@@ -1,0 +1,234 @@
+.pagination .page-item .page-link {
+color: #32877f;
+border-radius: 0.375rem;
+transition: all 0.2s ease-in-out;
+margin: 0 2px;
+padding: 6px 12px;
+border: 1px solid #dee2e6;
+background-color: white;
+}
+.pagination .page-item .page-link:hover {
+background-color: #e9ecef;
+border-color: #adb5bd;
+}
+.pagination .page-item.active .page-link {
+background-color: #32877f;
+color: white;
+border-color: #32877f;
+font-weight: bold;
+}
+.pagination .page-item.disabled .page-link {
+color: #adb5bd;
+pointer-events: none;
+background-color: #f8f9fa;
+border-color: #dee2e6;
+}
+
+.divbuttons2{
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+}
+
+/*--------------------------------------*/
+/* SELECT PERSONALIZADOS*/
+
+.select-container {
+    position: relative;
+}
+.select-container .dropdown-menu {
+    max-height: 300px; 
+    overflow: hidden;
+    border: 1px solid #ced4da;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.select-container .search-box {
+    border-bottom: 1px solid #dee2e6;
+}
+
+.select-container .options {
+    max-height: 200px; 
+    overflow-y: auto;
+}
+
+.select-container .options button {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+}
+
+.select-container .options button:hover,
+.select-container .options button:focus {
+    background-color: #f1f1f1;
+}
+
+.select-container button.btn::after {
+    content: "▼";
+    float: right;
+    font-size: 0.75rem;
+    margin-top: 0.4rem;
+    margin-left: 0.5rem;
+    color: #888;
+}
+
+.select-container .dropdown-menu {
+    display: none;
+}
+
+.select-container .dropdown-menu.show {
+    display: block;
+}
+
+
+
+/*-------------------INPUT FILE-------------------*/
+.file-drop-area {
+  position: relative;
+  border: 2px dashed #ccc;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+  transition: border-color 0.3s, background-color 0.3s;
+}
+
+.file-drop-area.dragover {
+  border-color: #000;
+  background-color: #e0e0e0;
+}
+
+.file-message {
+  font-size: 16px;
+  color: #888;
+}
+
+/* Ocultar el input de tipo archivo original */
+.file-drop-area input[type="file"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/*------------------------------------------*/
+
+
+/*-------------------------------------*/
+.loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+.loader {
+    border: 8px solid #f3f3f3;
+    border-top: 8px solid #3b927d;   
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/*================Cards=================*/
+.full{
+    width: 100%;
+    height: 100px;
+    display: flex;
+    justify-content: space-around;
+}
+
+.full2{
+    width: 100%;
+    height: 100px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.ventanas {
+    width: 23%;
+    height: 100%;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    padding: 0 1.5rem;
+    margin: 1rem;
+    gap: 1rem;
+}
+
+.ventanasi {
+    width: 70%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 0.2rem;
+    height: 100%;
+    padding: 0;
+}
+
+.ventana-titulo {
+    font-size: 0.85rem;
+    color: #aaa;
+    margin: 0 0 2px 0;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+}
+
+.ventana-numero {
+    font-size: 1rem;
+    color: #666;
+    margin: 0;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    background: #f5f5f5;
+    border-radius: 6px;
+    padding: 2px 10px;
+}
+
+.ventanasd {
+    width: 30%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.capsula {
+    width: 44px;
+    height: 44px;
+    background-color: #f3f4f6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.capsula i {
+    font-size: 28px;
+    color: #32877f;
+}
+
+
+.horizontales {
+    display: flex;
+    gap: 1rem;
+}

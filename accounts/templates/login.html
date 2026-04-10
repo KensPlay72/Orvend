@@ -1,0 +1,90 @@
+{% load static %}
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <!-- ===== CSS ===== -->
+        <link rel="stylesheet" href="{% static 'css/login.css' %}" />
+        <link rel="stylesheet" href="{% static 'plugins/bootstrap.min.css' %}">
+        <link rel="icon" href="{% static 'img/logo-card.ico' %}" type="image/x-icon">
+        <!-- ===== BOX ICONS ===== -->
+        <link href='https://cdn.jsdelivr.net/npm/boxicons@2.0.5/css/boxicons.min.css'
+              rel='stylesheet'>
+        <title>Iniciar Sesión</title>
+        <style>
+            .form-control {
+                border: none;
+                border-bottom: 1px solid #ccc;
+                border-radius: 0;
+                box-shadow: none;
+            }
+            .form-control:focus {
+                box-shadow: none;
+                border-color: #000;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="l-form">
+            <div class="shape1"></div>
+            <div class="shape2"></div>
+            <div class="form">
+                <img src="{% static 'img/imagenalta.webp' %}" />
+                <form class="form__content" method="POST" action="{% url 'login' %}">
+                    {% csrf_token %}
+                    <div class="imgtitle">
+                        <img src="{% static 'img/LV.png' %}" />
+                        <h1 class="form__title">Bienvenido</h1>
+                    </div>
+                    <br><br>
+                    <div class="form__div form__div-one">
+                        <div class="form__icon">
+                            <i class='bx bx-user-circle'></i>
+                        </div>
+                        <div class="form__div-input">
+                            <label for="" class="form__label">Usuario</label>
+                            <input type="text"
+                                    class="form__input"
+                                    id="username"
+                                    name="username"
+                                    autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="form__div form__div-one">
+                        <div class="form__icon">
+                            <i class='bx bx-lock'></i>
+                        </div>
+                        <div class="form__div-input">
+                            <label for="" class="form__label">Contraseña</label>
+                            <input type="password"
+                                    class="form__input"
+                                    id="password"
+                                    name="password"
+                                    autocomplete="off">
+                        </div>
+                    </div>
+                    <input type="submit"
+                           class="form__button"
+                           id="btn-login-usuarios"
+                           value="Iniciar Sesión">
+                </form>
+            </div>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <script>
+                    Swal.fire({
+                        icon: "{{ message.tags }}",
+                        title: "{{ message }}"
+                    });
+                </script>
+            {% endfor %}
+        {% endif %}
+        <script src="{% static 'plugins/jquery.min.js' %}"></script>
+        <script src="{% static 'plugins/bootstrap.min.js' %}"></script>
+        <script src="{% static 'plugins/sweetalert2.min.js' %}"></script>
+        <script src="{% static 'plugins/jwt-decode.min.js' %}"></script>
+        <script type="module" src="{% static 'js/login.js' %}"></script>
+    </body>
+</html>

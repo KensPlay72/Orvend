@@ -1,0 +1,66 @@
+{% extends "menu.html" %}
+{% load static %}
+{% block title %}Dashboard{% endblock %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+{% endblock %}
+{% block titulo_content %}
+    <div class="tituloscont">
+        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+        <p class="header__logo">| Dashboard</p>
+    </div>
+{% endblock %}
+{% block main_content %}
+<div class="full">
+    <div class="ventanas">
+        <div class="ventanasi">
+            <p class="ventana-titulo">Total de Productos</p>
+            <p class="ventana-numero">{{total_productos}}</p>
+        </div>
+        <div class="ventanasd">
+            <div class="capsula">
+                <i class='bx bx-package'></i>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="ventanas">
+        <div class="ventanasi">
+            <p class="ventana-titulo">Total de Productos</p>
+            <p class="ventana-numero">12,300</p>
+        </div>
+        <div class="ventanasd">
+            <div class="capsula">
+                <i class='bx bx-package'></i>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="ventanas">
+        <div class="ventanasi">
+            <p class="ventana-titulo">Total de Productos</p>
+            <p class="ventana-numero">12,300</p>
+        </div>
+        <div class="ventanasd">
+            <div class="capsula">
+                <i class='bx bx-package'></i>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="ventanas">
+        <div class="ventanasi">
+            <p class="ventana-titulo">Total de Productos</p>
+            <p class="ventana-numero">12,300</p>
+        </div>
+        <div class="ventanasd">
+            <div class="capsula">
+                <i class='bx bx-package'></i>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

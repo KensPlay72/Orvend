@@ -1,0 +1,332 @@
+{% load static %}
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+        <link rel="icon" href="{% static 'img/logo-card.ico' %}" type="image/x-icon">
+        <title>Orvend</title>
+        <meta name="description" content="Simple landind page" />
+        <meta name="keywords" content="" />
+        <meta name="author" content="" />
+        <link rel="stylesheet"
+              href="https://unpkg.com/tailwindcss@2.2.19/dist/tailwind.min.css" />
+        <!--Replace with your tailwind.css once created-->
+        <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700"
+              rel="stylesheet" />
+        <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/boxicons@2.0.5/css/boxicons.min.css"
+              rel="stylesheet">
+        <style>
+      .gradient {
+        background: linear-gradient(90deg, #3b927d 0%, #badec1 100%);
+      }
+        </style>
+        <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    </head>
+    <body class="leading-normal tracking-normal text-white gradient"
+          style="font-family: 'Source Sans Pro', sans-serif">
+        <!--Nav-->
+        <nav id="header" class="navbar gradient">
+            <div class="navbar-container">
+                <div class="navbar-brand">
+                    <a href="#" class="navbar-logo">
+                        <img src="{% static 'img/CarBlanco.png' %}" alt="Logo" class="logo-img" />
+                        OrvendMart
+                    </a>
+                </div>
+                <div id="nav-content" class="navbar-links">
+                    <ul class="nav-items">
+                        <li>
+                            <a href="" class="nav-link" data-target="contactanos">Contáctanos</a>
+                        </li>
+                        {% comment %} <li>
+                            <a href="" class="nav-link" data-target="suscripciones">Suscripciones</a>
+                        </li> {% endcomment %}
+                    </ul>
+                    <a id="navAction" class="nav-action" href="{% url 'login' %}">Login</a>
+                </div>
+            </div>
+            <hr class="navbar-divider" />
+        </nav>
+        <!--Hero-->
+        <div class="hero-section">
+            <div class="hero-container">
+                <!--Left Col-->
+                <div class="hero-left">
+                    <p class="hero-tagline">Tecnología que impulsa, soluciones que transforman</p>
+                    <h1 class="hero-title">CRECE CON ORVEND</h1>
+                    <p class="hero-subtitle">Llevamos tu empresa al siguiente nivel con innovación y estrategia</p>
+                    {% comment %} <a class="hero-button" href="{% url 'suscripciones' %}">Suscribete</a> {% endcomment %}
+                </div>
+                <!--Right Col-->
+                <div class="hero-right">
+                    <br>
+                    <img src="{% static 'img/junta.webp' %}" alt="falta aqui" />
+                </div>
+            </div>
+        </div>
+        <div class="hero-wave">
+            <img src="{% static 'img/fil1.svg' %}" alt="">
+        </div>
+        <section class="feature-section">
+            <div class="feature-container">
+                <div class="feature-divider-container" data-aos="fade-up">
+                    <div class="feature-divider"></div>
+                </div>
+                <!-- Primer bloque (reversa) -->
+                <div class="feature-row reverse" data-aos="fade-left">
+                    <div class="feature-image mt" data-aos="fade-right">
+                        <img src="{% static 'img/pagina.webp' %}" alt="" />
+                    </div>
+                    <div class="feature-text mt" data-aos="fade-left">
+                        <div class="feature-align">
+                            <h3 class="feature-subtitle">Misión</h3>
+                            <p class="feature-description">
+                                Posicionarnos como una de las mejores empresas de servicios en Honduras, ofreciendo soluciones confiables, accesibles y de alta calidad que mejoren la vida de nuestros clientes.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Segundo bloque -->
+                <div class="feature-row" data-aos="fade-right">
+                    <div class="feature-text" data-aos="fade-right">
+                        <h3 class="feature-subtitle">Visión</h3>
+                        <p class="feature-description">
+                            Expandir nuestras operaciones a nivel mundial, llevando nuestros servicios a nuevos mercados y consolidándonos como un referente global en excelencia, innovación y compromiso con nuestros clientes.
+                        </p>
+                    </div>
+                    <div class="feature-image" data-aos="fade-left">
+                        <img src="{% static 'img/mapa.webp' %}" alt="" />
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section class="card-section">
+            <div class="card-container">
+                <h2 class="card-title" data-aos="fade-up">Comentarios</h2>
+                <div class="card-divider-wrapper" data-aos="fade-up">
+                    <div class="card-divider"></div>
+                </div>
+                <div class="card-row">
+                    <!-- Card 1: Izquierda -->
+                    <div class="card" data-aos="fade-right">
+                        <div class="card-content">
+                            <a href="#" class="card-link">
+                                <p class="card-label">xGETTING STARTED</p>
+                                <div class="card-heading">Lorem ipsum dolor sit amet.</div>
+                                <p class="card-text">
+                                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam at ipsum eu nunc commodo posuere et sit amet ligula.
+                                </p>
+                            </a>
+                        </div>
+                        <div class="card-footer">
+                            <div class="card-footer-content start">
+                                <button class="card-button">Action</button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 2: Centro -->
+                    <div class="card" data-aos="fade-up">
+                        <div class="card-content">
+                            <a href="#" class="card-link">
+                                <p class="card-label">xGETTING STARTED</p>
+                                <div class="card-heading">Lorem ipsum dolor sit amet.</div>
+                                <p class="card-text">
+                                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam at ipsum eu nunc commodo posuere et sit amet ligula.
+                                </p>
+                            </a>
+                        </div>
+                        <div class="card-footer">
+                            <div class="card-footer-content center">
+                                <button class="card-button">Action</button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 3: Derecha -->
+                    <div class="card" data-aos="fade-left">
+                        <div class="card-content">
+                            <a href="#" class="card-link">
+                                <p class="card-label">xGETTING STARTED</p>
+                                <div class="card-heading">Lorem ipsum dolor sit amet.</div>
+                                <p class="card-text">
+                                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam at ipsum eu nunc commodo posuere et sit amet ligula.
+                                </p>
+                            </a>
+                        </div>
+                        <div class="card-footer">
+                            <div class="card-footer-content end">
+                                <button class="card-button">Action</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        {% comment %} <section id="suscripciones" class="bg-gray-100 py-8">
+    <div class="container mx-auto px-2 pt-4 pb-12 text-gray-800">
+        <h2 class="w-full my-2 text-5xl font-bold leading-tight text-center text-gray-800" data-aos="fade-up">Suscripciones</h2>
+        <div class="w-full mb-4" data-aos="fade-up">
+            <div class="h-1 mx-auto gradient w-64 opacity-25 my-0 py-0 rounded-t"></div>
+        </div>
+        <div class="flex flex-col sm:flex-row justify-center pt-12 my-12 sm:my-4">
+            {% for suscripcion in suscripciones|slice:":3" %}
+                <div class="flex flex-col w-5/6 lg:w-1/4 mx-auto lg:mx-0 rounded-none {% if forloop.counter0 == 1 %}rounded-lg sm:-mt-6 shadow-lg z-10{% elif forloop.first %}lg:rounded-l-lg{% elif forloop.last %}lg:rounded-r-lg{% endif %} bg-white mt-4" data-aos="{% if forloop.first %}fade-right{% elif forloop.last %}fade-left{% else %}zoom-in{% endif %}">
+                    <div class="flex-1 bg-white text-gray-600 rounded-t rounded-b-none overflow-hidden shadow">
+                        <div class="w-full p-8 text-3xl font-bold text-center flex items-center justify-center gap-2">
+                            <span>{{ suscripcion.nombre }}</span>
+                            {% if suscripcion.imagen %}
+                                <img src="{{ suscripcion.imagen.url }}" alt="{{ suscripcion.nombre }}" class="h-6 w-8">
+                            {% endif %}
+                        </div>
+                        {% if forloop.counter0 == 1 %}
+                            <div class="h-1 w-full gradient my-0 py-0 rounded-t"></div>
+                            <ul class="w-full text-center text-base font-bold">
+                        {% else %}
+                            <ul class="w-full text-center text-sm">
+                        {% endif %}
+                            <li class="border-b py-4">Realiza hasta: {{ suscripcion.max_ventas|default:"♾️" }} transacciones</li>
+                            <li class="border-b py-4">Duración: {{ suscripcion.duracion_dias }} días</li>
+                            <li class="border-b py-4">Nivel: {{ suscripcion.nivel }}</li>
+                        </ul>
+                    </div>
+                    <div class="flex-none mt-auto bg-white rounded-b rounded-t-none overflow-hidden shadow p-6">
+                        <div class="precio-container">
+                            {% if suscripcion.precio_con_descuento is not None %}
+                                <div class="precio-wrapper text-center space-y-1">
+                                    <div class="flex items-center justify-center gap-4 mb-1">
+                                        <span class="precio-normal line-through text-gray-400 text-sm">${{ suscripcion.precio_usd }}</span>
+                                        <span class="badge-descuento text-xs text-red-600 font-semibold">-{{ suscripcion.descuento }}%</span>
+                                    </div>
+                                    <span class="precio-descuento text-2xl font-bold text-gray-800">${{ suscripcion.precio_con_descuento|floatformat:2 }}</span>
+                                </div>
+                            {% else %}
+                                <span class="precio-solo text-2xl font-bold text-gray-800 mt-3 block">${{ suscripcion.precio_usd }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="flex items-center justify-center">
+                            <a class="mx-auto lg:mx-0 hover:underline gradient text-white font-bold rounded-full my-6 py-2 px-8 shadow-lg focus:outline-none focus:shadow-outline transform transition hover:scale-105 duration-300 ease-in-out" href="{% url 'suscripciones' %}?plan={{ suscripcion.id }}">Suscribirse</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+        </section> {% endcomment %}
+        <img src="{% static 'img/fil4.svg' %}" alt="">
+        <section id="contactanos"
+                 class="container mx-auto text-center py-6 mb-12"
+                 data-aos="fade-up">
+            <h2 class="w-full my-2 text-5xl font-bold leading-tight text-center text-white"
+                data-aos="fade-up">Contactanos</h2>
+            <div class="w-full mb-4" data-aos="fade-up" data-aos-delay="100">
+                <div class="h-1 mx-auto bg-white w-1/6 opacity-25 my-0 py-0 rounded-t"></div>
+            </div>
+            <h3 class="my-4 text-3xl leading-tight"
+                data-aos="fade-up"
+                data-aos-delay="200">¿Tienes dudas o necesitas asistencia? ¡Hablemos!</h3>
+            <div class="centrado" data-aos="fade-up" data-aos-delay="300">
+                <button class="flex items-center justify-center gap-2 mx-auto lg:mx-0  bg-white text-gray-800 font-bold rounded-full my-6 py-4 px-8 shadow-lg focus:outline-none focus:shadow-outline transform transition hover:scale-105 duration-300 ease-in-out">
+                    <i class='bx bxl-whatsapp text-xl'></i>
+                    Whatsapp
+                </button>
+                <button class="flex items-center justify-center gap-2 mx-auto lg:mx-0 bg-white text-gray-800 font-bold rounded-full my-6 py-4 px-8 shadow-lg focus:outline-none focus:shadow-outline transform transition hover:scale-105 duration-300 ease-in-out">
+                    <i class='bx bxl-telegram text-xl'></i>
+                    Telegram
+                </button>
+            </div>
+        </section>
+        <!--Footer-->
+        <footer class="bg-white">
+            <div class="mx-auto px-8">
+                <div class="w-full flex flex-col md:flex-row py-6">
+                    <!-- Marca / Logo -->
+                    <div class="flex-1 mb-6 text-black" style="margin-right: 40px;">
+                        <a href="#" class="brand-logo">
+                            <img src="{% static 'img/LH1.png' %}" alt="Logo" class="logo-img" />
+                        </a>
+                    </div>
+                    <!-- Sección Links -->
+                    <div class="flex-1">
+                        <p class="footer-title">Links</p>
+                        <ul class="footer-list">
+                            <li>
+                                <a href="#">FAQ</a>
+                            </li>
+                            <li>
+                                <a href="#">Help</a>
+                            </li>
+                            <li>
+                                <a href="#">Support</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <!-- Sección Legal -->
+                    <div class="flex-1">
+                        <p class="footer-title">Legal</p>
+                        <ul class="footer-list">
+                            <li>
+                                <a href="#">Terms</a>
+                            </li>
+                            <li>
+                                <a href="#">Privacy</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <!-- Sección Social -->
+                    <div class="flex-1">
+                        <p class="footer-title">Social</p>
+                        <ul class="footer-list">
+                            <li>
+                                <a href="#">Facebook</a>
+                            </li>
+                            <li>
+                                <a href="#">Linkedin</a>
+                            </li>
+                            <li>
+                                <a href="#">Twitter</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <!-- Sección Company -->
+                    <div class="flex-1">
+                        <p class="footer-title">Company</p>
+                        <ul class="footer-list">
+                            <li>
+                                <a href="#">Official Blog</a>
+                            </li>
+                            <li>
+                                <a href="#">About Us</a>
+                            </li>
+                            <li>
+                                <a href="#">Contact</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-copy">&copy; OrvendCompany {% now "Y" %}. Todos los derechos reservados.</div>
+        </footer>
+        <!-- AOS Script -->
+        <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+        <script>
+  AOS.init({
+    once: true,
+    duration: 800,
+    easing: 'ease-in-out',
+  });
+        </script>
+        <script>
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      const targetId = this.getAttribute('data-target');
+      const targetEl = document.getElementById(targetId);
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  });
+        </script>
+    </body>
+</html>
