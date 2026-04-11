@@ -42,6 +42,9 @@ body {
     background-color: var(--body-color);
     color: var(--text-color);
 }
+.main{
+padding: 1rem;
+}
 
 h3 {
 margin: 0;
@@ -100,7 +103,7 @@ align-items: center;
 margin-bottom: 12px;
 }
 .logoencabezado {
-width: 80px;
+width: 100px;
 }
 .logout-link {
 font-size: 0.85rem;

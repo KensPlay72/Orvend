@@ -45,7 +45,7 @@
                         <!-- Header: Logo left, Logout right -->
                         <div class="encabezado">
                             <img class="logoencabezado"
-                                 src="{% static 'img/LV.png' %}"
+                                 src="{% static 'img/LH.png' %}"
                                  alt="Logo Orvend">
                             <a href="#" id="btn-logout" class="logout-link">Cerrar Sesión</a>
                         </div>
@@ -98,8 +98,8 @@
                             </div>
                             <div class="nav__items">
                                 <h3 class="nav__subtitle">GESTIONES</h3>
-                                {% comment %} <div class="nav__dropdown">
-                                    <a href="{% url 'productos' %}"
+                                <div class="nav__dropdown">
+                                    <a href="#"
                                        class="nav__link {% if request.path == '/manager/productos/' %}active{% endif %}">
                                         <i class='bx bx-box nav__icon'></i>
                                         <span class="nav__name">Productos</span>
@@ -107,17 +107,21 @@
                                     </a>
                                     <div class="nav__dropdown-collapse">
                                         <div class="nav__dropdown-content">
-                                            <a href="{% url 'marcas' %}"
+                                            <a href="#"
                                                class="nav__dropdown-item {% if request.path == '/manager/marcas/' %}active{% endif %}">Marcas</a>
-                                            <a href="{% url 'proveedores' %}"
+                                            <a href="#"
                                                class="nav__dropdown-item {% if request.path == '/manager/proveedores/' %}active{% endif %}">Proveedores</a>
+                                            {% if perms.manager.view_umedidas %}
                                             <a href="{% url 'presentaciones' %}"
-                                               class="nav__dropdown-item {% if request.path == '/manager/presentaciones/' %}active{% endif %}">Presentaciones</a>
-                                            <a href="{% url 'categorias' %}"
+                                            class="nav__dropdown-item {% if request.path == '/manager/presentaciones/' %}active{% endif %}">
+                                                Presentaciones
+                                            </a>
+                                            {% endif %}
+                                            <a href="#"
                                                class="nav__dropdown-item {% if request.path == '/manager/categorias/' %}active{% endif %}">Categorías</a>
                                         </div>
                                     </div>
-                                </div> {% endcomment %}
+                                </div>
                                 {% comment %} <a href="{% url 'cppagar' %}"
                                    class="nav__link {% if request.path == '/manager/cppagar/' %}active{% endif %}">                                  
                                     <i class='bx bx-receipt nav__icon'></i>
@@ -173,16 +177,15 @@
                 </nav>
             </div>
             <!--========== CONTENTS ========-->
-            <main>
+            <main class="main">
                 {% block main_content %}{% endblock %}
             </main>
             <!--========== MAIN JS ==========-->
             <script src="{% static 'js/menu.js' %}"></script>
-            <script src="{% static 'js/logout.js' %}"></script>
             <script src="{% static 'plugins/jwt-decode.min.js' %}"></script>
             <script src="{% static 'plugins/jquery.min.js' %}"></script>
             <script src="{% static 'plugins/bootstrap.min.js' %}"></script>
-            <script src="{% static 'plugins/sweetaler2.min.js' %}"></script>
+            <script src="{% static 'plugins/sweetalert2.min.js' %}"></script>
         </body>
     </html>
 {% endblock %}

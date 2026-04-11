@@ -72,61 +72,64 @@ linkColor.forEach(l => l.addEventListener('click', colorLink))
   /* ──────────────────────────────────────────────────────────
      Cerrar sesion
   ────────────────────────────────────────────────────────── */
-  document.getElementById("btn-logout").onclick = function() {
-    fetch("/logout/", {
-        method: "GET",
-        credentials: "same-origin" 
-    }).then(() => {
-        window.location.href = "/login/";
-    });
-};
+document.addEventListener("DOMContentLoaded", function () {
 
+    const btn = document.getElementById("btn-logout");
 
-//----------------
-// CHECKTBOX TEXT
-//----------------
-document.addEventListener('DOMContentLoaded', () => {
-    const checkbox = document.getElementById('isActive');
-    const text = document.getElementById('activeText');
+    if (btn) {
+        btn.addEventListener("click", function (e) {
+            e.preventDefault();
 
-    const toggleActiveText = () => {
-        if (checkbox.checked) {
-            text.textContent = 'Activo';
-            text.classList.remove('text-danger');
-            text.classList.add('text-success');
-        } else {
-            text.textContent = 'Inactivo';
-            text.classList.remove('text-success');
-            text.classList.add('text-danger');
-        }
-    };
+            Swal.fire({
+                title: "¿Cerrar sesión?",
+                text: "Tu sesión se cerrará y tendrás que iniciar sesión nuevamente.",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonText: "Sí, cerrar sesión",
+                cancelButtonText: "Cancelar",
+                confirmButtonColor: "#d33",   // rojo
+                cancelButtonColor: "#6c757d"  // gris
+            }).then((result) => {
 
-    toggleActiveText(); // Inicializa el texto
-    checkbox.addEventListener('change', toggleActiveText);
+                if (result.isConfirmed) {
+
+                    fetch("/accounts/api/logout/", {
+                        method: "POST",
+                        headers: {
+                            "X-CSRFToken": getCookie("csrftoken")
+                        }
+                    })
+                    .then(() => {
+                        window.location.href = "/accounts/login/";
+                    })
+                    .catch(error => {
+                        console.error("Error logout:", error);
+                        window.location.href = "/accounts/login/";
+                    });
+                }
+
+            });
+        });
+    }
 });
 
 
-document.addEventListener('DOMContentLoaded', () => {
-    const checkboxEdit = document.getElementById('isActiveedit');
-    const textEdit = document.getElementById('activeTextedit');
+// CSRF helper
+function getCookie(name) {
+    let cookieValue = null;
 
-    if (!checkboxEdit || !textEdit) return;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
 
-    const toggleActiveTextEdit = () => {
-        if (checkboxEdit.checked) {
-            textEdit.textContent = 'Activo';
-            textEdit.classList.remove('text-danger');
-            textEdit.classList.add('text-success');
-        } else {
-            textEdit.textContent = 'Inactivo';
-            textEdit.classList.remove('text-success');
-            textEdit.classList.add('text-danger');
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+
+            if (cookie.startsWith(name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
         }
-    };
+    }
 
-    // Inicializar al cargar
-    toggleActiveTextEdit();
-
-    // Escuchar cambios
-    checkboxEdit.addEventListener('change', toggleActiveTextEdit);
-});
+    return cookieValue;
+}
