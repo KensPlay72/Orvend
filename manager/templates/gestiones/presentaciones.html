@@ -54,16 +54,6 @@
                                        placeholder="Abreviatura" required>
                             </div>
                             <br>
-                            <div class="form-group">
-                                <label for="isActive" class="d-block">
-                                    Estado
-                                </label>
-                                <label class="d-flex align-items-center" for="isActive">
-                                    <input type="checkbox" id="isActive" name="isActive" checked class="me-2">
-                                    <span id="activeText" class="fw-bold text-success">Activo</span>
-                                </label>
-                            </div>
-                            <br>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                                 <button type="submit" id="btnregis" class="btn btn classbotones">Guardar</button>
@@ -247,5 +237,7 @@
     </ul>
 </nav>
 
-            <script type="module" src="{% static 'js/presentaciones.js' %}"></script>
-    {% endblock %}
+    <script type="module" src="{% static 'js/gestiones/presentaciones.js' %}"></script>
+    <script type="module" src="{% static 'js/chektext.js' %}"></script>
+
+{% endblock %}

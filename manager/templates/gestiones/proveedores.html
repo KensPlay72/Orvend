@@ -1,0 +1,336 @@
+{% extends "menu.html" %}
+{% load static %}
+{% block title %}Proveedores{% endblock %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+{% endblock %}
+
+{% block titulo_content %}
+    <div class="tituloscont">
+        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+        <p class="header__logo">| Proveedores</p>
+    </div>
+{% endblock %}
+{% block main_content %}
+<div class="divbuttons2">
+    {% if perms.manager.add_proveedores %}
+    <button id="toggleDropdownPanel" class="btn-dropdown" data-bs-toggle="modal"
+            data-bs-target="#modalregis">
+        <i class="bx bx-plus-circle"></i> Agregar
+    </button>
+    {% endif %}
+    {% if perms.manager.view_proveedorescontactos %}
+    <a class="btn-dropdown" href="{% url 'proveedores_contactos' %}">
+        <i class="bx bx-user-plus"></i> Contactos
+    </a>
+    {% endif %}
+</div>
+
+
+        <div class="modal fade"
+             id="modalregis"
+             tabindex="-1"
+             aria-labelledby="exampleModalCenterTitle"
+             aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLongTitle">Registrar Proveedor</h5>
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="postregistro" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="nlegal">Nombre Legal</label>
+                                <input type="text"
+                                       name="nlegal"
+                                       id="nlegal"
+                                       class="form-control"
+                                       placeholder="Nombre">
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="ncomercial">Nombre Comercial</label>
+                                <input type="text"
+                                       name="ncomercial"
+                                       id="ncomercial"
+                                       class="form-control"
+                                       placeholder="Nombre">
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="rtn">RTN</label>
+                                <input type="text"
+                                       name="rtn"
+                                       id="rtn"
+                                       class="form-control"
+                                       placeholder="RTN"
+                                       oninput="validateNumber(this)"
+                                       maxlength="14">
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="dcreditos">Dias de Credito</label>
+                                <input type="text"
+                                       name="dcreditos"
+                                       id="dcreditos"
+                                       class="form-control"
+                                       placeholder="Dias de Credito"
+                                       oninput="validateNumber(this)"
+                                       maxlength="3">
+                            </div>
+                            <br>
+                            <div class="form-group">
+                            <label for="telefono">Número de Teléfono</label>
+                                <div class="d-flex">
+                                    <!-- Select para código de país -->
+                                    <select id="countryCode" class="form-control me-2" style="max-width: 120px;">
+                                    <option value="">+Cod</option>
+                                    </select>
+                                    
+                                    <!-- Input para número -->
+                                    <input type="text"
+                                        name="telefono"
+                                        id="telefono"
+                                        class="form-control"
+                                        placeholder="Número de teléfono"
+                                        oninput="validateNumber(this)"
+                                        maxlength="10">
+                                </div>
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email"
+                                       name="email"
+                                       id="email"
+                                       class="form-control"
+                                       placeholder="Email">
+                            </div>
+                            <br>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                <button type="submit" id="btnregis" class="btn btn classbotones">Guardar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade"
+             id="modalput"
+             tabindex="-1"
+             aria-labelledby="exampleModalCenterTitle"
+             aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLongTitle">Editar Proveedor</h5>
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="putregistro" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <input type="text" id="idproveedor" hidden>
+                            <div class="form-group">
+                                <label for="nlegaledit">Nombre Legal</label>
+                                <input type="text"
+                                       name="nlegaledit"
+                                       id="nlegaledit"
+                                       class="form-control"
+                                       placeholder="Nombre">
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="ncomercialedit">Nombre Comercial</label>
+                                <input type="text"
+                                       name="ncomercialedit"
+                                       id="ncomercialedit"
+                                       class="form-control"
+                                       placeholder="Nombre">
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="rtnedit">RTN</label>
+                                <input type="text"
+                                       name="rtnedit"
+                                       id="rtnedit"
+                                       class="form-control"
+                                       placeholder="RTN"
+                                       oninput="validateNumber(this)"
+                                       maxlength="14">
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="dcreditosedit">Dias de Credito</label>
+                                <input type="text"
+                                       name="dcreditosedit"
+                                       id="dcreditosedit"
+                                       class="form-control"
+                                       placeholder="Dias de Credito"
+                                       oninput="validateNumber(this)"
+                                       maxlength="3">
+                            </div>
+                            <br>
+                            <div class="form-group">
+                            <label for="telefonoedit">Número de Teléfono</label>
+                                <div class="d-flex">
+                                    <!-- Select para código de país -->
+                                    <select id="countryCodeedit" class="form-control me-2" style="max-width: 120px;">
+                                    <option value="">+Cod</option>
+                                    </select>
+                                    
+                                    <!-- Input para número -->
+                                    <input type="text"
+                                        name="telefonoedit"
+                                        id="telefonoedit"
+                                        class="form-control"
+                                        placeholder="Número de teléfono"
+                                        oninput="validateNumber(this)"
+                                        maxlength="10">
+                                </div>
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="emailedit">Email</label>
+                                <input type="email"
+                                       name="emailedit"
+                                       id="emailedit"
+                                       class="form-control"
+                                       placeholder="Email">
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="isActiveedit" class="d-block">
+                                    Estado
+                                </label>
+                                <label class="d-flex align-items-center" for="isActiveedit">
+                                    <input type="checkbox" id="isActiveedit" name="isActiveedit" checked class="me-2">
+                                    <span id="activeTextedit" class="fw-bold text-success">Activo</span>
+                                </label>
+                            </div>
+                            <br>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                <button type="submit" id="btnput" class="btn btn classbotones">Guardar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<div class="tabla-container">
+    <table class="tablas-todo" id="tablacont">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Nombre Legal</th>
+                <th>Nombre Comercial</th>
+                <th>RTN</th>
+                <th>Días Crédito</th>
+                <th>Teléfono</th>
+                <th>Email</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for proveedor in page_obj %}
+            <tr data-id="{{ proveedor.id }}">
+
+                <td>{{ proveedor.id }}</td>
+                <td>{{ proveedor.nombre_legal }}</td>
+                <td>{{ proveedor.nombre_comercial }}</td>
+                <td>{{ proveedor.rtn }}</td>
+                <td>{{ proveedor.dias_credito }}</td>
+                <td>{{ proveedor.telefono }}</td>
+                <td>{{ proveedor.email }}</td>
+
+                <td>
+                    {% if proveedor.is_active %}
+                        <span class="estado-circulo estado-activo"></span>
+                    {% else %}
+                        <span class="estado-circulo estado-inactivo"></span>
+                    {% endif %}
+                </td>
+
+                <td>
+                    {% if not proveedor.is_delete %}
+
+                        {% if perms.manager.change_proveedores %}
+                        <button type="button"
+                                class="btn btn-sm btn-primary btn-edit"
+                                data-id="{{ proveedor.id }}"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalput">
+                            <i class='bx bx-edit'></i>
+                        </button>
+                        {% endif %}
+
+                        {% if perms.manager.delete_proveedores %}
+                        <button type="button"
+                                class="btn btn-sm btn-danger btn-delete"
+                                data-id="{{ proveedor.id }}">
+                            <i class='bx bx-trash'></i>
+                        </button>
+                        {% endif %}
+
+                    {% endif %}
+                </td>
+
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<nav class="d-flex justify-content-center mt-4">
+    <ul class="pagination">
+
+        <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+            {% if page_obj.has_previous %}
+                <a class="page-link"
+                   href="?page={{ page_obj.previous_page_number }}&search={{ search }}">
+                    «
+                </a>
+            {% else %}
+                <span class="page-link">«</span>
+            {% endif %}
+        </li>
+
+        {% for p in page_obj.paginator.page_range %}
+            <li class="page-item {% if p == page_obj.number %}active{% endif %}">
+                <a class="page-link"
+                   href="?page={{ p }}&search={{ search }}">
+                    {{ p }}
+                </a>
+            </li>
+        {% endfor %}
+
+        <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+            {% if page_obj.has_next %}
+                <a class="page-link"
+                   href="?page={{ page_obj.next_page_number }}&search={{ search }}">
+                    »
+                </a>
+            {% else %}
+                <span class="page-link">»</span>
+            {% endif %}
+        </li>
+
+    </ul>
+</nav>
+        <br>
+            <script type="module" src="{% static 'js/gestiones/proveedores.js' %}"></script>
+            <script type="module" src="{% static 'js/chektext.js' %}"></script>
+    {% endblock %}

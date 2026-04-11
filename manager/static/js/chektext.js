@@ -2,25 +2,25 @@
 //----------------
 // CHECKTBOX TEXT
 //----------------
-document.addEventListener('DOMContentLoaded', () => {
-    const checkbox = document.getElementById('isActive');
-    const text = document.getElementById('activeText');
+// document.addEventListener('DOMContentLoaded', () => {
+//     const checkbox = document.getElementById('isActive');
+//     const text = document.getElementById('activeText');
 
-    const toggleActiveText = () => {
-        if (checkbox.checked) {
-            text.textContent = 'Activo';
-            text.classList.remove('text-danger');
-            text.classList.add('text-success');
-        } else {
-            text.textContent = 'Inactivo';
-            text.classList.remove('text-success');
-            text.classList.add('text-danger');
-        }
-    };
+//     const toggleActiveText = () => {
+//         if (checkbox.checked) {
+//             text.textContent = 'Activo';
+//             text.classList.remove('text-danger');
+//             text.classList.add('text-success');
+//         } else {
+//             text.textContent = 'Inactivo';
+//             text.classList.remove('text-success');
+//             text.classList.add('text-danger');
+//         }
+//     };
 
-    toggleActiveText(); // Inicializa el texto
-    checkbox.addEventListener('change', toggleActiveText);
-});
+//     toggleActiveText(); // Inicializa el texto
+//     checkbox.addEventListener('change', toggleActiveText);
+// });
 
 
 document.addEventListener('DOMContentLoaded', () => {

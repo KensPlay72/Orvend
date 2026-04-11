@@ -1,37 +1,21 @@
 //----------------
 // REGISTRAR
 //----------------
-document.addEventListener('DOMContentLoaded', function () {
-
+document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("postregistro");
-
+    const modalElement = document.getElementById("modalregis");
+    const modal = new bootstrap.Modal(modalElement);
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
 
-        const nombre = document.getElementById("npresentacion").value.trim();
-        const abreviatura = document.getElementById("abreviatura").value.trim();
-        const isActive = document.getElementById("isActive").checked;
-
-        console.log({ nombre, abreviatura, isActive });
-
-        if (!nombre || !abreviatura) {
-            Swal.fire({
-                title: "Error",
-                text: "Nombre y abreviatura son obligatorios",
-                icon: "error"
-            });
-            return;
+        const payload ={
+            Nombre: document.getElementById("ncategoria").value,
+            Descripcion: document.getElementById("desccategoria").value,
         }
 
-        const payload = {
-            nombre,
-            abreviatura,
-            is_active: isActive
-        };
-
         try {
-            const response = await fetch("/manager/presentaciones/post/", {
-                method: "POST",
+            const response = await fetch("/manager/categorias/post/", {
+             method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                     "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
@@ -40,49 +24,40 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             const data = await response.json();
-
-            if (response.ok && data.success) {
-
-                const modalEl = document.getElementById("modalregis");
-                const modalInstance = bootstrap.Modal.getInstance(modalEl);
-                modalInstance.hide();
-
+            
+            if (data.success) {
+                modal.hide();
                 form.reset();
-
                 Swal.fire({
                     title: "¡Éxito!",
-                    text: data.message || "Registrado correctamente",
+                    text: data.message || "registrado correctamente",
                     icon: "success",
                     confirmButtonText: "Aceptar",
                     customClass: { confirmButton: "classbotones" }
-                }).then(() => {
-                    window.location.reload();
-                });
-
+            }).then(() => {
+                window.location.reload(true);
+            });
             } else {
-
                 Swal.fire({
                     title: "Error",
-                    text: data.message || "Ocurrió un error",
+                    text: data.message || "Ocurrió un error al registrar",
                     icon: "error",
                     confirmButtonText: "Aceptar",
                     customClass: { confirmButton: "classbotones" }
                 });
             }
-
         } catch (error) {
-            console.error(error);
-
             Swal.fire({
                 title: "Error",
-                text: "Error de conexión o servidor",
+                text: "Error de conexión o inesperado. Ver consola para más detalles.",
                 icon: "error",
                 confirmButtonText: "Aceptar",
                 customClass: { confirmButton: "classbotones" }
             });
         }
-    });
 });
+});
+
 
 //----------------------
 // LLENAR FORMULARIO
@@ -91,19 +66,18 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll(".btn-edit").forEach(button => {
         button.addEventListener("click", async () => {
             const id = button.getAttribute("data-id");
-            const response = await fetch(`/manager/presentaciones/get/${id}/`);
+            const response = await fetch(`/manager/categorias/get/${id}/`);
             const data = await response.json();
-            console.log(data);
 
             if (data.success){
-                const presentacion = data.presentacion;
-                document.getElementById("idedit").value = presentacion.id;
-                document.getElementById("npresentacionedit").value = presentacion.nombre;
-                document.getElementById("abreviaturaedit").value = presentacion.abreviatura;
+                const categoria = data.categoria;
+                document.getElementById("idedit").value = categoria.id;
+                document.getElementById("ncategoriaedit").value = categoria.nombre;
+                document.getElementById("desccategoriaedit").value = categoria.descripcion;
 
                 const isActiveCheckbox = document.getElementById("isActiveedit");
                 const activeText = document.getElementById("activeTextedit");
-                if (presentacion.isActive) {
+                if (categoria.isActive) {
                     isActiveCheckbox.checked = true;
                     activeText.textContent = "Activo";
                     activeText.classList.replace("text-danger", "text-success");
@@ -119,7 +93,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-
 //----------------------
 // EDICION
 //----------------------
@@ -129,15 +102,15 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
     const id = document.getElementById("idedit").value;
 
     const payload ={
-        Nombre: document.getElementById("npresentacionedit").value,
-        Abreviatura: document.getElementById("abreviaturaedit").value,
+        Nombre: document.getElementById("ncategoriaedit").value,
+        Descripcion: document.getElementById("desccategoriaedit").value,
     }
 
     const isActiveCheckbox = document.getElementById("isActiveedit");
     if (!isActiveCheckbox.checked) payload.IsActive = false;
 
     try {
-        const response = await fetch(`/manager/presentaciones/put/${id}/`, {
+        const response = await fetch(`/manager/categorias/put/${id}/`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
@@ -151,7 +124,7 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
         if (data.success) {
             Swal.fire({
                 title: "¡Éxito!",
-                text: data.message || "Actualizado correctamente",
+                text: data.message || "actualizado correctamente",
                 icon: "success",
                 confirmButtonText: "Aceptar",
                 customClass: { confirmButton: "classbotones" }
@@ -178,7 +151,6 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
     }
 });
 
-
 //----------------
 // ELIMINACION
 //----------------
@@ -192,7 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const nombre = btn.closest("tr").children[1].innerText;
 
             const result = await Swal.fire({
-                title: `¿Eliminar la presentación "${nombre}"?`,
+                title: `¿Eliminar la marca "${nombre}"?`,
                 text: "Esta acción no se puede deshacer",
                 icon: "warning",
                 showCancelButton: true,
@@ -204,7 +176,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (result.isConfirmed){
                 try {
-                    const response = await fetch(`/manager/presentaciones/delete/${id}/`, {
+                    const response = await fetch(`/manager/categorias/delete/${id}/`, {
                         method: "DELETE",
                         headers: {
                             "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
@@ -246,5 +218,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 });
+
+
+
+
 
 

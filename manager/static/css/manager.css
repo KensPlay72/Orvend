@@ -23,6 +23,9 @@ pointer-events: none;
 background-color: #f8f9fa;
 border-color: #dee2e6;
 }
+.modal-footer{
+    height: 40px;
+}
 
 .divbuttons2{
     width: 100%;

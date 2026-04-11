@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -78,10 +79,10 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # IDIOMA
-LANGUAGE_CODE = 'es'
-
+LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'America/Tegucigalpa'
 
+USE_L10N = False
 USE_I18N = True
 USE_TZ = True
 
@@ -90,6 +91,8 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
+MEDIA_URL = '/manager/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'manager/media')
 # AUTH CONFIG
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
