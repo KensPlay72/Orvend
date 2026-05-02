@@ -1,0 +1,57 @@
+.todo{
+    width: 100%;
+    height: 90%;
+    padding: 0;
+    margin: 0;
+}
+
+.tabl{
+    width: 75%;
+    height: 100%;
+    float: left;
+    padding: 1%;
+    padding-top: 0;
+
+} 
+.tbimg{
+    width: 25%;
+    height: 100%;
+    float: left;
+    display: flex;
+    flex-direction: column;
+}
+
+.imagenesp {
+    width: 100%;
+    height: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#imgProducto {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+.cantp{
+    width: 100%;
+    height: 50%;
+}
+
+.fila-producto {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.fila-producto:hover {
+    background-color: #32877f;
+}
+
+.fila-producto.selected td {
+    background-color: #32877f !important;
+    color: white !important;
+    font-weight: 600;
+}

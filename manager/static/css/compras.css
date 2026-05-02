@@ -1,0 +1,164 @@
+.provselect{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.divbuttonscompras{
+    width: 100%;
+    display: flex;
+    justify-content: start;
+    align-items: center;
+    gap: 200px;
+}
+
+.tablaencompras{
+    width: 80%;
+    height: 100%;
+}
+.divbuttons3{
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Estilos generales del contenedor */
+.select-container {
+    position: relative;
+    width: 300px;
+}
+.select-container .dropdown-menu {
+    max-height: 300px; 
+    overflow: hidden;
+    border: 1px solid #ced4da;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.select-container .search-box {
+    border-bottom: 1px solid #dee2e6;
+}
+
+.select-container .options {
+    max-height: 200px; 
+    overflow-y: auto;
+}
+
+.select-container .options button {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+}
+
+.select-container .options button:hover,
+.select-container .options button:focus {
+    background-color: #f1f1f1;
+}
+
+.select-container button.btn::after {
+    content: "▼";
+    float: right;
+    font-size: 0.75rem;
+    margin-top: 0.4rem;
+    color: #888;
+}
+
+.custom-width {
+  width: 300px;
+}
+
+.total{
+    width: 20%;
+    height: 100%;
+    gap: 20px;
+    display: flex;
+    align-items: end;
+    flex-direction: column;
+}
+
+.totalcompleto {
+    width: 180px;
+    height: 120px;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    background: #f9f9f9;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 18px;
+    color: #333;
+    font-weight: bold;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease-in-out;
+}
+
+.totalcompleto:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+.productosstyle {
+    width: 100%;
+    height: 65px;
+    border: 1px solid #ccc;
+    margin-top: 10px;
+    border-radius: 5px;
+    background-color: #ffffff;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    padding: 5px 10px;
+}
+
+.productosstyle:hover {
+    background-color: #f0f8f8;
+}
+
+.producto-item.seleccionado {
+    background-color: #32877f !important;
+    color: white;
+}
+
+.producto-item.seleccionado small {
+    color: #e0e0e0;
+}
+
+.cantidad-input{
+    width: 100px;
+}
+
+/*------------------------------Estados -------------------------------*/
+
+.tablas-todo input[type="number"].cantidad-recepcion,
+.tablas-todo input[type="date"].fecha-vencimiento {
+    width: 150px;
+    padding: 6px 10px;
+    border: 1.5px solid #32877f;
+    border-radius: 6px;
+    background: #f9fafb;
+    color: #1f2937;
+    font-size: 1rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    box-shadow: 0 1px 2px rgba(22,163,74,0.04);
+}
+
+.tablas-todo input[type="number"].cantidad-recepcion:focus,
+.tablas-todo input[type="date"].fecha-vencimiento:focus {
+    border-color: #32877f;
+    box-shadow: 0 0 0 2px rgba(22,163,74,0.15);
+    background: #fff;
+}
+
+.tablas-todo input[type="number"].cantidad-recepcion:disabled {
+    background: #e5e7eb;
+    color: #9ca3af;
+    border-style: dashed;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.tablas-todo input[type="date"].fecha-vencimiento::-webkit-calendar-picker-indicator {
+    filter: invert(38%) sepia(77%) saturate(400%) hue-rotate(90deg);
+    cursor: pointer;
+}

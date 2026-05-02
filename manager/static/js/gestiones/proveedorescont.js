@@ -16,11 +16,12 @@ document.addEventListener('DOMContentLoaded', function() {
   const payload = {
     proveedor: document.getElementById("proveedoresid").value,
     nombre: document.getElementById("ncontacto").value,
-    Puesto: document.getElementById("puesto").value,
-    Telefono: fullPhone,
-    Email: document.getElementById("email").value,
-    Observaciones: document.getElementById("observacion").value,
+    puesto: document.getElementById("puesto").value,
+    telefono: fullPhone,
+    email: document.getElementById("email").value,
+    observaciones: document.getElementById("observacion").value,
   };
+  console.log("Payload a enviar:", payload);
 
   try {
     const response = await fetch("/manager/proveedores/contactos/post/", {

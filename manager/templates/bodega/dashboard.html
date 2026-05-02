@@ -1,0 +1,17 @@
+{% extends "menu.html" %}
+{% load static %}
+{% block title %}Bodega Dashboard{% endblock %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+{% endblock %}
+{% block titulo_content %}
+    <div class="tituloscont">
+        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+        <p class="header__logo">| Bodega Dashboard</p>
+    </div>
+{% endblock %}
+{% block main_content %}
+        {% comment %} {% block extra_js %}
+            <script src="{% static 'js/main.js' %}"></script>
+        {% endblock %} {% endcomment %}
+{% endblock %}

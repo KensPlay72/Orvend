@@ -1,0 +1,212 @@
+{% extends "menu.html" %}
+{% load static %}
+{% block title %}Cuentas x pagar{% endblock %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+{% endblock %}
+{% block titulo_content %}
+    <div class="tituloscont">
+        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+        <p class="header__logo">| Cuentas x pagar</p>
+    </div>
+{% endblock %}
+{% block main_content %}
+        <div class="modal fade"
+             id="modalregis"
+             tabindex="-1"
+             aria-labelledby="exampleModalCenterTitle"
+             aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLongTitle">Registrar Empleado</h5>
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="postregistro" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="mpagar">Monto a pagar</label>
+                                <input type="text"
+                                       name="mpagar"
+                                       id="mpagar"
+                                       class="form-control"
+                                       placeholder="Monto a pagar" readonly>
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="abono">Abono</label>
+                                <input type="text"
+                                    name="abono"
+                                    id="abono"
+                                    class="form-control"
+                                    placeholder="Abono"
+                                    oninput="validateNumber(this)" autocomplete="off">
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                <button type="submit" id="btnregis" class="btn btn classbotones">Guardar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+<div class="full2">
+    <div class="ventanas">
+        <div class="ventanasi">
+            <p class="ventana-titulo">Cuentas Pendientes</p>
+            <p class="ventana-numero">{{total_pendientes}}</p>
+        </div>
+        <div class="ventanasd">
+            <div class="capsula">
+                <i class='bx bx-time-five'></i>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="ventanas">
+        <div class="ventanasi">
+            <p class="ventana-titulo">Cuentas Parciales</p>
+            <p class="ventana-numero">{{total_parciales}}</p>
+        </div>
+        <div class="ventanasd">
+            <div class="capsula">
+                <i class='bx bx-loader-circle' ></i>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="ventanas">
+        <div class="ventanasi">
+            <p class="ventana-titulo">Cuentas Pagadas</p>
+            <p class="ventana-numero">{{total_pagadas}}</p>
+        </div>
+        <div class="ventanasd">
+            <div class="capsula">
+                <i class='bx bx-check-circle'></i>
+            </div>
+        </div>
+    </div>
+
+
+        <div class="ventanas">
+        <div class="ventanasi">
+            <p class="ventana-titulo">Cuentas Totales</p>
+            <p class="ventana-numero">{{cuentas_totales}}</p>
+        </div>
+        <div class="ventanasd">
+            <div class="capsula">
+                <i class='bx bx-layer'></i>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="tabla-container">
+    <table class="tablas-todo" id="tablaUsuarios">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Proveedor</th>
+                <th>CompraID</th>
+                <th>Total</th>
+                <th>Pendiente</th>
+                <th>F. Vencimiento</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cuenta in cuentas %}
+            <tr data-id="{{ cuenta.id }}">
+                <td>{{ cuenta.id }}</td>
+
+                <!-- PROVEEDOR -->
+                <td>{{ cuenta.proveedor.nombre_legal }}</td>
+
+                <!-- COMPRA -->
+                <td>
+                    <u style="color:blue;">
+                        <a href="{% url 'detalle_compra' cuenta.compra.id %}?page={{ page }}" style="color:blue;">
+                            {{ cuenta.compra.id }}
+                        </a>
+                    </u>
+                </td>
+
+                <!-- MONTOS -->
+                <td>L. {{ cuenta.monto_total|floatformat:2 }}</td>
+                <td>L. {{ cuenta.monto_pendiente|floatformat:2 }}</td>
+                <td>{{ cuenta.fecha_vencimiento|date:"d/m/Y" }}</td>
+
+                <!-- ESTADO -->
+                <td>
+                    {% if cuenta.estado == 1 %}
+                        <span class="estado-circulo estado-pendiente" title="Pendiente"></span>
+                    {% elif cuenta.estado == 2 %}
+                        <span class="estado-circulo estado-parcial" title="Parcial"></span>
+                    {% elif cuenta.estado == 3 %}
+                        <span class="estado-circulo estado-pagado" title="Pagado"></span>
+                    {% elif cuenta.estado == 4 %}
+                        <span class="estado-circulo estado-cancelado" title="Cancelado"></span>
+                    {% else %}
+                        <span class="estado-circulo estado-desconocido"></span>
+                    {% endif %}
+                </td>
+
+                <!-- ACCIONES -->
+                <td>
+                {% if cuenta.estado != 3 and perms.manager.add_registroabonos %}
+                <button type="button"
+                        class="btn btn-sm btn-success me-1 btn-edit"
+                        title="Pagar cuenta"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalregis"
+                        data-id="{{ cuenta.id }}"
+                        data-monto="{{ cuenta.monto_pendiente }}">
+                    <i class='bx bx-transfer-alt'></i>
+                </button>
+                {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="text-center">No hay cuentas registradas</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- PAGINACIÓN -->
+<nav class="d-flex justify-content-center mt-4">
+    <ul class="pagination">
+
+        <!-- Anterior -->
+        <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+            <a class="page-link" href="?page={{ page|add:"-1" }}&search={{ search }}">«</a>
+        </li>
+
+        <!-- Números -->
+        {% for p in page_range %}
+            <li class="page-item {% if p == page %}active{% endif %}">
+                <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
+            </li>
+        {% endfor %}
+
+        <!-- Siguiente -->
+        <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+            <a class="page-link" href="?page={{ page|add:"1" }}&search={{ search }}">»</a>
+        </li>
+
+    </ul>
+</nav>
+        <br>
+        <script type="module" src="{% static 'js/gestiones/cuentasxpagar.js' %}"></script>
+    {% endblock %}

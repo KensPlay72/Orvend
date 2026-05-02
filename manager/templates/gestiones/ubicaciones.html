@@ -1,0 +1,246 @@
+{% extends "menu.html" %}
+{% load static %}
+{% block title %}Ubicaciones{% endblock %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+{% endblock %}
+{% block titulo_content %}
+    <div class="tituloscont">
+        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+        <p class="header__logo">| Ubicaciones</p>
+    </div>
+{% endblock %}
+{% block main_content %}
+{% if perms.manager.add_ubicaciones %}
+<button id="toggleDropdownPanel" class="btn-dropdown" data-bs-toggle="modal"
+        data-bs-target="#modalregis">
+    <i class="bx bx-plus-circle"></i> Agregar
+</button>
+{% endif %}
+
+
+        <div class="modal fade"
+             id="modalregis"
+             tabindex="-1"
+             aria-labelledby="exampleModalCenterTitle"
+             aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLongTitle">Registrar Ubicación</h5>
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="postregistro" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="nubicacion">Nombre de la ubicación</label>
+                                <input type="text"
+                                       name="nubicacion"
+                                       id="nubicacion"
+                                       class="form-control"
+                                       placeholder="Nombre" required>
+                            </div>
+                            <br>
+                            <div class="form-group">
+                            <label for="tubicacion">Tipo de Ubicación</label>
+                            <select name="tubicacion" id="tubicacion" class="form-control">
+                                <option value="" selected disabled>Seleccione una Tipo</option>
+                                <option value="1">Bodega</option>
+                                <option value="2">Tienda</option>
+                            </select>
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="cubicacion">Codigo de la ubicación</label>
+                                <input type="text"
+                                       name="cubicacion"
+                                       id="cubicacion"
+                                       class="form-control"
+                                       placeholder="Codigo de la ubicación" required>
+                            </div>
+                            <br>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                <button type="submit" id="btnregis" class="btn btn classbotones">Guardar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade"
+             id="modalput"
+             tabindex="-1"
+             aria-labelledby="exampleModalCenterTitle"
+             aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLongTitle">Editar Ubicación</h5>
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="putregistro" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <input type="text" id="idedit" hidden>      
+                            <div class="form-group">
+                                <label for="nubicacionedit">Nombre de la ubicación</label>
+                                <input type="text"
+                                       name="nubicacionedit"
+                                       id="nubicacionedit"
+                                       class="form-control"
+                                       placeholder="Nombre" required>
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="tubicacionedit">Tipo de Ubicación</label>
+                                <select name="tubicacionedit" id="tubicacionedit" class="form-control">
+                                    <option value="" selected disabled>Seleccione una Tipo</option>
+                                    <option value="1">Bodega</option>
+                                    <option value="2">Tienda</option>
+                                </select>
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="cubicacionedit">Codigo de la ubicación</label>
+                                <input type="text"
+                                       name="cubicacionedit"
+                                       id="cubicacionedit"
+                                       class="form-control"
+                                       placeholder="Codigo de la ubicación" required>
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="isActiveedit" class="d-block">
+                                    Estado
+                                </label>
+                                <label class="d-flex align-items-center" for="isActiveedit">
+                                    <input type="checkbox" id="isActiveedit" name="isActiveedit" checked class="me-2">
+                                    <span id="activeTextedit" class="fw-bold text-success">Activo</span>
+                                </label>
+                            </div>
+                            <br>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                <button type="submit" id="btnput" class="btn btn classbotones">Guardar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<div class="tabla-container">
+    <table class="tablas-todo" id="tablacont">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Nombre</th>
+                <th>Tipo</th>
+                <th>Código</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for ubicacion in page_obj %}
+            <tr data-id="{{ ubicacion.id }}">
+
+                <td>{{ ubicacion.id }}</td>
+                <td>{{ ubicacion.nombre }}</td>
+
+                <td>
+                    {% if ubicacion.tipo == 1 or ubicacion.tipo == '1' %}
+                        Bodega
+                    {% elif ubicacion.tipo == 2 or ubicacion.tipo == '2' %}
+                        Tienda
+                    {% else %}
+                        Desconocido
+                    {% endif %}
+                </td>
+
+                <td>{{ ubicacion.codigo }}</td>
+
+                <td>
+                    {% if ubicacion.is_active %}
+                        <span class="estado-circulo estado-activo"></span>
+                    {% else %}
+                        <span class="estado-circulo estado-inactivo"></span>
+                    {% endif %}
+                </td>
+
+                <td>
+                    {% if not ubicacion.is_delete %}
+
+                    <button type="button"
+                            class="btn btn-sm btn-primary btn-edit"
+                            data-id="{{ ubicacion.id }}"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalput">
+                        <i class='bx bx-edit'></i>
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-sm btn-danger btn-delete"
+                            data-id="{{ ubicacion.id }}">
+                        <i class='bx bx-trash'></i>
+                    </button>
+
+                    {% endif %}
+                </td>
+
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<nav class="d-flex justify-content-center mt-4">
+    <ul class="pagination">
+
+        <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+            {% if page_obj.has_previous %}
+                <a class="page-link"
+                   href="?page={{ page_obj.previous_page_number }}&search={{ search }}">
+                    «
+                </a>
+            {% else %}
+                <span class="page-link">«</span>
+            {% endif %}
+        </li>
+
+        {% for p in page_obj.paginator.page_range %}
+            <li class="page-item {% if p == page_obj.number %}active{% endif %}">
+                <a class="page-link"
+                   href="?page={{ p }}&search={{ search }}">
+                    {{ p }}
+                </a>
+            </li>
+        {% endfor %}
+
+        <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+            {% if page_obj.has_next %}
+                <a class="page-link"
+                   href="?page={{ page_obj.next_page_number }}&search={{ search }}">
+                    »
+                </a>
+            {% else %}
+                <span class="page-link">»</span>
+            {% endif %}
+        </li>
+
+    </ul>
+</nav>
+        <br>
+            <script type="module" src="{% static 'js/gestiones/ubicaciones.js' %}"></script>
+            <script type="module" src="{% static 'js/chektext.js' %}"></script>
+    {% endblock %}

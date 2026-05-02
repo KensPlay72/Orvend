@@ -99,6 +99,13 @@
 
                             <div class="nav__items">
                                 <h3 class="nav__subtitle">Gestiones</h3>
+                                    {% if perms.manager.view_inventarios %}
+                                    <a href="{% url 'inventario' %}"
+                                    class="nav__link {% if request.path == '/manager/inventario/' %}active{% endif %}">
+                                        <i class='bx bx-list-ul nav__icon'></i>
+                                        <span class="nav__name">Inventario</span>
+                                    </a>
+                                    {% endif %}
                                     {% if perms.manager.view_productos %}
                                     <a href="{% url 'productos' %}"
                                     class="nav__link {% if request.path == '/manager/productos/' %}active{% endif %}">
@@ -134,8 +141,48 @@
                                         <span class="nav__name">Categorías</span>
                                     </a>
                                     {% endif %}
+                                    {% if perms.manager.view_compras %}
+                                    <a href="{% url 'compras' %}"
+                                    class="nav__link {% if request.path == '/manager/compras/' %}active{% endif %}">
+                                        <i class='bx bx-cart-alt nav__icon'></i>
+                                        <span class="nav__name">Compras</span>
+                                    </a>
+                                    {% endif %}
+                                    {% if perms.manager.view_ubicaciones %}
+                                    <a href="{% url 'ubicaciones' %}"
+                                    class="nav__link {% if request.path == '/manager/ubicaciones/' %}active{% endif %}">
+                                        <i class='bx bx-map nav__icon'></i>
+                                        <span class="nav__name">Ubicaciones</span>
+                                    </a>
+                                    {% endif %}
+                                    {% if perms.manager.view_cuentasporpagar %}
+                                    <a href="{% url 'cppagar' %}"
+                                    class="nav__link {% if request.path == '/manager/cppagar/' %}active{% endif %}">
+                                        <i class='bx bx-money nav__icon'></i>
+                                        <span class="nav__name">Cuentas x Pagar</span>
+                                    </a>
+                                    {% endif %}
+                                    {% if perms.manager.view_clientes %}
+                                    <a href="{% url 'clientes' %}"
+                                    class="nav__link {% if request.path == '/manager/clientes/' %}active{% endif %}">
+                                        <i class='bx bx-group nav__icon'></i>
+                                        <span class="nav__name">Clientes</span>
+                                    </a>
+                                    {% endif %}
                             </div>
-
+                            <div class="nav__items">
+                                <h3 class="nav__subtitle">Bodega</h3>
+                                <a href="{% url 'dashboard_bodega' %}"
+                                class="nav__link {% if request.path == '/manager/bodega/dashboard/' %}active{% endif %}">
+                                    <i class='bx bx-home nav__icon'></i>
+                                    <span class="nav__name">Dashboard</span>
+                                </a>
+                                <a href="{% url 'recepcion_inventario' %}"
+                                class="nav__link {% if request.path == '/manager/bodega/recepcion_inventario/' %}active{% endif %}">                                  
+                                    <i class='bx bx-package nav__icon'></i>
+                                    <span class="nav__name">Recepción</span>
+                                </a>
+                            </div>
 
                             {% comment %} <div class="nav__items">
                                 <h3 class="nav__subtitle">GESTIONES</h3>

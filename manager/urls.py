@@ -52,4 +52,44 @@ urlpatterns = [
     path("productos/put/<int:id>/", views.put_producto, name="put_producto"),
     path("productos/delete/<int:id>/", views.delete_producto, name="delete_producto"),
     path("productos/search/", views.search_productos, name="search_productos"),
+
+    path("api/proxy/productos/", views.api_productos, name="api_productos"),
+
+
+    path("ubicaciones/", views.ubicaciones_view, name="ubicaciones"),
+    path("ubicaciones/post/", views.post_ubicaciones, name="post_ubicaciones"),
+    path("ubicaciones/get/<int:id>/", views.get_ubicaciones, name="get_ubicaciones"),
+    path("ubicaciones/put/<int:id>/", views.put_ubicaciones, name="put_ubicaciones"),
+    path("ubicaciones/delete/<int:id>/", views.delete_ubicaciones, name="delete_ubicaciones"),
+    path("ubicaciones/search/", views.search_ubicaciones, name="search_ubicaciones"),
+
+    path("compras/", views.compras_view, name="compras"),
+    path("compras/realizarcompra", views.realizarcompra_view, name="realizarcompra"),
+    path("compras/realizarcompra/post/", views.post_compra, name="post_compra"),
+    path("compras/detallecompra/<int:id>/", views.detalle_compra_view, name="detalle_compra"),
+    path("compras/pdf/<int:id>/", views.proxy_compras_pdf, name="compras_pdf"),
+    path("compras/edit/<int:id>/", views.editar_compra, name="editar_compra"),
+    path("compras/put/<int:id>/", views.editar_compra_put, name="editar_compra_put"),
+
+
+    path("cppagar/", views.cuentas_por_pagar_view, name="cppagar"),
+    path('cppagar/post/<int:id>/', views.registrar_abono, name="cppagar_abono"),
+
+
+    path("clientes/", views.clientes_view, name="clientes"),
+    path("clientes/post/", views.post_clientes, name="post_cliente"),
+    path("clientes/get/<int:id>/", views.get_cliente, name="get_cliente"),
+    path("clientes/put/<int:id>/", views.put_cliente, name="put_cliente"),
+
+
+    path('bodega/dashboard/', views.dashboard_bodega, name="dashboard_bodega"),
+    path('bodega/recepcion_inventario/', views.recepcion_inventario_view, name="recepcion_inventario"),
+    path('bodega/autorizar/<int:id>/', views.autorizar_compra_view, name='autorizar_compra'),
+    path('bodega/detalleinventario/post/', views.post_autorizar_inventario, name='post_autorizar_inventario'),
+    path('bodega/devocompras/', views.post_devolucion_compra, name='post_devolucion_compra'),
+
+
+    path('inventario/', views.inventario_view, name='inventario'),
+    path('inventario/<int:id>/', views.get_inventario_producto, name='get_inventario_producto'),
+
 ] 

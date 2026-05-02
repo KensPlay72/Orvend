@@ -1,0 +1,162 @@
+{% extends "menu.html" %}
+{% load static %}
+{% block title %}Detalle Compra{% endblock %}
+{% block extra_css %}
+        <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+{% endblock %}
+{% block titulo_content %}
+    <div class="tituloscont">
+        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+        <p class="header__logo">| Detalle Compra</p>
+    </div>
+{% endblock %}
+{% block main_content %}
+<br>
+        <div class="divbuttonscompras">
+            <br>
+            <div class="proveedoreselect">
+                <p style="margin-right: 5px;">Recepcion:</p>
+                <p><b>{{compra.ubicacion}}</b></p>
+            </div>
+            <div class="proveedoreselect">
+                <p style="margin-right: 5px;">Proveedor:</p>
+                <p><b>{{compra.proveedorNombre}}</b></p>
+            </div>
+            <div class="proveedoreselect">
+                <p style="margin-right: 5px;">Tipo de Compra:</p>
+                <p><b>{{compra.tipoCompra}}</b></p>
+            </div>
+        </div>
+        <br>
+        <div class="divbuttons3">
+            <div>
+                <table class="tablas-todo" id="tabladecom">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Nombre</th>
+                            <th>Presentación</th>
+                            <th>SKU</th>
+                            <th>Precio</th>
+                            <th>Cantidad</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for detalle in compra.detalles %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ detalle.productoNombre }}</td>
+                            <td>{{detalle.presentacion}}</td> 
+                            <td>{{detalle.sku}}</td>
+                            <td>L. {{ detalle.precioCompra }}</td>
+                            <td>{{ detalle.cantidad }}</td>
+                            <td>L. {{ detalle.total|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <nav id="paginadordecom" class="d-flex justify-content-center mt-4"></nav>
+                <br>
+            </div>
+            <div class="total1">
+                <div class="totalcompleto" id="total-compra">Total: L. {{compra.total}}</div>
+                <br>
+                <div class="totalcompleto" id="cantidad-productos">Total de productos: {{compra.totalProductos}}</div>
+            </div>
+        </div>
+
+        <script>
+document.addEventListener("DOMContentLoaded", () => {
+    const filasPorPagina = 10;
+    let paginaActual = parseInt(new URLSearchParams(window.location.search).get("page")) || 1;
+
+    function obtenerFilas() {
+        return Array.from(document.querySelectorAll("#tabladecom tbody tr"));
+    }
+
+    function mostrarPagina(pagina) {
+        const filas = obtenerFilas();
+        const totalPaginas = Math.ceil(filas.length / filasPorPagina);
+        if (pagina < 1) pagina = 1;
+        if (pagina > totalPaginas) pagina = totalPaginas || 1;
+
+        const inicio = (pagina - 1) * filasPorPagina;
+        const fin = inicio + filasPorPagina;
+
+        filas.forEach(fila => fila.style.display = "none");
+        filas.slice(inicio, fin).forEach(fila => fila.style.display = "");
+
+        paginaActual = pagina;
+        renderPaginador(filas.length, pagina);
+        actualizarUrl();
+    }
+
+    function renderPaginador(totalFilas, pagina) {
+        const totalPaginas = Math.ceil(totalFilas / filasPorPagina);
+        const paginador = document.getElementById("paginadordecom");
+        paginador.innerHTML = "";
+
+        if (totalPaginas <= 1) return;
+
+        const ul = document.createElement("ul");
+        ul.className = "pagination";
+
+        // Botón anterior
+        const liPrev = document.createElement("li");
+        liPrev.className = `page-item ${pagina === 1 ? "disabled" : ""}`;
+        liPrev.innerHTML = `<a class="page-link" href="?page=${pagina - 1}">«</a>`;
+        ul.appendChild(liPrev);
+
+        // Rango dinámico
+        let start = Math.max(1, pagina - 2);
+        let end = Math.min(totalPaginas, pagina + 2);
+
+        if (end - start < 4) {
+            if (start === 1) end = Math.min(totalPaginas, start + 4);
+            else if (end === totalPaginas) start = Math.max(1, end - 4);
+        }
+
+        for (let i = start; i <= end; i++) {
+            const li = document.createElement("li");
+            li.className = `page-item ${i === pagina ? "active" : ""}`;
+            li.innerHTML = `<a class="page-link" href="?page=${i}">${i}</a>`;
+            ul.appendChild(li);
+        }
+
+        // Botón siguiente
+        const liNext = document.createElement("li");
+        liNext.className = `page-item ${pagina === totalPaginas ? "disabled" : ""}`;
+        liNext.innerHTML = `<a class="page-link" href="?page=${pagina + 1}">»</a>`;
+        ul.appendChild(liNext);
+
+        paginador.appendChild(ul);
+
+        // Interceptar clicks
+        ul.querySelectorAll("a").forEach(a => {
+            a.addEventListener("click", e => {
+                e.preventDefault();
+                const newPage = parseInt(new URL(a.href).searchParams.get("page"));
+                mostrarPagina(newPage);
+            });
+        });
+    }
+
+    function actualizarUrl() {
+        const url = new URL(window.location.href);
+        url.searchParams.set("page", paginaActual);
+        window.history.replaceState({}, "", url);
+    }
+
+    // Exponer funciones globalmente por si las necesitas
+    window.mostrarPaginaDecom = mostrarPagina;
+    window.paginaActualDecom = paginaActual;
+
+    // Inicializar
+    mostrarPagina(paginaActual);
+});
+</script>
+
+{% endblock %}

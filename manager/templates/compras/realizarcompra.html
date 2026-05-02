@@ -1,0 +1,187 @@
+{% extends "menu.html" %}
+{% load static %}
+{% block title %}Realizar Compra{% endblock %}
+{% block extra_css %}
+        <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+{% endblock %}
+
+{% block titulo_content %}
+    <div class="tituloscont">
+        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+        <p class="header__logo">| Realizar Compra</p>
+    </div>
+{% endblock %}
+{% block main_content %}
+        <div class="divbuttons2">
+            <button id="toggleDropdownPanel" class="btn-dropdown" data-bs-toggle="modal"
+                data-bs-target="#modalregis">
+                <i class="bx bx-cart-add"></i> Agregar Producto
+            </button>
+            <div class="provselect">
+                <p>Recepcion: </p>
+                <div class="form-group mb-3">
+                    <input type="hidden" name="recepcionid" id="recepcionid" required>
+
+                    <div class="dropdown select-container w-100">
+                        <button type="button" class="btn w-100 text-start form-control">
+                            Escriba para buscar...
+                        </button>
+
+                        <div class="dropdown-menu w-100 p-0" style="max-height: 400px; overflow-y: auto;">
+                            <div class="search-box p-2" style="position: sticky; top: 0; background: #fff; z-index: 1; border-bottom: 1px solid #dee2e6;">
+                                <input type="text" class="form-control" placeholder="Buscar proveedor...">
+                            </div>
+
+                            <div class="options list-group list-group-flush" style="max-height: 350px; overflow-y: auto;">
+                                <!-- Se llenará por JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="provselect">
+                <p>Proveedor: </p>
+                <div class="form-group mb-3">
+                    <input type="hidden" name="proveedoresid" id="proveedoresid" required>
+
+                    <div class="dropdown select-container w-100">
+                        <button type="button" class="btn w-100 text-start form-control">
+                            Escriba para buscar...
+                        </button>
+
+                        <div class="dropdown-menu w-100 p-0" style="max-height: 400px; overflow-y: auto;">
+                            <div class="search-box p-2" style="position: sticky; top: 0; background: #fff; z-index: 1; border-bottom: 1px solid #dee2e6;">
+                                <input type="text" class="form-control" placeholder="Buscar proveedor...">
+                            </div>
+
+                            <div class="options list-group list-group-flush" style="max-height: 350px; overflow-y: auto;">
+                                <!-- Se llenará por JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button id="toggleDropdownPanel32" class="btn-dropdown">
+                <i class="bx bx-check-circle"></i> Completar compra
+            </button>
+        </div>
+
+<!-- Modal Productos -->
+<div class="modal fade" id="modalregis" tabindex="-1" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 600px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Agregar Productos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Buscador -->
+                <input type="text" class="form-control mb-3" id="buscadorProductos" placeholder="Buscar por nombre o SKU...">
+
+                <!-- Lista dinámica de productos -->
+                <div id="contenedorProductosAjax" style="max-height: 400px; overflow-y: auto;">
+                    <div id="loadingProductos" class="text-center py-4">Cargando productos...</div>
+                </div>
+
+                <!-- Paginación dinámica -->
+                <nav class="d-flex justify-content-center mt-3">
+                    <ul class="pagination" id="paginacionProductos">
+                        <!-- Se rellena por JS -->
+                    </ul>
+                </nav>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn classbotones" id="guardarProductosSeleccionados">Agregar Selección</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<div class="modal fade" id="completarcompra" tabindex="-1" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Completar Compra</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body">
+                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                <div class="form-group">
+                    <label for="tcompra">Tipo de compra</label>
+                    <select name="tcompra" id="tcompra" class="form-control">
+                        <option value="" disabled selected>Seleccione un Estado</option>
+                        <option value="1">Contado</option>
+                        <option value="2">Credito</option>
+                    </select>
+                </div>
+                <br>
+                <div class="form-group">
+                    <label for="observaciones">Observaciones</label>
+                     <textarea name="observaciones" id="observaciones" rows="2" maxlength="100" required class="form-control" placeholder="Descripción"></textarea>
+                </div>
+                <br>
+                <div class="tabla-container">
+                    <table class="tablas-todo" id="tablacomprar">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Nombre</th>
+                                <th>Presentación</th>
+                                <th>SKU</th>
+                                <th>Cantidad</th>
+                                <th>Precio</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaDetallesModal">
+                            <!-- Filas dinámicas aquí -->
+                        </tbody>
+                    </table>
+                </div>
+                <nav id="paginadorcomprar" class="d-flex justify-content-center mt-4"></nav>
+                <br>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn classbotones" id="enviarCompraBtn">Registrar compra</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+        <br>
+        <div class="divbuttons3">
+            <div class="tablaencompras">
+                <table class="tablas-todo" id="tablacont">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Nombre</th>
+                            <th>Presentación</th>
+                            <th>SKU</th>
+                            <th>Precio</th>
+                            <th>Cantidad</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <nav id="paginadorProv" class="d-flex justify-content-center mt-4"></nav>
+                <br>
+            </div>
+            <div class="total">
+                <div class="totalcompleto" id="total-compra">Total: L. 0.00</div>
+                <div class="totalcompleto" id="cantidad-productos">Total de productos: 0</div>
+                <div class="totalcompleto" id="contador-productos">Productos: 0</div>
+            </div>
+        </div>
+
+            <script type="module" src="{% static 'js/compras/realcompra.js' %}"></script>
+    {% endblock %}

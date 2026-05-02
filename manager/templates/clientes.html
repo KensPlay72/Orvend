@@ -1,0 +1,362 @@
+{% extends "menu.html" %}
+{% load static %}
+{% block title %}Clientes{% endblock %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+{% endblock %}
+{% block titulo_content %}
+    <div class="tituloscont">
+        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+        <p class="header__logo">| Clientes</p>
+    </div>
+{% endblock %}
+{% block main_content %}
+<div class="full2">
+    <div class="ventanas">
+        <div class="ventanasi">
+            <p class="ventana-titulo">Clientes Totales</p>
+            <p class="ventana-numero">{{total_clientes}}</p>
+        </div>
+        <div class="ventanasd">
+            <div class="capsula">
+                <i class='bx bx-user'></i>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="ventanas">
+        <div class="ventanasi">
+            <p class="ventana-titulo">Clientes Activos</p>
+            <p class="ventana-numero">{{clientes_activos}}</p>
+        </div>
+        <div class="ventanasd">
+            <div class="capsula">
+                <i class='bx bx-check-circle'></i>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="ventanas">
+        <div class="ventanasi">
+            <p class="ventana-titulo">Clientes Inactivos</p>
+            <p class="ventana-numero">{{clientes_inactivos}}</p>
+        </div>
+        <div class="ventanasd">
+            <div class="capsula">
+                <i class='bx bx-x-circle' style="color: #dc3545;"></i>
+            </div>
+        </div>
+    </div>
+        <button id="toggleDropdownPanel" class="btn-dropdown" data-bs-toggle="modal"
+            data-bs-target="#modalregis">
+            <i class="bx bx-plus-circle"></i> Agregar
+        </button>
+</div>
+
+        {% comment %} MODAL REGISTRAR {% endcomment %}
+        <div class="modal fade"
+             id="modalregis"
+             tabindex="-1"
+             aria-labelledby="exampleModalCenterTitle"
+             aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLongTitle">Registrar Cliente</h5>
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="postregis" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="horizontales">
+                                <div class="form-group">
+                                    <label for="pnombre">Primero Nombre</label>
+                                    <input type="text"
+                                        name="pnombre"
+                                        id="pnombre"
+                                        class="form-control"
+                                        placeholder="Nombre">
+                                </div>
+                                <div class="form-group">
+                                    <label for="snombre">Segundo Nombre</label>
+                                    <input type="text"
+                                        name="snombre"
+                                        id="snombre"
+                                        class="form-control"
+                                        placeholder="Apellido">
+                                </div>
+                            </div>
+                            <br>
+                            <div class="horizontales">
+                                <div class="form-group">
+                                    <label for="papellido">Primero Apellido</label>
+                                    <input type="text"
+                                        name="papellido"
+                                        id="papellido"
+                                        class="form-control"
+                                        placeholder="Apellido">
+                                </div>
+                                <div class="form-group">
+                                    <label for="sapellido">Segundo Apellido</label>
+                                    <input type="text"
+                                        name="sapellido"
+                                        id="sapellido"
+                                        class="form-control"
+                                        placeholder="Apellido">
+                                </div>
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="nempresa">Nombre de la Empresa</label>
+                                <input type="text"
+                                    name="nempresa"
+                                    id="nempresa"
+                                    class="form-control"
+                                    placeholder="Nombre de la Empresa">
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label>DNI/RTN</label>
+                                <input type="text"
+                                       name="dni"
+                                       id="dni"
+                                       class="form-control"
+                                       placeholder="DNI/RTN"
+                                       oninput="validateNumber(this)"
+                                       maxlength="14">
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email"
+                                       name="email"
+                                       id="email"
+                                       class="form-control"
+                                       placeholder="Email">
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="telefono">Número de Teléfono</label>
+                                <div class="d-flex">
+                                    <!-- Select para código de país -->
+                                    <select id="countryCodephone" class="form-control me-2" style="max-width: 120px;">
+                                    <option value="" selected disabled>+Cod</option>
+                                    </select>
+                                    
+                                    <!-- Input para número -->
+                                    <input type="text"
+                                        name="telefono"
+                                        id="telefono"
+                                        class="form-control"
+                                        placeholder="Número de teléfono"
+                                        oninput="validateNumber(this)"
+                                        maxlength="10">
+                                </div>
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="direccion">Dirección</label>
+                                <textarea name="direccion" id="direccion" rows="2" maxlength="100" class="form-control" placeholder="Dirección"></textarea>
+                            </div>
+                            <br>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                <button type="button" id="btnregis" class="btn classbotones">
+                                    Guardar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% comment %} MODAL EDITAR {% endcomment %}
+        <div class="modal fade"
+             id="modalput"
+             tabindex="-1"
+             aria-labelledby="exampleModalCenterTitle"
+             aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLongTitle">Editar Empleado</h5>
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="putclientes" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <input type="text" id="idedit" hidden>
+                            <div class="horizontales">
+                                <div class="form-group">
+                                    <label for="pnombreedit">Primero Nombre</label>
+                                    <input type="text"
+                                        name="pnombreedit"
+                                        id="pnombreedit"
+                                        class="form-control"
+                                        placeholder="Nombre">
+                                </div>
+                                <div class="form-group">
+                                    <label for="snombreedit">Segundo Nombre</label>
+                                    <input type="text"
+                                        name="snombreedit"
+                                        id="snombreedit"
+                                        class="form-control"
+                                        placeholder="Apellido">
+                                </div>
+                            </div>
+                            <br>
+                            <div class="horizontales">
+                                <div class="form-group">
+                                    <label for="papellidoedit">Primero Apellido</label>
+                                    <input type="text"
+                                        name="papellidoedit"
+                                        id="papellidoedit"
+                                        class="form-control"
+                                        placeholder="Apellido">
+                                </div>
+                                <div class="form-group">
+                                    <label for="sapellidoedit">Segundo Apellido</label>
+                                    <input type="text"
+                                        name="sapellidoedit"
+                                        id="sapellidoedit"
+                                        class="form-control"
+                                        placeholder="Apellido">
+                                </div>
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="nempresaedit">Nombre de la Empresa</label>
+                                <input type="text"
+                                    name="nempresaedit"
+                                    id="nempresaedit"
+                                    class="form-control"
+                                    placeholder="Nombre de la Empresa">
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="dniedit">DNI/RTN</label>
+                                <input type="text"
+                                       name="dniedit"
+                                       id="dniedit"
+                                       class="form-control"
+                                       placeholder="DNI/RTN"
+                                       oninput="validateNumber(this)"
+                                       maxlength="14">
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="emailedit">Email</label>
+                                <input type="email"
+                                       name="emailedit"
+                                       id="emailedit"
+                                       class="form-control"
+                                       placeholder="Email">
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="telefonoedit">Número de Teléfono</label>
+                                <div class="d-flex">
+                                    <!-- Select para código de país -->
+                                    <select id="countryCodephoneedit" class="form-control me-2" style="max-width: 120px;">
+                                    <option value="" selected disabled>+Cod</option>
+                                    </select>
+                                    
+                                    <!-- Input para número -->
+                                    <input type="text"
+                                        name="telefonoedit"
+                                        id="telefonoedit"
+                                        class="form-control"
+                                        placeholder="Número de teléfono"
+                                        oninput="validateNumber(this)"
+                                        maxlength="10">
+                                </div>
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="direccionedit">Dirección</label>
+                                <textarea name="direccionedit" id="direccionedit" rows="2" maxlength="100" class="form-control" required placeholder="Dirección"></textarea>
+                            </div>
+                            <br>
+                            <div class="form-group">
+                                <label for="isActiveedit" class="d-block">
+                                    Estado
+                                </label>
+                                <label class="d-flex align-items-center" for="isActiveedit">
+                                    <input type="checkbox" id="isActiveedit" name="isActiveedit" checked class="me-2">
+                                    <span id="activeTextedit" class="fw-bold text-success">Activo</span>
+                                </label>
+                            </div>
+                            <br>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                <button type="button" id="btnput" class="btn classbotones">Guardar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<div class="tabla-container">
+    <table class="tablas-todo" id="tablaClientes">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>DNI/RTN</th>
+                <th>Nombre</th>
+                <th>Correo</th>
+                <th>Empresa</th>
+                <th>Teléfono</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for cliente in clientes %}
+            <tr data-id="{{ cliente.id }}">
+                <td>{{ cliente.id }}</td>
+                <td>{{ cliente.dni }}</td>
+                <td>{{ cliente.nombre_completo|default:"--" }}</td>
+                <td>{{ cliente.email|default:"--" }}</td>
+                <td>{{ cliente.empresa|default:"--" }}</td>
+                <td>{{ cliente.telefono|default:"--" }}</td>
+
+                <td>
+                    {% if cliente.is_active %}
+                        <span class="estado-circulo estado-activo" title="Activo"></span>
+                    {% else %}
+                        <span class="estado-circulo estado-inactivo" title="Inactivo"></span>
+                    {% endif %}
+                </td>
+
+                <td>
+                    {% if not cliente.is_delete %}
+                    <button type="button"
+                            class="btn btn-sm btn-primary me-1 btn-edit"
+                            title="Editar"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalput"
+                            data-id="{{ cliente.id }}">
+                        <i class='bx bx-edit'></i>
+                    </button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+        <br>
+        <script src="{% static 'js/clientes.js' %}"></script>
+        <script src="{% static 'js/chektext.js' %}"></script>
+    {% endblock %}

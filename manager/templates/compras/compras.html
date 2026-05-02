@@ -1,0 +1,184 @@
+{% extends "menu.html" %}
+{% load static %}
+{% block title %}Compras{% endblock %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+{% endblock %}
+{% block search_content %}
+    <div class="header__search">
+        <input type="search"
+               placeholder="Buscar"
+               class="header__input"
+               autocomplete="off" />
+        <i class="bx bx-search header__icon"></i>
+    </div>
+{% endblock %}
+{% block titulo_content %}
+    <div class="tituloscont">
+        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+        <p class="header__logo">| Compras</p>
+    </div>
+{% endblock %}
+{% block main_content %}
+<div class="full2">
+    <div class="ventanas">
+        <div class="ventanasi">
+            <p class="ventana-titulo">Total de Compras</p>
+            <p class="ventana-numero">{{total_compras}}</p>
+        </div>
+        <div class="ventanasd">
+            <div class="capsula">
+                <i class='bx bx-package'></i>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="ventanas">
+        <div class="ventanasi">
+            <p class="ventana-titulo">Compras Completadas</p>
+            <p class="ventana-numero">{{compras_completadas}}</p>
+        </div>
+        <div class="ventanasd">
+            <div class="capsula">
+                <i class='bx bx-check-circle'></i>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="ventanas">
+        <div class="ventanasi">
+            <p class="ventana-titulo">Compras Pendientes</p>
+            <p class="ventana-numero">{{compras_pendientes}}</p>
+        </div>
+        <div class="ventanasd">
+            <div class="capsula">
+                <i class='bx bx-loader-circle' ></i>
+            </div>
+        </div>
+    </div>
+
+
+<button id="toggleDropdownPanel" class="btn-dropdown" onclick="location.href='{% url 'realizarcompra' %}'">
+    <i class="bx bx-plus-circle"></i> Realizar Compra
+</button>
+</div>
+
+
+        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
+
+<div class="tabla-container">
+    <table class="tablas-todo" id="tablacont">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Proveedor</th>
+                <th>Tipo Compra</th>
+                <th>Total</th>
+                <th>F. Compra</th>
+                <th>F. Vencimiento</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for compra in page_obj %}
+            <tr data-id="{{ compra.id }}">
+
+                <td>{{ compra.id }}</td>
+
+                <td>{{ compra.proveedor.nombre_comercial }}</td>
+
+                <td>{{ compra.get_tipo_compra_display }}</td>
+
+                <td>L. {{ compra.total }}</td>
+
+                <td>{{ compra.fecha_compra|date:"d/m/Y H:i" }}</td>
+
+                <td>
+                    {% if compra.fecha_vencimiento %}
+                        {{ compra.fecha_vencimiento|date:"d/m/Y" }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+
+                <td>
+                    {% if compra.estado == "Pendiente" %}
+                        <span class="estado-circulo estado-pendiente" title="Pendiente"></span>
+                    {% elif compra.estado == "Completado" %}
+                        <span class="estado-circulo estado-completado" title="Completado"></span>
+                    {% elif compra.estado == "Cancelada" %}
+                        <span class="estado-circulo estado-cancelada" title="Cancelada"></span>
+                    {% else %}
+                        <span class="estado-circulo estado-desconocido"></span>
+                    {% endif %}
+                </td>
+
+                <td>
+                    {% if compra.estado != "Completado" %}
+
+                        {% if perms.manager.change_compras %}
+                        <button type="button"
+                                class="btn btn-sm btn-primary btn-edit"
+                                data-id="{{ compra.id }}">
+                            <i class='bx bx-edit'></i>
+                        </button>
+                        {% endif %}
+
+                        <button type="button"
+                                class="btn btn-sm btn-danger btn-pdf"
+                                data-id="{{ compra.id }}">
+                            <i class='bx bxs-file-pdf'></i>
+                        </button>
+
+                    {% endif %}
+                </td>
+
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<nav class="d-flex justify-content-center mt-4">
+    <ul class="pagination">
+
+        <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+            {% if page_obj.has_previous %}
+                <a class="page-link"
+                   href="?page={{ page_obj.previous_page_number }}&search={{ search }}">
+                    «
+                </a>
+            {% else %}
+                <span class="page-link">«</span>
+            {% endif %}
+        </li>
+
+        {% for p in page_obj.paginator.page_range %}
+            <li class="page-item {% if p == page_obj.number %}active{% endif %}">
+                <a class="page-link"
+                   href="?page={{ p }}&search={{ search }}">
+                    {{ p }}
+                </a>
+            </li>
+        {% endfor %}
+
+        <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+            {% if page_obj.has_next %}
+                <a class="page-link"
+                   href="?page={{ page_obj.next_page_number }}&search={{ search }}">
+                    »
+                </a>
+            {% else %}
+                <span class="page-link">»</span>
+            {% endif %}
+        </li>
+
+    </ul>
+</nav>
+        <br>
+        <script type="module" src="{% static 'js/compras/compras.js' %}"></script>
+{% endblock %}

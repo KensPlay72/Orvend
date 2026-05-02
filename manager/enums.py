@@ -10,6 +10,7 @@ class EstadoCuenta(models.IntegerChoices):
     PENDIENTE = 1, "Pendiente"
     PARCIAL = 2, "Parcial"
     PAGADO = 3, "Pagado"
+    CANCELADO = 4, "Cancelado"
 
 class MotivoDevolucion(models.IntegerChoices):
     PRODUCTO_DANADO = 1, "Producto dañado"

@@ -1,0 +1,193 @@
+{% extends "menu.html" %}
+{% load static %}
+{% block title %}Confirmar Inventario{% endblock %}
+{% block extra_css %}
+        <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+{% endblock %}
+{% block titulo_content %}
+    <div class="tituloscont">
+        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+        <p class="header__logo">| Confirmar Inventario</p>
+    </div>
+{% endblock %}
+{% block main_content %}
+        <div class="divbuttons2">
+            <button id="toggleDropdownPanel" class="btn-dropdown" onclick="location.href='{% url 'recepcion_inventario' %}'">
+                <i class="bx bx-arrow-back"></i> Regresar
+            </button>
+            <div style="display: flex; gap: 10px;">
+                <button id="devoluciones" class="btn-dropdown" 
+                data-bs-toggle="modal"  data-bs-target="#devo">
+                    <i class="bx bx-transfer-alt"></i>Devoluciones
+                </button>
+                <button id="toggleDropdownPanel32" class="btn-dropdown">
+                    <i class="bx bx-check-circle"></i> Confirmar Entrada
+                </button>
+            </div>
+        </div>
+        <br>
+
+        <!-- Modal Confirmación de Autorización -->
+<div class="modal fade" id="completarcompra" tabindex="-1" aria-labelledby="completarCompraLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      
+      <div class="modal-header">
+        <h5 class="modal-title" id="completarCompraLabel">Confirmar Autorización de Productos</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="tabla-container">
+        <table class="tablas-todo" id="tablacomprar">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>ProductoId</th>
+                    <th>Nombre</th>
+                    <th>Presentación</th>
+                    <th>SKU</th>
+                    <th>Compra / Recibido</th>
+                    <th>F. Vencimiento</th>
+                </tr>
+            </thead>
+            <tbody id="tablaDetallesModal">
+                <!-- Filas dinámicas aquí -->
+            </tbody>
+        </table>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn classbotones" id="enviarAutorizacionBtn">Autorizar</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<div class="modal fade" id="devo" tabindex="-1" aria-labelledby="devoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      
+      <div class="modal-header">
+        <h5 class="modal-title" id="devoLabel">Solicitud de Devolución</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Observaciones -->
+        <div class="mb-3">
+          <label for="observaciones" class="form-label">Observaciones</label>
+          <textarea id="observaciones" class="form-control" rows="2" placeholder="Escribe aquí las observaciones..."></textarea>
+        </div>
+        <br>
+
+        <!-- Tabla de productos a devolver -->
+        <table class="tablas-todo" id="tablaDevolucion">
+          <thead>
+            <tr>
+              <th>Seleccionar</th>
+              <th>Nombre</th>
+              <th>SKU</th>
+              <th>Cantidad</th>
+              <th>Motivo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for detalle in compra.detalles %}
+              {% if detalle.cantidad > 0 %}
+              <tr>
+                <td>
+                  <input type="checkbox" class="check-devolucion">
+                  <input type="hidden" class="producto-id" value="{{ detalle.productoId }}">
+                </td>
+                <td>{{ detalle.productoNombre }}</td>
+                <td>{{ detalle.sku }}</td>
+                <td>{{ detalle.cantidad }}</td>
+                <td>
+                  <select class="form-select motivo-select">
+                    <option value="" selected disabled>Seleccione</option>
+                    <option value="0">Producto Dañado</option>
+                    <option value="1">Producto Vencido</option>
+                    <option value="2">Error de Pedido</option>
+                    <option value="3">Producto Incorrecto</option>
+                    <option value="4">Exceso de Inventario</option>
+                    <option value="5">Otro</option>
+                  </select>
+                </td>
+              </tr>
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <!-- Hidden input general para compraId -->
+        <input type="hidden" id="compra-id" value="{{ compra_id }}">
+        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn classbotones" id="enviarDevolucionBtn">Registrar Devolución</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<table class="tablas-todo" id="tabladecom">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Nombre</th>
+            <th>Marcas</th>
+            <th>Presentación</th>
+            <th>SKU</th>
+            <th>Cantidad</th>
+            <th>Cant Recepcion</th>
+            <th>FVencimiento</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for detalle in compra.detalles %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ detalle.productoNombre }}</td>
+            <td>{{ detalle.marcas }}</td>
+            <td>{{ detalle.presentacion }}</td> 
+            <td>{{ detalle.sku }}</td>
+            <td>{{ detalle.cantidad }}</td>
+
+            <!--Si la cantidad es 0, el input queda deshabilitado -->
+            <td>
+                <input type="number" 
+                       class="cantidad-recepcion" 
+                       style="width: 100px;" 
+                       min="0" 
+                       max="{{ detalle.cantidad }}"
+                       {% if detalle.cantidad == 0 %} disabled {% endif %}>
+            </td>
+
+            <!--Si hay fecha de vencimiento la ponemos -->
+            <td>
+                {% if detalle.requiereVencimiento %}
+                <input type="date" class="fecha-vencimiento" value="{{ detalle.fvencimiento }}">
+                {% endif %}
+            </td>
+
+            <input type="hidden" class="producto-id" value="{{ detalle.productoId }}">
+            <input type="hidden" id="compra-id" value="{{ compra_id }}">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<br>
+<script type="module" src="{% static 'js/bodega/entradainventario.js' %}"></script>
+{% endblock %}
