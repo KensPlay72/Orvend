@@ -162,6 +162,13 @@
                                         <span class="nav__name">Cuentas x Pagar</span>
                                     </a>
                                     {% endif %}
+                                    {% if perms.manager.view_traslados %}
+                                    <a href="{% url 'traslados' %}"
+                                    class="nav__link {% if request.path == '/manager/traslados/' %}active{% endif %}">
+                                        <i class='bx bx-transfer-alt nav__icon'></i>
+                                        <span class="nav__name">Traslados</span>
+                                    </a>
+                                    {% endif %}
                                     {% if perms.manager.view_clientes %}
                                     <a href="{% url 'clientes' %}"
                                     class="nav__link {% if request.path == '/manager/clientes/' %}active{% endif %}">

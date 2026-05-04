@@ -1,0 +1,118 @@
+{% extends "menu.html" %}
+{% load static %}
+
+{% block title %}Detalle Devolución{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+{% endblock %}
+
+{% block titulo_content %}
+<div class="tituloscont">
+    <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+    <p class="header__logo">| Detalle Devolución #{{ devolucion.id }}</p>
+</div>
+{% endblock %}
+
+{% block main_content %}
+
+<div class="container mt-3">
+
+    <!-- =========================
+         INFO GENERAL
+    ========================== -->
+    <div class="card mb-3">
+        <div class="card-body">
+
+            <h5>Información de la Compra</h5>
+
+            <p><strong>Compra:</strong> #{{ devolucion.compra.id }}</p>
+
+            <p><strong>Proveedor:</strong>
+                {{ devolucion.compra.proveedor.nombre_legal }}
+                {% if devolucion.compra.proveedor.nombre_comercial %}
+                    | {{ devolucion.compra.proveedor.nombre_comercial }}
+                {% endif %}
+            </p>
+
+            <p><strong>Ubicación:</strong> {{ devolucion.compra.ubicacion.nombre }}</p>
+
+            <p><strong>Observaciones:</strong> {{ devolucion.observaciones }}</p>
+
+            <p><strong>Estado:</strong>
+                {% if devolucion.estado == "Pendiente" %}
+                    <span class="badge bg-warning text-dark">Pendiente</span>
+                {% elif devolucion.estado == "Aprobada" %}
+                    <span class="badge bg-success">Aprobada</span>
+                {% elif devolucion.estado == "Rechazada" %}
+                    <span class="badge bg-danger">Rechazada</span>
+                {% elif devolucion.estado == "Completada" %}
+                    <span class="badge bg-primary">Completada</span>
+                {% else %}
+                    <span class="badge bg-secondary">Cancelada</span>
+                {% endif %}
+            </p>
+
+        </div>
+    </div>
+
+    <!-- =========================
+         DETALLES
+    ========================== -->
+    <div class="card mb-3">
+        <div class="card-body">
+
+            <h5>Productos en Devolución</h5>
+
+            <div class="tabla-container">
+                <table class="tablas-todo">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Cantidad</th>
+                            <th>Motivo</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for d in detalles %}
+                        <tr>
+                            <td>{{ d.producto.nombre }}</td>
+                            <td>{{ d.cantidad }}</td>
+                            <td>{{ d.get_motivo_display }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center">Sin productos</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- =========================
+         ACCIONES
+    ========================== -->
+    {% if devolucion.estado == "Pendiente" %}
+    <div class="card">
+        <div class="card-body d-flex gap-2">
+
+            <button class="btn btn-success" id="btnAprobar">
+                ✔ Aprobar Devolución
+            </button>
+
+            <button class="btn btn-danger" id="btnRechazar">
+                ✖ Rechazar
+            </button>
+
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+    <script type="module" src="{% static 'js/devoluciones/devoluciones.js' %}"></script>
+{% endblock %}

@@ -17,11 +17,13 @@
                 <i class="bx bx-arrow-back"></i> Regresar
             </button>
             <div style="display: flex; gap: 10px;">
+              {% if perms.manager.add_devolucioncompra %}
                 <button id="devoluciones" class="btn-dropdown" 
                 data-bs-toggle="modal"  data-bs-target="#devo">
                     <i class="bx bx-transfer-alt"></i>Devoluciones
                 </button>
-                <button id="toggleDropdownPanel32" class="btn-dropdown">
+              {% endif %}
+              <button id="toggleDropdownPanel32" class="btn-dropdown">
                     <i class="bx bx-check-circle"></i> Confirmar Entrada
                 </button>
             </div>

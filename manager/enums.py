@@ -3,14 +3,35 @@ from django.db import models
 
 class EstadoCompra(models.TextChoices):
     PENDIENTE = "Pendiente", "Pendiente"
+    EN_RECEPCION = "En Recepcion", "En Recepción"
+    RECEPCION_PARCIAL = "Recepcion Parcial", "Recepción Parcial"
+    COMPLETADO = "Completado", "Completado"
+    CON_DEVOLUCION = "Con Devolucion", "Con Devolución"
+    PENDIENTE_RESOLUCION = "Pendiente Resolucion", "Pendiente Resolución"
+    CERRADA = "Cerrada", "Cerrada"
+    CANCELADA = "Cancelada", "Cancelada"
+
+
+class EstadoDevolucionCompra(models.TextChoices):
+    PENDIENTE = "Pendiente", "Pendiente"
+    APROBADA = "Aprobada", "Aprobada"
+    RECHAZADA = "Rechazada", "Rechazada"
+    COMPLETADA = "Completada", "Completada"
+    CANCELADA = "Cancelada", "Cancelada"
+
+
+class Estados(models.TextChoices):
+    PENDIENTE = "Pendiente", "Pendiente"
     COMPLETADO = "Completado", "Completado"
     CANCELADA = "Cancelada", "Cancelada"
+
 
 class EstadoCuenta(models.IntegerChoices):
     PENDIENTE = 1, "Pendiente"
     PARCIAL = 2, "Parcial"
     PAGADO = 3, "Pagado"
     CANCELADO = 4, "Cancelado"
+
 
 class MotivoDevolucion(models.IntegerChoices):
     PRODUCTO_DANADO = 1, "Producto dañado"

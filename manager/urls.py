@@ -92,4 +92,17 @@ urlpatterns = [
     path('inventario/', views.inventario_view, name='inventario'),
     path('inventario/<int:id>/', views.get_inventario_producto, name='get_inventario_producto'),
 
+    path('compras/devoluciones/', views.devoluciones_view, name='devoluciones_view'),
+    path('compras/devoluciones/detalles/<int:id>/', views.detalle_devolucion_view, name='detalle_devolucion_view'),
+
+    path('compras/devoluciones/aprobar/<int:id>/', views.aprobar_devolucion_view, name='aprobar_devolucion_view'),
+    path('compras/devoluciones/rechazar/<int:id>/', views.rechazar_devolucion_view, name='rechazar_devolucion_view'),
+
+
+    path(
+        "inventario/ubicacion/<int:ubicacion_id>/",
+        views.inventario_por_ubicacion,
+        name="inventario_por_ubicacion"
+    ),
+    path("traslados/", views.traslados_view, name="traslados"),
 ] 

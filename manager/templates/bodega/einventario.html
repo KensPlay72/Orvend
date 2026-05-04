@@ -97,13 +97,13 @@
                     <!-- ESTADO -->
                     <td class="estado-centrado">
                         {% if compra.estado == "Pendiente" %}
-                            <span class="estado-circulo estado-pendiente"></span>
+                            <span class="badge bg-warning text-dark">Pendiente</span>
                         {% elif compra.estado == "Completado" %}
-                            <span class="estado-circulo estado-completado"></span>
+                            <span class="badge bg-success">Completado</span>
                         {% elif compra.estado == "Cancelada" %}
-                            <span class="estado-circulo estado-cancelada"></span>
+                            <span class="badge bg-danger">Cancelada</span>
                         {% else %}
-                            <span class="estado-circulo estado-desconocido"></span>
+                            <span class="badge bg-secondary">Desconocido</span>
                         {% endif %}
                     </td>
 

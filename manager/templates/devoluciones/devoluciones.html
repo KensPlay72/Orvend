@@ -1,0 +1,113 @@
+{% extends "menu.html" %}
+{% load static %}
+{% block title %}Devoluciones{% endblock %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+{% endblock %}
+{% block titulo_content %}
+    <div class="tituloscont">
+        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+        <p class="header__logo">| Devoluciones</p>
+    </div>
+{% endblock %}
+{% block main_content %}
+
+<div class="tabla-container">
+    <table class="tablas-todo" id="tablacont">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Compra Ref.</th>
+                <th>Proveedor</th>
+                <th>Ubicación</th>
+                <th>Observación</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for devolucion in page_obj %}
+            <tr data-id="{{ devolucion.id }}">
+
+                <td>{{ devolucion.id }}</td>
+                <td>#{{ devolucion.compra.id }}</td>
+
+                <td>
+                    {{ devolucion.compra.proveedor.nombre_legal }}
+                    {% if devolucion.compra.proveedor.nombre_comercial %}
+                        | {{ devolucion.compra.proveedor.nombre_comercial }}
+                    {% endif %}
+                </td>
+
+                <td>{{ devolucion.compra.ubicacion.nombre }}</td>
+
+                <td>{{ devolucion.observaciones }}</td>
+
+                <td>
+                    {% if devolucion.estado == "Pendiente" %}
+                        <span class="badge bg-warning text-dark">Pendiente</span>
+                    {% elif devolucion.estado == "Aprobada" %}
+                        <span class="badge bg-success">Aprobada</span>
+                    {% elif devolucion.estado == "Rechazada" %}
+                        <span class="badge bg-danger">Rechazada</span>
+                    {% elif devolucion.estado == "Completada" %}
+                        <span class="badge bg-primary">Completada</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Cancelada</span>
+                    {% endif %}
+                </td>
+
+                <td>{{ devolucion.f_creacion|date:"d/m/Y h:i A" }}</td>
+
+                <td>
+                    {% if perms.manager.view_devolucioncompra %}
+                    <button type="button"
+                            class="btn btn-sm btn-primary btn-view"
+                            data-id="{{ devolucion.id }}">
+                        <i class='bx bx-show'></i>
+                    </button>
+                    {% endif %}
+                </td>
+
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" class="text-center">No hay devoluciones pendientes</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<br>
+<nav class="d-flex justify-content-center mt-4">
+    <ul class="pagination">
+
+        <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+            {% if page_obj.has_previous %}
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}&search={{ search }}">«</a>
+            {% else %}
+                <span class="page-link">«</span>
+            {% endif %}
+        </li>
+
+        {% for p in page_obj.paginator.page_range %}
+            <li class="page-item {% if p == page_obj.number %}active{% endif %}">
+                <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
+            </li>
+        {% endfor %}
+
+        <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+            {% if page_obj.has_next %}
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}&search={{ search }}">»</a>
+            {% else %}
+                <span class="page-link">»</span>
+            {% endif %}
+        </li>
+
+    </ul>
+</nav>
+        <script type="module" src="{% static 'js/devoluciones/devoluciones.js' %}"></script>
+{% endblock %}

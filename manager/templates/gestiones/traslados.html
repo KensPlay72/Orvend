@@ -1,0 +1,124 @@
+{% extends "menu.html" %}
+{% load static %}
+{% block title %}
+  Traslados
+{% endblock title %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+{% endblock extra_css %}
+{% block titulo_content %}
+  <div class="tituloscont">
+    <img class="logop"
+         src="{% static 'img/LH.png' %}"
+         alt="logo"
+         width="0"
+         height="0" />
+    <p class="header__logo">| Traslados</p>
+  </div>
+{% endblock titulo_content %}
+{% block main_content %}
+  <div class="divbuttons2">
+    <button id="toggleDropdownPanel" class="btn-dropdown" type="button">
+      <i class="bx bx-cart-add"></i> Agregar Producto
+    </button>
+    <div class="ubicacionselect">
+      <p>Ubicación Origen:</p>
+      <div class="form-group mb-3">
+        <input type="hidden" name="ubicacion_origen" id="ubicacion_origen" required />
+        <div class="dropdown select-container w-100">
+          <button type="button" class="btn w-100 text-start form-control">Escriba para buscar...</button>
+          <div class="dropdown-menu w-100 p-0">
+            <div class="search-box p-2">
+              <input type="text" class="form-control" placeholder="Buscar ubicación..." />
+            </div>
+            <div class="options list-group list-group-flush">
+              <!-- Se llenará por JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ubicacionselect">
+      <p>Ubicación Destino:</p>
+      <div class="form-group mb-3">
+        <input type="hidden"
+               name="ubicacion_destino"
+               id="ubicacion_destino"
+               required />
+        <div class="dropdown select-container w-100">
+          <button type="button" class="btn w-100 text-start form-control">Escriba para buscar...</button>
+          <div class="dropdown-menu w-100 p-0">
+            <div class="search-box p-2">
+              <input type="text" class="form-control" placeholder="Buscar ubicación..." />
+            </div>
+            <div class="options list-group list-group-flush">
+              <!-- Se llenará por JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button id="toggleDropdownPanel32" class="btn-dropdown">
+      <i class="bx bx-check-circle"></i> Completar compra
+    </button>
+  </div>
+  <!-- Modal Productos -->
+  <div class="modal fade"
+       id="modalregis"
+       tabindex="-1"
+       aria-labelledby="exampleModalCenterTitle"
+       aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal600">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Agregar Productos</h5>
+          <button type="button"
+                  class="btn-close"
+                  data-bs-dismiss="modal"
+                  aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Buscador -->
+          <input type="text"
+                 class="form-control mb-3"
+                 id="buscadorProductos"
+                 placeholder="Buscar por nombre o SKU..." />
+          <!-- Lista dinámica de productos -->
+          <div id="contenedorProductosAjax" class="contenedorProductosAjax">
+            <div id="loadingProductos" class="text-center py-4">Cargando productos...</div>
+          </div>
+          <!-- Paginación dinámica -->
+          <nav class="d-flex justify-content-center mt-3">
+            <ul class="pagination" id="paginacionProductos">
+              <!-- Se rellena por JS -->
+            </ul>
+          </nav>
+        </div>
+        <div class="modal-footer">
+          <button type="button"
+                  class="btn btn classbotones"
+                  id="guardarProductosSeleccionados">Agregar Selección</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ================= TABLA ================= -->
+  <div class="tabla-container">
+    <table class="tablas-todo">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Producto</th>
+          <th>SKU</th>
+          <th>Stock Disponible</th>
+          <th>Cantidad a mover</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+      <tbody id="tablaTraslados">
+      </tbody>
+    </table>
+  </div>
+  <script src="{% static 'js/gestiones/traslados.js' %}"></script>
+{% endblock main_content %}

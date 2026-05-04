@@ -395,20 +395,27 @@ position: relative;
 display: inline-block;
 }
 .btn-dropdown {
-background: linear-gradient(135deg, #10463e 0%, #32877f 50%, #3f8886 100%);
-color: #fff;
-padding: 10px 16px;
-border: none;
-border-radius: 8px;
-cursor: pointer;
-font-size: 16px;
-display: flex;
-align-items: center;
-gap: 8px;
-background-size: 200% 200%;
-background-position: 100% 100%;
-transition: background-position 0.9s ease-in-out;
-margin-top: 5px;
+    background: linear-gradient(135deg, #10463e 0%, #32877f 50%, #3f8886 100%);
+    color: #fff;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-size: 200% 200%;
+    background-position: 100% 100%;
+    transition: background-position 0.9s ease-in-out;
+    margin-top: 5px;
+
+    /* FIX: evita estiramiento */
+    height: auto;
+    width: auto;
+    align-self: flex-start;
+    flex-shrink: 0;
+    flex-grow: 0;
 }
 .btn-dropdown:hover {
 background-position: 0 0;

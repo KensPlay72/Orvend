@@ -1,6 +1,13 @@
-from django.db import models
-from .enums import *
 from django.conf import settings
+from django.db import models
+
+from .enums import (
+    EstadoCompra,
+    EstadoCuenta,
+    EstadoDevolucionCompra,
+    Estados,
+    MotivoDevolucion,
+)
 
 
 class Abstracto(models.Model):
@@ -16,9 +23,11 @@ class Abstracto(models.Model):
     class Meta:
         abstract = True
 
+
 # =========================
 # CATEGORIAS
 # =========================
+
 
 class Categorias(Abstracto):
     nombre = models.CharField(max_length=30)
@@ -26,7 +35,8 @@ class Categorias(Abstracto):
 
     def __str__(self):
         return self.nombre
-    
+
+
 # =========================
 # CLIENTES
 # =========================
@@ -51,14 +61,10 @@ class Clientes(Abstracto):
     @property
     def nombre_completo(self):
         return " ".join(
-            filter(None, [
-                self.nombre,
-                self.nombre2,
-                self.apellido,
-                self.apellido2
-            ])
+            filter(None, [self.nombre, self.nombre2, self.apellido, self.apellido2])
         ).strip()
-    
+
+
 # =========================
 # MARCAS
 # =========================
@@ -80,6 +86,7 @@ class UMedidas(Abstracto):
     def __str__(self):
         return self.abreviatura
 
+
 # =========================
 # PRODUCTOS
 # =========================
@@ -89,21 +96,15 @@ class Productos(Abstracto):
     descripcion = models.CharField(max_length=200, blank=True, default="")
 
     categoria = models.ForeignKey(
-        Categorias,
-        on_delete=models.PROTECT,
-        related_name="categoria_productos"
+        Categorias, on_delete=models.PROTECT, related_name="categoria_productos"
     )
 
     unidad_medida = models.ForeignKey(
-        UMedidas,
-        on_delete=models.PROTECT,
-        related_name="umedida_productos"
+        UMedidas, on_delete=models.PROTECT, related_name="umedida_productos"
     )
 
     marca = models.ForeignKey(
-        Marcas,
-        on_delete=models.PROTECT,
-        related_name="marca_productos"
+        Marcas, on_delete=models.PROTECT, related_name="marca_productos"
     )
 
     vencimiento = models.BooleanField(default=False)
@@ -117,6 +118,7 @@ class Productos(Abstracto):
 
     def __str__(self):
         return self.nombre
+
 
 # =========================
 # PROVEEDORES
@@ -133,6 +135,7 @@ class Proveedores(Abstracto):
     def __str__(self):
         return self.nombre_comercial
 
+
 # =========================
 # PROVEEDORES CONTACTOS
 # =========================
@@ -142,7 +145,7 @@ class ProveedoresContactos(Abstracto):
         on_delete=models.CASCADE,
         related_name="proveedor_contactos",
         null=True,
-        blank=True
+        blank=True,
     )
 
     nombre = models.CharField(max_length=100)
@@ -159,7 +162,6 @@ class ProveedoresContactos(Abstracto):
 # UBICACIONES
 # =========================
 class Ubicaciones(Abstracto):
-
     class TipoUbicacion(models.IntegerChoices):
         BODEGA = 1, "Bodega"
         TIENDA = 2, "Tienda"
@@ -189,14 +191,12 @@ class Compras(Abstracto):
         on_delete=models.CASCADE,
         related_name="proveedor_compras",
         null=False,
-        blank=False
+        blank=False,
     )
     tipo_compra = models.IntegerField()
 
     estado = models.CharField(
-        max_length=20,
-        choices=EstadoCompra.choices,
-        default=EstadoCompra.PENDIENTE
+        max_length=20, choices=EstadoCompra.choices, default=EstadoCompra.PENDIENTE
     )
 
     fecha_compra = models.DateTimeField(auto_now_add=True)
@@ -225,14 +225,14 @@ class DetalleCompra(Abstracto):
         on_delete=models.CASCADE,
         related_name="compra_detalles",
         null=False,
-        blank=False
+        blank=False,
     )
     producto = models.ForeignKey(
         Productos,
         on_delete=models.PROTECT,
         related_name="producto_compra_detalles",
         null=False,
-        blank=False
+        blank=False,
     )
 
     cantidad = models.DecimalField(max_digits=18, decimal_places=2)
@@ -252,14 +252,14 @@ class HAutorizarCompra(Abstracto):
         on_delete=models.CASCADE,
         related_name="compra_autorizaciones",
         null=False,
-        blank=False
+        blank=False,
     )
     producto = models.ForeignKey(
         Productos,
         on_delete=models.PROTECT,
         related_name="producto_autorizaciones",
         null=False,
-        blank=False
+        blank=False,
     )
 
     cantidad_comprada = models.DecimalField(max_digits=18, decimal_places=2)
@@ -277,16 +277,15 @@ class DevolucionCompra(Abstracto):
         on_delete=models.CASCADE,
         related_name="compra_devoluciones",
         null=False,
-        blank=False
+        blank=False,
     )
 
     estado = models.CharField(
         max_length=20,
-        choices=EstadoCompra.choices,
-        default=EstadoCompra.PENDIENTE
+        choices=EstadoDevolucionCompra.choices,
+        default=EstadoDevolucionCompra.PENDIENTE,
     )
-
-    observaciones = models.CharField(max_length=100, blank=True, default="")
+    observaciones = models.CharField(max_length=300, blank=True, default="")
 
     def __str__(self):
         return f"Devolución #{self.id}"
@@ -301,31 +300,30 @@ class DevolucionCompraDetalle(models.Model):
         on_delete=models.CASCADE,
         related_name="devolucion_detalles",
         null=False,
-        blank=False
+        blank=False,
     )
     compra = models.ForeignKey(
         Compras,
         on_delete=models.CASCADE,
         related_name="compra_devolucion_detalles",
         null=False,
-        blank=False
+        blank=False,
     )
     producto = models.ForeignKey(
         Productos,
         on_delete=models.PROTECT,
         related_name="producto_devolucion_detalles",
         null=False,
-        blank=False
+        blank=False,
     )
 
     cantidad = models.DecimalField(max_digits=18, decimal_places=2)
 
-    motivo = models.IntegerField(
-        choices=MotivoDevolucion.choices
-    )
+    motivo = models.IntegerField(choices=MotivoDevolucion.choices)
 
     def __str__(self):
         return f"Detalle devolución #{self.id}"
+
 
 # =========================
 # CUENTAS POR PAGAR
@@ -336,14 +334,14 @@ class CuentasPorPagar(Abstracto):
         on_delete=models.CASCADE,
         related_name="proveedor_cuentas_por_pagar",
         null=False,
-        blank=False
+        blank=False,
     )
     compra = models.ForeignKey(
         Compras,
         on_delete=models.CASCADE,
         related_name="compra_cuentas_por_pagar",
         null=False,
-        blank=False
+        blank=False,
     )
 
     monto_total = models.DecimalField(max_digits=18, decimal_places=2)
@@ -352,8 +350,7 @@ class CuentasPorPagar(Abstracto):
     fecha_vencimiento = models.DateTimeField()
 
     estado = models.IntegerField(
-        choices=EstadoCuenta.choices,
-        default=EstadoCuenta.PENDIENTE
+        choices=EstadoCuenta.choices, default=EstadoCuenta.PENDIENTE
     )
 
     def __str__(self):
@@ -373,7 +370,7 @@ class RegistroAbonos(Abstracto):
         on_delete=models.CASCADE,
         related_name="cuenta_abonos",
         null=False,
-        blank=False
+        blank=False,
     )
 
     monto_abonado = models.DecimalField(max_digits=18, decimal_places=2)
@@ -383,37 +380,30 @@ class RegistroAbonos(Abstracto):
 
     def __str__(self):
         return f"Abono #{self.id}"
-    
+
+
 # =========================
 # INVENTARIOS
 # =========================
 class Inventarios(Abstracto):
     producto = models.ForeignKey(
-        "Productos",
-        on_delete=models.PROTECT,
-        related_name="producto_inventarios"
+        Productos, on_delete=models.PROTECT, related_name="producto_inventarios"
     )
 
     compra = models.ForeignKey(
-        "Compras",
+        Compras,
         on_delete=models.PROTECT,
         related_name="compra_inventarios",
         null=True,
     )
 
     ubicacion = models.ForeignKey(
-        Ubicaciones,
-        on_delete=models.PROTECT,
-        related_name="ubicacion_inventarios"
+        Ubicaciones, on_delete=models.PROTECT, related_name="ubicacion_inventarios"
     )
 
     cantidad = models.DecimalField(max_digits=18, decimal_places=2)
 
-    stock_minimo = models.DecimalField(
-        max_digits=18,
-        decimal_places=2,
-        default=5
-    )
+    stock_minimo = models.DecimalField(max_digits=18, decimal_places=2, default=5)
 
     fvencimiento = models.DateTimeField(null=True, blank=True)
 
@@ -428,7 +418,7 @@ class Traslados(Abstracto):
     solicitado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='solicitado_traslados'
+        related_name="solicitado_traslados",
     )
 
     autorizado_por = models.ForeignKey(
@@ -436,51 +426,44 @@ class Traslados(Abstracto):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='autorizaciones_traslados'
+        related_name="autorizaciones_traslados",
     )
 
     ubicacion_origen = models.ForeignKey(
-        Ubicaciones,
-        on_delete=models.PROTECT,
-        related_name="ubicacion_origen_traslados"
+        Ubicaciones, on_delete=models.PROTECT, related_name="ubicacion_origen_traslados"
     )
 
     ubicacion_destino = models.ForeignKey(
         Ubicaciones,
         on_delete=models.PROTECT,
-        related_name="ubicacion_destino_traslados"
+        related_name="ubicacion_destino_traslados",
     )
 
     fecha_autorizacion = models.DateTimeField(null=True, blank=True)
 
-    estado = models.CharField(
-        max_length=20,
-        choices=EstadoCompra.choices
-    )
+    estado = models.CharField(max_length=20, choices=Estados.choices)
 
     observaciones = models.CharField(max_length=255, blank=True, default="")
 
     def __str__(self):
         return f"Traslado #{self.id}"
 
+
 # =========================
 # DETALLES TRASLADOS
 # =========================
 class DetalleTraslado(Abstracto):
     traslado = models.ForeignKey(
-        Traslados,
-        on_delete=models.CASCADE,
-        related_name="detalles_traslado"
+        Traslados, on_delete=models.CASCADE, related_name="detalles_traslado"
     )
 
     producto = models.ForeignKey(
-        "Productos",
-        on_delete=models.PROTECT,
-        related_name="productos_traslado"
+        "Productos", on_delete=models.PROTECT, related_name="productos_traslado"
     )
 
     cantidad_solicitada = models.DecimalField(max_digits=18, decimal_places=2)
     cantidad_entregada = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+
 
 # =========================
 # MOVIMIENTOS INVENTARIOS
@@ -503,15 +486,11 @@ class TipoMovimientoInventario(models.IntegerChoices):
 
 
 class MovimientoInventario(models.Model):
-    tipo_movimiento = models.IntegerField(
-        choices=TipoMovimientoInventario.choices
-    )
+    tipo_movimiento = models.IntegerField(choices=TipoMovimientoInventario.choices)
 
     # Producto afectado
     producto = models.ForeignKey(
-        Productos,
-        on_delete=models.CASCADE,
-        related_name='movimientos'
+        Productos, on_delete=models.CASCADE, related_name="movimientos"
     )
 
     # Ubicaciones
@@ -520,7 +499,7 @@ class MovimientoInventario(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='movimientos_origen'
+        related_name="movimientos_origen",
     )
 
     ubicacion_destino = models.ForeignKey(
@@ -528,7 +507,7 @@ class MovimientoInventario(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='movimientos_destino'
+        related_name="movimientos_destino",
     )
 
     # Cantidad (siempre positiva)
@@ -544,23 +523,14 @@ class MovimientoInventario(models.Model):
 
     # Documento origen
     compra = models.ForeignKey(
-        Compras,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True
+        Compras, on_delete=models.SET_NULL, null=True, blank=True
     )
 
     traslado = models.ForeignKey(
-        Traslados,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True
+        Traslados, on_delete=models.SET_NULL, null=True, blank=True
     )
 
     venta_id = models.IntegerField(null=True, blank=True)  # futura tabla ventas
 
     def __str__(self):
         return f"Movimiento {self.id} - {self.get_tipo_movimiento_display()}"
-
-
-

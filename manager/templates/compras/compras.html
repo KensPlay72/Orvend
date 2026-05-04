@@ -59,10 +59,16 @@
         </div>
     </div>
 
-
-<button id="toggleDropdownPanel" class="btn-dropdown" onclick="location.href='{% url 'realizarcompra' %}'">
-    <i class="bx bx-plus-circle"></i> Realizar Compra
-</button>
+    <div class="bottom_content">
+        <button id="toggleDropdownPanel" class="btn-dropdown" onclick="location.href='{% url 'realizarcompra' %}'">
+            <i class="bx bx-plus-circle"></i> Realizar Compra
+        </button>
+        {% if perms.manager.view_devolucioncompra %}
+        <button id="toggleDropdownPanel" class="btn-dropdown" onclick="location.href='{% url 'devoluciones_view' %}'">
+            <i class='bx bx-undo'></i> Devoluciones
+        </button>
+        {% endif %}
+    </div>
 </div>
 
 
@@ -128,6 +134,7 @@
                             <i class='bx bx-edit'></i>
                         </button>
                         {% endif %}
+                    {% endif %}
 
                         <button type="button"
                                 class="btn btn-sm btn-danger btn-pdf"
@@ -135,7 +142,6 @@
                             <i class='bx bxs-file-pdf'></i>
                         </button>
 
-                    {% endif %}
                 </td>
 
             </tr>
