@@ -19,17 +19,14 @@ from django.views.decorators.http import require_http_methods, require_POST
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
-from .enums import (
-    EstadoCompra,
-    EstadoCuenta,
-    EstadoDevolucionCompra,
-)
+from .enums import EstadoCompra, EstadoCuenta, EstadoDevolucionCompra, Estados
 from .models import (
     Categorias,
     Clientes,
     Compras,
     CuentasPorPagar,
     DetalleCompra,
+    DetalleTraslado,
     DevolucionCompra,
     DevolucionCompraDetalle,
     HAutorizarCompra,
@@ -41,6 +38,7 @@ from .models import (
     ProveedoresContactos,
     RegistroAbonos,
     TipoMovimientoInventario,
+    Traslados,
     Ubicaciones,
     UMedidas,
 )
@@ -3313,17 +3311,53 @@ def inventario_view(request):
 def get_inventario_producto(request, id):
 
     try:
-        producto = get_object_or_404(Productos.objects.select_related("marca"), id=id)
+        producto = get_object_or_404(
+            Productos.objects.select_related("marca"),
+            id=id,
+            is_delete=False,
+        )
 
-        inventarios = Inventarios.objects.select_related("ubicacion").filter(
-            producto_id=id
+        # ==========================================
+        # STOCK FISICO AGRUPADO POR UBICACION
+        # ==========================================
+        inventarios = (
+            Inventarios.objects.select_related("ubicacion")
+            .filter(
+                producto_id=id,
+                is_delete=False,
+                cantidad__gt=0,
+            )
+            .values("ubicacion__id", "ubicacion__nombre")
+            .annotate(total_cantidad=Sum("cantidad"))
+            .order_by("ubicacion__nombre")
         )
 
         inventario_list = []
 
         for inv in inventarios:
+            ubicacion_id = inv["ubicacion__id"]
+            stock_fisico = Decimal(str(inv["total_cantidad"] or 0))
+
+            # ==========================================
+            # STOCK RESERVADO EN TRASLADOS PENDIENTES
+            # ==========================================
+            reservado = DetalleTraslado.objects.filter(
+                producto_id=id,
+                traslado__ubicacion_origen_id=ubicacion_id,
+                traslado__estado__in=["PENDIENTE", "EN_TRANSITO"],
+                traslado__is_delete=False,
+            ).aggregate(total=Sum("cantidad_solicitada"))["total"] or Decimal("0.00")
+
+            stock_disponible = stock_fisico - Decimal(str(reservado))
+
+            if stock_disponible < 0:
+                stock_disponible = Decimal("0.00")
+
             inventario_list.append(
-                {"ubicacion": inv.ubicacion.nombre, "cantidad": float(inv.cantidad)}
+                {
+                    "ubicacion": inv["ubicacion__nombre"],
+                    "cantidad": float(stock_disponible),
+                }
             )
 
         return JsonResponse(
@@ -3484,7 +3518,6 @@ def traslados_view(request):
 
 
 def inventario_por_ubicacion(request, ubicacion_id):
-
     inventario = (
         Inventarios.objects.select_related("producto", "producto__unidad_medida")
         .filter(ubicacion_id=ubicacion_id)
@@ -3513,3 +3546,158 @@ def inventario_por_ubicacion(request, ubicacion_id):
         )
 
     return JsonResponse(data, safe=False)
+
+
+@login_required
+@permission_required("manager.add_traslados", raise_exception=True)
+@require_http_methods(["POST"])
+def post_traslado(request):
+    try:
+        try:
+            data = json.loads(request.body)
+        except:
+            return JsonResponse(
+                {"success": False, "message": "JSON inválido"}, status=400
+            )
+
+        origen_id = data.get("origenId")
+        destino_id = data.get("destinoId")
+        observaciones = data.get("observaciones", "").strip()
+        detalles = data.get("detalles", [])
+
+        if not origen_id or not destino_id:
+            return JsonResponse(
+                {"success": False, "message": "Debe seleccionar origen y destino"},
+                status=400,
+            )
+
+        if origen_id == destino_id:
+            return JsonResponse(
+                {"success": False, "message": "Origen y destino no pueden ser iguales"},
+                status=400,
+            )
+
+        if not detalles:
+            return JsonResponse(
+                {"success": False, "message": "Debe incluir al menos un producto"},
+                status=400,
+            )
+
+        origen = Ubicaciones.objects.filter(id=origen_id, is_delete=False).first()
+        destino = Ubicaciones.objects.filter(id=destino_id, is_delete=False).first()
+
+        if not origen or not destino:
+            return JsonResponse(
+                {"success": False, "message": "Ubicaciones inválidas"},
+                status=400,
+            )
+
+        with transaction.atomic():
+            traslado = Traslados.objects.create(
+                solicitado_por_id=request.user.id,
+                ubicacion_origen=origen,
+                ubicacion_destino=destino,
+                observaciones=observaciones,
+                estado=Estados.PENDIENTE,
+                u_creo_id=request.user.id,
+            )
+
+            for item in detalles:
+                producto_id = item.get("productoId")
+
+                try:
+                    cantidad_solicitada = Decimal(str(item.get("cantidad") or 0))
+                except:
+                    return JsonResponse(
+                        {"success": False, "message": "Cantidad inválida"},
+                        status=400,
+                    )
+
+                if cantidad_solicitada <= 0:
+                    return JsonResponse(
+                        {"success": False, "message": "Cantidad debe ser mayor a 0"},
+                        status=400,
+                    )
+
+                producto = Productos.objects.filter(
+                    id=producto_id, is_delete=False
+                ).first()
+
+                if not producto:
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "message": f"Producto {producto_id} no existe",
+                        },
+                        status=400,
+                    )
+
+                capas_origen = Inventarios.objects.filter(
+                    producto_id=producto_id,
+                    ubicacion_id=origen_id,
+                    is_delete=False,
+                    cantidad__gt=0,
+                ).order_by("f_creacion")
+
+                stock_total = sum([Decimal(str(x.cantidad)) for x in capas_origen])
+
+                if stock_total < cantidad_solicitada:
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "message": f"Stock insuficiente para {producto.nombre}. Disponible {stock_total}",
+                        },
+                        status=400,
+                    )
+
+                DetalleTraslado.objects.create(
+                    traslado=traslado,
+                    producto=producto,
+                    cantidad_solicitada=cantidad_solicitada,
+                    u_creo_id=request.user.id,
+                )
+
+                restante = cantidad_solicitada
+
+                # ===============================
+                # DESCONTAR SOLO ORIGEN FIFO
+                # ===============================
+                for capa in capas_origen:
+                    if restante <= 0:
+                        break
+
+                    stock_capa = Decimal(str(capa.cantidad))
+                    stock_anterior_origen = stock_capa
+
+                    consumir = min(stock_capa, restante)
+
+                    capa.cantidad -= consumir
+                    capa.save()
+
+                    MovimientoInventario.objects.create(
+                        tipo_movimiento=TipoMovimientoInventario.TRASLADO_SALIDA,
+                        producto=producto,
+                        ubicacion_origen=origen,
+                        ubicacion_destino=destino,
+                        cantidad=consumir,
+                        stock_anterior=stock_anterior_origen,
+                        stock_resultante=capa.cantidad,
+                        traslado=traslado,
+                    )
+
+                    restante -= consumir
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "Traslado registrado correctamente y stock reservado",
+                "trasladoId": traslado.id,
+            }
+        )
+
+    except Exception as e:
+        print(traceback.format_exc())
+        return JsonResponse(
+            {"success": False, "message": f"Error interno: {str(e)}"},
+            status=500,
+        )

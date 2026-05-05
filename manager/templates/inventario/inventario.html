@@ -1,96 +1,98 @@
 {% extends "menu.html" %}
 {% load static %}
-{% block title %}Inventario{% endblock %}
+{% block title %}
+    Inventario
+{% endblock title %}
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/inventario.css' %}" />
-        <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
-{% endblock %}
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+{% endblock extra_css %}
 {% block titulo_content %}
     <div class="tituloscont">
-        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+        <img class="logop"
+             src="{% static 'img/LH.png' %}"
+             alt="logo"
+             width="0"
+             height="0" />
         <p class="header__logo">| Inventario</p>
     </div>
-{% endblock %}
+{% endblock titulo_content %}
 {% block main_content %}
-{% csrf_token %}
-<div class="todo">
-    <div class="tabl">
-        <div class="tabla-container">
-            <table class="tablas-todo" id="tablaProductos">
-                <thead>
-                    <tr>
-                        <th>Nombre</th>
-                        <th>Present</th>
-                        <th>Marca</th>
-                        <th>CodBarras</th>
-                        <th>Precio</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for producto in productos %}
-                    <tr class="fila-producto" data-id="{{ producto.id }}">
-                        <td>{{ producto.nombre }}</td>
-                        <td>{{ producto.unidadMedida.abreviatura }}</td>
-                        <td>{{ producto.marcas.nombre }}</td>
-                        <td>{{ producto.codigoSKU }}</td>
-                        <td>L. {{ producto.precioVenta|default:"0.00" }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <!-- PAGINACIÓN -->
+    {% csrf_token %}
+    <div class="todo">
+        <div class="tabl">
+            <div class="tabla-container">
+                <table class="tablas-todo" id="tablaProductos">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Present</th>
+                            <th>Marca</th>
+                            <th>CodBarras</th>
+                            <th>Precio</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for producto in productos %}
+                            <tr class="fila-producto" data-id="{{ producto.id }}">
+                                <td>{{ producto.nombre }}</td>
+                                <td>{{ producto.unidadMedida.abreviatura }}</td>
+                                <td>{{ producto.marcas.nombre }}</td>
+                                <td>{{ producto.codigoSKU }}</td>
+                                <td>L. {{ producto.precioVenta|default:"0.00" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <!-- PAGINACIÓN -->
             <nav class="d-flex justify-content-center mt-4">
                 <ul class="pagination">
                     <!-- Flecha anterior SIEMPRE visible -->
                     <li class="page-item {% if page <= 1 %}disabled{% endif %}">
-                        <a class="page-link" href="?page={{ page|add:"-1" }}&search={{ search }}">«</a>
+                        <a class="page-link"
+                           href="?page={{ page|add:"-1" }}&search={{ search }}">«</a>
                     </li>
-
                     {% for p in page_range %}
                         <li class="page-item {% if p == page %}active{% endif %}">
                             <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
                         </li>
                     {% endfor %}
-
                     <!-- Flecha siguiente SIEMPRE visible -->
                     <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
                         <a class="page-link" href="?page={{ page|add:"1" }}&search={{ search }}">»</a>
                     </li>
                 </ul>
             </nav>
-        <br>
-
-    </div>
-    <div class="tbimg">
-        <div class="imagenesp">
-            <img id="imgProducto" src="" style="max-width:100%; border-radius:10px; display:none;">
-        </div>
-            <div class="cantp">
-            <div class="tabla-container">
-                <table class="tablas-todo">
-                    <thead>
-                        <tr>
-                            <th>Ubicación</th>
-                            <th>Cantidad</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tablaInventarioBody">
-                        {% for ubicacion in ubicaciones %}
-                        <tr data-id="{{ ubicacion.nombre }}">
-                            <td>{{ ubicacion.nombre }}</td>
-                            <td class="cantidad">0</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
             <br>
         </div>
+        <div class="tbimg">
+            <div class="imagenesp">
+                <img id="imgProducto" class="imgProducto" alt="" width="200" height="200">
+            </div>
+            <div class="cantp">
+                <div class="tabla-container">
+                    <table class="tablas-todo">
+                        <thead>
+                            <tr>
+                                <th>Ubicación</th>
+                                <th>Cantidad</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaInventarioBody">
+                            {% for ubicacion in ubicaciones %}
+                                <tr data-id="{{ ubicacion.nombre }}">
+                                    <td>{{ ubicacion.nombre }}</td>
+                                    <td class="cantidad">0</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <br>
+            </div>
+        </div>
     </div>
-</div>
-<br>
-        <script type="module" src="{% static 'js/gestiones/inventario.js' %}"></script>
-
-{% endblock %}
+    <br>
+    <script type="module" src="{% static 'js/gestiones/inventario.js' %}"></script>
+{% endblock main_content %}

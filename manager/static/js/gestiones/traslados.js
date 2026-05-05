@@ -1,5 +1,10 @@
 let inventarioSeleccionadoGlobal = {};
+let trasladoPreviewArray = [];
+const TRASLADO_PAGE_SIZE = 10;
 
+/*========================================
+=            VALIDAR MODAL               =
+========================================*/
 document.getElementById("modalregis").addEventListener("show.bs.modal", (e) => {
   const origen = document.getElementById("ubicacion_origen").value;
 
@@ -10,13 +15,15 @@ document.getElementById("modalregis").addEventListener("show.bs.modal", (e) => {
       title: "Ubicación requerida",
       text: "Debes seleccionar una ubicación de origen antes de continuar.",
       icon: "warning",
-      confirmButtonText: "OK",
+      confirmButtonText: "Aceptar",
       customClass: { confirmButton: "classbotones" },
     });
   }
 });
 
-// debounce
+/*========================================
+=               DEBOUNCE                 =
+========================================*/
 function debounce(func, delay) {
   let timer;
   return function (...args) {
@@ -25,7 +32,9 @@ function debounce(func, delay) {
   };
 }
 
-// dropdown ubicaciones (igual que lo tenías)
+/*========================================
+=         DROPDOWN PERSONALIZADO         =
+========================================*/
 function initDropdown(hiddenInputId, remoteSearchFn = null) {
   const hiddenInput = document.getElementById(hiddenInputId);
   const container = hiddenInput.nextElementSibling;
@@ -66,7 +75,9 @@ function initDropdown(hiddenInputId, remoteSearchFn = null) {
   });
 }
 
-// fetch ubicaciones
+/*========================================
+=          FETCH UBICACIONES             =
+========================================*/
 async function fetchUbicaciones(term, optionsContainer) {
   const res = await fetch(
     `/manager/ubicaciones/search/?search=${encodeURIComponent(term)}`,
@@ -90,7 +101,9 @@ async function fetchUbicaciones(term, optionsContainer) {
 initDropdown("ubicacion_origen", fetchUbicaciones);
 initDropdown("ubicacion_destino", fetchUbicaciones);
 
-// cargar inventario
+/*========================================
+=       CARGAR INVENTARIO EN MODAL       =
+========================================*/
 async function cargarInventarioEnModal(ubicacionId) {
   const contenedor = document.getElementById("contenedorProductosAjax");
   contenedor.innerHTML = `<div class="text-center py-4">Cargando...</div>`;
@@ -115,7 +128,9 @@ async function cargarInventarioEnModal(ubicacionId) {
              style="width:60px;height:60px;object-fit:cover;border-radius:5px;">
       </div>
 
-      <div class="flex-grow-1">
+      <div class="flex-grow-1 datos-producto"
+           data-sku="${prod.sku}"
+           data-stock="${prod.stock}">
         <strong>${prod.nombre}</strong><br>
         <small>SKU: ${prod.sku} | Stock: ${prod.stock}</small>
       </div>
@@ -131,7 +146,9 @@ async function cargarInventarioEnModal(ubicacionId) {
   inicializarSeleccion();
 }
 
-// selección estilo productos
+/*========================================
+=         SELECCIONAR PRODUCTOS          =
+========================================*/
 function inicializarSeleccion() {
   document.querySelectorAll(".producto-item").forEach((item) => {
     const checkbox = item.querySelector(".producto-checkbox");
@@ -142,10 +159,12 @@ function inicializarSeleccion() {
       item.classList.toggle("seleccionado", checkbox.checked);
 
       if (checkbox.checked) {
+        const datos = item.querySelector(".datos-producto");
+
         inventarioSeleccionadoGlobal[id] = {
           nombre: item.querySelector("strong").textContent,
-          sku: item.querySelector("small").textContent,
-          stock: item.querySelector("small").textContent,
+          sku: datos.dataset.sku,
+          stock: datos.dataset.stock,
         };
       } else {
         delete inventarioSeleccionadoGlobal[id];
@@ -154,20 +173,23 @@ function inicializarSeleccion() {
   });
 }
 
-// abrir modal
+/*========================================
+=           ABRIR MODAL                  =
+========================================*/
 document.getElementById("toggleDropdownPanel").addEventListener("click", () => {
   const modal = new bootstrap.Modal(document.getElementById("modalregis"));
   modal.show();
 });
 
-// agregar a tabla
+/*========================================
+=        GUARDAR PRODUCTOS A TABLA       =
+========================================*/
 document
   .getElementById("guardarProductosSeleccionados")
   .addEventListener("click", () => {
     const tbody = document.getElementById("tablaTraslados");
 
     Object.entries(inventarioSeleccionadoGlobal).forEach(([id, data]) => {
-      // evitar duplicados
       if (document.querySelector(`#traslado-${id}`)) return;
 
       const tr = document.createElement("tr");
@@ -195,14 +217,12 @@ document
       tbody.appendChild(tr);
     });
 
-    // cerrar modal correctamente (sin errores de instance null)
     const modalEl = document.getElementById("modalregis");
     const modal =
       bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
 
     modal.hide();
 
-    // limpiar backdrop si se queda pegado
     setTimeout(() => {
       document.querySelectorAll(".modal-backdrop").forEach((el) => el.remove());
       document.body.classList.remove("modal-open");
@@ -212,7 +232,9 @@ document
     reordenar();
   });
 
-// eliminar
+/*========================================
+=         ELIMINAR DE TABLA              =
+========================================*/
 document.getElementById("tablaTraslados").addEventListener("click", (e) => {
   const btn = e.target.closest(".eliminar-traslado");
   if (!btn) return;
@@ -224,9 +246,222 @@ document.getElementById("tablaTraslados").addEventListener("click", (e) => {
   reordenar();
 });
 
-// orden
+/*========================================
+=             REORDENAR                  =
+========================================*/
 function reordenar() {
   document.querySelectorAll("#tablaTraslados tr").forEach((tr, i) => {
     tr.children[0].textContent = i + 1;
   });
 }
+
+/*========================================
+=           PREVIEW TRASLADO             =
+========================================*/
+document.getElementById("btnPreviewTraslado").addEventListener("click", () => {
+  const origenId = document.getElementById("ubicacion_origen").value;
+  const destinoId = document.getElementById("ubicacion_destino").value;
+  const filas = document.querySelectorAll("#tablaTraslados tr");
+
+  let errores = [];
+
+  if (!origenId) errores.push("Debe seleccionar una ubicación de origen.");
+  if (!destinoId) errores.push("Debe seleccionar una ubicación destino.");
+  if (filas.length === 0)
+    errores.push("Debe agregar al menos un producto para trasladar.");
+
+  if (errores.length > 0) {
+    Swal.fire({
+      title: "Datos incompletos",
+      html: errores.join("<br>"),
+      icon: "warning",
+      confirmButtonText: "Aceptar",
+      customClass: { confirmButton: "classbotones" },
+    });
+    return;
+  }
+
+  document.getElementById("previewOrigen").value = document
+    .getElementById("ubicacion_origen")
+    .nextElementSibling.querySelector("button").textContent;
+
+  document.getElementById("previewDestino").value = document
+    .getElementById("ubicacion_destino")
+    .nextElementSibling.querySelector("button").textContent;
+
+  trasladoPreviewArray = Array.from(filas).map((fila) => ({
+    producto: fila.children[1].textContent,
+    sku: fila.children[2].textContent,
+    stock: fila.children[3].textContent,
+    cantidad: fila.querySelector(".cantidad-final").value,
+  }));
+
+  mostrarPaginaPreviewTraslado(1);
+
+  const modal = bootstrap.Modal.getOrCreateInstance(
+    document.getElementById("completartraslado"),
+  );
+  modal.show();
+});
+
+function mostrarPaginaPreviewTraslado(pagina = 1) {
+  const tbody = document.getElementById("tablaPreviewTraslado");
+  const paginador = document.getElementById("paginadorPreviewTraslado");
+
+  tbody.innerHTML = "";
+  paginador.innerHTML = "";
+
+  const inicio = (pagina - 1) * TRASLADO_PAGE_SIZE;
+  const fin = inicio + TRASLADO_PAGE_SIZE;
+
+  const itemsPagina = trasladoPreviewArray.slice(inicio, fin);
+
+  itemsPagina.forEach((item, index) => {
+    tbody.innerHTML += `
+      <tr>
+        <td>${inicio + index + 1}</td>
+        <td>${item.producto}</td>
+        <td>${item.sku}</td>
+        <td>${item.stock}</td>
+        <td>${item.cantidad}</td>
+      </tr>
+    `;
+  });
+
+  const totalPaginas = Math.ceil(
+    trasladoPreviewArray.length / TRASLADO_PAGE_SIZE,
+  );
+
+  if (totalPaginas <= 1) return;
+
+  for (let i = 1; i <= totalPaginas; i++) {
+    paginador.innerHTML += `
+      <button type="button"
+              class="btn btn-sm ${i === pagina ? "classbotones" : "btn-light"} me-1"
+              onclick="mostrarPaginaPreviewTraslado(${i})">
+        ${i}
+      </button>
+    `;
+  }
+}
+
+document
+  .getElementById("confirmarTrasladoBtn")
+  .addEventListener("click", async function () {
+    const origenId = parseInt(
+      document.getElementById("ubicacion_origen").value,
+    );
+    const destinoId = parseInt(
+      document.getElementById("ubicacion_destino").value,
+    );
+    const observaciones = document
+      .getElementById("observacionesTraslado")
+      .value.trim();
+
+    const detalles = [];
+
+    document.querySelectorAll("#tablaTraslados tr").forEach((fila) => {
+      const productoId = parseInt(fila.id.replace("traslado-", ""));
+      const cantidad = parseFloat(fila.querySelector(".cantidad-final").value);
+      const stockDisponible = parseFloat(fila.children[3].textContent);
+
+      detalles.push({
+        productoId,
+        cantidad,
+        stockDisponible,
+      });
+    });
+
+    const payload = {
+      origenId,
+      destinoId,
+      observaciones,
+      detalles,
+    };
+
+    try {
+      const response = await fetch("/manager/traslados/post/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+            .value,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        Swal.fire({
+          title: "¡Éxito!",
+          text: data.message || "Traslado registrado correctamente.",
+          icon: "success",
+          confirmButtonText: "Aceptar",
+          customClass: { confirmButton: "classbotones" },
+        }).then(() => {
+          window.location.href = "/manager/traslados/";
+        });
+      } else {
+        throw new Error(data.message || "Error al registrar traslado.");
+      }
+    } catch (err) {
+      Swal.fire({
+        title: "Error",
+        text: err.message,
+        icon: "error",
+        confirmButtonText: "Aceptar",
+        customClass: { confirmButton: "classbotones" },
+      });
+    }
+  });
+
+document.addEventListener("DOMContentLoaded", () => {
+  function validarCantidadesTraslado() {
+    const rows = document.querySelectorAll("#tablaTraslados tr");
+
+    rows.forEach((row) => {
+      const input = row.querySelector(".cantidad-final");
+      if (!input) return;
+
+      const stock = parseFloat(row.children[3].textContent) || 0;
+
+      // 🔥 SOLO validar mientras escribe (sin forzar mínimo)
+      input.addEventListener("input", () => {
+        let valor = parseFloat(input.value);
+
+        // si está vacío, no hacemos nada
+        if (input.value === "") return;
+
+        if (valor > stock) {
+          input.value = stock;
+        }
+
+        if (valor < 0) {
+          input.value = "";
+        }
+      });
+
+      // 🔥 aquí sí corregimos el valor final
+      input.addEventListener("blur", () => {
+        let valor = parseFloat(input.value);
+
+        if (isNaN(valor) || valor <= 0) {
+          input.value = 1; // valor por defecto al salir
+        }
+
+        if (valor > stock) {
+          input.value = stock;
+        }
+      });
+    });
+  }
+
+  document
+    .getElementById("guardarProductosSeleccionados")
+    .addEventListener("click", () => {
+      setTimeout(validarCantidadesTraslado, 100);
+    });
+
+  validarCantidadesTraslado();
+});

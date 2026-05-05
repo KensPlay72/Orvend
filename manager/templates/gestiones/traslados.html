@@ -59,7 +59,7 @@
         </div>
       </div>
     </div>
-    <button id="toggleDropdownPanel32" class="btn-dropdown">
+    <button id="btnPreviewTraslado" class="btn-dropdown">
       <i class="bx bx-check-circle"></i> Completar compra
     </button>
   </div>
@@ -99,6 +99,67 @@
           <button type="button"
                   class="btn btn classbotones"
                   id="guardarProductosSeleccionados">Agregar Selección</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ================= CONFIRMAR ================= -->
+  <div class="modal fade"
+       id="completartraslado"
+       tabindex="-1"
+       aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Confirmar Traslado</h5>
+          <button type="button"
+                  class="btn-close"
+                  data-bs-dismiss="modal"
+                  aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="fw-bold">Ubicación Origen</label>
+              <input type="text" id="previewOrigen" class="form-control" readonly>
+            </div>
+            <div class="col-md-6">
+              <label class="fw-bold">Ubicación Destino</label>
+              <input type="text" id="previewDestino" class="form-control" readonly>
+            </div>
+          </div>
+          <br>
+          <div class="form-group mb-3">
+            <label for="observacionesTraslado">Observaciones</label>
+            <textarea id="observacionesTraslado"
+                      rows="2"
+                      maxlength="150"
+                      class="form-control"
+                      placeholder="Descripción del traslado"></textarea>
+          </div>
+          <div class="tabla-container">
+            <table class="tablas-todo">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Producto</th>
+                  <th>SKU</th>
+                  <th>Stock Disponible</th>
+                  <th>Cantidad a Mover</th>
+                </tr>
+              </thead>
+              <tbody id="tablaPreviewTraslado">
+              </tbody>
+            </table>
+          </div>
+          <nav id="paginadorPreviewTraslado"
+               class="d-flex justify-content-center mt-4">
+          </nav>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn classbotones" id="confirmarTrasladoBtn">Registrar Traslado</button>
         </div>
       </div>
     </div>

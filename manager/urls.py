@@ -1,108 +1,146 @@
-from django.conf import settings
-from django.conf.urls.static import static
 from django.urls import path
+
 from . import views
-import os
 
 urlpatterns = [
     path("dashboard/", views.dashboard_view, name="dashboard"),
-
-
-
     path("presentaciones/", views.umedidas_view, name="presentaciones"),
     path("presentaciones/post/", views.post_umedida, name="post_umedida"),
     path("presentaciones/get/<int:id>/", views.get_umedida, name="get_umedida"),
     path("presentaciones/put/<int:id>/", views.put_umedida, name="put_umedida"),
-    path("presentaciones/delete/<int:id>/", views.delete_umedida, name="delete_umedida"),
+    path(
+        "presentaciones/delete/<int:id>/", views.delete_umedida, name="delete_umedida"
+    ),
     path("presentaciones/search/", views.search_umedidas, name="search_umedidas"),
-
-
     path("marcas/", views.marcas_view, name="marcas"),
     path("marcas/post/", views.post_marca, name="post_marca"),
     path("marcas/get/<int:id>/", views.get_marca, name="get_marca"),
     path("marcas/put/<int:id>/", views.put_marca, name="put_marca"),
     path("marcas/delete/<int:id>/", views.delete_marca, name="delete_marca"),
     path("marcas/search/", views.search_marcas, name="search_marcas"),
-
-
     path("categorias/", views.categorias_view, name="categorias"),
     path("categorias/post/", views.post_categoria, name="post_categoria"),
     path("categorias/get/<int:id>/", views.get_categoria, name="get_categoria"),
     path("categorias/put/<int:id>/", views.put_categoria, name="put_categoria"),
-    path("categorias/delete/<int:id>/", views.delete_categoria, name="delete_categoria"),
+    path(
+        "categorias/delete/<int:id>/", views.delete_categoria, name="delete_categoria"
+    ),
     path("categorias/search/", views.search_categorias, name="search_categorias"),
-
-
     path("proveedores/", views.proveedores_view, name="proveedores"),
     path("proveedores/post/", views.post_proveedor, name="post_proveedor"),
     path("proveedores/get/<int:id>/", views.get_proveedor, name="get_proveedor"),
     path("proveedores/put/<int:id>/", views.put_proveedor, name="put_proveedor"),
-    path("proveedores/delete/<int:id>/", views.delete_proveedor, name="delete_proveedor"),
+    path(
+        "proveedores/delete/<int:id>/", views.delete_proveedor, name="delete_proveedor"
+    ),
     path("proveedores/search/", views.search_proveedores, name="search_proveedores"),
-
-    path("proveedores/contactos/", views.proveedores_contactos_view , name="proveedores_contactos"),
-    path("proveedores/contactos/post/", views.post_proveedor_contacto, name="post_proveedor_contacto"),
-    path("proveedores/contactos/get/<int:id>/", views.get_proveedor_contacto, name="get_proveedor_contacto"),
-    path("proveedores/contactos/put/<int:id>/", views.put_proveedor_contacto, name="put_proveedor_contacto"),
-    path("proveedores/contactos/delete/<int:id>/", views.delete_proveedor_contacto, name="delete_proveedor_contacto"),
-
+    path(
+        "proveedores/contactos/",
+        views.proveedores_contactos_view,
+        name="proveedores_contactos",
+    ),
+    path(
+        "proveedores/contactos/post/",
+        views.post_proveedor_contacto,
+        name="post_proveedor_contacto",
+    ),
+    path(
+        "proveedores/contactos/get/<int:id>/",
+        views.get_proveedor_contacto,
+        name="get_proveedor_contacto",
+    ),
+    path(
+        "proveedores/contactos/put/<int:id>/",
+        views.put_proveedor_contacto,
+        name="put_proveedor_contacto",
+    ),
+    path(
+        "proveedores/contactos/delete/<int:id>/",
+        views.delete_proveedor_contacto,
+        name="delete_proveedor_contacto",
+    ),
     path("productos/", views.productos_view, name="productos"),
     path("productos/post/", views.post_producto, name="post_producto"),
     path("productos/get/<int:id>/", views.get_producto, name="get_producto"),
     path("productos/put/<int:id>/", views.put_producto, name="put_producto"),
     path("productos/delete/<int:id>/", views.delete_producto, name="delete_producto"),
     path("productos/search/", views.search_productos, name="search_productos"),
-
     path("api/proxy/productos/", views.api_productos, name="api_productos"),
-
-
     path("ubicaciones/", views.ubicaciones_view, name="ubicaciones"),
     path("ubicaciones/post/", views.post_ubicaciones, name="post_ubicaciones"),
     path("ubicaciones/get/<int:id>/", views.get_ubicaciones, name="get_ubicaciones"),
     path("ubicaciones/put/<int:id>/", views.put_ubicaciones, name="put_ubicaciones"),
-    path("ubicaciones/delete/<int:id>/", views.delete_ubicaciones, name="delete_ubicaciones"),
+    path(
+        "ubicaciones/delete/<int:id>/",
+        views.delete_ubicaciones,
+        name="delete_ubicaciones",
+    ),
     path("ubicaciones/search/", views.search_ubicaciones, name="search_ubicaciones"),
-
     path("compras/", views.compras_view, name="compras"),
     path("compras/realizarcompra", views.realizarcompra_view, name="realizarcompra"),
     path("compras/realizarcompra/post/", views.post_compra, name="post_compra"),
-    path("compras/detallecompra/<int:id>/", views.detalle_compra_view, name="detalle_compra"),
+    path(
+        "compras/detallecompra/<int:id>/",
+        views.detalle_compra_view,
+        name="detalle_compra",
+    ),
     path("compras/pdf/<int:id>/", views.proxy_compras_pdf, name="compras_pdf"),
     path("compras/edit/<int:id>/", views.editar_compra, name="editar_compra"),
     path("compras/put/<int:id>/", views.editar_compra_put, name="editar_compra_put"),
-
-
     path("cppagar/", views.cuentas_por_pagar_view, name="cppagar"),
-    path('cppagar/post/<int:id>/', views.registrar_abono, name="cppagar_abono"),
-
-
+    path("cppagar/post/<int:id>/", views.registrar_abono, name="cppagar_abono"),
     path("clientes/", views.clientes_view, name="clientes"),
     path("clientes/post/", views.post_clientes, name="post_cliente"),
     path("clientes/get/<int:id>/", views.get_cliente, name="get_cliente"),
     path("clientes/put/<int:id>/", views.put_cliente, name="put_cliente"),
-
-
-    path('bodega/dashboard/', views.dashboard_bodega, name="dashboard_bodega"),
-    path('bodega/recepcion_inventario/', views.recepcion_inventario_view, name="recepcion_inventario"),
-    path('bodega/autorizar/<int:id>/', views.autorizar_compra_view, name='autorizar_compra'),
-    path('bodega/detalleinventario/post/', views.post_autorizar_inventario, name='post_autorizar_inventario'),
-    path('bodega/devocompras/', views.post_devolucion_compra, name='post_devolucion_compra'),
-
-
-    path('inventario/', views.inventario_view, name='inventario'),
-    path('inventario/<int:id>/', views.get_inventario_producto, name='get_inventario_producto'),
-
-    path('compras/devoluciones/', views.devoluciones_view, name='devoluciones_view'),
-    path('compras/devoluciones/detalles/<int:id>/', views.detalle_devolucion_view, name='detalle_devolucion_view'),
-
-    path('compras/devoluciones/aprobar/<int:id>/', views.aprobar_devolucion_view, name='aprobar_devolucion_view'),
-    path('compras/devoluciones/rechazar/<int:id>/', views.rechazar_devolucion_view, name='rechazar_devolucion_view'),
-
-
+    path("bodega/dashboard/", views.dashboard_bodega, name="dashboard_bodega"),
+    path(
+        "bodega/recepcion_inventario/",
+        views.recepcion_inventario_view,
+        name="recepcion_inventario",
+    ),
+    path(
+        "bodega/autorizar/<int:id>/",
+        views.autorizar_compra_view,
+        name="autorizar_compra",
+    ),
+    path(
+        "bodega/detalleinventario/post/",
+        views.post_autorizar_inventario,
+        name="post_autorizar_inventario",
+    ),
+    path(
+        "bodega/devocompras/",
+        views.post_devolucion_compra,
+        name="post_devolucion_compra",
+    ),
+    path("inventario/", views.inventario_view, name="inventario"),
+    path(
+        "inventario/<int:id>/",
+        views.get_inventario_producto,
+        name="get_inventario_producto",
+    ),
+    path("compras/devoluciones/", views.devoluciones_view, name="devoluciones_view"),
+    path(
+        "compras/devoluciones/detalles/<int:id>/",
+        views.detalle_devolucion_view,
+        name="detalle_devolucion_view",
+    ),
+    path(
+        "compras/devoluciones/aprobar/<int:id>/",
+        views.aprobar_devolucion_view,
+        name="aprobar_devolucion_view",
+    ),
+    path(
+        "compras/devoluciones/rechazar/<int:id>/",
+        views.rechazar_devolucion_view,
+        name="rechazar_devolucion_view",
+    ),
     path(
         "inventario/ubicacion/<int:ubicacion_id>/",
         views.inventario_por_ubicacion,
-        name="inventario_por_ubicacion"
+        name="inventario_por_ubicacion",
     ),
     path("traslados/", views.traslados_view, name="traslados"),
-] 
+    path("traslados/post/", views.post_traslado, name="post_traslado"),
+]
