@@ -383,35 +383,6 @@ class RegistroAbonos(Abstracto):
 
 
 # =========================
-# INVENTARIOS
-# =========================
-class Inventarios(Abstracto):
-    producto = models.ForeignKey(
-        Productos, on_delete=models.PROTECT, related_name="producto_inventarios"
-    )
-
-    compra = models.ForeignKey(
-        Compras,
-        on_delete=models.PROTECT,
-        related_name="compra_inventarios",
-        null=True,
-    )
-
-    ubicacion = models.ForeignKey(
-        Ubicaciones, on_delete=models.PROTECT, related_name="ubicacion_inventarios"
-    )
-
-    cantidad = models.DecimalField(max_digits=18, decimal_places=2)
-
-    stock_minimo = models.DecimalField(max_digits=18, decimal_places=2, default=5)
-
-    fvencimiento = models.DateTimeField(null=True, blank=True)
-
-    def __str__(self):
-        return f"{self.producto} - {self.cantidad}"
-
-
-# =========================
 # TRASLADOS
 # =========================
 class Traslados(Abstracto):
@@ -463,6 +434,34 @@ class DetalleTraslado(Abstracto):
 
     cantidad_solicitada = models.DecimalField(max_digits=18, decimal_places=2)
     cantidad_entregada = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+
+
+# =========================
+# INVENTARIOS
+# =========================
+class Inventarios(Abstracto):
+    producto = models.ForeignKey(
+        Productos, on_delete=models.PROTECT, related_name="producto_inventarios"
+    )
+
+    compra = models.ForeignKey(
+        Compras,
+        on_delete=models.PROTECT,
+        related_name="compra_inventarios",
+        null=True,
+    )
+    ubicacion = models.ForeignKey(
+        Ubicaciones, on_delete=models.PROTECT, related_name="ubicacion_inventarios"
+    )
+
+    cantidad = models.DecimalField(max_digits=18, decimal_places=2)
+
+    stock_minimo = models.DecimalField(max_digits=18, decimal_places=2, default=5)
+
+    fvencimiento = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.producto} - {self.cantidad}"
 
 
 # =========================

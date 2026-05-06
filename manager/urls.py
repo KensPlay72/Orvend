@@ -100,9 +100,9 @@ urlpatterns = [
         name="recepcion_inventario",
     ),
     path(
-        "bodega/autorizar/<int:id>/",
-        views.autorizar_compra_view,
-        name="autorizar_compra",
+        "bodega/autorizar/<str:tipo>/<int:id>/",
+        views.autorizar_entrada_view,
+        name="autorizar_entrada",
     ),
     path(
         "bodega/detalleinventario/post/",

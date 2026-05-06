@@ -1,9 +1,11 @@
 {% extends "menu.html" %}
 {% load static %}
-{% block title %}Recepción de Inventario{% endblock %}
+{% block title %}
+    Recepción de Inventario
+{% endblock title %}
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
-{% endblock %}
+{% endblock extra_css %}
 {% block search_content %}
     <div class="header__search">
         <input type="search"
@@ -12,144 +14,139 @@
                autocomplete="off" />
         <i class="bx bx-search header__icon"></i>
     </div>
-{% endblock %}
+{% endblock search_content %}
 {% block titulo_content %}
     <div class="tituloscont">
-        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+        <img class="logop"
+             src="{% static 'img/LH.png' %}"
+             alt="logo"
+             width="0"
+             height="0" />
         <p class="header__logo">| Recepción de Inventario</p>
     </div>
-{% endblock %}
+{% endblock titulo_content %}
 {% block main_content %}
-<div class="full2">
-    <div class="ventanas">
-        <div class="ventanasi">
-            <p class="ventana-titulo">Entradas Completas</p>
-            <p class="ventana-numero">{{compras_completadas}}</p>
-        </div>
-        <div class="ventanasd">
-            <div class="capsula">
-                <i class='bx bx-time-five'></i>
-            </div>
-        </div>
-    </div>
-
-
-    <div class="ventanas">
-        <div class="ventanasi">
-            <p class="ventana-titulo">Entradas Pendientes</p>
-            <p class="ventana-numero">{{compras_pendientes}}</p>
-        </div>
-        <div class="ventanasd">
-            <div class="capsula">
-                <i class='bx bx-loader-circle' ></i>
-            </div>
-        </div>
-    </div>
-
-    <div class="ventanas">
-    <div class="ventanasi">
-        <p class="ventana-titulo">Devoluciones Generadas</p>
-        <p class="ventana-numero">{{ total_devoluciones }}</p>
-    </div>
-    <div class="ventanasd">
-        <div class="capsula">
-            <i class='bx bx-undo'></i>
-        </div>
-    </div>
-</div>
-
+    <div class="full2">
         <div class="ventanas">
-        <div class="ventanasi">
-            <p class="ventana-titulo">Entradas Totales</p>
-            <p class="ventana-numero">{{total_compras}}</p>
+            <div class="ventanasi">
+                <p class="ventana-titulo">Entradas Completas</p>
+                <p class="ventana-numero">{{ compras_completadas }}</p>
+            </div>
+            <div class="ventanasd">
+                <div class="capsula">
+                    <i class="bx bx-time-five"></i>
+                </div>
+            </div>
         </div>
-        <div class="ventanasd">
-            <div class="capsula">
-                <i class='bx bx-layer'></i>
+        <div class="ventanas">
+            <div class="ventanasi">
+                <p class="ventana-titulo">Entradas Pendientes</p>
+                <p class="ventana-numero">{{ compras_pendientes }}</p>
+            </div>
+            <div class="ventanasd">
+                <div class="capsula">
+                    <i class="bx bx-loader-circle"></i>
+                </div>
+            </div>
+        </div>
+        <div class="ventanas">
+            <div class="ventanasi">
+                <p class="ventana-titulo">Devoluciones Generadas</p>
+                <p class="ventana-numero">{{ total_devoluciones }}</p>
+            </div>
+            <div class="ventanasd">
+                <div class="capsula">
+                    <i class="bx bx-undo"></i>
+                </div>
+            </div>
+        </div>
+        <div class="ventanas">
+            <div class="ventanasi">
+                <p class="ventana-titulo">Entradas Totales</p>
+                <p class="ventana-numero">{{ total_compras }}</p>
+            </div>
+            <div class="ventanasd">
+                <div class="capsula">
+                    <i class="bx bx-layer"></i>
+                </div>
             </div>
         </div>
     </div>
-</div>
-        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-
-
-<div class="tabla-container">
-    <table class="tablas-todo" id="tablacont">
-        <thead>
-            <tr>
-                <th>IdCompra</th>
-                <th>Proveedor</th>
-                <th>FCompra</th>
-                <th>Cant</th>
-                <th>Estado</th>
-                <th>Autorizar</th>
-            </tr>
-        </thead>
-
-        <tbody>
-            {% for compra in compras %}
-                <tr data-id="{{ compra.id }}">
-                    <td>{{ compra.id }}</td>
-                    <td>{{ compra.proveedorNombre }}</td>
-                    <td>{{ compra.fechaCompra }}</td>
-                    <td>{{ compra.totalProductos }}</td>
-
-                    <!-- ESTADO -->
-                    <td class="estado-centrado">
-                        {% if compra.estado == "Pendiente" %}
-                            <span class="badge bg-warning text-dark">Pendiente</span>
-                        {% elif compra.estado == "Completado" %}
-                            <span class="badge bg-success">Completado</span>
-                        {% elif compra.estado == "Cancelada" %}
-                            <span class="badge bg-danger">Cancelada</span>
-                        {% else %}
-                            <span class="badge bg-secondary">Desconocido</span>
-                        {% endif %}
-                    </td>
-
-                    <!-- BOTÓN -->
-                    <td>
-                        {% if perms.manager.add_hautorizarcompra and compra.estado == "Pendiente" and compra.puede_autorizar %}
-                            <button type="button"
-                                    class="btn btn-sm btn-success btn-edit"
-                                    data-id="{{ compra.id }}"
-                                    title="Autorizar Recepción">
-                                <i class='bx bx-check-circle'></i>
-                            </button>
-                        {% endif %}
-                    </td>
-                </tr>
-
-            {% empty %}
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+    <div class="tabla-container">
+        <table class="tablas-todo" id="tablacont">
+            <thead>
                 <tr>
-                    <td colspan="6" style="text-align:center;">
-                        No hay compras disponibles
-                    </td>
+                    <th>ID</th>
+                    <th>Tipo</th>
+                    <th>Proveedor / Origen</th>
+                    <th>Fecha</th>
+                    <th>Cant</th>
+                    <th>Estado</th>
+                    <th>Autorizar</th>
                 </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-        <nav class="d-flex justify-content-center mt-4">
-            <ul class="pagination">
-                <!-- Flecha anterior SIEMPRE visible -->
-                <li class="page-item {% if page <= 1 %}disabled{% endif %}">
-                    <a class="page-link" href="?page={{ page|add:"-1" }}&search={{ search }}">«</a>
-                </li>
-
-                {% for p in page_range %}
-                    <li class="page-item {% if p == page %}active{% endif %}">
-                        <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
-                    </li>
+            </thead>
+            <tbody>
+                {% for item in recepciones %}
+                    <tr data-id="{{ item.id }}" data-tipo="{{ item.tipo_codigo }}">
+                        <td>{{ item.id }}</td>
+                        <td>
+                            {% if item.tipo == "Compra" %}
+                                <span class="badge bg-primary">Compra</span>
+                            {% else %}
+                                <span class="badge bg-info text-dark">Traslado</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ item.referencia }}</td>
+                        <td>{{ item.fecha|date:"d/m/Y H:i" }}</td>
+                        <td>{{ item.cantidad }}</td>
+                        <td class="estado-centrado">
+                            {% if item.estado == "Pendiente" %}
+                                <span class="badge bg-warning text-dark">Pendiente</span>
+                            {% elif item.estado == "Completado" %}
+                                <span class="badge bg-success">Completado</span>
+                            {% else %}
+                                <span class="badge bg-danger">{{ item.estado }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if perms.manager.add_hautorizarcompra and item.estado == "Pendiente" and item.puede_autorizar %}
+                                <button type="button"
+                                        class="btn btn-sm btn-success btn-edit"
+                                        data-id="{{ item.id }}"
+                                        data-tipo="{{ item.tipo }}"
+                                        title="Autorizar Recepción">
+                                    <i class="bx bx-check-circle"></i>
+                                </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center">No hay entradas disponibles</td>
+                    </tr>
                 {% endfor %}
-
-                <!-- Flecha siguiente SIEMPRE visible -->
-                <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
-                    <a class="page-link" href="?page={{ page|add:"1" }}&search={{ search }}">»</a>
+            </tbody>
+        </table>
+    </div>
+    <nav class="d-flex justify-content-center mt-4">
+        <ul class="pagination">
+            <!-- Flecha anterior SIEMPRE visible -->
+            <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                <a class="page-link"
+                   href="?page={{ page|add:"-1" }}&search={{ search }}">«</a>
+            </li>
+            {% for p in page_range %}
+                <li class="page-item {% if p == page %}active{% endif %}">
+                    <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
                 </li>
-            </ul>
-        </nav>
-        <br>
-        <script type="module" src="{% static 'js/bodega/bodega.js' %}"></script>
-{% endblock %}
+            {% endfor %}
+            <!-- Flecha siguiente SIEMPRE visible -->
+            <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                <a class="page-link" href="?page={{ page|add:"1" }}&search={{ search }}">»</a>
+            </li>
+        </ul>
+    </nav>
+    <br>
+    <script type="module" src="{% static 'js/bodega/bodega.js' %}"></script>
+{% endblock main_content %}

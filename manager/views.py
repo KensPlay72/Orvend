@@ -10,7 +10,7 @@ from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, Sum
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -2642,6 +2642,11 @@ def recepcion_inventario_view(request):
 
     search = request.GET.get("search", "").strip()
 
+    recepciones = []
+
+    # =========================================================
+    # COMPRAS
+    # =========================================================
     compras_qs = Compras.objects.select_related("proveedor").prefetch_related(
         "compra_detalles",
         "compra_autorizaciones",
@@ -2653,74 +2658,99 @@ def recepcion_inventario_view(request):
             Q(id__icontains=search) | Q(proveedor__nombre_comercial__icontains=search)
         )
 
-    # =========================
-    # CONTADORES
-    # =========================
-    compras_completadas = compras_qs.filter(estado="Completado").count()
-    compras_pendientes = compras_qs.filter(estado="Pendiente").count()
-    total_compras = compras_qs.count()
-
-    total_devoluciones = DevolucionCompra.objects.filter(compra__in=compras_qs).count()
-
-    # =========================
-    # PAGINADOR
-    # =========================
-    paginator = Paginator(compras_qs.order_by("-id"), 10)
-    page_number = request.GET.get("page", 1)
-    page_obj = paginator.get_page(page_number)
-
-    compras_list = []
-
-    # =========================
-    # RECORRER COMPRAS
-    # =========================
-    for c in page_obj:
+    for c in compras_qs:
         total_productos = Decimal("0.00")
 
         for d in c.compra_detalles.all():
-            # AUTORIZADO (NO VUELVE)
             autorizado = c.compra_autorizaciones.filter(
                 producto_id=d.producto_id
             ).aggregate(total=Sum("cantidad_autorizada"))["total"] or Decimal("0.00")
 
-            # =========================
-            # SOLO DEVOLUCIONES PENDIENTES BLOQUEAN
-            # =========================
             devuelto = DevolucionCompraDetalle.objects.filter(
                 compra_id=c.id,
                 producto_id=d.producto_id,
                 devolucion_compra__estado=EstadoDevolucionCompra.PENDIENTE,
             ).aggregate(total=Sum("cantidad"))["total"] or Decimal("0.00")
 
-            # DISPONIBLE REAL
             pendiente = d.cantidad - autorizado - devuelto
 
             if pendiente > 0:
                 total_productos += pendiente
 
-        # =========================
-        # BOTÓN AUTORIZAR
-        # =========================
-        puede_autorizar = total_productos > 0
-
-        compras_list.append(
+        recepciones.append(
             {
                 "id": c.id,
-                "proveedorNombre": getattr(c.proveedor, "nombre_comercial", "N/A"),
-                "fechaCompra": c.fecha_compra.strftime("%d/%m/%Y %H:%M")
-                if c.fecha_compra
-                else "",
-                "totalProductos": float(total_productos),
+                "tipo": "Compra",
+                "tipo_codigo": "COMPRA",
+                "referencia": getattr(c.proveedor, "nombre_comercial", ""),
+                "fecha": c.fecha_compra,
+                "cantidad": float(total_productos),
                 "estado": c.estado,
-                "puede_autorizar": puede_autorizar,
+                "puede_autorizar": total_productos > 0,
             }
         )
 
+    # =========================================================
+    # TRASLADOS
+    # =========================================================
+    traslados_qs = Traslados.objects.select_related(
+        "ubicacion_origen", "ubicacion_destino"
+    ).prefetch_related("detalles_traslado")
+
+    if search:
+        traslados_qs = traslados_qs.filter(
+            Q(id__icontains=search)
+            | Q(ubicacion_origen__nombre__icontains=search)
+            | Q(ubicacion_destino__nombre__icontains=search)
+        )
+
+    for t in traslados_qs:
+        total_pendiente = Decimal("0.00")
+
+        for d in t.detalles_traslado.all():
+            pendiente = d.cantidad_solicitada - d.cantidad_entregada
+            if pendiente > 0:
+                total_pendiente += pendiente
+
+        recepciones.append(
+            {
+                "id": t.id,
+                "tipo": "Traslado",
+                "tipo_codigo": "TRASLADO",
+                "referencia": f"{t.ubicacion_origen.nombre} → {t.ubicacion_destino.nombre}",
+                "fecha": t.f_creacion,
+                "cantidad": float(total_pendiente),
+                "estado": t.estado,
+                "puede_autorizar": total_pendiente > 0,
+            }
+        )
+
+    # =========================================================
+    # ORDENAR TODO JUNTO POR FECHA DESC
+    # =========================================================
+    recepciones = sorted(recepciones, key=lambda x: x["fecha"], reverse=True)
+
+    # =========================================================
+    # CONTADORES
+    # =========================================================
+    entradas_completadas = len([x for x in recepciones if x["estado"] == "Completado"])
+    entradas_pendientes = len([x for x in recepciones if x["estado"] == "Pendiente"])
+    total_entradas = len(recepciones)
+
+    total_devoluciones = DevolucionCompra.objects.filter(compra__in=compras_qs).count()
+
+    # =========================================================
+    # PAGINADOR MANUAL
+    # =========================================================
+    paginator = Paginator(recepciones, 10)
+    page_number = request.GET.get("page", 1)
+    page_obj = paginator.get_page(page_number)
+
     context = {
-        "compras": compras_list,
-        "compras_completadas": compras_completadas,
-        "compras_pendientes": compras_pendientes,
-        "total_compras": total_compras,
+        "recepciones": page_obj.object_list,
+        "compras_completadas": entradas_completadas,
+        "compras_pendientes": entradas_pendientes,
+        "total_compras": total_entradas,
         "total_devoluciones": total_devoluciones,
         "page": page_obj.number,
         "total_pages": paginator.num_pages,
@@ -2734,84 +2764,132 @@ def recepcion_inventario_view(request):
 
 @login_required
 @permission_required("manager.view_hautorizarcompra", raise_exception=True)
-def autorizar_compra_view(request, id):
+def autorizar_entrada_view(request, tipo, id):
 
-    compra = get_object_or_404(
-        Compras.objects.select_related("proveedor", "ubicacion").prefetch_related(
-            "compra_detalles__producto__unidad_medida",
-            "compra_detalles__producto__marca",
-        ),
-        id=id,
-    )
-
-    historial = HAutorizarCompra.objects.filter(compra_id=compra.id)
-
-    # SOLO PENDIENTES BLOQUEAN
-    devoluciones_pendientes = DevolucionCompraDetalle.objects.filter(
-        compra_id=compra.id, devolucion_compra__estado=EstadoDevolucionCompra.PENDIENTE
-    )
-
-    detalles = []
-
-    for d in compra.compra_detalles.all():
-        # LO YA AUTORIZADO NO VUELVE
-        autorizado = historial.filter(producto_id=d.producto_id).aggregate(
-            total=Sum("cantidad_autorizada")
-        )["total"] or Decimal("0")
-
-        # SOLO LO PENDIENTE BLOQUEA
-        bloqueado = devoluciones_pendientes.filter(producto_id=d.producto_id).aggregate(
-            total=Sum("cantidad")
-        )["total"] or Decimal("0")
-
-        disponible = d.cantidad - autorizado - bloqueado
-
-        if disponible < 0:
-            disponible = Decimal("0")
-
-        detalles.append(
-            {
-                "productoId": d.producto.id,
-                "productoNombre": d.producto.nombre,
-                "cantidad": float(disponible),
-                "precioCompra": float(d.precio_compra),
-                "sku": d.producto.codigo_sku or "N/A",
-                "presentacion": getattr(d.producto.unidad_medida, "abreviatura", "N/A"),
-                "marcas": getattr(d.producto.marca, "nombre", "N/A"),
-                "requiereVencimiento": d.producto.vencimiento,
-            }
+    # =========================================================
+    # SI ES COMPRA
+    # =========================================================
+    if tipo == "Compra":
+        compra = get_object_or_404(
+            Compras.objects.select_related("proveedor", "ubicacion").prefetch_related(
+                "compra_detalles__producto__unidad_medida",
+                "compra_detalles__producto__marca",
+            ),
+            id=id,
         )
 
-    # BOTÓN: SI HAY ALGO POR AUTORIZAR (NO DEPENDE DE DEVOLUCIÓN APROBADA/RECHAZADA)
-    puede_autorizar = any(
-        (
-            d.cantidad
-            - (
-                historial.filter(producto_id=d.producto_id).aggregate(
-                    total=Sum("cantidad_autorizada")
-                )["total"]
-                or 0
+        historial = HAutorizarCompra.objects.filter(compra_id=compra.id)
+
+        devoluciones_pendientes = DevolucionCompraDetalle.objects.filter(
+            compra_id=compra.id,
+            devolucion_compra__estado=EstadoDevolucionCompra.PENDIENTE,
+        )
+
+        detalles = []
+
+        for d in compra.compra_detalles.all():
+            autorizado = historial.filter(producto_id=d.producto_id).aggregate(
+                total=Sum("cantidad_autorizada")
+            )["total"] or Decimal("0")
+
+            bloqueado = devoluciones_pendientes.filter(
+                producto_id=d.producto_id
+            ).aggregate(total=Sum("cantidad"))["total"] or Decimal("0")
+
+            disponible = d.cantidad - autorizado - bloqueado
+
+            if disponible < 0:
+                disponible = Decimal("0")
+
+            detalles.append(
+                {
+                    "productoId": d.producto.id,
+                    "productoNombre": d.producto.nombre,
+                    "cantidad": float(disponible),
+                    "precioCompra": float(d.precio_compra),
+                    "sku": d.producto.codigo_sku or "N/A",
+                    "presentacion": getattr(
+                        d.producto.unidad_medida, "abreviatura", "N/A"
+                    ),
+                    "marcas": getattr(d.producto.marca, "nombre", "N/A"),
+                    "requiereVencimiento": d.producto.vencimiento,
+                }
             )
+
+        puede_autorizar = any(x["cantidad"] > 0 for x in detalles)
+
+        compra_data = {
+            "id": compra.id,
+            "proveedorNombre": compra.proveedor.nombre_legal,
+            "total": float(compra.total),
+            "tipoCompra": compra.tipo_compra,
+            "observaciones": compra.observaciones,
+            "fechaCompra": compra.fecha_compra.strftime("%Y-%m-%d %H:%M"),
+            "detalles": detalles,
+            "puede_autorizar": puede_autorizar,
+            "tipo": "Compra",
+        }
+
+    # =========================================================
+    # SI ES TRASLADO
+    # =========================================================
+    elif tipo == "Traslado":
+        traslado = get_object_or_404(
+            Traslados.objects.select_related(
+                "ubicacion_origen", "ubicacion_destino", "solicitado_por"
+            ).prefetch_related(
+                "detalles_traslado__producto__unidad_medida",
+                "detalles_traslado__producto__marca",
+            ),
+            id=id,
         )
-        > 0
-        for d in compra.compra_detalles.all()
-    )
+
+        detalles = []
+
+        for d in traslado.detalles_traslado.all():
+            pendiente = d.cantidad_solicitada - d.cantidad_entregada
+
+            if pendiente < 0:
+                pendiente = Decimal("0")
+
+            detalles.append(
+                {
+                    "productoId": d.producto.id,
+                    "productoNombre": d.producto.nombre,
+                    "cantidad": float(pendiente),
+                    "precioCompra": 0,
+                    "sku": d.producto.codigo_sku or "N/A",
+                    "presentacion": getattr(
+                        d.producto.unidad_medida, "abreviatura", "N/A"
+                    ),
+                    "marcas": getattr(d.producto.marca, "nombre", "N/A"),
+                    "requiereVencimiento": False,
+                }
+            )
+
+        puede_autorizar = any(x["cantidad"] > 0 for x in detalles)
+
+        compra_data = {
+            "id": traslado.id,
+            "proveedorNombre": "",
+            "total": 0,
+            "tipoCompra": "TRASLADO INTERNO",
+            "observaciones": traslado.observaciones,
+            "fechaCompra": traslado.f_creacion.strftime("%Y-%m-%d %H:%M"),
+            "detalles": detalles,
+            "puede_autorizar": puede_autorizar,
+            "tipo": "Traslado",
+        }
+
+    else:
+        raise Http404("Tipo no válido")
 
     return render(
         request,
         "bodega/confiinventario.html",
         {
-            "compra_id": compra.id,
-            "compra": {
-                "id": compra.id,
-                "proveedorNombre": compra.proveedor.nombre_legal,
-                "total": float(compra.total),
-                "tipoCompra": compra.tipo_compra,
-                "observaciones": compra.observaciones,
-                "fechaCompra": compra.fecha_compra.strftime("%Y-%m-%d %H:%M"),
-                "detalles": detalles,
-                "puede_autorizar": puede_autorizar,
-            },
+            "compra_id": id,
+            "compra": compra_data,
         },
     )
 
@@ -2830,144 +2908,178 @@ def post_autorizar_inventario(request):
     try:
         data = json.loads(request.body)
 
-        compra_id = data.get("CompraId")
+        entrada_id = data.get("EntradaId")
+        tipo = data.get("TipoEntrada")
         productos = data.get("Productos", [])
 
-        if not compra_id or not productos:
+        if not entrada_id or not tipo or not productos:
             return JsonResponse(
                 {"success": False, "message": "Datos incompletos"}, status=400
             )
 
-        compra = get_object_or_404(
-            Compras.objects.select_related("ubicacion").prefetch_related(
-                "compra_detalles"
-            ),
-            id=compra_id,
-        )
+        # =====================================================
+        # COMPRA
+        # =====================================================
+        if tipo == "COMPRA":
+            entrada = get_object_or_404(
+                Compras.objects.select_related("ubicacion").prefetch_related(
+                    "compra_detalles"
+                ),
+                id=entrada_id,
+            )
 
-        # =========================
-        # VALIDAR ESTADO
-        # =========================
-        if compra.estado == EstadoCompra.COMPLETADO:
+            ubicacion_destino = entrada.ubicacion
+            detalles = entrada.compra_detalles.all()
+
+            for p in productos:
+                producto_id = p.get("ProductoId")
+                cantidad = Decimal(str(p.get("Cantidad", 0)))
+                fvencimiento = p.get("Fvencimiento")
+
+                if cantidad <= 0:
+                    continue
+
+                detalle = detalles.filter(producto_id=producto_id).first()
+                if not detalle:
+                    continue
+
+                autorizado_actual = HAutorizarCompra.objects.filter(
+                    compra_id=entrada.id,
+                    producto_id=producto_id,
+                ).aggregate(total=Sum("cantidad_autorizada"))["total"] or Decimal("0")
+
+                pendiente = detalle.cantidad - autorizado_actual
+
+                if cantidad > pendiente:
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "message": f"Excede cantidad pendiente producto {producto_id}",
+                        },
+                        status=400,
+                    )
+
+                HAutorizarCompra.objects.create(
+                    compra_id=entrada.id,
+                    producto_id=producto_id,
+                    cantidad_comprada=detalle.cantidad,
+                    cantidad_autorizada=cantidad,
+                    fvencimiento=parse_datetime(fvencimiento) if fvencimiento else None,
+                    u_creo_id=request.user.id,
+                )
+
+                Inventarios.objects.create(
+                    producto_id=producto_id,
+                    ubicacion=ubicacion_destino,
+                    compra=entrada,
+                    cantidad=cantidad,
+                    fvencimiento=parse_datetime(fvencimiento) if fvencimiento else None,
+                    u_creo_id=request.user.id,
+                )
+
+                MovimientoInventario.objects.create(
+                    tipo_movimiento=TipoMovimientoInventario.ENTRADA_COMPRA,
+                    producto_id=producto_id,
+                    ubicacion_destino=ubicacion_destino,
+                    cantidad=cantidad,
+                    stock_anterior=0,
+                    stock_resultante=cantidad,
+                    compra_id=entrada.id,
+                )
+
+            autorizados = (
+                HAutorizarCompra.objects.filter(compra_id=entrada.id)
+                .values("producto_id")
+                .annotate(total=Sum("cantidad_autorizada"))
+            )
+
+            map_aut = {a["producto_id"]: a["total"] for a in autorizados}
+
+            completado = all(
+                map_aut.get(d.producto_id, Decimal("0")) >= d.cantidad for d in detalles
+            )
+
+            entrada.estado = (
+                EstadoCompra.COMPLETADO if completado else EstadoCompra.PENDIENTE
+            )
+            entrada.save()
+
+        # =====================================================
+        # TRASLADO
+        # =====================================================
+        elif tipo == "TRASLADO":
+            entrada = get_object_or_404(
+                Traslados.objects.select_related(
+                    "ubicacion_origen", "ubicacion_destino"
+                ),
+                id=entrada_id,
+            )
+
+            origen = entrada.ubicacion_origen
+            destino = entrada.ubicacion_destino
+
+            detalles = DetalleTraslado.objects.filter(traslado_id=entrada.id)
+
+            for p in productos:
+                producto_id = p.get("ProductoId")
+                cantidad = Decimal(str(p.get("Cantidad", 0)))
+                fvencimiento = p.get("Fvencimiento")
+
+                if cantidad <= 0:
+                    continue
+
+                detalle = detalles.filter(producto_id=producto_id).first()
+                if not detalle:
+                    continue
+
+                # =====================================================
+                # NO SUMA → SOLO REEMPLAZA
+                # =====================================================
+                detalle.cantidad_entregada = cantidad
+                detalle.save(update_fields=["cantidad_entregada"])
+
+                Inventarios.objects.create(
+                    producto_id=producto_id,
+                    ubicacion=destino,
+                    cantidad=cantidad,
+                    fvencimiento=parse_datetime(fvencimiento) if fvencimiento else None,
+                    u_creo_id=request.user.id,
+                )
+
+                MovimientoInventario.objects.create(
+                    tipo_movimiento=TipoMovimientoInventario.TRASLADO_ENTRADA,
+                    producto_id=producto_id,
+                    ubicacion_origen=origen,
+                    ubicacion_destino=destino,
+                    cantidad=cantidad,
+                    stock_anterior=0,
+                    stock_resultante=cantidad,
+                    traslado_id=entrada.id,
+                )
+
+            entrada.autorizado_por = request.user
+            entrada.fecha_autorizacion = timezone.now()
+
+            # =====================================================
+            # ESTADO SOLO SI ES IGUAL EXACTO
+            # =====================================================
+            detalles_refresh = DetalleTraslado.objects.filter(traslado_id=entrada.id)
+
+            completado = all(
+                d.cantidad_entregada == d.cantidad_solicitada for d in detalles_refresh
+            )
+
+            entrada.estado = Estados.COMPLETADO if completado else Estados.PENDIENTE
+
+            entrada.save()
+
+        else:
             return JsonResponse(
-                {"success": False, "message": "La compra ya está completada"},
-                status=400,
+                {"success": False, "message": "Tipo inválido"}, status=400
             )
-
-        # =========================
-        # PROCESAR PRODUCTOS
-        # =========================
-        for p in productos:
-            producto_id = p.get("ProductoId")
-            cantidad = Decimal(str(p.get("Cantidad", 0)))
-            fvencimiento = p.get("Fvencimiento")
-
-            if cantidad <= 0:
-                continue
-
-            detalle = compra.compra_detalles.filter(producto_id=producto_id).first()
-
-            if not detalle:
-                return JsonResponse(
-                    {
-                        "success": False,
-                        "message": f"Producto {producto_id} no pertenece a la compra",
-                    },
-                    status=400,
-                )
-
-            # =========================
-            # CALCULAR AUTORIZADO ACTUAL
-            # =========================
-            autorizado_actual = HAutorizarCompra.objects.filter(
-                compra_id=compra.id, producto_id=producto_id
-            ).aggregate(total=Sum("cantidad_autorizada"))["total"] or Decimal("0")
-
-            pendiente = detalle.cantidad - autorizado_actual
-
-            if cantidad > pendiente:
-                return JsonResponse(
-                    {
-                        "success": False,
-                        "message": f"Cantidad excede lo pendiente para producto {producto_id}",
-                    },
-                    status=400,
-                )
-
-            # =========================
-            # PARSE FECHA
-            # =========================
-            fecha_venc = None
-            if fvencimiento:
-                fecha_venc = parse_datetime(fvencimiento)
-
-            # =========================
-            # GUARDAR AUTORIZACIÓN
-            # =========================
-            HAutorizarCompra.objects.create(
-                compra_id=compra.id,
-                producto_id=producto_id,
-                cantidad_comprada=detalle.cantidad,
-                cantidad_autorizada=cantidad,
-                fvencimiento=fecha_venc,
-                u_creo_id=request.user.id,
-            )
-
-            # =========================
-            # INVENTARIO (POR LOTE)
-            # =========================
-            inventario, created = Inventarios.objects.get_or_create(
-                producto_id=producto_id,
-                ubicacion_id=compra.ubicacion_id,
-                compra_id=compra.id,
-                fvencimiento=fecha_venc,
-                defaults={"cantidad": Decimal("0"), "u_creo_id": request.user.id},
-            )
-
-            stock_anterior = inventario.cantidad
-            inventario.cantidad += cantidad
-            inventario.u_modifico_id = request.user.id
-            inventario.save()
-
-            # =========================
-            # MOVIMIENTO INVENTARIO
-            # =========================
-            MovimientoInventario.objects.create(
-                tipo_movimiento=TipoMovimientoInventario.ENTRADA_COMPRA,
-                producto_id=producto_id,
-                ubicacion_destino_id=compra.ubicacion_id,
-                cantidad=cantidad,
-                stock_anterior=stock_anterior,
-                stock_resultante=inventario.cantidad,
-                compra_id=compra.id,
-            )
-
-        # =========================
-        # VALIDAR SI YA SE COMPLETÓ (OPTIMIZADO)
-        # =========================
-        autorizados = (
-            HAutorizarCompra.objects.filter(compra_id=compra.id)
-            .values("producto_id")
-            .annotate(total=Sum("cantidad_autorizada"))
-        )
-
-        map_autorizados = {a["producto_id"]: a["total"] for a in autorizados}
-
-        completado = all(
-            (map_autorizados.get(d.producto_id, Decimal("0")) >= d.cantidad)
-            for d in compra.compra_detalles.all()
-        )
-
-        # =========================
-        # ACTUALIZAR ESTADO
-        # =========================
-        if completado:
-            compra.estado = EstadoCompra.COMPLETADO
-            compra.u_modifico_id = request.user.id
-            compra.save(update_fields=["estado", "u_modifico_id", "f_modificacion"])
 
         return JsonResponse(
-            {"success": True, "message": "Inventario autorizado correctamente"}
+            {"success": True, "message": "Inventario procesado correctamente"}
         )
 
     except Exception as e:
@@ -3511,16 +3623,23 @@ def rechazar_devolucion_view(request, id):
 
 
 @login_required
+@permission_required("manager.view_traslados", raise_exception=True)
 def traslados_view(request):
     ubicaciones = Ubicaciones.objects.filter(is_delete=False).order_by("nombre")
     context = {"ubicaciones": ubicaciones}
     return render(request, "gestiones/traslados.html", context)
 
 
+@login_required
+@permission_required("manager.view_traslados", raise_exception=True)
 def inventario_por_ubicacion(request, ubicacion_id):
+
     inventario = (
         Inventarios.objects.select_related("producto", "producto__unidad_medida")
-        .filter(ubicacion_id=ubicacion_id)
+        .filter(
+            ubicacion_id=ubicacion_id,
+            cantidad__gt=0,
+        )
         .values(
             "producto_id",
             "producto__nombre",
@@ -3534,6 +3653,11 @@ def inventario_por_ubicacion(request, ubicacion_id):
     data = []
 
     for item in inventario:
+        stock = float(item["total_stock"] or 0)
+
+        if stock <= 0:
+            continue
+
         data.append(
             {
                 "producto_id": item["producto_id"],
@@ -3541,7 +3665,7 @@ def inventario_por_ubicacion(request, ubicacion_id):
                 "sku": item["producto__codigo_sku"],
                 "imagen": item["producto__imagen_url"],
                 "unidad": item["producto__unidad_medida__nombre"],
-                "stock": float(item["total_stock"] or 0),
+                "stock": stock,
             }
         )
 
