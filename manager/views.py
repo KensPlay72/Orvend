@@ -3627,7 +3627,7 @@ def rechazar_devolucion_view(request, id):
 def traslados_view(request):
     ubicaciones = Ubicaciones.objects.filter(is_delete=False).order_by("nombre")
     context = {"ubicaciones": ubicaciones}
-    return render(request, "gestiones/traslados.html", context)
+    return render(request, "traslados/traslados.html", context)
 
 
 @login_required
@@ -3825,3 +3825,41 @@ def post_traslado(request):
             {"success": False, "message": f"Error interno: {str(e)}"},
             status=500,
         )
+
+
+@login_required
+@permission_required("manager.view_traslados", raise_exception=True)
+def traslados_list(request):
+    search = request.GET.get("search", "").strip()
+
+    traslados = (
+        Traslados.objects.select_related(
+            "solicitado_por",
+            "autorizado_por",
+            "ubicacion_origen",
+            "ubicacion_destino",
+        )
+        .filter(is_delete=False)
+        .order_by("-id")
+    )
+
+    if search:
+        traslados = traslados.filter(
+            Q(id__icontains=search)
+            | Q(ubicacion_origen__nombre__icontains=search)
+            | Q(ubicacion_destino__nombre__icontains=search)
+            | Q(estado__icontains=search)
+        )
+
+    paginator = Paginator(traslados, 10)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    return render(
+        request,
+        "traslados/traslados_view.html",
+        {
+            "page_obj": page_obj,
+            "search": search,
+        },
+    )

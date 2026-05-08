@@ -141,6 +141,11 @@ urlpatterns = [
         views.inventario_por_ubicacion,
         name="inventario_por_ubicacion",
     ),
-    path("traslados/", views.traslados_view, name="traslados"),
+    path("r/traslados/", views.traslados_view, name="traslados_create"),
     path("traslados/post/", views.post_traslado, name="post_traslado"),
+    path(
+        "traslados/",
+        views.traslados_list,
+        name="traslados_list",
+    ),
 ]
