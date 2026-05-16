@@ -242,3 +242,7 @@
   display: flex;
   gap: 1rem;
 }
+
+.displaynone {
+  display: none;
+}

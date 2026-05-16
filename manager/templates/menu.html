@@ -1,287 +1,352 @@
-{% load static %}
-{% block content %}
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" href="{% static 'plugins/bootstrap.min.css' %}">
-        <link rel="icon"
-              href="{% static 'img/logo-card.ico' %}"
-              type="image/x-icon">
-        {% block extra_css %}
-        {% endblock extra_css %}
-        <!--========== BOX ICONS ==========-->
-        <link rel="stylesheet" href="{% static 'plugins/css/boxicons.min.css' %}">
-        <!--========== CSS ==========-->
-        <link rel="stylesheet" href="{% static 'css/menu.css' %}">
-        <title>
-            {% block title %}
-            {% endblock title %}
-        </title>
-    </head>
-    <body>
-        <!--========== HEADER ========-->
-        <header class="header">
-            <div class="header__container">
-                {% block titulo_content %}
-                {% endblock titulo_content %}
-                <div class="header__toggle">
-                    <i class="bx bx-menu" id="header-toggle"></i>
-                </div>
-                <!-- Campo de búsqueda -->
-                {% if mostrar_buscador %}
-                    <form method="get" class="header__search" id="buscadorform">
-                        <input type="search"
-                               name="search"
-                               placeholder="Buscar"
-                               class="header__input"
-                               id="busqueda"
-                               value="{{ search }}"
-                               autocomplete="off" />
-                        <i class="bx bx-search header__icon" id="buscarIcono"></i>
-                    </form>
-                {% endif %}
-                <div class="initials-circle" id="profile-img">
-                    {{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}
-                </div>
-            </div>
-            <div id="modal" class="modal1">
-                <div class="modal-content">
-                    <!-- Header: Logo left, Logout right -->
-                    <div class="encabezado">
-                        <img class="logoencabezado"
-                             src="{% static 'img/LH.png' %}"
-                             alt="Logo Orvend"
-                             width="0"
-                             height="0" />
-                        <a href="#" id="btn-logout" class="logout-link">Cerrar Sesión</a>
-                    </div>
-                    <!-- Profile Info -->
-                    <div class="modal-header">
-                        <div class="initials-circle">{{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}</div>
-                        <div class="modal-info">
-                            <p class="username" id="modal-username">{{ request.user.username }}</p>
-                            <p class="full-name" id="modal-fullname">{{ request.user.first_name }} {{ request.user.last_name }}</p>
-                            <p class="email" id="modal-email">{{ request.user.email }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </header>
-        <!--========== NAV ==========-->
-        <div class="nav" id="navbar">
-            <nav class="nav__container">
-                <div>
-                    <div class="nav__list">
-                        <div class="nav__items">
-                            <h3 class="nav__subtitle">Tiendas</h3>
-                            <a href="{% url 'dashboard' %}"
-                               class="nav__link {% if request.path == '/manager/dashboard/' %}active{% endif %}">
-                                <i class="bx bx-home nav__icon"></i>
-                                <span class="nav__name">Dashboard</span>
-                            </a>
-                            <a href="#" class="nav__link">
-                                <i class="bx bx-cart nav__icon"></i>
-                                <span class="nav__name">Ventas</span>
-                            </a>
-                            <a href="#" class="nav__link">
-                                <i class="bx bx-transfer-alt nav__icon"></i>
-                                <span class="nav__name">Cambios</span>
-                            </a>
-                            <a href="#" class="nav__link">
-                                <i class="bx bx-purchase-tag nav__icon"></i>
-                                <span class="nav__name">Promociones</span>
-                            </a>
-                            <a href="#" class="nav__link">
-                                <i class="bx bx-credit-card nav__icon"></i>
-                                <span class="nav__name">Ceditos</span>
-                            </a>
-                            <a href="#" class="nav__link">
-                                <i class="bx bx-wallet nav__icon"></i>
-                                <span class="nav__name">Cierre de caja</span>
-                            </a>
-                        </div>
-                        <div class="nav__items">
-                            <h3 class="nav__subtitle">Gestiones</h3>
-                            {% if perms.manager.view_inventarios %}
-                                <a href="{% url 'inventario' %}"
-                                   class="nav__link {% if request.path == '/manager/inventario/' %}active{% endif %}">
-                                    <i class="bx bx-list-ul nav__icon"></i>
-                                    <span class="nav__name">Inventario</span>
-                                </a>
-                            {% endif %}
-                            {% if perms.manager.view_productos %}
-                                <a href="{% url 'productos' %}"
-                                   class="nav__link {% if request.path == '/manager/productos/' %}active{% endif %}">
-                                    <i class="bx bx-box nav__icon"></i>
-                                    <span class="nav__name">Productos</span>
-                                </a>
-                            {% endif %}
-                            {% if perms.manager.view_proveedores %}
-                                <a href="{% url 'proveedores' %}"
-                                   class="nav__link {% if request.path == '/manager/proveedores/' %}active{% endif %}">
-                                    <i class="bx bx-group nav__icon"></i>
-                                    <span class="nav__name">Proveedores</span>
-                                </a>
-                            {% endif %}
-                            {% if perms.manager.view_marcas %}
-                                <a href="{% url 'marcas' %}"
-                                   class="nav__link {% if request.path == '/manager/marcas/' %}active{% endif %}">
-                                    <i class="bx bx-tag nav__icon"></i>
-                                    <span class="nav__name">Marcas</span>
-                                </a>
-                            {% endif %}
-                            {% if perms.manager.view_umedidas %}
-                                <a href="{% url 'presentaciones' %}"
-                                   class="nav__link {% if request.path == '/manager/presentaciones/' %}active{% endif %}">
-                                    <i class="bx bx-package nav__icon"></i>
-                                    <span class="nav__name">Presentaciones</span>
-                                </a>
-                            {% endif %}
-                            {% if perms.manager.view_categorias %}
-                                <a href="{% url 'categorias' %}"
-                                   class="nav__link {% if request.path == '/manager/categorias/' %}active{% endif %}">
-                                    <i class="bx bx-category nav__icon"></i>
-                                    <span class="nav__name">Categorías</span>
-                                </a>
-                            {% endif %}
-                            {% if perms.manager.view_compras %}
-                                <a href="{% url 'compras' %}"
-                                   class="nav__link {% if request.path == '/manager/compras/' %}active{% endif %}">
-                                    <i class="bx bx-cart-alt nav__icon"></i>
-                                    <span class="nav__name">Compras</span>
-                                </a>
-                            {% endif %}
-                            {% if perms.manager.view_ubicaciones %}
-                                <a href="{% url 'ubicaciones' %}"
-                                   class="nav__link {% if request.path == '/manager/ubicaciones/' %}active{% endif %}">
-                                    <i class="bx bx-map nav__icon"></i>
-                                    <span class="nav__name">Ubicaciones</span>
-                                </a>
-                            {% endif %}
-                            {% if perms.manager.view_cuentasporpagar %}
-                                <a href="{% url 'cppagar' %}"
-                                   class="nav__link {% if request.path == '/manager/cppagar/' %}active{% endif %}">
-                                    <i class="bx bx-money nav__icon"></i>
-                                    <span class="nav__name">Cuentas x Pagar</span>
-                                </a>
-                            {% endif %}
-                            {% if perms.manager.view_traslados %}
-                                <a href="{% url 'traslados_list' %}"
-                                   class="nav__link {% if request.path == '/manager/traslados/' %}active{% endif %}">
-                                    <i class="bx bx-transfer-alt nav__icon"></i>
-                                    <span class="nav__name">Traslados</span>
-                                </a>
-                            {% endif %}
-                            {% if perms.manager.view_clientes %}
-                                <a href="{% url 'clientes' %}"
-                                   class="nav__link {% if request.path == '/manager/clientes/' %}active{% endif %}">
-                                    <i class="bx bx-group nav__icon"></i>
-                                    <span class="nav__name">Clientes</span>
-                                </a>
-                            {% endif %}
-                        </div>
-                        <div class="nav__items">
-                            <h3 class="nav__subtitle">Bodega</h3>
-                            <a href="{% url 'dashboard_bodega' %}"
-                               class="nav__link {% if request.path == '/manager/bodega/dashboard/' %}active{% endif %}">
-                                <i class="bx bx-home nav__icon"></i>
-                                <span class="nav__name">Dashboard</span>
-                            </a>
-                            <a href="{% url 'recepcion_inventario' %}"
-                               class="nav__link {% if request.path == '/manager/bodega/recepcion_inventario/' %}active{% endif %}">
-                                <i class="bx bx-package nav__icon"></i>
-                                <span class="nav__name">Recepción</span>
-                            </a>
-                        </div>
-                        {% comment %} <div class="nav__items">
-                                <h3 class="nav__subtitle">GESTIONES</h3>
-                                <div class="nav__dropdown">
-                                    {% if perms.manager.view_productos %}
-                                    <a href="{% url 'productos' %}" class="nav__link {% if request.path == '/manager/productos/' %}active{% endif %}">
-                                        <i class='bx bx-box nav__icon'></i>
-                                        <span class="nav__name">Productos</span>
-                                    </a>
-                                    {% endif %}
-                                    <div class="nav__dropdown-collapse">
-                                        <div class="nav__dropdown-content">
-                                            {% if perms.manager.view_marcas %}
-                                            <a href="{% url 'marcas' %}" class="nav__dropdown-item {% if request.path == '/manager/marcas/' %}active{% endif %}">
-                                            Marcas
-                                            </a>
-                                            {% endif %}
-                                            {% if perms.manager.view_proveedores %}
-                                            <a href="{% url 'proveedores' %}" class="nav__dropdown-item {% if request.path == '/manager/proveedores/' %}active{% endif %}">
-                                            Proveedores
-                                            </a>
-                                            {% endif %}
-                                            {% if perms.manager.view_umedidas %}
-                                            <a href="{% url 'presentaciones' %}" class="nav__dropdown-item {% if request.path == '/manager/presentaciones/' %}active{% endif %}">
-                                                Presentaciones
-                                            </a>
-                                            {% endif %}
-                                            {% if perms.manager.view_categorias %}
-                                            <a href="{% url 'categorias' %}" class="nav__dropdown-item {% if request.path == '/manager/categorias/' %}active{% endif %}">
-                                            Categorías
-                                            </a>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                                <a href="{% url 'cppagar' %}" class="nav__link {% if request.path == '/manager/cppagar/' %}active{% endif %}">                                  
-                                    <i class='bx bx-receipt nav__icon'></i>
-                                    <span class="nav__name">Cuentas x pagar</span>
-                                </a>
-                                <a href="{% url 'compras' %}" class="nav__link {% if request.path == '/manager/compras/' %}active{% endif %}">
-                                    <i class='bx bx-cart-alt nav__icon'></i>
-                                    <span class="nav__name">Compras</span>
-                                </a>
-                                <a href="{% url 'devoluciones_compras' %}" class="nav__link {% if request.path == '/manager/compras/devoluciones/' %}active{% endif %}">
-                                    <i class='bx bx-revision nav__icon'></i>
-                                    <span class="nav__name">Devoluciones</span>
-                                </a>
-                                <a href="{% url 'clientes' %}" class="nav__link {% if request.path == '/manager/clientes/' %}active{% endif %}">
-                                    <i class='bx bx-group nav__icon'></i>
-                                    <span class="nav__name">Clientes</span>
-                                </a>
-                                <a href="{% url 'inventario' %}" class="nav__link {% if request.path == '/manager/inventario/' %}active{% endif %}">
-                                    <i class='bx bx-list-ul nav__icon'></i>
-                                    <span class="nav__name">Inventario</span>
-                                </a>
-                                <a href="{% url 'ubicaciones' %}" class="nav__link {% if request.path == '/manager/ubicaciones/' %}active{% endif %}">
-                                    <i class='bx bx-map nav__icon'></i>
-                                    <span class="nav__name">Ubicaciones</span>
-                                </a>
-                                <a href="{% url 'usuarios' %}" class="nav__link {% if request.path == '/manager/usuarios/' %}active{% endif %}">
-                                    <i class='bx bx-id-card nav__icon'></i>
-                                    <span class="nav__name">Usuarios</span>
-                                </a>
-                                {%endif%}
-                                {% if rol_id == 5 or is_admin %}
-                                    <h3 class="nav__subtitle">Bodega</h3>
-                                    <a href="{% url 'dashboard_bodega' %}" class="nav__link {% if request.path == '/manager/bodega/dashboard/' %}active{% endif %}">
-                                        <i class='bx bx-home nav__icon'></i>
-                                        <span class="nav__name">Dashboard</span>
-                                    </a>
-                                    <a href="{% url 'recepcion_inventario' %}" class="nav__link {% if request.path == '/manager/bodega/recepcion_inventario/' %}active{% endif %}">                                  
-                                        <i class='bx bx-package nav__icon'></i>
-                                        <span class="nav__name">Recepción</span>
-                                    </a>
-                                {% endif %}
-                        </div> {% endcomment %}
-                    </div>
-                </div>
-            </nav>
+{% load static %} {% block content %}
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="{% static 'plugins/bootstrap.min.css' %}" />
+  <link
+    rel="icon"
+    href="{% static 'img/logo-card.ico' %}"
+    type="image/x-icon"
+  />
+  {% block extra_css %} {% endblock extra_css %}
+  <!--========== BOX ICONS ==========-->
+  <link rel="stylesheet" href="{% static 'plugins/css/boxicons.min.css' %}" />
+  <!--========== CSS ==========-->
+  <link rel="stylesheet" href="{% static 'css/menu.css' %}" />
+  <title>{% block title %} {% endblock title %}</title>
+</head>
+<body>
+  <!--========== HEADER ========-->
+  <header class="header">
+    <div class="header__container">
+      {% block titulo_content %} {% endblock titulo_content %}
+      <div class="header__toggle">
+        <i class="bx bx-menu" id="header-toggle"></i>
+      </div>
+      <!-- Campo de búsqueda -->
+      {% if mostrar_buscador %}
+      <form method="get" class="header__search" id="buscadorform">
+        <input
+          type="search"
+          name="search"
+          placeholder="Buscar"
+          class="header__input"
+          id="busqueda"
+          value="{{ search }}"
+          autocomplete="off"
+        />
+        <i class="bx bx-search header__icon" id="buscarIcono"></i>
+      </form>
+      {% endif %}
+      <div class="initials-circle" id="profile-img">
+        {{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}
+      </div>
+    </div>
+    <div id="modal" class="modal1">
+      <div class="modal-content">
+        <!-- Header: Logo left, Logout right -->
+        <div class="encabezado">
+          <img
+            class="logoencabezado"
+            src="{% static 'img/LH.png' %}"
+            alt="Logo Orvend"
+            width="0"
+            height="0"
+          />
+          <a href="#" id="btn-logout" class="logout-link">Cerrar Sesión</a>
         </div>
-        <!--========== CONTENTS ========-->
-        <main class="main">
-            {% block main_content %}
-            {% endblock main_content %}
-        </main>
-        <!--========== MAIN JS ==========-->
-        <script src="{% static 'js/menu.js' %}"></script>
-        <script src="{% static 'plugins/jwt-decode.min.js' %}"></script>
-        <script src="{% static 'plugins/jquery.min.js' %}"></script>
-        <script src="{% static 'plugins/bootstrap.min.js' %}"></script>
-        <script src="{% static 'plugins/sweetalert2.min.js' %}"></script>
-    </body>
+        <!-- Profile Info -->
+        <div class="modal-header">
+          <div class="initials-circle">
+        {{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}
+          </div>
+          <div class="modal-info">
+            <p class="username" id="modal-username">
+              {{ request.user.username }}
+            </p>
+            <p class="full-name" id="modal-fullname">
+              {{ request.user.first_name }} {{ request.user.last_name }}
+            </p>
+            <p class="email" id="modal-email">{{ request.user.email }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+  <!--========== NAV ==========-->
+  <div class="nav" id="navbar">
+    <nav class="nav__container">
+      <div>
+        <div class="nav__list">
+          <div class="nav__items">
+            <h3 class="nav__subtitle">Tiendas</h3>
+            <a
+              href="{% url 'dashboard' %}"
+              class="nav__link {% if request.path == '/manager/dashboard/' %}active{% endif %}"
+            >
+              <i class="bx bx-home nav__icon"></i>
+              <span class="nav__name">Dashboard</span>
+            </a>
+            <a href="#" class="nav__link">
+              <i class="bx bx-cart nav__icon"></i>
+              <span class="nav__name">Ventas</span>
+            </a>
+            <a href="#" class="nav__link">
+              <i class="bx bx-transfer-alt nav__icon"></i>
+              <span class="nav__name">Cambios</span>
+            </a>
+            {% if perms.manager.view_descuento %}
+            <a href="{% url 'descuentos' %}" class="nav__link">
+              <i class="bx bx-purchase-tag nav__icon"></i>
+              <span class="nav__name">Descuentos</span>
+            </a>
+            {% endif %}
+            <a href="#" class="nav__link">
+              <i class="bx bx-credit-card nav__icon"></i>
+              <span class="nav__name">Ceditos</span>
+            </a>
+            <a href="#" class="nav__link">
+              <i class="bx bx-wallet nav__icon"></i>
+              <span class="nav__name">Cierre de caja</span>
+            </a>
+          </div>
+          <div class="nav__items">
+            <h3 class="nav__subtitle">Gestiones</h3>
+            {% if perms.manager.view_inventarios %}
+            <a
+              href="{% url 'inventario' %}"
+              class="nav__link {% if request.path == '/manager/inventario/' %}active{% endif %}"
+            >
+              <i class="bx bx-list-ul nav__icon"></i>
+              <span class="nav__name">Inventario</span>
+            </a>
+            {% endif %} 
+            {% if perms.manager.view_productos %}
+            <a
+              href="{% url 'productos' %}"
+              class="nav__link {% if request.path == '/manager/productos/' %}active{% endif %}"
+            >
+              <i class="bx bx-box nav__icon"></i>
+              <span class="nav__name">Productos</span>
+            </a>
+            {% endif %} 
+            {% if perms.manager.view_proveedores %}
+            <a
+              href="{% url 'proveedores' %}"
+              class="nav__link {% if request.path == '/manager/proveedores/' %}active{% endif %}"
+            >
+              <i class="bx bx-group nav__icon"></i>
+              <span class="nav__name">Proveedores</span>
+            </a>
+            {% endif %} {% if perms.manager.view_marcas %}
+            <a
+              href="{% url 'marcas' %}"
+              class="nav__link {% if request.path == '/manager/marcas/' %}active{% endif %}"
+            >
+              <i class="bx bx-tag nav__icon"></i>
+              <span class="nav__name">Marcas</span>
+            </a>
+            {% endif %} {% if perms.manager.view_umedidas %}
+            <a
+              href="{% url 'presentaciones' %}"
+              class="nav__link {% if request.path == '/manager/presentaciones/' %}active{% endif %}"
+            >
+              <i class="bx bx-package nav__icon"></i>
+              <span class="nav__name">Presentaciones</span>
+            </a>
+            {% endif %} {% if perms.manager.view_categorias %}
+            <a
+              href="{% url 'categorias' %}"
+              class="nav__link {% if request.path == '/manager/categorias/' %}active{% endif %}"
+            >
+              <i class="bx bx-category nav__icon"></i>
+              <span class="nav__name">Categorías</span>
+            </a>
+            {% endif %} {% if perms.manager.view_compras %}
+            <a
+              href="{% url 'compras' %}"
+              class="nav__link {% if request.path == '/manager/compras/' %}active{% endif %}"
+            >
+              <i class="bx bx-cart-alt nav__icon"></i>
+              <span class="nav__name">Compras</span>
+            </a>
+            {% endif %} {% if perms.manager.view_ubicaciones %}
+            <a
+              href="{% url 'ubicaciones' %}"
+              class="nav__link {% if request.path == '/manager/ubicaciones/' %}active{% endif %}"
+            >
+              <i class="bx bx-map nav__icon"></i>
+              <span class="nav__name">Ubicaciones</span>
+            </a>
+            {% endif %} {% if perms.manager.view_cuentasporpagar %}
+            <a
+              href="{% url 'cppagar' %}"
+              class="nav__link {% if request.path == '/manager/cppagar/' %}active{% endif %}"
+            >
+              <i class="bx bx-money nav__icon"></i>
+              <span class="nav__name">Cuentas x Pagar</span>
+            </a>
+            {% endif %} {% if perms.manager.view_traslados %}
+            <a
+              href="{% url 'traslados_list' %}"
+              class="nav__link {% if request.path == '/manager/traslados/' %}active{% endif %}"
+            >
+              <i class="bx bx-transfer-alt nav__icon"></i>
+              <span class="nav__name">Traslados</span>
+            </a>
+            {% endif %} {% if perms.manager.view_clientes %}
+            <a
+              href="{% url 'clientes' %}"
+              class="nav__link {% if request.path == '/manager/clientes/' %}active{% endif %}"
+            >
+              <i class="bx bx-group nav__icon"></i>
+              <span class="nav__name">Clientes</span>
+            </a>
+            {% endif %}
+          </div>
+          <div class="nav__items">
+            <h3 class="nav__subtitle">Bodega</h3>
+            <a
+              href="{% url 'dashboard_bodega' %}"
+              class="nav__link {% if request.path == '/manager/bodega/dashboard/' %}active{% endif %}"
+            >
+              <i class="bx bx-home nav__icon"></i>
+              <span class="nav__name">Dashboard</span>
+            </a>
+            <a
+              href="{% url 'recepcion_inventario' %}"
+              class="nav__link {% if request.path == '/manager/bodega/recepcion_inventario/' %}active{% endif %}"
+            >
+              <i class="bx bx-package nav__icon"></i>
+              <span class="nav__name">Recepción</span>
+            </a>
+          </div>
+          {% comment %}
+          <div class="nav__items">
+            <h3 class="nav__subtitle">GESTIONES</h3>
+            <div class="nav__dropdown">
+              {% if perms.manager.view_productos %}
+              <a
+                href="{% url 'productos' %}"
+                class="nav__link {% if request.path == '/manager/productos/' %}active{% endif %}"
+              >
+                <i class="bx bx-box nav__icon"></i>
+                <span class="nav__name">Productos</span>
+              </a>
+              {% endif %}
+              <div class="nav__dropdown-collapse">
+                <div class="nav__dropdown-content">
+                  {% if perms.manager.view_marcas %}
+                  <a
+                    href="{% url 'marcas' %}"
+                    class="nav__dropdown-item {% if request.path == '/manager/marcas/' %}active{% endif %}"
+                  >
+                    Marcas
+                  </a>
+                  {% endif %} {% if perms.manager.view_proveedores %}
+                  <a
+                    href="{% url 'proveedores' %}"
+                    class="nav__dropdown-item {% if request.path == '/manager/proveedores/' %}active{% endif %}"
+                  >
+                    Proveedores
+                  </a>
+                  {% endif %} {% if perms.manager.view_umedidas %}
+                  <a
+                    href="{% url 'presentaciones' %}"
+                    class="nav__dropdown-item {% if request.path == '/manager/presentaciones/' %}active{% endif %}"
+                  >
+                    Presentaciones
+                  </a>
+                  {% endif %} {% if perms.manager.view_categorias %}
+                  <a
+                    href="{% url 'categorias' %}"
+                    class="nav__dropdown-item {% if request.path == '/manager/categorias/' %}active{% endif %}"
+                  >
+                    Categorías
+                  </a>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            <a
+              href="{% url 'cppagar' %}"
+              class="nav__link {% if request.path == '/manager/cppagar/' %}active{% endif %}"
+            >
+              <i class="bx bx-receipt nav__icon"></i>
+              <span class="nav__name">Cuentas x pagar</span>
+            </a>
+            <a
+              href="{% url 'compras' %}"
+              class="nav__link {% if request.path == '/manager/compras/' %}active{% endif %}"
+            >
+              <i class="bx bx-cart-alt nav__icon"></i>
+              <span class="nav__name">Compras</span>
+            </a>
+            <a
+              href="{% url 'devoluciones_compras' %}"
+              class="nav__link {% if request.path == '/manager/compras/devoluciones/' %}active{% endif %}"
+            >
+              <i class="bx bx-revision nav__icon"></i>
+              <span class="nav__name">Devoluciones</span>
+            </a>
+            <a
+              href="{% url 'clientes' %}"
+              class="nav__link {% if request.path == '/manager/clientes/' %}active{% endif %}"
+            >
+              <i class="bx bx-group nav__icon"></i>
+              <span class="nav__name">Clientes</span>
+            </a>
+            <a
+              href="{% url 'inventario' %}"
+              class="nav__link {% if request.path == '/manager/inventario/' %}active{% endif %}"
+            >
+              <i class="bx bx-list-ul nav__icon"></i>
+              <span class="nav__name">Inventario</span>
+            </a>
+            <a
+              href="{% url 'ubicaciones' %}"
+              class="nav__link {% if request.path == '/manager/ubicaciones/' %}active{% endif %}"
+            >
+              <i class="bx bx-map nav__icon"></i>
+              <span class="nav__name">Ubicaciones</span>
+            </a>
+            <a
+              href="{% url 'usuarios' %}"
+              class="nav__link {% if request.path == '/manager/usuarios/' %}active{% endif %}"
+            >
+              <i class="bx bx-id-card nav__icon"></i>
+              <span class="nav__name">Usuarios</span>
+            </a>
+            {%endif%} {% if rol_id == 5 or is_admin %}
+            <h3 class="nav__subtitle">Bodega</h3>
+            <a
+              href="{% url 'dashboard_bodega' %}"
+              class="nav__link {% if request.path == '/manager/bodega/dashboard/' %}active{% endif %}"
+            >
+              <i class="bx bx-home nav__icon"></i>
+              <span class="nav__name">Dashboard</span>
+            </a>
+            <a
+              href="{% url 'recepcion_inventario' %}"
+              class="nav__link {% if request.path == '/manager/bodega/recepcion_inventario/' %}active{% endif %}"
+            >
+              <i class="bx bx-package nav__icon"></i>
+              <span class="nav__name">Recepción</span>
+            </a>
+            {% endif %}
+          </div>
+          {% endcomment %}
+        </div>
+      </div>
+    </nav>
+  </div>
+  <!--========== CONTENTS ========-->
+  <main class="main">{% block main_content %} {% endblock main_content %}</main>
+  <!--========== MAIN JS ==========-->
+  <script src="{% static 'js/menu.js' %}"></script>
+  <script src="{% static 'plugins/jwt-decode.min.js' %}"></script>
+  <script src="{% static 'plugins/jquery.min.js' %}"></script>
+  <script src="{% static 'plugins/bootstrap.min.js' %}"></script>
+  <script src="{% static 'plugins/sweetalert2.min.js' %}"></script>
+</body>
 {% endblock content %}

@@ -1,5 +1,7 @@
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
+import uuid
 
 from .enums import (
     EstadoCompra,
@@ -533,3 +535,100 @@ class MovimientoInventario(models.Model):
 
     def __str__(self):
         return f"Movimiento {self.id} - {self.get_tipo_movimiento_display()}"
+
+
+class Descuento(Abstracto):
+    # =========================
+    # IDENTIFICACION
+    # =========================
+
+    nombre = models.CharField(max_length=150)
+
+    descripcion = models.TextField(null=True, blank=True)
+
+    # =========================
+    # TIPO ACTIVACION
+    # =========================
+
+    es_cupon = models.BooleanField(default=False)
+
+    codigo = models.CharField(max_length=50, unique=True, null=True, blank=True)
+
+    # =========================
+    # TIPO DESCUENTO
+    # =========================
+
+    es_porcentaje = models.BooleanField(default=True)
+
+    valor = models.DecimalField(max_digits=10, decimal_places=2)
+
+    # =========================
+    # APLICACION
+    # =========================
+
+    aplicar_productos = models.BooleanField(default=False)
+
+    aplicar_categorias = models.BooleanField(default=False)
+
+    productos = models.ManyToManyField(Productos, blank=True, null=True)
+
+    categorias = models.ManyToManyField(Categorias, blank=True, null=True)
+
+    # =========================
+    # LIMITES
+    # =========================
+
+    limite_uso = models.IntegerField(null=True, blank=True)
+
+    cantidad_usados = models.IntegerField(default=0)
+
+    # =========================
+    # FECHAS
+    # =========================
+
+    fecha_inicio = models.DateTimeField(null=True, blank=True)
+
+    fecha_fin = models.DateTimeField(null=True, blank=True)
+
+    # =========================
+    # CONFIGURACIONES
+    # =========================
+
+    acumulable = models.BooleanField(default=False)
+    requiere_codigo = models.BooleanField(default=False)
+
+    # =========================
+    # METODOS
+    # =========================
+
+    def vigente(self):
+
+        ahora = timezone.now()
+
+        if self.fecha_inicio and ahora < self.fecha_inicio:
+            return False
+
+        if self.fecha_fin and ahora > self.fecha_fin:
+            return False
+
+        if self.limite_uso is not None:
+            if self.cantidad_usados >= self.limite_uso:
+                return False
+
+        return self.is_active and not self.is_delete
+
+    def generar_codigo(self):
+
+        return str(uuid.uuid4()).replace("-", "").upper()[:10]
+
+    def save(self, *args, **kwargs):
+
+        self.f_modificacion = timezone.now()
+
+        if self.es_cupon and not self.codigo:
+            self.codigo = self.generar_codigo()
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.nombre

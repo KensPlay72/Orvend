@@ -148,4 +148,8 @@ urlpatterns = [
         views.traslados_list,
         name="traslados_list",
     ),
+    path("descuentos/", views.descuentos_view, name="descuentos"),
+    path("descuentos/post/", views.post_descuento, name="post_descuento"),
+    path("descuentos/get/<int:id>/", views.get_descuento, name="get_descuento"),
+    path("descuentos/put/<int:id>/", views.put_descuento, name="put_descuento"),
 ]
