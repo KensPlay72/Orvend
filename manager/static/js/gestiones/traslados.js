@@ -79,23 +79,64 @@ function initDropdown(hiddenInputId, remoteSearchFn = null) {
 =          FETCH UBICACIONES             =
 ========================================*/
 async function fetchUbicaciones(term, optionsContainer) {
-  const res = await fetch(
-    `/manager/ubicaciones/search/?search=${encodeURIComponent(term)}`,
-  );
-  const data = await res.json();
+  try {
+    const res = await fetch(
+      `/manager/ubicaciones/search/?search=${encodeURIComponent(term)}`,
+    );
 
-  optionsContainer.innerHTML = "";
+    const data = await res.json();
 
-  data.forEach((u) => {
+    optionsContainer.innerHTML = "";
+
+    if (!data.length) {
+      optionsContainer.innerHTML = `
+        <div class="list-group-item text-muted">Sin resultados</div>
+      `;
+      return;
+    }
+
     optionsContainer.innerHTML += `
-      <button type="button"
-        class="list-group-item list-group-item-action"
-        data-value="${u.id}"
-        data-label="${u.nombre} | ${u.codigo || ""}">
-        ${u.nombre} | ${u.codigo || ""}
-      </button>
+      <div class="list-group-item active bg-light text-dark fw-bold">
+        ${term ? "Resultados encontrados" : "Sugerencias recientes"}
+      </div>
     `;
-  });
+
+    data.forEach((u) => {
+      // =========================
+      // TIPO LABEL
+      // =========================
+      let tipoLabel = "";
+
+      if (u.es_bodega) {
+        tipoLabel = "Bodega";
+      } else if (u.es_tienda) {
+        tipoLabel = "Tienda";
+      } else {
+        tipoLabel = "Sin tipo";
+      }
+
+      // =========================
+      // TEXTO FINAL
+      // =========================
+      const texto = `${u.nombre}${u.codigo ? " | " + u.codigo : ""} | ${tipoLabel}`;
+
+      optionsContainer.innerHTML += `
+        <button type="button"
+                class="list-group-item list-group-item-action"
+                data-value="${u.id}"
+                data-label="${texto}">
+          ${texto}
+        </button>
+      `;
+    });
+  } catch (error) {
+    optionsContainer.innerHTML = `
+      <div class="list-group-item text-danger">
+        Error al cargar ubicaciones
+      </div>
+    `;
+    console.error(error);
+  }
 }
 
 initDropdown("ubicacion_origen", fetchUbicaciones);

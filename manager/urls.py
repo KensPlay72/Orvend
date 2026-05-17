@@ -76,6 +76,7 @@ urlpatterns = [
         name="delete_ubicaciones",
     ),
     path("ubicaciones/search/", views.search_ubicaciones, name="search_ubicaciones"),
+    path("ubicaciones/bodega/search/", views.search_bodegas, name="search_bodegas"),
     path("compras/", views.compras_view, name="compras"),
     path("compras/realizarcompra", views.realizarcompra_view, name="realizarcompra"),
     path("compras/realizarcompra/post/", views.post_compra, name="post_compra"),

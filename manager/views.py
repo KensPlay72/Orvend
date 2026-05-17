@@ -1480,13 +1480,18 @@ def ubicaciones_view(request):
 
     query = Ubicaciones.objects.all()
 
+    # -------------------------
+    # SEARCH
+    # -------------------------
     if search:
         query = query.filter(Q(nombre__icontains=search) | Q(codigo__icontains=search))
 
+    # -------------------------
+    # PAGINADOR
+    # -------------------------
     paginator = Paginator(query.order_by("id"), 10)
+    page_obj = paginator.get_page(request.GET.get("page", 1))
 
-    page_number = request.GET.get("page", 1)
-    page_obj = paginator.get_page(page_number)
     context = {
         "page_obj": page_obj,
         "search": search,
@@ -1504,25 +1509,57 @@ def post_ubicaciones(request):
     try:
         data = json.loads(request.body)
 
-        nombre = (data.get("Nombre") or "").strip()
-        tipo = data.get("Tipo")
-        codigo = (data.get("Codigo") or "").strip()
+        nombre = (data.get("nombre") or "").strip()
+        codigo = (data.get("codigo") or "").strip()
 
-        if not nombre or tipo is None:
+        es_bodega = data.get("es_bodega", False)
+        es_tienda = data.get("es_tienda", False)
+
+        relacion_bodega = data.get("relacion_bodega", False)
+        bodega_id = data.get("bodega_id")
+
+        # =========================
+        # VALIDACIONES BÁSICAS
+        # =========================
+        if not nombre:
             return JsonResponse(
-                {"success": False, "message": "Nombre y tipo son obligatorios"},
+                {"success": False, "message": "El nombre es obligatorio"},
                 status=400,
             )
 
+        if not es_bodega and not es_tienda:
+            return JsonResponse(
+                {"success": False, "message": "Debe seleccionar bodega o tienda"},
+                status=400,
+            )
+
+        # =========================
+        # DUPLICADOS
+        # =========================
         if Ubicaciones.objects.filter(nombre=nombre, is_delete=False).exists():
             return JsonResponse(
                 {"success": False, "message": "Ya existe una ubicación con ese nombre"},
                 status=400,
             )
 
-        Ubicaciones.objects.create(
-            nombre=nombre, tipo=tipo, codigo=codigo, u_creo_id=request.user.id
+        # =========================
+        # CREAR OBJETO
+        # =========================
+        ubicacion = Ubicaciones(
+            nombre=nombre,
+            codigo=codigo,
+            es_bodega=es_bodega,
+            es_tienda=es_tienda,
+            u_creo_id=request.user.id,
         )
+
+        # =========================
+        # RELACIÓN (SOLO TIENDA)
+        # =========================
+        if es_tienda and relacion_bodega and bodega_id:
+            ubicacion.bodega_id = bodega_id
+
+        ubicacion.save()
 
         return JsonResponse(
             {"success": True, "message": "Ubicación creada correctamente"}
@@ -1530,7 +1567,8 @@ def post_ubicaciones(request):
 
     except Exception as e:
         return JsonResponse(
-            {"success": False, "message": "Error interno: " + str(e)}, status=500
+            {"success": False, "message": "Error interno: " + str(e)},
+            status=500,
         )
 
 
@@ -1552,8 +1590,11 @@ def get_ubicaciones(request, id):
                 "ubicacion": {
                     "id": ubicacion.id,
                     "nombre": ubicacion.nombre,
-                    "tipo": ubicacion.tipo,
                     "codigo": ubicacion.codigo,
+                    "es_bodega": ubicacion.es_bodega,
+                    "es_tienda": ubicacion.es_tienda,
+                    "bodegaid": ubicacion.bodega.id if ubicacion.bodega else None,
+                    "bodeganombre": ubicacion.bodega.nombre if ubicacion.bodega else "",
                     "isActive": ubicacion.is_active,
                 },
             }
@@ -1574,23 +1615,32 @@ def put_ubicaciones(request, id):
         data = json.loads(request.body)
 
         nombre = (data.get("Nombre") or "").strip()
-        tipo = data.get("Tipo")
         codigo = (data.get("Codigo") or "").strip()
+
+        es_bodega = data.get("es_bodega", False)
+        es_tienda = data.get("es_tienda", False)
+
+        relacion_bodega = data.get("relacion_bodega", False)
+        bodegaid = data.get("bodegaid")
+
         is_active = data.get("IsActive", True)
 
-        if not nombre or tipo is None:
+        # VALIDACIONES BÁSICAS
+        if not nombre:
             return JsonResponse(
-                {"success": False, "message": "Nombre y tipo son obligatorios"},
+                {"success": False, "message": "Nombre es obligatorio"},
                 status=400,
             )
 
-        ubicacion = Ubicaciones.objects.filter(id=id).first()
+        ubicacion = Ubicaciones.objects.filter(id=id, is_delete=False).first()
 
-        if not ubicacion or ubicacion.is_delete:
+        if not ubicacion:
             return JsonResponse(
-                {"success": False, "message": "Ubicación no encontrada"}, status=404
+                {"success": False, "message": "Ubicación no encontrada"},
+                status=404,
             )
 
+        # DUPLICADOS
         if (
             Ubicaciones.objects.filter(nombre=nombre, is_delete=False)
             .exclude(id=id)
@@ -1601,9 +1651,30 @@ def put_ubicaciones(request, id):
                 status=400,
             )
 
+        # =========================
+        # ASIGNACIÓN CAMPOS
+        # =========================
         ubicacion.nombre = nombre
-        ubicacion.tipo = tipo
         ubicacion.codigo = codigo
+
+        ubicacion.es_bodega = es_bodega
+        ubicacion.es_tienda = es_tienda
+
+        # =========================
+        # RELACIÓN BODEGA ↔ TIENDA
+        # =========================
+        if es_tienda and relacion_bodega and bodegaid:
+            try:
+                bodega = Ubicaciones.objects.get(id=bodegaid, es_bodega=True)
+                ubicacion.bodega = bodega
+            except Ubicaciones.DoesNotExist:
+                return JsonResponse(
+                    {"success": False, "message": "Bodega inválida"},
+                    status=400,
+                )
+        else:
+            ubicacion.bodega = None
+
         ubicacion.is_active = is_active
         ubicacion.u_modifico_id = request.user.id
         ubicacion.f_modificacion = timezone.now()
@@ -1615,7 +1686,8 @@ def put_ubicaciones(request, id):
 
     except Exception as e:
         return JsonResponse(
-            {"success": False, "message": "Error interno: " + str(e)}, status=500
+            {"success": False, "message": "Error interno: " + str(e)},
+            status=500,
         )
 
 
@@ -1649,6 +1721,7 @@ def delete_ubicaciones(request, id):
 
 @login_required
 def search_ubicaciones(request):
+
     search = request.GET.get("search", "").strip()
 
     items = Ubicaciones.objects.filter(is_delete=False, is_active=True)
@@ -1663,8 +1736,42 @@ def search_ubicaciones(request):
     items = items[:8]
 
     data = [
-        {"id": u.id, "nombre": u.nombre, "tipo": u.tipo, "codigo": u.codigo}
+        {
+            "id": u.id,
+            "nombre": u.nombre,
+            "codigo": u.codigo,
+            "es_bodega": u.es_bodega,
+            "es_tienda": u.es_tienda,
+        }
         for u in items
+    ]
+
+    return JsonResponse(data, safe=False)
+
+
+@login_required
+def search_bodegas(request):
+
+    search = request.GET.get("search", "").strip()
+
+    items = Ubicaciones.objects.filter(is_delete=False, is_active=True, es_bodega=True)
+
+    if search:
+        items = items.filter(
+            Q(nombre__icontains=search) | Q(codigo__icontains=search)
+        ).order_by("nombre")
+    else:
+        items = items.order_by("-id")
+
+    items = items[:8]
+
+    data = [
+        {
+            "id": b.id,
+            "nombre": b.nombre,
+            "codigo": b.codigo,
+        }
+        for b in items
     ]
 
     return JsonResponse(data, safe=False)
@@ -2894,6 +3001,8 @@ def autorizar_entrada_view(request, tipo, id):
     else:
         raise Http404("Tipo no válido")
 
+    print(compra_data)
+
     return render(
         request,
         "bodega/confiinventario.html",
@@ -3385,7 +3494,9 @@ def inventario_view(request):
 
     search = request.GET.get("search", "").strip()
 
-    productos_qs = Productos.objects.select_related("unidad_medida", "marca")
+    productos_qs = Productos.objects.select_related(
+        "unidad_medida", "marca", "categoria"
+    )
 
     if search:
         productos_qs = productos_qs.filter(
@@ -3395,12 +3506,107 @@ def inventario_view(request):
         )
 
     paginator = Paginator(productos_qs.order_by("nombre"), 12)
-    page_number = request.GET.get("page", 1)
-    page_obj = paginator.get_page(page_number)
+
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    # =========================
+    # DESCUENTOS AUTOMÁTICOS
+    # =========================
+
+    descuentos = Descuento.objects.filter(
+        is_active=True,
+        is_delete=False,
+        es_cupon=False,
+    ).prefetch_related("productos", "categorias")
 
     productos_list = []
 
     for p in page_obj:
+        precio_original = Decimal(p.precio_venta)
+
+        precio_final = precio_original
+
+        descuento_producto = None
+
+        descuento_categoria = None
+
+        # =========================
+        # BUSCAR DESCUENTOS
+        # =========================
+
+        for d in descuentos:
+            if not d.vigente():
+                continue
+
+            # =========================
+            # PRODUCTO
+            # =========================
+
+            if d.aplicar_productos:
+                if d.productos.filter(id=p.id).exists():
+                    descuento_producto = d
+
+            # =========================
+            # CATEGORIA
+            # =========================
+
+            if d.aplicar_categorias:
+                if d.categorias.filter(id=p.categoria_id).exists():
+                    descuento_categoria = d
+
+        # =========================
+        # CALCULAR DESCUENTO
+        # =========================
+
+        descuentos_aplicados = []
+
+        # =========================
+        # SI EXISTE PRODUCTO
+        # =========================
+
+        if descuento_producto:
+            descuentos_aplicados.append(descuento_producto)
+
+            # SI ES ACUMULABLE
+            if descuento_producto.acumulable and descuento_categoria:
+                descuentos_aplicados.append(descuento_categoria)
+
+        # =========================
+        # SI NO HAY PRODUCTO
+        # =========================
+
+        elif descuento_categoria:
+            descuentos_aplicados.append(descuento_categoria)
+
+        # =========================
+        # APLICAR TODOS
+        # =========================
+
+        total_descuento = Decimal("0.00")
+
+        nombres_descuentos = []
+
+        for d in descuentos_aplicados:
+            nombres_descuentos.append(d.nombre)
+
+            # =========================
+            # PORCENTAJE
+            # =========================
+
+            if d.es_porcentaje:
+                descuento = (precio_original * Decimal(d.valor)) / Decimal(100)
+
+            else:
+                descuento = Decimal(d.valor)
+
+            total_descuento += descuento
+
+        precio_final = precio_original - total_descuento
+
+        # evitar negativos
+        if precio_final < 0:
+            precio_final = Decimal("0.00")
+
         productos_list.append(
             {
                 "id": p.id,
@@ -3410,7 +3616,20 @@ def inventario_view(request):
                 },
                 "marcas": {"nombre": getattr(p.marca, "nombre", "N/A")},
                 "codigoSKU": p.codigo_sku,
-                "precioVenta": float(p.precio_venta),
+                # =========================
+                # PRECIOS
+                # =========================
+                "precioVenta": float(precio_original),
+                "precioFinal": float(precio_final),
+                "tieneDescuento": len(descuentos_aplicados) > 0,
+                "descuentos": [
+                    {
+                        "nombre": d.nombre,
+                        "valor": float(d.valor),
+                        "es_porcentaje": d.es_porcentaje,
+                    }
+                    for d in descuentos_aplicados
+                ],
             }
         )
 

@@ -11,485 +11,440 @@
     </div>
 {% endblock %}
 {% block main_content %}
-<div class="full2">
-    <div class="ventanas">
-        <div class="ventanasi">
-            <p class="ventana-titulo">Total de productos</p>
-            <p class="ventana-numero">{{total_productos}}</p>
-        </div>
-        <div class="ventanasd">
-            <div class="capsula">
-                <i class='bx bx-package'></i>
+    <div class="full2">
+        <div class="ventanas">
+            <div class="ventanasi">
+                <p class="ventana-titulo">Total de productos</p>
+                <p class="ventana-numero">{{ total_productos }}</p>
+            </div>
+            <div class="ventanasd">
+                <div class="capsula">
+                    <i class='bx bx-package'></i>
+                </div>
             </div>
         </div>
+        <div class="ventanas">
+            <div class="ventanasi">
+                <p class="ventana-titulo">Productos Activos</p>
+                <p class="ventana-numero">{{ productos_activos }}</p>
+            </div>
+            <div class="ventanasd">
+                <div class="capsula">
+                    <i class='bx bx-check-circle'></i>
+                </div>
+            </div>
+        </div>
+        <div class="ventanas">
+            <div class="ventanasi">
+                <p class="ventana-titulo">Productos Inactivos</p>
+                <p class="ventana-numero">{{ productos_inactivos }}</p>
+            </div>
+            <div class="ventanasd">
+                <div class="capsula">
+                    <i class='bx bx-x-circle' style="color: #dc3545;"></i>
+                </div>
+            </div>
+        </div>
+        {% if perms.manager.add_productos %}
+            <button id="toggleDropdownPanel"
+                    class="btn-dropdown"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalregis">
+                <i class="bx bx-plus-circle"></i> Agregar
+            </button>
+        {% endif %}
     </div>
-
-
-    <div class="ventanas">
-        <div class="ventanasi">
-            <p class="ventana-titulo">Productos Activos</p>
-            <p class="ventana-numero">{{productos_activos}}</p>
-        </div>
-        <div class="ventanasd">
-            <div class="capsula">
-                <i class='bx bx-check-circle'></i>
-            </div>
-        </div>
-    </div>
-
-
-    <div class="ventanas">
-        <div class="ventanasi">
-            <p class="ventana-titulo">Productos Inactivos</p>
-            <p class="ventana-numero">{{productos_inactivos}}</p>
-        </div>
-        <div class="ventanasd">
-            <div class="capsula">
-                <i class='bx bx-x-circle' style="color: #dc3545;"></i>
-            </div>
-        </div>
-    </div>
-    {% if perms.manager.add_productos %}
-    <button id="toggleDropdownPanel"
-            class="btn-dropdown"
-            data-bs-toggle="modal"
-            data-bs-target="#modalregis">
-        <i class="bx bx-plus-circle"></i> Agregar
-    </button>
-    {% endif %}
-</div>
-
-
-<div class="modal fade" id="modalregis" tabindex="-1" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Registrar Producto</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-
-            <form id="postregistro" enctype="multipart/form-data">
-                {% csrf_token %}
-                <div class="modal-body">
-                    <div class="row">
-                        <!-- Columna izquierda -->
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="Nombre">Nombre Producto</label>
-                                <input type="text" name="Nombre" id="Nombre" class="form-control" placeholder="Nombre">
-                            </div>
-                            <br>
-                            <div class="form-group mb-3">
-                                <label for="Descripcion">Descripción</label>
-                                <textarea name="Descripcion" id="Descripcion" rows="2" maxlength="100" class="form-control" placeholder="Descripción"></textarea>
-                            </div>
-                            <br>
-                            <div class="form-group mb-3">
-                                <label for="CodigoSKU">Código de Barras</label>
-                                <input type="text" name="CodigoSKU" id="CodigoSKU" class="form-control" placeholder="Código de Barras">
-                            </div>
-                            <br>
-                            <div class="form-group">
-                                <label for="precioVenta">Precio de Venta</label>
-                                <input type="text"
-                                       name="precioVenta"
-                                       id="precioVenta"
-                                       class="form-control"
-                                       placeholder="Precio"
-                                       oninput="validateNumber(this)" required>
-                            </div>
-                            <br>
-                            <div style="display:flex; width: 100%; gap: 2rem;">
+    <div class="modal fade"
+         id="modalregis"
+         tabindex="-1"
+         aria-labelledby="exampleModalCenterTitle"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Registrar Producto</h5>
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"></button>
+                </div>
+                <form id="postregistro" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <div class="row">
+                            <!-- Columna izquierda -->
+                            <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="vencimiento" class="d-block">Vencimiento</label>
-                                    <label class="d-flex align-items-center">
-                                        <input type="checkbox" id="vencimiento" name="vencimiento" class="me-2">
-                                        <span id="vencimientoText" class="fw-bold text-success">SI</span>
-                                    </label>
+                                    <label for="Nombre">Nombre Producto</label>
+                                    <input type="text"
+                                           name="Nombre"
+                                           id="Nombre"
+                                           class="form-control"
+                                           placeholder="Nombre">
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- Columna derecha -->
-                        <div class="col-md-6">
-
-                        <div class="form-group mb-3">
-                            <label>Categoría</label>
-                            <input type="hidden" id="CategoriaId" name="CategoriaId" required>
-
-                            <div class="dropdown select-container w-100">
-                                <button type="button"
-                                        class="btn w-100 text-start form-control">
-                                    Escriba para buscar...
-                                </button>
-
-                                <div class="dropdown-menu w-100 p-0">
-                                    <div class="search-box p-2">
-                                        <input type="text"
-                                            class="form-control"
-                                            placeholder="Buscar categoría...">
-                                    </div>
-
-                                    <div class="options list-group list-group-flush"></div>
+                                <br>
+                                <div class="form-group mb-3">
+                                    <label for="Descripcion">Descripción</label>
+                                    <textarea name="Descripcion"
+                                              id="Descripcion"
+                                              rows="2"
+                                              maxlength="100"
+                                              class="form-control"
+                                              placeholder="Descripción"></textarea>
                                 </div>
-                            </div>
-                        </div>
-
-
-                            <br>
-                            <div class="form-group mb-3">
-                                <label for="UnidadMedidaId">Presentación</label>
-                                <input type="hidden" name="UnidadMedidaId" id="UnidadMedidaId" required>
-
-                                <div class="dropdown select-container w-100">
-                                    <button type="button"
-                                            class="btn w-100 text-start form-control">
-                                        Escriba para buscar...
-                                    </button>
-
-                                    <div class="dropdown-menu w-100 p-0">
-                                        <div class="search-box p-2">
-                                            <input type="text"
-                                                class="form-control"
-                                                placeholder="Buscar presentación...">
-                                        </div>
-
-                                        <div class="options list-group list-group-flush"></div>
+                                <br>
+                                <div class="form-group mb-3">
+                                    <label for="CodigoSKU">Código de Barras</label>
+                                    <input type="text"
+                                           name="CodigoSKU"
+                                           id="CodigoSKU"
+                                           class="form-control"
+                                           placeholder="Código de Barras">
+                                </div>
+                                <br>
+                                <div class="form-group">
+                                    <label for="precioVenta">Precio de Venta</label>
+                                    <input type="text"
+                                           name="precioVenta"
+                                           id="precioVenta"
+                                           class="form-control"
+                                           placeholder="Precio"
+                                           oninput="validateNumber(this)"
+                                           required>
+                                </div>
+                                <br>
+                                <div style="display:flex; width: 100%; gap: 2rem;">
+                                    <div class="form-group mb-3">
+                                        <label for="vencimiento" class="d-block">Vencimiento</label>
+                                        <label class="d-flex align-items-center">
+                                            <input type="checkbox" id="vencimiento" name="vencimiento" class="me-2">
+                                            <span id="vencimientoText" class="fw-bold text-success">SI</span>
+                                        </label>
                                     </div>
                                 </div>
                             </div>
-                            <br>
-
-                            <div class="form-group mb-3">
-                                <label for="MarcaId">Marca</label>
-
-                                <input type="hidden" name="MarcaId" id="MarcaId" required>
-
-                                <div class="dropdown select-container w-100">
-                                    <button type="button"
-                                            class="btn w-100 text-start form-control">
-                                        Escriba para buscar...
-                                    </button>
-
-                                    <div class="dropdown-menu w-100 p-0">
-                                        <div class="search-box p-2">
-                                            <input type="text"
-                                                class="form-control"
-                                                placeholder="Buscar marca...">
-                                        </div>
-
-                                        <div class="options list-group list-group-flush">
-                                            <!-- Las marcas se cargan por JS -->
+                            <!-- Columna derecha -->
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label>Categoría</label>
+                                    <input type="hidden" id="CategoriaId" name="CategoriaId" required>
+                                    <div class="dropdown select-container w-100">
+                                        <button type="button" class="btn w-100 text-start form-control">Escriba para buscar...</button>
+                                        <div class="dropdown-menu w-100 p-0">
+                                            <div class="search-box p-2">
+                                                <input type="text" class="form-control" placeholder="Buscar categoría...">
+                                            </div>
+                                            <div class="options list-group list-group-flush"></div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <br>
-                            <div class="form-group mb-3">
-                                <label>Imagen del Producto</label>
-                                <div class="file-drop-area">
-                                    <span class="file-message">Arrastra tu archivo aquí o haz clic para seleccionar</span>
-                                    <input type="file" id="imagenproducto" class="file form-control" accept=".jpg,.png,.webp,.jpeg">
+                                <br>
+                                <div class="form-group mb-3">
+                                    <label for="UnidadMedidaId">Presentación</label>
+                                    <input type="hidden" name="UnidadMedidaId" id="UnidadMedidaId" required>
+                                    <div class="dropdown select-container w-100">
+                                        <button type="button" class="btn w-100 text-start form-control">Escriba para buscar...</button>
+                                        <div class="dropdown-menu w-100 p-0">
+                                            <div class="search-box p-2">
+                                                <input type="text" class="form-control" placeholder="Buscar presentación...">
+                                            </div>
+                                            <div class="options list-group list-group-flush"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <br>
+                                <div class="form-group mb-3">
+                                    <label for="MarcaId">Marca</label>
+                                    <input type="hidden" name="MarcaId" id="MarcaId" required>
+                                    <div class="dropdown select-container w-100">
+                                        <button type="button" class="btn w-100 text-start form-control">Escriba para buscar...</button>
+                                        <div class="dropdown-menu w-100 p-0">
+                                            <div class="search-box p-2">
+                                                <input type="text" class="form-control" placeholder="Buscar marca...">
+                                            </div>
+                                            <div class="options list-group list-group-flush">
+                                                <!-- Las marcas se cargan por JS -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <br>
+                                <div class="form-group mb-3">
+                                    <label>Imagen del Producto</label>
+                                    <div class="file-drop-area">
+                                        <span class="file-message">Arrastra tu archivo aquí o haz clic para seleccionar</span>
+                                        <input type="file"
+                                               id="imagenproducto"
+                                               class="file form-control"
+                                               accept=".jpg,.png,.webp,.jpeg">
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <!-- Footer con botones -->
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="submit" id="btnregis" class="btn classbotones">Guardar</button>
-                </div>
-            </form>
+                    <!-- Footer con botones -->
+                    <div class="modal-footer altura-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" id="btnregis" class="btn classbotones">Guardar</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</div>
-
-<div class="modal fade" id="modalput" tabindex="-1" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content">
-
-            <div class="modal-header">
-                <h5 class="modal-title">Editar Producto</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-
-            <form id="putregistro" enctype="multipart/form-data">
-                {% csrf_token %}
-                <input type="text" id="idedit" hidden>
-                <input type="hidden" name="ImagenNombreActual" id="ImagenNombreActual">
-                <input type="hidden" name="ImagenUrlActual" id="ImagenUrlActual">
-
-                <div class="modal-body">
-                    <div class="row">
-
-                        <!-- Columna izquierda -->
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label for="Nombreedit">Nombre Producto</label>
-                                <input type="text" name="Nombreedit" id="Nombreedit" class="form-control" placeholder="Nombre">
-                            </div>
-                            <br>
-
-                            <div class="form-group mb-3">
-                                <label for="Descripcionedit">Descripción</label>
-                                <textarea name="Descripcionedit" id="Descripcionedit" rows="2" maxlength="100" class="form-control" placeholder="Descripción"></textarea>
-                            </div>
-                            <br>
-
-                            <div class="form-group mb-3">
-                                <label for="CodigoSKUedit">Código de Barras</label>
-                                <input type="text" name="CodigoSKUedit" id="CodigoSKUedit" class="form-control" placeholder="Código de Barras">
-                            </div>
-                            <br>
-
-                            <div class="form-group">
-                                <label for="precioVentaedit">Precio de Venta</label>
-                                <input type="text"
-                                       name="precioVentaedit"
-                                       id="precioVentaedit"
-                                       class="form-control"
-                                       placeholder="Precio"
-                                       oninput="validateNumber(this)" required>
-                            </div>
-                            <br>
-                            <div style="display:flex; width: 100%; gap: 2rem;">
+    <div class="modal fade"
+         id="modalput"
+         tabindex="-1"
+         aria-labelledby="exampleModalCenterTitle"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Producto</h5>
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"></button>
+                </div>
+                <form id="putregistro" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="text" id="idedit" hidden>
+                    <input type="hidden" name="ImagenNombreActual" id="ImagenNombreActual">
+                    <input type="hidden" name="ImagenUrlActual" id="ImagenUrlActual">
+                    <div class="modal-body">
+                        <div class="row">
+                            <!-- Columna izquierda -->
+                            <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="isActiveedit" class="d-block">Estado</label>
-                                    <label class="d-flex align-items-center" for="isActiveedit">
-                                        <input type="checkbox" id="isActiveedit" name="isActiveedit" checked class="me-2">
-                                        <span id="activeTextedit" class="fw-bold text-success">Activo</span>
-                                    </label>
+                                    <label for="Nombreedit">Nombre Producto</label>
+                                    <input type="text"
+                                           name="Nombreedit"
+                                           id="Nombreedit"
+                                           class="form-control"
+                                           placeholder="Nombre">
                                 </div>
-
+                                <br>
                                 <div class="form-group mb-3">
-                                    <label for="vencimientoedit" class="d-block">Vencimiento</label>
-                                    <label class="d-flex align-items-center">
-                                        <input type="checkbox" id="vencimientoedit" name="vencimientoedit" class="me-2">
-                                        <span id="vencimientoTextedit" class="fw-bold text-success">SI</span>
-                                    </label>
+                                    <label for="Descripcionedit">Descripción</label>
+                                    <textarea name="Descripcionedit"
+                                              id="Descripcionedit"
+                                              rows="2"
+                                              maxlength="100"
+                                              class="form-control"
+                                              placeholder="Descripción"></textarea>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- Columna derecha -->
-                        <div class="col-md-6">
-
-                            <div class="form-group mb-3">
-                                <label>Categoría</label>
-                                <input type="hidden" id="CategoriaIdedit" name="CategoriaIdedit" required>
-
-                                <div class="dropdown select-container w-100">
-                                    <button type="button"
-                                            class="btn w-100 text-start form-control">
-                                        Escriba para buscar...
-                                    </button>
-
-                                    <div class="dropdown-menu w-100 p-0">
-                                        <div class="search-box p-2">
-                                            <input type="text"
-                                                   class="form-control"
-                                                   placeholder="Buscar categoría...">
-                                        </div>
-
-                                        <div class="options list-group list-group-flush"></div>
+                                <br>
+                                <div class="form-group mb-3">
+                                    <label for="CodigoSKUedit">Código de Barras</label>
+                                    <input type="text"
+                                           name="CodigoSKUedit"
+                                           id="CodigoSKUedit"
+                                           class="form-control"
+                                           placeholder="Código de Barras">
+                                </div>
+                                <br>
+                                <div class="form-group">
+                                    <label for="precioVentaedit">Precio de Venta</label>
+                                    <input type="text"
+                                           name="precioVentaedit"
+                                           id="precioVentaedit"
+                                           class="form-control"
+                                           placeholder="Precio"
+                                           oninput="validateNumber(this)"
+                                           required>
+                                </div>
+                                <br>
+                                <div style="display:flex; width: 100%; gap: 2rem;">
+                                    <div class="form-group mb-3">
+                                        <label for="isActiveedit" class="d-block">Estado</label>
+                                        <label class="d-flex align-items-center" for="isActiveedit">
+                                            <input type="checkbox"
+                                                   id="isActiveedit"
+                                                   name="isActiveedit"
+                                                   checked
+                                                   class="me-2">
+                                            <span id="activeTextedit" class="fw-bold text-success">Activo</span>
+                                        </label>
+                                    </div>
+                                    <div class="form-group mb-3">
+                                        <label for="vencimientoedit" class="d-block">Vencimiento</label>
+                                        <label class="d-flex align-items-center">
+                                            <input type="checkbox"
+                                                   id="vencimientoedit"
+                                                   name="vencimientoedit"
+                                                   class="me-2">
+                                            <span id="vencimientoTextedit" class="fw-bold text-success">SI</span>
+                                        </label>
                                     </div>
                                 </div>
                             </div>
-
-                            <br>
-
-                            <div class="form-group mb-3">
-                                <label for="UnidadMedidaIdedit">Presentación</label>
-                                <input type="hidden" name="UnidadMedidaIdedit" id="UnidadMedidaIdedit" required>
-
-                                <div class="dropdown select-container w-100">
-                                    <button type="button"
-                                            class="btn w-100 text-start form-control">
-                                        Escriba para buscar...
-                                    </button>
-
-                                    <div class="dropdown-menu w-100 p-0">
-                                        <div class="search-box p-2">
-                                            <input type="text"
-                                                   class="form-control"
-                                                   placeholder="Buscar presentación...">
-                                        </div>
-
-                                        <div class="options list-group list-group-flush"></div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <br>
-
-                            <div class="form-group mb-3">
-                                <label for="MarcaIdedit">Marca</label>
-                                <input type="hidden" name="MarcaIdedit" id="MarcaIdedit" required>
-
-                                <div class="dropdown select-container w-100">
-                                    <button type="button"
-                                            class="btn w-100 text-start form-control">
-                                        Escriba para buscar...
-                                    </button>
-
-                                    <div class="dropdown-menu w-100 p-0">
-                                        <div class="search-box p-2">
-                                            <input type="text"
-                                                   class="form-control"
-                                                   placeholder="Buscar marca..." value="">
-                                        </div>
-
-                                        <div class="options list-group list-group-flush">
-                                            <!-- Las marcas se cargan por JS -->
+                            <!-- Columna derecha -->
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label>Categoría</label>
+                                    <input type="hidden" id="CategoriaIdedit" name="CategoriaIdedit" required>
+                                    <div class="dropdown select-container w-100">
+                                        <button type="button" class="btn w-100 text-start form-control">Escriba para buscar...</button>
+                                        <div class="dropdown-menu w-100 p-0">
+                                            <div class="search-box p-2">
+                                                <input type="text" class="form-control" placeholder="Buscar categoría...">
+                                            </div>
+                                            <div class="options list-group list-group-flush"></div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-
-                            <br>
-
-                            <div class="form-group mb-3">
-                                <label>Imagen del Producto</label>
-                                <div class="file-drop-area">
-                                    <span class="file-message" id="imagenNombreedit">
-                                        Arrastra tu archivo aquí o haz clic para seleccionar
-                                    </span>
-                                    <input type="file"
-                                           id="imagenproductoedit"
-                                           class="file form-control"
-                                           accept=".jpg,.png,.webp,.jpeg">
+                                <br>
+                                <div class="form-group mb-3">
+                                    <label for="UnidadMedidaIdedit">Presentación</label>
+                                    <input type="hidden"
+                                           name="UnidadMedidaIdedit"
+                                           id="UnidadMedidaIdedit"
+                                           required>
+                                    <div class="dropdown select-container w-100">
+                                        <button type="button" class="btn w-100 text-start form-control">Escriba para buscar...</button>
+                                        <div class="dropdown-menu w-100 p-0">
+                                            <div class="search-box p-2">
+                                                <input type="text" class="form-control" placeholder="Buscar presentación...">
+                                            </div>
+                                            <div class="options list-group list-group-flush"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <br>
+                                <div class="form-group mb-3">
+                                    <label for="MarcaIdedit">Marca</label>
+                                    <input type="hidden" name="MarcaIdedit" id="MarcaIdedit" required>
+                                    <div class="dropdown select-container w-100">
+                                        <button type="button" class="btn w-100 text-start form-control">Escriba para buscar...</button>
+                                        <div class="dropdown-menu w-100 p-0">
+                                            <div class="search-box p-2">
+                                                <input type="text"
+                                                       class="form-control"
+                                                       placeholder="Buscar marca..."
+                                                       value="">
+                                            </div>
+                                            <div class="options list-group list-group-flush">
+                                                <!-- Las marcas se cargan por JS -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <br>
+                                <div class="form-group mb-3">
+                                    <label>Imagen del Producto</label>
+                                    <div class="file-drop-area">
+                                        <span class="file-message" id="imagenNombreedit">Arrastra tu archivo aquí o haz clic para seleccionar</span>
+                                        <input type="file"
+                                               id="imagenproductoedit"
+                                               class="file form-control"
+                                               accept=".jpg,.png,.webp,.jpeg">
+                                    </div>
                                 </div>
                             </div>
-
                         </div>
                     </div>
-                </div>
-
-                <!-- Footer -->
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="submit" id="btnregis" class="btn classbotones">Guardar</button>
-                </div>
-
-            </form>
+                    <!-- Footer -->
+                    <div class="modal-footer altura-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" id="btnregis" class="btn classbotones">Guardar</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</div>
-
-
-<div class="tabla-container">
-    <table class="tablas-todo" id="tablacont">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Nombre</th>
-                <th>Categoria</th>
-                <th>Present</th>
-                <th>Marca</th>
-                <th>SKU</th>
-                <th>Precio</th>
-                <th>Imagen</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-
-        <tbody>
-            {% for producto in page_obj %}
-            <tr data-id="{{ producto.id }}">
-
-                <td>{{ producto.id }}</td>
-                <td>{{ producto.nombre }}</td>
-
-                <td>{{ producto.categoria.nombre }}</td>
-                <td>{{ producto.unidad_medida.abreviatura }}</td>
-                <td>{{ producto.marca.nombre }}</td>
-
-                <td>{{ producto.codigo_sku }}</td>
-
-                <td>L. {{ producto.precio_venta|floatformat:2 }}</td>
-
-                <td>
-                    {% if producto.imagen_url %}
-                        <img src="{{ producto.imagen_url }}"
-                             alt="{{ producto.imagen_nombre }}"
-                             class="img-thumbnail"
-                             style="max-width: 80px;">
-                    {% else %}
-                        <span class="text-muted">Sin imagen</span>
-                    {% endif %}
-                </td>
-
-                <td class="estado-centrado">
-                    {% if producto.is_active %}
-                        <span class="estado-circulo estado-activo"></span>
-                    {% else %}
-                        <span class="estado-circulo estado-inactivo"></span>
-                    {% endif %}
-                </td>
-
-                <td>
-                    {% if not producto.is_delete %}
-
-                        {% if perms.manager.change_productos %}
-                        <button type="button"
-                                class="btn btn-sm btn-primary btn-edit"
-                                data-id="{{ producto.id }}"
-                                data-bs-toggle="modal"
-                                data-bs-target="#modalput">
-                            <i class="bx bx-edit"></i>
-                        </button>
-                        {% endif %}
-
-                        {% if perms.manager.delete_productos %}
-                        <button type="button"
-                                class="btn btn-sm btn-danger btn-delete"
-                                data-id="{{ producto.id }}">
-                            <i class="bx bx-trash"></i>
-                        </button>
-                        {% endif %}
-
-                    {% endif %}
-                </td>
-
-            </tr>
+    <div class="tabla-container">
+        <table class="tablas-todo" id="tablacont">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Nombre</th>
+                    <th>Categoria</th>
+                    <th>Present</th>
+                    <th>Marca</th>
+                    <th>SKU</th>
+                    <th>Precio</th>
+                    <th>Imagen</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for producto in page_obj %}
+                    <tr data-id="{{ producto.id }}">
+                        <td>{{ producto.id }}</td>
+                        <td>{{ producto.nombre }}</td>
+                        <td>{{ producto.categoria.nombre }}</td>
+                        <td>{{ producto.unidad_medida.abreviatura }}</td>
+                        <td>{{ producto.marca.nombre }}</td>
+                        <td>{{ producto.codigo_sku }}</td>
+                        <td>L. {{ producto.precio_venta|floatformat:2 }}</td>
+                        <td>
+                            {% if producto.imagen_url %}
+                                <img src="{{ producto.imagen_url }}"
+                                     alt="{{ producto.imagen_nombre }}"
+                                     class="img-thumbnail"
+                                     style="max-width: 80px">
+                            {% else %}
+                                <span class="text-muted">Sin imagen</span>
+                            {% endif %}
+                        </td>
+                        <td class="estado-centrado">
+                            {% if producto.is_active %}
+                                <span class="estado-circulo estado-activo"></span>
+                            {% else %}
+                                <span class="estado-circulo estado-inactivo"></span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if not producto.is_delete %}
+                                {% if perms.manager.change_productos %}
+                                    <button type="button"
+                                            class="btn btn-sm btn-primary btn-edit"
+                                            data-id="{{ producto.id }}"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modalput">
+                                        <i class="bx bx-edit"></i>
+                                    </button>
+                                {% endif %}
+                                {% if perms.manager.delete_productos %}
+                                    <button type="button"
+                                            class="btn btn-sm btn-danger btn-delete"
+                                            data-id="{{ producto.id }}">
+                                        <i class="bx bx-trash"></i>
+                                    </button>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <nav class="d-flex justify-content-center mt-4">
+        <ul class="pagination">
+            <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+                {% if page_obj.has_previous %}
+                    <a class="page-link"
+                       href="?page={{ page_obj.previous_page_number }}&search={{ search }}">«</a>
+                {% else %}
+                    <span class="page-link">«</span>
+                {% endif %}
+            </li>
+            {% for p in page_obj.paginator.page_range %}
+                <li class="page-item {% if p == page_obj.number %}active{% endif %}">
+                    <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
+                </li>
             {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-<nav class="d-flex justify-content-center mt-4">
-    <ul class="pagination">
-
-        <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
-            {% if page_obj.has_previous %}
-                <a class="page-link" href="?page={{ page_obj.previous_page_number }}&search={{ search }}">«</a>
-            {% else %}
-                <span class="page-link">«</span>
-            {% endif %}
-        </li>
-
-        {% for p in page_obj.paginator.page_range %}
-        <li class="page-item {% if p == page_obj.number %}active{% endif %}">
-            <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
-        </li>
-        {% endfor %}
-
-        <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
-            {% if page_obj.has_next %}
-                <a class="page-link" href="?page={{ page_obj.next_page_number }}&search={{ search }}">»</a>
-            {% else %}
-                <span class="page-link">»</span>
-            {% endif %}
-        </li>
-
-    </ul>
-</nav>
-
-        <br>
-        <script type="module" src="{% static 'js/gestiones/productos.js' %}"></script>
-        <script type="module" src="{% static 'js/chektext.js' %}"></script>
-
-    {% endblock %}
+            <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+                {% if page_obj.has_next %}
+                    <a class="page-link"
+                       href="?page={{ page_obj.next_page_number }}&search={{ search }}">»</a>
+                {% else %}
+                    <span class="page-link">»</span>
+                {% endif %}
+            </li>
+        </ul>
+    </nav>
+    <br>
+    <script type="module" src="{% static 'js/gestiones/productos.js' %}"></script>
+    <script type="module" src="{% static 'js/chektext.js' %}"></script>
+{% endblock %}

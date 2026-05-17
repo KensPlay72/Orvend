@@ -42,6 +42,9 @@
                 <div class="modal-body">
                     <form id="postregistro" enctype="multipart/form-data">
                         {% csrf_token %}
+                        <!-- ========================= -->
+                        <!-- NOMBRE -->
+                        <!-- ========================= -->
                         <div class="form-group">
                             <label for="nubicacion">Nombre de la ubicación</label>
                             <input type="text"
@@ -52,28 +55,74 @@
                                    required>
                         </div>
                         <br>
+                        <!-- ========================= -->
+                        <!-- TIPO -->
+                        <!-- ========================= -->
                         <div class="form-group">
-                            <label for="tubicacion">Tipo de Ubicación</label>
-                            <select name="tubicacion" id="tubicacion" class="form-control">
-                                <option value="" selected disabled>Seleccione una Tipo</option>
-                                <option value="1">Bodega</option>
-                                <option value="2">Tienda</option>
-                            </select>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="es_bodega"
+                                       name="es_bodega">
+                                <label class="form-check-label" for="es_bodega">¿Es bodega?</label>
+                            </div>
+                            <br>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="es_tienda"
+                                       name="es_tienda">
+                                <label class="form-check-label" for="es_tienda">¿Es tienda?</label>
+                            </div>
+                            <br>
+                            <!-- NUEVO SWITCH -->
+                            <div class="form-check form-switch displaynone" id="switch_relacion">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="relacion_bodega"
+                                       name="relacion_bodega">
+                                <label class="form-check-label" for="relacion_bodega">¿Quieres relacionar una bodega con la tienda?</label>
+                            </div>
                         </div>
                         <br>
+                        <!-- ========================= -->
+                        <!-- CODIGO -->
+                        <!-- ========================= -->
                         <div class="form-group">
-                            <label for="cubicacion">Codigo de la ubicación</label>
+                            <label for="cubicacion">Código de la ubicación</label>
                             <input type="text"
                                    name="cubicacion"
                                    id="cubicacion"
                                    class="form-control"
-                                   placeholder="Codigo de la ubicación"
+                                   placeholder="Código de la ubicación"
                                    required>
                         </div>
                         <br>
+                        <!-- ========================= -->
+                        <!-- SELECT BODEGA -->
+                        <!-- ========================= -->
+                        <div class="provselect displaynone" id="bodega_container">
+                            <p>Bodega:</p>
+                            <div class="form-group mb-3">
+                                <input type="hidden" name="bodegaid" id="bodegaid">
+                                <div class="dropdown select-container w-100">
+                                    <button type="button" class="btn w-100 text-start form-control">Escriba para buscar...</button>
+                                    <div class="dropdown-menu w-100 p-0">
+                                        <div class="search-box p-2">
+                                            <input type="text" class="form-control" placeholder="Buscar bodega...">
+                                        </div>
+                                        <div class="options list-group list-group-flush"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <br>
+                        <!-- ========================= -->
+                        <!-- BOTONES -->
+                        <!-- ========================= -->
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                            <button type="submit" id="btnregis" class="btn btn classbotones">Guardar</button>
+                            <button type="submit" id="btnregis" class="btn classbotones">Guardar</button>
                         </div>
                     </form>
                 </div>
@@ -97,7 +146,10 @@
                 <div class="modal-body">
                     <form id="putregistro" enctype="multipart/form-data">
                         {% csrf_token %}
-                        <input type="text" id="idedit" hidden>
+                        <input type="hidden" id="idedit">
+                        <!-- ========================= -->
+                        <!-- NOMBRE -->
+                        <!-- ========================= -->
                         <div class="form-group">
                             <label for="nubicacionedit">Nombre de la ubicación</label>
                             <input type="text"
@@ -108,40 +160,82 @@
                                    required>
                         </div>
                         <br>
-                        <div class="form-group">
-                            <label for="tubicacionedit">Tipo de Ubicación</label>
-                            <select name="tubicacionedit" id="tubicacionedit" class="form-control">
-                                <option value="" selected disabled>Seleccione una Tipo</option>
-                                <option value="1">Bodega</option>
-                                <option value="2">Tienda</option>
-                            </select>
+                        <!-- ========================= -->
+                        <!-- ACTIVE -->
+                        <!-- ========================= -->
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="isActiveedit">
+                            <label class="form-check-label" id="activeTextedit">Activo</label>
                         </div>
                         <br>
+                        <!-- ========================= -->
+                        <!-- TIPO -->
+                        <!-- ========================= -->
                         <div class="form-group">
-                            <label for="cubicacionedit">Codigo de la ubicación</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="es_bodegaedit"
+                                       name="es_bodegaedit">
+                                <label class="form-check-label" for="es_bodegaedit">¿Es bodega?</label>
+                            </div>
+                            <br>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="es_tiendaedit"
+                                       name="es_tiendaedit">
+                                <label class="form-check-label" for="es_tiendaedit">¿Es tienda?</label>
+                            </div>
+                            <br>
+                            <!-- SWITCH RELACION -->
+                            <div class="form-check form-switch displaynone" id="switch_relacionedit">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="relacion_bodegaedit"
+                                       name="relacion_bodegaedit">
+                                <label class="form-check-label" for="relacion_bodegaedit">¿Quieres relacionar una bodega con la tienda?</label>
+                            </div>
+                        </div>
+                        <br>
+                        <!-- ========================= -->
+                        <!-- CODIGO -->
+                        <!-- ========================= -->
+                        <div class="form-group">
+                            <label for="cubicacionedit">Código de la ubicación</label>
                             <input type="text"
                                    name="cubicacionedit"
                                    id="cubicacionedit"
                                    class="form-control"
-                                   placeholder="Codigo de la ubicación"
+                                   placeholder="Código de la ubicación"
                                    required>
                         </div>
                         <br>
-                        <div class="form-group">
-                            <label for="isActiveedit" class="d-block">Estado</label>
-                            <label class="d-flex align-items-center" for="isActiveedit">
-                                <input type="checkbox"
-                                       id="isActiveedit"
-                                       name="isActiveedit"
-                                       checked
-                                       class="me-2">
-                                <span id="activeTextedit" class="fw-bold text-success">Activo</span>
-                            </label>
+                        <!-- ========================= -->
+                        <!-- BODEGA -->
+                        <!-- ========================= -->
+                        <div class="provselect displaynone" id="bodega_containeredit">
+                            <p>Bodega:</p>
+                            <div class="form-group mb-3">
+                                <input type="hidden" name="bodegaidedit" id="bodegaidedit">
+                                <div class="dropdown select-container w-100">
+                                    <button type="button" class="btn w-100 text-start form-control">Escriba para buscar...</button>
+                                    <div class="dropdown-menu w-100 p-0">
+                                        <div class="search-box p-2">
+                                            <input type="text" class="form-control" placeholder="Buscar bodega...">
+                                        </div>
+                                        <div class="options list-group list-group-flush"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <br>
+                        <!-- ========================= -->
+                        <!-- BOTONES -->
+                        <!-- ========================= -->
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                            <button type="submit" id="btnput" class="btn btn classbotones">Guardar</button>
+                            <button type="submit" id="btnput" class="btn classbotones">Guardar</button>
                         </div>
                     </form>
                 </div>
@@ -156,6 +250,7 @@
                     <th>Nombre</th>
                     <th>Tipo</th>
                     <th>Código</th>
+                    <th>Relación</th>
                     <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
@@ -163,18 +258,31 @@
             <tbody>
                 {% for ubicacion in page_obj %}
                     <tr data-id="{{ ubicacion.id }}">
+                        <!-- ID -->
                         <td>{{ ubicacion.id }}</td>
-                        <td>{{ ubicacion.nombre }}</td>
+                        <!-- NOMBRE -->
+                        <td class="fw-bold">{{ ubicacion.nombre }}</td>
+                        <!-- TIPO -->
                         <td>
-                            {% if ubicacion.tipo == 1 or ubicacion.tipo == '1' %}
-                                Bodega
-                            {% elif ubicacion.tipo == 2 or ubicacion.tipo == '2' %}
-                                Tienda
+                            {% if ubicacion.es_bodega %}
+                                <span class="badge bg-warning text-dark">Bodega</span>
+                            {% elif ubicacion.es_tienda %}
+                                <span class="badge bg-primary">Tienda</span>
                             {% else %}
-                                Desconocido
+                                <span class="badge bg-secondary">N/A</span>
                             {% endif %}
                         </td>
+                        <!-- CODIGO -->
                         <td>{{ ubicacion.codigo }}</td>
+                        <!-- RELACION -->
+                        <td>
+                            {% if ubicacion.bodega %}
+                                <span class="badge bg-info">↳ {{ ubicacion.bodega.nombre }}</span>
+                            {% else %}
+                                <span class="text-muted">Sin relación</span>
+                            {% endif %}
+                        </td>
+                        <!-- ESTADO -->
                         <td>
                             {% if ubicacion.is_active %}
                                 <span class="estado-circulo estado-activo"></span>
@@ -182,22 +290,25 @@
                                 <span class="estado-circulo estado-inactivo"></span>
                             {% endif %}
                         </td>
+                        <!-- ACCIONES -->
                         <td>
-                            {% if not ubicacion.is_delete %}
-                                <button type="button"
-                                        class="btn btn-sm btn-primary btn-edit"
-                                        data-id="{{ ubicacion.id }}"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#modalput">
-                                    <i class="bx bx-edit"></i>
-                                </button>
-                                <button type="button"
-                                        class="btn btn-sm btn-danger btn-delete"
-                                        data-id="{{ ubicacion.id }}">
-                                    <i class="bx bx-trash"></i>
-                                </button>
-                            {% endif %}
+                            <button type="button"
+                                    class="btn btn-sm btn-primary btn-edit"
+                                    data-id="{{ ubicacion.id }}"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalput">
+                                <i class="bx bx-edit"></i>
+                            </button>
+                            <button type="button"
+                                    class="btn btn-sm btn-danger btn-delete"
+                                    data-id="{{ ubicacion.id }}">
+                                <i class="bx bx-trash"></i>
+                            </button>
                         </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">No hay ubicaciones registradas</td>
                     </tr>
                 {% endfor %}
             </tbody>
@@ -205,6 +316,7 @@
     </div>
     <nav class="d-flex justify-content-center mt-4">
         <ul class="pagination">
+            <!-- ANTERIOR -->
             <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
                 {% if page_obj.has_previous %}
                     <a class="page-link"
@@ -213,11 +325,13 @@
                     <span class="page-link">«</span>
                 {% endif %}
             </li>
+            <!-- PÁGINAS -->
             {% for p in page_obj.paginator.page_range %}
                 <li class="page-item {% if p == page_obj.number %}active{% endif %}">
                     <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
                 </li>
             {% endfor %}
+            <!-- SIGUIENTE -->
             <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
                 {% if page_obj.has_next %}
                     <a class="page-link"
