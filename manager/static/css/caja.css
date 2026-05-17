@@ -1,0 +1,250 @@
+/* CONTENEDOR */
+.tabla-container{
+    width: 75%;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    overflow: hidden;
+    background: white;
+}
+
+/* TABLA */
+.tablas-todo{
+    width: 100%;
+    border-collapse: collapse;
+}
+
+/* HEADER */
+.tablas-todo thead{
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+/* BODY CON SCROLL */
+.tablas-todo tbody{
+    display: block;
+    height: 500px;
+    overflow-y: auto;
+    width: 100%;
+}
+
+/* FILAS */
+.tablas-todo tbody tr,
+.tablas-todo thead tr{
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+/* TD */
+.tablas-todo td{
+    padding: 14px;
+    text-align: center;
+    border-bottom: 1px solid #eee;
+}
+
+/* FILAS ALTERNAS */
+.tablas-todo tbody tr:nth-child(even){
+    background: #f5f8f8;
+}
+
+.tablas-todo tbody tr:hover{
+    background: #e7f3f1;
+}
+
+
+/*BUSQUEDAS*/
+
+.header__search.codigo {
+    margin-left: 5px;
+}
+
+/*FLEX DEL CONTENIDO*/
+
+.tabla{
+    display: flex;
+    align-items: flex-start;
+    margin-top: 15px;
+}
+
+/*DETALLE TOTAL*/
+
+.detalle table {
+    border-collapse: collapse;
+    margin-top: 0;
+}
+
+.detalle{
+    background-color: white;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    border-radius: 8px 12px;
+    padding: 20px;
+}
+
+.detalle td {
+    padding: 12px 24px;
+    font-size: 19px;
+    color: black;
+}
+
+.detalle .total_pagar{
+    background-color: #d1f2eb;
+    color: black;
+    font-weight: bold;
+}
+
+
+.detalle .total_pagar .a{
+    border-radius: 12px 0 0 12px;
+}
+
+.detalle .total_pagar .b{
+    border-radius: 0 12px 12px 0;
+}
+
+th{
+    margin-left: 10px !important;
+}
+
+.contenido{
+    display: flex;
+    flex-direction: column;
+    margin-left: 2%;
+    margin-top: 1%;
+}
+
+.container_abajo{
+    margin-top: 10%;
+    background-color: white;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    border-radius: 8px 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.container_abajo button{
+    background-color: #1a6e61;
+    border: none;
+    padding: 10px 100px;
+    border-radius: 8px 12px;
+    color: #ffff;
+    font-size: 20px;
+    box-shadow: 1px 1px 1px 1px rgba(26, 110, 97, 0.5);
+    cursor: pointer;
+    text-transform: capitalize;
+}
+
+.button_action{
+    display: flex;
+    flex-direction: row;
+}
+
+.button_action button{
+    margin-top: 10px;
+    border: none;
+    padding: 4px;
+    border-radius: 8px ;
+    color: #ffff;
+    font-size: 20px;
+    cursor: pointer;
+    text-transform: capitalize;   
+}
+
+.btn_add{
+    background-color: #2d9c89;
+    margin-left: 10px;
+    padding: 0px 12px !important;
+}
+
+
+.btn_remove{
+    background-color: #d9534f;
+    margin-left: 10px;
+    padding: 0px 12px !important;
+}
+
+.btn_discunt{
+    background-color: #e0a800;
+}
+
+.div_row{
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+
+/*filtro de busqueda*/
+
+.filtro-container {
+    position: relative;
+    width: 300px; /* Ajusta según necesites */
+}
+
+/* El estilo de la barra (fondo lila suave y redondeado) */
+.search-box {
+    display: flex;
+    align-items: center;
+    background-color: #f3f0f7; /* Color similar al de la imagen */
+    border-radius: 8px;
+    padding: 8px 15px;
+}
+
+/* El input sin bordes propios para que use el del contenedor */
+.header__input {
+    border: none;
+    background: transparent;
+    outline: none;
+    width: 100%;
+    font-size: 16px;
+    color: #495057;
+}
+
+/* Icono a la derecha */
+.header__icon {
+    font-size: 20px;
+    color: #6c757d;
+    cursor: pointer;
+}
+
+/* CAJA DE RESULTADOS: Ahora sí aparecerá abajo */
+.resultados-busqueda {
+    position: absolute;
+    top: 110%; /* Lo separa un poquito del input */
+    left: 0;
+    width: 100%;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none; /* Se controla con JS */
+    flex-direction: column;
+    overflow-x: hidden;
+    border: 1px solid #eee;
+}
+
+.item-resultado {
+    padding: 12px;
+    border-bottom: 1px solid #f8f9fa;
+    cursor: pointer;
+}
+
+.item-resultado:hover {
+    background-color: #f1f1f1;
+}
+
+.mi-select{
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+
+    width: 100%;
+    padding: 10px;
+    border: 2px solid;
+    border-radius: 8px;
+    background-color: white;
+    font-size: 16px;
+}

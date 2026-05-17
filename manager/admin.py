@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import User
 from .models import *
 from decimal import Decimal
 from django.utils import timezone
@@ -381,3 +383,13 @@ class ClientesAdmin(admin.ModelAdmin):
         return obj.nombre_completo
 
     nombre_completo.short_description = "Nombre completo"
+
+class PerfilUsuarioInline(admin.StackedInline):
+    model = PerfilUsuario
+    can_delete = False
+
+class CustUserAdmin(UserAdmin):
+    inlines= [PerfilUsuarioInline]
+
+admin.site.unregister(User)
+admin.site.register(User,CustUserAdmin)

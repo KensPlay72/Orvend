@@ -28,6 +28,25 @@
                     <div class="header__toggle">
                         <i class="bx bx-menu" id="header-toggle"></i>
                     </div>
+                    {% if mostrar_codigo %}
+                        <!-- Campo de búsqueda -->
+                        <form id="codigo_form" class="header__search codigo" style="margin-top:15px">
+                            <input name="" placeholder="codigo" class="header__input codigo" id="codigo_busqueda"
+                                value="{{ search }}" autocomplete="off" />
+                            <i class="bx bx-search header__icon" id="buscarIcono" style="margin-top:4px;cursor: pointer"></i>
+                        </form>
+                        
+                            <div class="filtro-container" style="margin-right: 500px;">
+                                <div class="search-box">
+                                    <input type="search" name="search" class="header__input" id="busqueda" 
+                                        placeholder="{% if mostrar_codigo %}Buscar Producto{% else %}Buscar{% endif %}" 
+                                        value="{{ search }}" autocomplete="off" />
+                                    <i class="bx bx-search header__icon" id="buscarIcono"></i>
+                                </div>
+                                
+                                <div id="resultadoBusquda" class="resultados-busqueda"></div>
+                            </div>
+                        {% endif %}
                     <!-- Campo de búsqueda -->
                     {% if mostrar_buscador %}
                         <form method="get" class="header__search" style="margin-top:15px">
@@ -73,6 +92,23 @@
             <div class="nav" id="navbar">
                 <nav class="nav__container">
                     <div>
+                        {% if request.user.groups.all.0.name == "cajeros" or request.user.is_superuser %}
+                        <div class="nav__items">
+                            <h3 class="nav__subtitle">Caja</h3>
+                            <a href="{% url 'caja' %}"
+                                class="nav__link {% if request.path == '/manager/caja/' %}active{% endif %}">
+                                <i class="bx bx-store nav__icon"></i>
+                                <span class="nav__name">Caja</span>
+                            </a>
+                            <a href="#" class="nav__link">
+                                <i class="bx bx-wallet nav__icon"></i>
+                                <span class="nav__name">Cierre de caja</span>
+                            </a>
+                        </div>
+                        <br>
+                        <br>
+                        {% endif %}
+                        {% if not request.user.groups.all.0.name == "cajeros" %}
                         <div class="nav__list">
                             <div class="nav__items">
                                 <h3 class="nav__subtitle">Tiendas</h3>
@@ -102,6 +138,7 @@
                                     <span class="nav__name">Cierre de caja</span>
                                 </a>
                             </div>
+                            {% endif %}
                             <div class="nav__items">
                                 <h3 class="nav__subtitle">Gestiones</h3>
                                 {% if perms.manager.view_inventarios %}
@@ -182,6 +219,7 @@
                                     </a>
                                 {% endif %}
                             </div>
+                             {% if not request.user.groups.all.0.name == "cajeros" %}
                             <div class="nav__items">
                                 <h3 class="nav__subtitle">Bodega</h3>
                                 <a href="{% url 'dashboard_bodega' %}"
@@ -195,6 +233,7 @@
                                     <span class="nav__name">Recepción</span>
                                 </a>
                             </div>
+                            {% endif %}
                             {% comment %} <div class="nav__items">
                                 <h3 class="nav__subtitle">GESTIONES</h3>
                                 <div class="nav__dropdown">

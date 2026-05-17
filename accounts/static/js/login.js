@@ -65,8 +65,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 return;
             }
 
-            // ✔ ÉXITO → redirect directo
-            window.location.href = "/manager/dashboard/";
+            // ✔ ÉXITO → redirect por rol
+
+            if(data.groups===1){
+                window.location.href = "/manager/dashboard/";
+            }
+            else{
+                window.location.href="/manager/caja/"
+            }
+            
 
         } catch (error) {
             Swal.fire({

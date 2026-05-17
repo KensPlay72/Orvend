@@ -18,6 +18,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_POST
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+from django.core.exceptions import PermissionDenied
 
 from .enums import EstadoCompra, EstadoCuenta, EstadoDevolucionCompra, Estados
 from .models import (
@@ -3415,7 +3416,7 @@ def inventario_view(request):
         "mostrar_buscador": True,
     }
 
-    return render(request, "inventario/inventario.html", context)
+    return render(request, "inventario/inventario.html", context,)
 
 
 @login_required
@@ -3825,3 +3826,68 @@ def post_traslado(request):
             {"success": False, "message": f"Error interno: {str(e)}"},
             status=500,
         )
+
+#__________________________
+## RUTA DE CAJA##
+#_________________________
+@login_required
+def caja_view(request):    
+    if not request.user.groups.filter(name="cajeros").exists():
+        raise PermissionDenied("No tienes permiso")
+
+    context = {
+        "mostrar_buscador":False,
+        "mostrar_codigo":True
+    }
+
+    return render(request,"caja/caja.html",context)
+
+#Busqueda de Productos por codigo de barra en caja.
+
+@login_required
+def busqueda_codigo(request,codigo):
+
+    if not request.user.groups.filter(name='cajeros').exists():
+        return JsonResponse({
+            "error":"Usuario no valido"
+        },status=403)
+
+    try:
+        producto = Productos.objects.get(
+            codigo_sku =codigo
+        )
+
+        data = {
+            "id": producto.id,
+            "codigo_sku":producto.codigo_sku,
+            "nombre":producto.nombre,
+            "precio_venta":producto.precio_venta
+        }
+
+        return JsonResponse(data)
+    
+    except Productos.DoesNotExist:
+        return JsonResponse({
+            "error":"Producto no encontrado"
+        },status=404)
+
+@login_required
+def busqueda_nombre(request,producto):
+
+    if not request.user.groups.filter(name='cajeros').exists():
+        return JsonResponse({
+            "error":"Usuario no valido"
+        },status=403)    
+
+    if not producto or len(producto)<2:
+        return JsonResponse({},safe=False)
+
+    items =(Productos.objects.filter(is_delete=False,is_active=True)
+            .filter(Q(nombre__icontains=producto)).order_by("nombre")[:20]
+            )
+
+    data=[{"id":c.id,"codigo_sku":c.codigo_sku,"nombre":c.nombre,"precio_venta":c.precio_venta} for c in items]
+
+    return JsonResponse(data,safe=False)
+
+

@@ -1,0 +1,130 @@
+{% load static %}
+{% block content %}
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'plugins/bootstrap.min.css' %}">
+    <link rel="icon" href="{% static 'img/logo-card.ico' %}" type="image/x-icon">
+    {% block extra_css %}
+    {% endblock extra_css %}
+    <!--========== BOX ICONS ==========-->
+    <link rel="stylesheet" href="{% static 'plugins/css/boxicons.min.css' %}">
+    <!--========== CSS ==========-->
+    <link rel="stylesheet" href="{% static 'css/menu.css' %}">
+    <title>
+        {% block title %}
+        {% endblock title %}
+    </title>
+</head>
+
+<body>
+    <!--========== HEADER ========-->
+    <header class="header">
+        <div class="header__container">
+            {% block titulo_content %}
+            {% endblock titulo_content %}
+            <div class="header__toggle">
+                <i class="bx bx-menu" id="header-toggle"></i>
+            </div>
+            {% if mostrar_codigo %}
+            <!-- Campo de búsqueda -->
+             <form id="codigo_form" class="header__search codigo" style="margin-top:15px">
+                <input name="" placeholder="codigo" class="header__input codigo" id="codigo_busqueda"
+                    value="{{ search }}" autocomplete="off" />
+                <i class="bx bx-search header__icon" id="buscarIcono" style="margin-top:4px;cursor: pointer"></i>
+            </form>
+            
+                <div class="filtro-container" style="margin-right: 500px;">
+                    <div class="search-box">
+                        <input type="search" name="search" class="header__input" id="busqueda" 
+                            placeholder="{% if mostrar_codigo %}Buscar Producto{% else %}Buscar{% endif %}" 
+                            value="{{ search }}" autocomplete="off" />
+                        <i class="bx bx-search header__icon" id="buscarIcono"></i>
+                    </div>
+                    
+                    <div id="resultadoBusquda" class="resultados-busqueda"></div>
+                </div>
+            {% endif %}
+            <div class="initials-circle" id="profile-img">
+                {{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}
+            </div>
+        </div>
+        <div id="modal" class="modal1">
+            <div class="modal-content">
+                <!-- Header: Logo left, Logout right -->
+                <div class="encabezado">
+                    <img class="logoencabezado" src="{% static 'img/LH.png' %}" alt="Logo Orvend">
+                    <a href="#" id="btn-logout" class="logout-link">Cerrar Sesión</a>
+                </div>
+                <!-- Profile Info -->
+                <div class="modal-header">
+                    <div class="initials-circle">{{ request.user.first_name|slice:":1" }}{{request.user.last_name|slice:":1" }}</div>
+                    <div class="modal-info">
+                        <p class="username" id="modal-username">{{ request.user.username }}</p>
+                        <p class="full-name" id="modal-fullname">{{ request.user.first_name }} {{ request.user.last_name}}</p>
+                        <p class="email" id="modal-email">{{ request.user.email }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!--========== NAV ==========-->
+    <div class="nav" id="navbar">
+        <nav class="nav__container">
+            <div>
+                <div class="nav__list">
+                    <div class="nav__items">
+                        <h3 class="nav__subtitle">Caja</h3>
+                        <a href="{% url 'caja' %}"
+                            class="nav__link {% if request.path == '/manager/caja/' %}active{% endif %}">
+                            <i class="bx bx-store nav__icon"></i>
+                            <span class="nav__name">Caja</span>
+                        </a>
+                        <a href="#" class="nav__link">
+                            <i class="bx bx-wallet nav__icon"></i>
+                            <span class="nav__name">Cierre de caja</span>
+                        </a>
+                    </div>
+                    <div class="nav__items">
+                        <h3 class="nav__subtitle">Gestiones</h3>
+                        {% if perms.manager.view_inventarios %}
+                        <a href="{% url 'inventario' %}"
+                            class="nav__link {% if request.path == '/manager/inventario/' %}active{% endif %}">
+                            <i class="bx bx-list-ul nav__icon"></i>
+                            <span class="nav__name">Inventario</span>
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'ubicaciones' %}"
+                            class="nav__link {% if request.path == '/manager/ubicaciones/' %}active{% endif %}">
+                            <i class="bx bx-map nav__icon"></i>
+                            <span class="nav__name">Ubicaciones</span>
+                        </a>
+
+                        <a href="/"
+                            class="nav__link {% if request.path == '/manager/compras/devoluciones/' %}active{% endif %}">
+                            <i class='bx bx-revision nav__icon'></i>
+                            <span class="nav__name">Devoluciones</span>
+                        </a>
+
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </div>
+    <!--========== CONTENTS ========-->
+    <main class="main">
+        {% block main_content %}
+        {% endblock %}
+    </main>
+    <!--========== MAIN JS ==========-->
+    <script src="{% static 'js/menu.js' %}"></script>
+    <script src="{% static 'plugins/jwt-decode.min.js' %}"></script>
+    <script src="{% static 'plugins/jquery.min.js' %}"></script>
+    <script src="{% static 'plugins/bootstrap.min.js' %}"></script>
+    <script src="{% static 'plugins/sweetalert2.min.js' %}"></script>
+</body>
+
+</html>
+{% endblock %}

@@ -143,4 +143,8 @@ urlpatterns = [
     ),
     path("traslados/", views.traslados_view, name="traslados"),
     path("traslados/post/", views.post_traslado, name="post_traslado"),
+
+    path("caja/",views.caja_view, name="caja"),
+    path("busquedacodigo/<int:codigo>/", views.busqueda_codigo,name="busqueda_codigo"),
+    path("busquedanombre/<str:producto>/",views.busqueda_nombre,name="busqueda_nombre")
 ]

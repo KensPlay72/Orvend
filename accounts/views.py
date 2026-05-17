@@ -27,9 +27,15 @@ def login_view(request):
 
         login(request, user)
 
+        if user.groups.filter(name="cajeros").exists():
+            groups=2
+        else:
+            groups=1
+
         return JsonResponse({
             "message": "Login exitoso",
-            "username": user.username
+            "username": user.username,
+            "groups": groups
         })
 
     return render(request, "login.html")

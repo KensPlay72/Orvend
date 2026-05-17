@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.contrib.auth.models import User
 
 from .enums import (
     EstadoCompra,
@@ -533,3 +534,13 @@ class MovimientoInventario(models.Model):
 
     def __str__(self):
         return f"Movimiento {self.id} - {self.get_tipo_movimiento_display()}"
+
+class PerfilUsuario(models.Model):
+    usuarios = models.OneToOneField(User,on_delete=models.CASCADE)
+    ubicacion = models.ForeignKey(
+        Ubicaciones,
+        on_delete=models.PROTECT,
+        related_name="usuarios_ubicacion"
+    )
+    def __str__(self):
+        return self.usuarios.username
