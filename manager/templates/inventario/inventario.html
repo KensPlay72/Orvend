@@ -39,7 +39,17 @@
                                 <td>{{ producto.unidadMedida.abreviatura }}</td>
                                 <td>{{ producto.marcas.nombre }}</td>
                                 <td>{{ producto.codigoSKU }}</td>
-                                <td>L. {{ producto.precioVenta|default:"0.00" }}</td>
+                                <td>
+                                    {% if producto.tieneDescuento %}
+                                        <div>
+                                            <span class="text-decoration-line-through text-danger">L. {{ producto.precioVenta|floatformat:2 }}</span>
+                                        </div>
+                                        <div class="fw-bold text-success precio-descuento">L. {{ producto.precioFinal|floatformat:2 }}</div>
+                                        {% for d in producto.descuentos %}<small class="text-muted d-block">{{ d.nombre }}</small>{% endfor %}
+                                    {% else %}
+                                        <span>L. {{ producto.precioVenta|floatformat:2 }}</span>
+                                    {% endif %}
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>

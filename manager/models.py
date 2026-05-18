@@ -165,13 +165,13 @@ class ProveedoresContactos(Abstracto):
 # UBICACIONES
 # =========================
 class Ubicaciones(Abstracto):
-    class TipoUbicacion(models.IntegerChoices):
-        BODEGA = 1, "Bodega"
-        TIENDA = 2, "Tienda"
-
     nombre = models.CharField(max_length=120)
-    tipo = models.IntegerField(choices=TipoUbicacion.choices)
     codigo = models.CharField(max_length=10, null=True, blank=True)
+    es_bodega = models.BooleanField(default=False)
+    es_tienda = models.BooleanField(default=False)
+    bodega = models.ForeignKey(
+        "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="tiendas"
+    )
 
     def __str__(self):
         return self.nombre

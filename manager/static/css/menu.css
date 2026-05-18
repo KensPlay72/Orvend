@@ -472,6 +472,15 @@ Modal Inner Content
   outline: none !important;
   box-shadow: none !important;
 }
+.modal-footer {
+  height: 30px;
+}
+.altura-footer {
+  height: 40px;
+}
+.altura-footer2 {
+  height: 60px;
+}
 a {
   text-decoration: none;
   color: #444;

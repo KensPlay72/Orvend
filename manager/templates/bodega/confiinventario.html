@@ -25,7 +25,7 @@
       <i class="bx bx-arrow-back"></i> Regresar
     </button>
     <div class="display-flex">
-      {% if perms.manager.add_devolucioncompra and compra.tipo == "COMPRA" %}
+      {% if perms.manager.add_devolucioncompra and compra.tipo == "Compra" %}
         <button id="devoluciones"
                 class="btn-dropdown"
                 data-bs-toggle="modal"
@@ -81,7 +81,7 @@
             </table>
           </div>
         </div>
-        <div class="modal-footer">
+        <div class="modal-footer altura-footer2">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
           <button type="button" class="btn classbotones" id="enviarAutorizacionBtn">Autorizar</button>
         </div>
@@ -153,7 +153,7 @@
               </tbody>
             </table>
           </div>
-          <div class="modal-footer">
+          <div class="modal-footer altura-footer2">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
             <button type="button" class="btn classbotones" id="enviarDevolucionBtn">Registrar Devolución</button>
           </div>
