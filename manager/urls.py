@@ -141,9 +141,17 @@ urlpatterns = [
         views.inventario_por_ubicacion,
         name="inventario_por_ubicacion",
     ),
-    path("traslados/", views.traslados_view, name="traslados"),
+    path("r/traslados/", views.traslados_view, name="traslados_create"),
     path("traslados/post/", views.post_traslado, name="post_traslado"),
-
+    path(
+        "traslados/",
+        views.traslados_list,
+        name="traslados_list",
+    ),
+    path("descuentos/", views.descuentos_view, name="descuentos"),
+    path("descuentos/post/", views.post_descuento, name="post_descuento"),
+    path("descuentos/get/<int:id>/", views.get_descuento, name="get_descuento"),
+    path("descuentos/put/<int:id>/", views.put_descuento, name="put_descuento"),
     path("caja/",views.caja_view, name="caja"),
     path("busquedacodigo/<int:codigo>/", views.busqueda_codigo,name="busqueda_codigo"),
     path("busquedanombre/<str:producto>/",views.busqueda_nombre,name="busqueda_nombre")

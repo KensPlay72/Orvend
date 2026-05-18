@@ -42,6 +42,8 @@ from .models import (
     Traslados,
     Ubicaciones,
     UMedidas,
+    Descuento,
+    
 )
 
 
@@ -957,12 +959,14 @@ def get_proveedor_contacto(request, id):
                 "id": contacto.id,
                 "proveedores": {
                     "id": contacto.proveedor.id if contacto.proveedor else None,
-                    "nombre_comercial": contacto.proveedor.nombre_comercial
-                    if contacto.proveedor
-                    else "",
-                    "nombre_legal": contacto.proveedor.nombre_legal
-                    if contacto.proveedor
-                    else "",
+                    "nombre_comercial": (
+                        contacto.proveedor.nombre_comercial
+                        if contacto.proveedor
+                        else ""
+                    ),
+                    "nombre_legal": (
+                        contacto.proveedor.nombre_legal if contacto.proveedor else ""
+                    ),
                 },
                 "nombre": contacto.nombre,
                 "puesto": contacto.puesto,
@@ -1281,18 +1285,22 @@ def get_producto(request, id):
                 "vencimiento": producto.vencimiento,
                 # relaciones
                 "categoriaId": producto.categoria.id if producto.categoria else None,
-                "categoria": {"nombre": producto.categoria.nombre}
-                if producto.categoria
-                else None,
-                "unidadMedidaId": producto.unidad_medida.id
-                if producto.unidad_medida
-                else None,
-                "unidadMedida": {
-                    "nombre": producto.unidad_medida.nombre,
-                    "abreviatura": producto.unidad_medida.abreviatura,
-                }
-                if producto.unidad_medida
-                else None,
+                "categoria": (
+                    {"nombre": producto.categoria.nombre}
+                    if producto.categoria
+                    else None
+                ),
+                "unidadMedidaId": (
+                    producto.unidad_medida.id if producto.unidad_medida else None
+                ),
+                "unidadMedida": (
+                    {
+                        "nombre": producto.unidad_medida.nombre,
+                        "abreviatura": producto.unidad_medida.abreviatura,
+                    }
+                    if producto.unidad_medida
+                    else None
+                ),
                 "marcasId": producto.marca.id if producto.marca else None,
                 "marcas": {"nombre": producto.marca.nombre} if producto.marca else None,
             },
@@ -1888,9 +1896,11 @@ def detalle_compra_view(request, id):
             {
                 "productoNombre": producto.nombre,
                 "productoId": producto.id,
-                "presentacion": getattr(producto.unidad_medida, "abreviatura", "N/A")
-                if hasattr(producto, "unidad_medida")
-                else "N/A",
+                "presentacion": (
+                    getattr(producto.unidad_medida, "abreviatura", "N/A")
+                    if hasattr(producto, "unidad_medida")
+                    else "N/A"
+                ),
                 "sku": getattr(producto, "codigo_sku", "N/A"),
                 "precioCompra": float(d.precio_compra),
                 "cantidad": float(d.cantidad),
@@ -1971,6 +1981,7 @@ def proxy_compras_pdf(request, id):
         return JsonResponse({"success": False, "message": str(e)}, status=500)
 
 
+@login_required
 def generar_pdf_compra(compra, logo_path="static/img/LH.png"):
 
     buffer = BytesIO()
@@ -3234,6 +3245,7 @@ def post_devolucion_compra(request):
 # ─────────────────────────────────────────────────────────────
 # GENERADOR PDF DEVOLUCION DJANGO
 # ─────────────────────────────────────────────────────────────
+@login_required
 def generar_pdf_devolucion(devolucion, logo_path="static/img/LH.png"):
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=letter)
@@ -3478,9 +3490,11 @@ def get_inventario_producto(request, id):
                 "producto": {
                     "id": producto.id,
                     "nombre": producto.nombre,
-                    "imagenUrl": producto.imagen_url
-                    if producto.imagen_url
-                    else "/static/img/noimage.png",
+                    "imagenUrl": (
+                        producto.imagen_url
+                        if producto.imagen_url
+                        else "/static/img/noimage.png"
+                    ),
                 },
                 "inventario": inventario_list,
             }
@@ -3628,7 +3642,7 @@ def rechazar_devolucion_view(request, id):
 def traslados_view(request):
     ubicaciones = Ubicaciones.objects.filter(is_delete=False).order_by("nombre")
     context = {"ubicaciones": ubicaciones}
-    return render(request, "gestiones/traslados.html", context)
+    return render(request, "traslados/traslados.html", context)
 
 
 @login_required
@@ -3891,3 +3905,485 @@ def busqueda_nombre(request,producto):
     return JsonResponse(data,safe=False)
 
 
+
+@login_required
+@permission_required("manager.view_traslados", raise_exception=True)
+def traslados_list(request):
+    search = request.GET.get("search", "").strip()
+
+    traslados = (
+        Traslados.objects.select_related(
+            "solicitado_por",
+            "autorizado_por",
+            "ubicacion_origen",
+            "ubicacion_destino",
+        )
+        .filter(is_delete=False)
+        .order_by("-id")
+    )
+
+    if search:
+        traslados = traslados.filter(
+            Q(id__icontains=search)
+            | Q(ubicacion_origen__nombre__icontains=search)
+            | Q(ubicacion_destino__nombre__icontains=search)
+            | Q(estado__icontains=search)
+        )
+
+    paginator = Paginator(traslados, 10)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    return render(
+        request,
+        "traslados/traslados_view.html",
+        {
+            "page_obj": page_obj,
+            "search": search,
+        },
+    )
+
+
+@login_required
+@permission_required("manager.view_descuento", raise_exception=True)
+def descuentos_view(request):
+
+    search = request.GET.get("search", "").strip()
+
+    descuentos = Descuento.objects.filter(is_delete=False).order_by("-id")
+
+    # =========================
+    # BUSQUEDA
+    # =========================
+
+    if search:
+        descuentos = descuentos.filter(nombre__icontains=search)
+
+    # =========================
+    # PAGINACION
+    # =========================
+
+    paginator = Paginator(descuentos, 10)
+
+    page_number = request.GET.get("page")
+
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        "page_obj": page_obj,
+        "search": search,
+        "mostrar_buscador": True,
+    }
+
+    return render(request, "inventario/descuentos.html", context)
+
+
+@login_required
+@permission_required("manager.add_descuento", raise_exception=True)
+@require_POST
+def post_descuento(request):
+
+    try:
+        data = json.loads(request.body)
+
+        # =========================
+        # INFORMACION GENERAL
+        # =========================
+
+        nombre = (data.get("nombre") or "").strip()
+
+        descripcion = (data.get("descripcion") or "").strip()
+
+        # =========================
+        # CUPONES
+        # =========================
+
+        es_cupon = data.get("es_cupon", False)
+
+        codigo = (data.get("codigo") or "").strip()
+
+        # =========================
+        # TIPO DESCUENTO
+        # =========================
+
+        es_porcentaje = data.get("es_porcentaje", True)
+
+        valor = data.get("valor")
+
+        # =========================
+        # APLICACION
+        # =========================
+
+        aplicar_productos = data.get("aplicar_productos", False)
+
+        aplicar_categorias = data.get("aplicar_categorias", False)
+
+        productoid = data.get("productoid")
+
+        categoriaid = data.get("categoriaid")
+
+        # =========================
+        # LIMITES
+        # =========================
+
+        limite_uso = data.get("limite_uso")
+
+        # =========================
+        # FECHAS
+        # =========================
+
+        fecha_inicio = data.get("fecha_inicio") or None
+
+        fecha_fin = data.get("fecha_fin") or None
+
+        # =========================
+        # CONFIGURACIONES
+        # =========================
+
+        acumulable = data.get("acumulable", False)
+
+        requiere_codigo = data.get("requiere_codigo", False)
+
+        # =========================
+        # VALIDACIONES
+        # =========================
+
+        if not nombre:
+            return JsonResponse(
+                {"success": False, "message": "El nombre es obligatorio"}, status=400
+            )
+
+        if valor in [None, ""]:
+            return JsonResponse(
+                {"success": False, "message": "El valor es obligatorio"}, status=400
+            )
+
+        if Descuento.objects.filter(nombre=nombre, is_delete=False).exists():
+            return JsonResponse(
+                {"success": False, "message": "Ya existe un descuento con ese nombre"},
+                status=400,
+            )
+
+        # =========================
+        # VALIDAR CODIGO CUPON
+        # =========================
+
+        if es_cupon:
+            # Si escribió código manual
+            if codigo:
+                if Descuento.objects.filter(codigo=codigo, is_delete=False).exists():
+                    return JsonResponse(
+                        {"success": False, "message": "El código ya existe"}, status=400
+                    )
+
+            # Si no escribió código
+            else:
+                codigo = None
+
+        else:
+            codigo = None
+
+        # =========================
+        # VALIDAR APLICACION
+        # =========================
+
+        if aplicar_productos and aplicar_categorias:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "No puedes aplicar a productos y categorías al mismo tiempo",
+                },
+                status=400,
+            )
+
+        if aplicar_productos and not productoid:
+            return JsonResponse(
+                {"success": False, "message": "Debes seleccionar un producto"},
+                status=400,
+            )
+
+        if aplicar_categorias and not categoriaid:
+            return JsonResponse(
+                {"success": False, "message": "Debes seleccionar una categoría"},
+                status=400,
+            )
+
+        # =========================
+        # CREAR DESCUENTO
+        # =========================
+
+        descuento = Descuento.objects.create(
+            nombre=nombre,
+            descripcion=descripcion,
+            es_cupon=es_cupon,
+            codigo=codigo,
+            es_porcentaje=es_porcentaje,
+            valor=valor,
+            aplicar_productos=aplicar_productos,
+            aplicar_categorias=aplicar_categorias,
+            limite_uso=limite_uso if limite_uso else None,
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
+            acumulable=acumulable,
+            requiere_codigo=requiere_codigo,
+            u_creo_id=request.user.id,
+        )
+
+        # =========================
+        # MANY TO MANY
+        # =========================
+
+        if aplicar_productos and productoid:
+            producto = Productos.objects.filter(id=productoid).first()
+
+            if producto:
+                descuento.productos.add(producto)
+
+        if aplicar_categorias and categoriaid:
+            categoria = Categorias.objects.filter(id=categoriaid).first()
+
+            if categoria:
+                descuento.categorias.add(categoria)
+
+        return JsonResponse(
+            {"success": True, "message": "Descuento registrado correctamente"}
+        )
+
+    except Exception as e:
+        return JsonResponse({"success": False, "message": str(e)}, status=500)
+
+
+@login_required
+@permission_required("manager.view_descuento", raise_exception=True)
+def get_descuento(request, id):
+
+    try:
+        descuento = Descuento.objects.filter(id=id, is_delete=False).first()
+
+        if not descuento:
+            return JsonResponse(
+                {"success": False, "message": "Descuento no encontrado"}, status=404
+            )
+
+        producto = descuento.productos.first()
+
+        categoria = descuento.categorias.first()
+
+        return JsonResponse(
+            {
+                "success": True,
+                "descuento": {
+                    "id": descuento.id,
+                    "nombre": descuento.nombre,
+                    "descripcion": descuento.descripcion,
+                    "es_cupon": descuento.es_cupon,
+                    "codigo": descuento.codigo,
+                    "es_porcentaje": descuento.es_porcentaje,
+                    "valor": str(descuento.valor),
+                    "aplicar_productos": descuento.aplicar_productos,
+                    "aplicar_categorias": descuento.aplicar_categorias,
+                    "productoid": producto.id if producto else None,
+                    "productonombre": producto.nombre if producto else "",
+                    "categoriaid": categoria.id if categoria else None,
+                    "categorianombre": categoria.nombre if categoria else "",
+                    "limite_uso": descuento.limite_uso,
+                    "fecha_inicio": (
+                        descuento.fecha_inicio.strftime("%Y-%m-%dT%H:%M")
+                        if descuento.fecha_inicio
+                        else ""
+                    ),
+                    "fecha_fin": (
+                        descuento.fecha_fin.strftime("%Y-%m-%dT%H:%M")
+                        if descuento.fecha_fin
+                        else ""
+                    ),
+                    "acumulable": descuento.acumulable,
+                    "requiere_codigo": descuento.requiere_codigo,
+                    "is_active": descuento.is_active,
+                },
+            }
+        )
+
+    except Exception as e:
+        return JsonResponse({"success": False, "message": str(e)}, status=500)
+
+
+@login_required
+@permission_required("manager.change_descuento", raise_exception=True)
+@require_http_methods(["PUT"])
+def put_descuento(request, id):
+
+    try:
+        descuento = Descuento.objects.filter(id=id, is_delete=False).first()
+
+        if not descuento:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Descuento no encontrado",
+                },
+                status=404,
+            )
+
+        data = json.loads(request.body)
+
+        # =========================
+        # INFORMACION GENERAL
+        # =========================
+
+        nombre = (data.get("nombre") or "").strip()
+
+        descripcion = (data.get("descripcion") or "").strip()
+
+        # =========================
+        # CUPON
+        # =========================
+
+        es_cupon = data.get("es_cupon", False)
+
+        codigo = (data.get("codigo") or "").strip()
+
+        # =========================
+        # TIPO DESCUENTO
+        # =========================
+
+        es_porcentaje = data.get("es_porcentaje", True)
+
+        valor = data.get("valor")
+
+        # =========================
+        # APLICACION
+        # =========================
+
+        aplicar_productos = data.get("aplicar_productos", False)
+
+        aplicar_categorias = data.get("aplicar_categorias", False)
+
+        productoid = data.get("productoid")
+
+        categoriaid = data.get("categoriaid")
+
+        # =========================
+        # LIMITES
+        # =========================
+
+        limite_uso = data.get("limite_uso") or None
+
+        # =========================
+        # FECHAS
+        # =========================
+
+        fecha_inicio = data.get("fecha_inicio") or None
+
+        fecha_fin = data.get("fecha_fin") or None
+
+        # =========================
+        # CONFIGURACIONES
+        # =========================
+
+        acumulable = data.get("acumulable", False)
+
+        requiere_codigo = data.get("requiere_codigo", False)
+
+        is_active = data.get("is_active", True)
+
+        # =========================
+        # VALIDACIONES
+        # =========================
+
+        if not nombre:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "El nombre es obligatorio",
+                },
+                status=400,
+            )
+
+        existe = Descuento.objects.filter(
+            nombre=nombre,
+            is_delete=False,
+        ).exclude(id=id)
+
+        if existe.exists():
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Ya existe un descuento con ese nombre",
+                },
+                status=400,
+            )
+
+        # =========================
+        # UPDATE
+        # =========================
+
+        descuento.nombre = nombre
+
+        descuento.descripcion = descripcion
+
+        descuento.es_cupon = es_cupon
+
+        descuento.codigo = codigo if es_cupon else None
+
+        descuento.es_porcentaje = es_porcentaje
+
+        descuento.valor = valor
+
+        descuento.aplicar_productos = aplicar_productos
+
+        descuento.aplicar_categorias = aplicar_categorias
+
+        descuento.limite_uso = limite_uso
+
+        descuento.fecha_inicio = fecha_inicio
+
+        descuento.fecha_fin = fecha_fin
+
+        descuento.acumulable = acumulable
+
+        descuento.requiere_codigo = requiere_codigo
+
+        descuento.is_active = is_active
+
+        descuento.u_modifico_id = request.user.id
+
+        descuento.save()
+
+        # =========================
+        # MANY TO MANY
+        # =========================
+
+        descuento.productos.clear()
+
+        descuento.categorias.clear()
+
+        if aplicar_productos and productoid:
+            producto = Productos.objects.filter(id=productoid, is_delete=False).first()
+
+            if producto:
+                descuento.productos.add(producto)
+
+        if aplicar_categorias and categoriaid:
+            categoria = Categorias.objects.filter(
+                id=categoriaid, is_delete=False
+            ).first()
+
+            if categoria:
+                descuento.categorias.add(categoria)
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "Descuento actualizado correctamente",
+            }
+        )
+
+    except Exception as e:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": str(e),
+            },
+            status=500,
+        )

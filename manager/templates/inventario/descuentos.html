@@ -1,0 +1,540 @@
+{% extends "menu.html" %}
+{% load static %}
+{% block title %}
+  Descuentos
+{% endblock title %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+{% endblock extra_css %}
+{% block titulo_content %}
+  <div class="tituloscont">
+    <img class="logop"
+         src="{% static 'img/LH.png' %}"
+         alt="logo"
+         width="0"
+         height="0" />
+    <p class="header__logo">| Descuentos</p>
+  </div>
+{% endblock titulo_content %}
+{% block main_content %}
+  {% if perms.manager.add_descuento %}
+    <button id="toggleDropdownPanel"
+            class="btn-dropdown"
+            data-bs-toggle="modal"
+            data-bs-target="#modalregis">
+      <i class="bx bx-plus-circle"></i> Agregar
+    </button>
+  {% endif %}
+  <div class="modal fade"
+       id="modalregis"
+       tabindex="-1"
+       aria-labelledby="modalRegistroDescuento"
+       aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalRegistroDescuento">Registrar Descuento</h5>
+          <button type="button"
+                  class="btn-close"
+                  data-bs-dismiss="modal"
+                  aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="postregistro" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="row">
+              <!-- ========================= -->
+              <!-- INFORMACION GENERAL -->
+              <!-- ========================= -->
+              <div class="col-md-6">
+                <div class="card">
+                  <div class="card-header">Información General</div>
+                  <div class="card-body">
+                    <div class="form-group">
+                      <label for="nombre">Nombre del descuento</label>
+                      <input type="text"
+                             name="nombre"
+                             id="nombre"
+                             class="form-control"
+                             autocomplete="off"
+                             placeholder="Ej: Descuento Navidad"
+                             required>
+                    </div>
+                    <br>
+                    <div class="form-group">
+                      <label for="descripcion">Descripción</label>
+                      <textarea name="descripcion"
+                                id="descripcion"
+                                rows="3"
+                                class="form-control"
+                                autocomplete="off"
+                                placeholder="Descripción del descuento"></textarea>
+                    </div>
+                    <br>
+                    <div class="form-check form-switch">
+                      <input class="form-check-input switch-color"
+                             type="checkbox"
+                             id="es_cuponedit"
+                             name="es_cupon">
+                      <label class="form-check-label" for="es_cupon">¿Es cupón?</label>
+                    </div>
+                    <br>
+                    <div class="form-group displaynone" id="divcodigo">
+                      <label for="codigo">Código</label>
+                      <input type="text"
+                             name="codigo"
+                             id="codigo"
+                             autocomplete="off"
+                             class="form-control"
+                             placeholder="Se genera automáticamente">
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- ========================= -->
+              <!-- TIPO DESCUENTO -->
+              <!-- ========================= -->
+              <div class="col-md-6">
+                <div class="card">
+                  <div class="card-header">Tipo de Descuento</div>
+                  <div class="card-body">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input"
+                             type="checkbox"
+                             id="es_porcentaje"
+                             name="es_porcentaje"
+                             checked>
+                      <label class="form-check-label" for="es_porcentaje">¿Es porcentaje?</label>
+                    </div>
+                    <br>
+                    <div class="form-group">
+                      <label for="valor">Valor del descuento</label>
+                      <input type="text"
+                             name="valor"
+                             id="valor"
+                             autocomplete="off"
+                             class="form-control"
+                             oninput="validateNumber(this)"
+                             placeholder="Ej: 10 o 150"
+                             required>
+                    </div>
+                    <small class="text-muted">
+                      Si es porcentaje ingresa:
+                      10 = 10%
+                    </small>
+                    <br>
+                    <br>
+                    <div class="form-check form-switch">
+                      <input class="form-check-input"
+                             type="checkbox"
+                             id="acumulable"
+                             name="acumulable">
+                      <label class="form-check-label" for="acumulable">¿Acumulable?</label>
+                    </div>
+                    <br>
+                    <div class="form-check form-switch">
+                      <input class="form-check-input"
+                             type="checkbox"
+                             id="requiere_codigo"
+                             name="requiere_codigo">
+                      <label class="form-check-label" for="requiere_codigo">¿Requiere código?</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <br>
+            <div class="row">
+              <!-- ========================= -->
+              <!-- APLICACION -->
+              <!-- ========================= -->
+              <div class="col-md-6">
+                <div class="card">
+                  <div class="card-header">Aplicación</div>
+                  <div class="card-body">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input"
+                             type="checkbox"
+                             id="aplicar_productos"
+                             name="aplicar_productos">
+                      <label class="form-check-label" for="aplicar_productos">Aplicar a productos</label>
+                    </div>
+                    <br>
+                    <div id="contenedor_productos">
+                      <input type="hidden" name="productoid" id="productoid">
+                      <div class="dropdown select-container w-100">
+                        <button type="button" class="btn w-100 text-start form-control">Escriba para buscar producto...</button>
+                        <div class="dropdown-menu w-100 p-0">
+                          <div class="search-box p-2">
+                            <input type="text" class="form-control" placeholder="Buscar producto...">
+                          </div>
+                          <div class="options list-group list-group-flush"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <hr>
+                    <hr>
+                    <br>
+                    <div class="form-check form-switch">
+                      <input class="form-check-input"
+                             type="checkbox"
+                             id="aplicar_categorias"
+                             name="aplicar_categorias">
+                      <label class="form-check-label" for="aplicar_categorias">Aplicar a categorías</label>
+                    </div>
+                    <br>
+                    <div id="contenedor_categorias">
+                      <input type="hidden" name="categoriaid" id="categoriaid">
+                      <div class="dropdown select-container w-100">
+                        <button type="button" class="btn w-100 text-start form-control">Escriba para buscar categoría...</button>
+                        <div class="dropdown-menu w-100 p-0">
+                          <div class="search-box p-2">
+                            <input type="text" class="form-control" placeholder="Buscar categoría...">
+                          </div>
+                          <div class="options list-group list-group-flush"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- ========================= -->
+              <!-- LIMITES -->
+              <!-- ========================= -->
+              <div class="col-md-6">
+                <div class="card">
+                  <div class="card-header">Límites y Fechas</div>
+                  <div class="card-body">
+                    <div class="form-group">
+                      <label for="limite_uso">Límite de usos</label>
+                      <input type="number"
+                             min="1"
+                             name="limite_uso"
+                             id="limite_uso"
+                             class="form-control"
+                             placeholder="Ej: 50">
+                    </div>
+                    <small class="text-muted">Déjalo vacío para ilimitado</small>
+                    <br>
+                    <br>
+                    <div class="form-group">
+                      <label for="fecha_inicio">Fecha inicio</label>
+                      <input type="datetime-local"
+                             name="fecha_inicio"
+                             id="fecha_inicio"
+                             class="form-control">
+                    </div>
+                    <br>
+                    <div class="form-group">
+                      <label for="fecha_fin">Fecha fin</label>
+                      <input type="datetime-local"
+                             name="fecha_fin"
+                             id="fecha_fin"
+                             class="form-control">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <br>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+              <button type="submit" id="btnregis" class="btn classbotones">Guardar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ========================= -->
+  <!-- MODAL PUT -->
+  <!-- ========================= -->
+  <div class="modal fade"
+       id="modalput"
+       tabindex="-1"
+       aria-labelledby="modalEditarDescuento"
+       aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalEditarDescuento">Editar Descuento</h5>
+          <button type="button"
+                  class="btn-close"
+                  data-bs-dismiss="modal"
+                  aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="putregistro">
+            {% csrf_token %}
+            <input type="hidden" id="idedit">
+            <div class="row">
+              <!-- ========================= -->
+              <!-- INFORMACION GENERAL -->
+              <!-- ========================= -->
+              <div class="col-md-6">
+                <div class="card">
+                  <div class="card-header">Información General</div>
+                  <div class="card-body">
+                    <div class="form-group">
+                      <label>Nombre</label>
+                      <input type="text" id="nombreedit" class="form-control" required>
+                    </div>
+                    <br>
+                    <div class="form-group">
+                      <label>Descripción</label>
+                      <textarea id="descripcionedit" rows="3" class="form-control"></textarea>
+                    </div>
+                    <br>
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="es_cuponedit">
+                      <label class="form-check-label">¿Es cupón?</label>
+                    </div>
+                    <br>
+                    <div class="form-group displaynone" id="divcodigoedit">
+                      <label>Código</label>
+                      <input type="text" id="codigoedit" class="form-control">
+                    </div>
+                    <br>
+                    <!-- ESTADO -->
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="is_activeedit">
+                      <label class="form-check-label">Activo</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- ========================= -->
+              <!-- TIPO -->
+              <!-- ========================= -->
+              <div class="col-md-6">
+                <div class="card">
+                  <div class="card-header">Tipo de Descuento</div>
+                  <div class="card-body">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="es_porcentajeedit">
+                      <label class="form-check-label">¿Es porcentaje?</label>
+                    </div>
+                    <br>
+                    <div class="form-group">
+                      <label>Valor</label>
+                      <input type="text"
+                             id="valoredit"
+                             class="form-control"
+                             oninput="validateNumber(this)"
+                             required>
+                    </div>
+                    <br>
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="acumulableedit">
+                      <label class="form-check-label">¿Acumulable?</label>
+                    </div>
+                    <br>
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="requiere_codigoedit">
+                      <label class="form-check-label">¿Requiere código?</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <br>
+            <!-- ========================= -->
+            <!-- APLICACION -->
+            <!-- ========================= -->
+            <div class="row">
+              <div class="col-md-6">
+                <div class="card">
+                  <div class="card-header">Aplicación</div>
+                  <div class="card-body">
+                    <!-- PRODUCTOS -->
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="aplicar_productosedit">
+                      <label class="form-check-label">Aplicar a productos</label>
+                    </div>
+                    <br>
+                    <div id="contenedor_productosedit">
+                      <input type="hidden" id="productoidedit">
+                      <div class="dropdown select-container w-100">
+                        <button type="button" class="btn w-100 text-start form-control">Escriba para buscar producto...</button>
+                        <div class="dropdown-menu w-100 p-0">
+                          <div class="search-box p-2">
+                            <input type="text" class="form-control" placeholder="Buscar producto...">
+                          </div>
+                          <div class="options list-group list-group-flush"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <hr>
+                    <hr>
+                    <!-- CATEGORIAS -->
+                    <br>
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="aplicar_categoriasedit">
+                      <label class="form-check-label">Aplicar a categorías</label>
+                    </div>
+                    <br>
+                    <div id="contenedor_categoriasedit">
+                      <input type="hidden" id="categoriaidedit">
+                      <div class="dropdown select-container w-100">
+                        <button type="button" class="btn w-100 text-start form-control">Escriba para buscar categoría...</button>
+                        <div class="dropdown-menu w-100 p-0">
+                          <div class="search-box p-2">
+                            <input type="text" class="form-control" placeholder="Buscar categoría...">
+                          </div>
+                          <div class="options list-group list-group-flush"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- LIMITES -->
+              <div class="col-md-6">
+                <div class="card">
+                  <div class="card-header">Límites y Fechas</div>
+                  <div class="card-body">
+                    <div class="form-group">
+                      <label>Límite de uso</label>
+                      <input type="number" id="limite_usoedit" class="form-control">
+                    </div>
+                    <br>
+                    <div class="form-group">
+                      <label>Fecha inicio</label>
+                      <input type="datetime-local" id="fecha_inicioedit" class="form-control">
+                    </div>
+                    <br>
+                    <div class="form-group">
+                      <label>Fecha fin</label>
+                      <input type="datetime-local" id="fecha_finedit" class="form-control">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <br>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+              <button type="submit" class="btn classbotones">Actualizar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="tabla-container">
+    <table class="tablas-todo" id="tablacont">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nombre</th>
+          <th>Tipo</th>
+          <th>Código</th>
+          <th>Valor</th>
+          <th>Aplica</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for descuento in page_obj %}
+          <tr data-id="{{ descuento.id }}">
+            <!-- ID -->
+            <td>{{ descuento.id }}</td>
+            <!-- NOMBRE -->
+            <td>
+              <div class="fw-bold">{{ descuento.nombre }}</div>
+              {% if descuento.descripcion %}
+                <small class="text-muted">{{ descuento.descripcion|truncatechars:40 }}</small>
+              {% endif %}
+            </td>
+            <!-- TIPO -->
+            <td>
+              {% if descuento.es_cupon %}
+                <span class="badge bg-primary">Cupón</span>
+              {% else %}
+                <span class="badge bg-success">Automático</span>
+              {% endif %}
+            </td>
+            <!-- CÓDIGO -->
+            <td>
+              {% if descuento.codigo %}<span>{{ descuento.codigo }}</span>{% endif %}
+            </td>
+            <!-- VALOR -->
+            <td>
+              {% if descuento.es_porcentaje %}
+                {{ descuento.valor }}%
+              {% else %}
+                L {{ descuento.valor }}
+              {% endif %}
+            </td>
+            <!-- APLICA -->
+            <td>
+              {% if descuento.aplicar_productos %}<span class="badge bg-info">Producto</span>{% endif %}
+              {% if descuento.aplicar_categorias %}<span class="badge bg-warning text-dark">Categoría</span>{% endif %}
+            </td>
+            <!-- ESTADO -->
+            <td>
+              {% if descuento.is_active %}
+                <span class="estado-circulo estado-activo"></span>
+              {% else %}
+                <span class="estado-circulo estado-inactivo"></span>
+              {% endif %}
+            </td>
+            <!-- ACCIONES -->
+            <td>
+              {% if perms.manager.change_descuento %}
+                <button type="button"
+                        class="btn btn-sm btn-primary btn-edit"
+                        data-id="{{ descuento.id }}"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalput">
+                  <i class="bx bx-edit"></i>
+                </button>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" class="text-center">No hay descuentos registrados</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <nav class="d-flex justify-content-center mt-4">
+    <ul class="pagination">
+      <!-- ANTERIOR -->
+      <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+        {% if page_obj.has_previous %}
+          <a class="page-link"
+             href="?page={{ page_obj.previous_page_number }}&search={{ search }}">«</a>
+        {% else %}
+          <span class="page-link">«</span>
+        {% endif %}
+      </li>
+      <!-- NUMEROS -->
+      {% for p in page_obj.paginator.page_range %}
+        <li class="page-item {% if p == page_obj.number %}active{% endif %}">
+          <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
+        </li>
+      {% endfor %}
+      <!-- SIGUIENTE -->
+      <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+        {% if page_obj.has_next %}
+          <a class="page-link"
+             href="?page={{ page_obj.next_page_number }}&search={{ search }}">»</a>
+        {% else %}
+          <span class="page-link">»</span>
+        {% endif %}
+      </li>
+    </ul>
+  </nav>
+  <br>
+  <script>
+    function validateNumber(input) {
+      input.value = input.value.replace(/[^0-9.+]/g, '');
+    }
+  </script>
+  <script type="module" src="{% static 'js/descuentos.js' %}"></script>
+  <script type="module" src="{% static 'js/chektext.js' %}"></script>
+{% endblock main_content %}

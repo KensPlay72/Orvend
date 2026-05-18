@@ -1,0 +1,95 @@
+{% extends "menu.html" %}
+{% load static %}
+{% block title %}
+    Traslados
+{% endblock title %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+{% endblock extra_css %}
+{% block titulo_content %}
+    <div class="tituloscont">
+        <img class="logop"
+             src="{% static 'img/LH.png' %}"
+             alt=""
+             width="0"
+             height="0">
+        <p class="header__logo">| Traslados</p>
+    </div>
+{% endblock titulo_content %}
+{% block main_content %}
+    {% if perms.manager.add_traslados %}
+        <button class="btn-dropdown"
+                onclick="location.href='{% url 'traslados_create' %}'">
+            <i class="bx bx-plus-circle"></i> Realizar Traslado
+        </button>
+    {% endif %}
+    <div class="tabla-container">
+        <table class="tablas-todo" id="tablacont">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Origen</th>
+                    <th>Destino</th>
+                    <th>Solicitado Por</th>
+                    <th>Fecha Solicitud</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for traslado in page_obj %}
+                    <tr>
+                        <td>{{ traslado.id }}</td>
+                        <td>{{ traslado.ubicacion_origen.nombre }}</td>
+                        <td>{{ traslado.ubicacion_destino.nombre }}</td>
+                        <td>{{ traslado.solicitado_por.username }}</td>
+                        <td>{{ traslado.f_creacion|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            {% if traslado.estado == "Pendiente" %}
+                                <span class="badge bg-warning text-dark">Pendiente</span>
+                            {% elif traslado.estado == "Completado" %}
+                                <span class="badge bg-success">Completado</span>
+                            {% else %}
+                                <span class="badge bg-danger">Cancelado</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-primary">
+                                <i class="bx bx-show"></i>
+                            </button>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7">No hay traslados registrados</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <nav class="d-flex justify-content-center mt-4">
+        <ul class="pagination">
+            <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+                {% if page_obj.has_previous %}
+                    <a class="page-link"
+                       href="?page={{ page_obj.previous_page_number }}&search={{ search }}">«</a>
+                {% else %}
+                    <span class="page-link">«</span>
+                {% endif %}
+            </li>
+            {% for p in page_obj.paginator.page_range %}
+                <li class="page-item {% if p == page_obj.number %}active{% endif %}">
+                    <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
+                </li>
+            {% endfor %}
+            <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+                {% if page_obj.has_next %}
+                    <a class="page-link"
+                       href="?page={{ page_obj.next_page_number }}&search={{ search }}">»</a>
+                {% else %}
+                    <span class="page-link">»</span>
+                {% endif %}
+            </li>
+        </ul>
+    </nav>
+{% endblock main_content %}

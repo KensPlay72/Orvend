@@ -92,7 +92,7 @@
             <div class="nav" id="navbar">
                 <nav class="nav__container">
                     <div>
-                        {% if request.user.groups.all.0.name == "cajeros" or request.user.is_superuser %}
+                        {% if request.user.groups.all.0.name == "cajeros" %}
                         <div class="nav__items">
                             <h3 class="nav__subtitle">Caja</h3>
                             <a href="{% url 'caja' %}"
@@ -125,10 +125,12 @@
                                     <i class="bx bx-transfer-alt nav__icon"></i>
                                     <span class="nav__name">Cambios</span>
                                 </a>
-                                <a href="#" class="nav__link">
-                                    <i class="bx bx-purchase-tag nav__icon"></i>
-                                    <span class="nav__name">Promociones</span>
-                                </a>
+                                {% if perms.manager.view_descuento %}
+                                  <a href="{% url 'descuentos' %}" class="nav__link">
+                                      <i class="bx bx-purchase-tag nav__icon"></i>
+                                      <span class="nav__name">Descuentos</span>
+                                  </a>
+                                {% endif %}
                                 <a href="#" class="nav__link">
                                     <i class="bx bx-credit-card nav__icon"></i>
                                     <span class="nav__name">Ceditos</span>
@@ -205,7 +207,7 @@
                                     </a>
                                 {% endif %}
                                 {% if perms.manager.view_traslados %}
-                                    <a href="{% url 'traslados' %}"
+                                    <a href="{% url 'traslados_list' %}"
                                        class="nav__link {% if request.path == '/manager/traslados/' %}active{% endif %}">
                                         <i class="bx bx-transfer-alt nav__icon"></i>
                                         <span class="nav__name">Traslados</span>
