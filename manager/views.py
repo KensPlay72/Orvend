@@ -18,7 +18,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_POST
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-
+import os
+import uuid
 from .enums import EstadoCompra, EstadoCuenta, EstadoDevolucionCompra, Estados
 from .models import (
     Categorias,
@@ -42,6 +43,7 @@ from .models import (
     Ubicaciones,
     UMedidas,
     Descuento,
+    ProductosImagenes,
 )
 
 
@@ -92,10 +94,11 @@ def post_umedida(request):
 
         nombre = (data.get("nombre") or "").strip()
         abreviatura = (data.get("abreviatura") or "").strip()
+        valor = (data.get("valor") or "").strip()
 
-        if not nombre or not abreviatura:
+        if not nombre or not abreviatura or not valor:
             return JsonResponse(
-                {"success": False, "message": "Nombre y abreviatura son obligatorios"},
+                {"success": False, "message": "Todos los campos son obligatorios"},
                 status=400,
             )
 
@@ -109,7 +112,10 @@ def post_umedida(request):
             )
 
         UMedidas.objects.create(
-            nombre=nombre, abreviatura=abreviatura, u_creo_id=request.user.id
+            nombre=nombre,
+            abreviatura=abreviatura,
+            valor=valor,
+            u_creo_id=request.user.id,
         )
 
         return JsonResponse({"success": True, "message": "Creado correctamente"})
@@ -140,6 +146,7 @@ def get_umedida(request, id):
                     "id": medida.id,
                     "nombre": medida.nombre,
                     "abreviatura": medida.abreviatura,
+                    "valor": medida.valor,
                     "isActive": medida.is_active,
                 },
             }
@@ -160,11 +167,12 @@ def put_umedida(request, id):
         data = json.loads(request.body)
         nombre = (data.get("Nombre") or "").strip()
         abreviatura = (data.get("Abreviatura") or "").strip()
+        valor = (data.get("Valor") or "").strip()
         is_active = data.get("IsActive", True)
 
-        if not nombre or not abreviatura:
+        if not nombre or not abreviatura or not valor:
             return JsonResponse(
-                {"success": False, "message": "Nombre y abreviatura son obligatorios"},
+                {"success": False, "message": "Todos los campos son obligatorios"},
                 status=400,
             )
 
@@ -191,12 +199,15 @@ def put_umedida(request, id):
 
         medida.nombre = nombre
         medida.abreviatura = abreviatura
+        medida.valor = valor
         medida.is_active = is_active
         medida.u_modifico_id = request.user.id
         medida.f_modificacion = timezone.now()
         medida.save()
 
-        return JsonResponse({"success": True, "message": "Actualizado correctamente"})
+        return JsonResponse(
+            {"success": True, "message": "Presentación actualizada correctamente"}
+        )
 
     except Exception as e:
         return JsonResponse(
@@ -1057,42 +1068,33 @@ def productos_view(request):
 
     query = Productos.objects.select_related(
         "categoria", "unidad_medida", "marca"
-    ).all()
+    ).prefetch_related("imagenes_producto")
 
-    # excluir eliminados
     query = query.filter(is_delete=False)
 
-    # -------------------------
-    # CONTADORES (NO AFECTADOS POR PAGINADOR)
-    # -------------------------
     total_productos = query.count()
     productos_activos = query.filter(is_active=True).count()
     productos_inactivos = query.filter(is_active=False).count()
 
-    # -------------------------
-    # SEARCH
-    # -------------------------
     if search:
         query = query.filter(
             Q(nombre__icontains=search) | Q(codigo_sku__icontains=search)
         )
 
-    # -------------------------
-    # PAGINADOR
-    # -------------------------
     paginator = Paginator(query.order_by("id"), 10)
     page_obj = paginator.get_page(request.GET.get("page"))
 
-    context = {
-        "page_obj": page_obj,
-        "search": search,
-        # contadores
-        "total_productos": total_productos,
-        "productos_activos": productos_activos,
-        "productos_inactivos": productos_inactivos,
-    }
-
-    return render(request, "gestiones/productos.html", context)
+    return render(
+        request,
+        "gestiones/productos.html",
+        {
+            "page_obj": page_obj,
+            "search": search,
+            "total_productos": total_productos,
+            "productos_activos": productos_activos,
+            "productos_inactivos": productos_inactivos,
+        },
+    )
 
 
 @login_required
@@ -1146,9 +1148,6 @@ def api_productos(request):
 @require_http_methods(["POST"])
 def post_producto(request):
     try:
-        import os
-        import uuid
-
         nombre = request.POST.get("nombre", "").strip()
         descripcion = request.POST.get("descripcion", "").strip()
         categoria_id = request.POST.get("categoria")
@@ -1158,18 +1157,13 @@ def post_producto(request):
         precio_venta = request.POST.get("precio_venta")
         vencimiento = str(request.POST.get("Vencimiento")).lower() == "true"
 
-        imagen = request.FILES.get("Imagen")
+        imagenes = request.FILES.getlist("Imagenes")
 
-        # =========================
+        # =====================
         # VALIDACIONES
-        # =========================
-        if (
-            not nombre
-            or not categoria_id
-            or not unidad_medida_id
-            or not marca_id
-            or not codigo_sku
-            or not precio_venta
+        # =====================
+        if not all(
+            [nombre, categoria_id, unidad_medida_id, marca_id, codigo_sku, precio_venta]
         ):
             return JsonResponse(
                 {"success": False, "message": "Campos obligatorios faltantes"},
@@ -1178,11 +1172,7 @@ def post_producto(request):
 
         if Productos.objects.filter(codigo_sku=codigo_sku).exists():
             return JsonResponse(
-                {
-                    "success": False,
-                    "message": "Ya existe un producto con ese código SKU",
-                },
-                status=400,
+                {"success": False, "message": "SKU ya existe"}, status=400
             )
 
         categoria = Categorias.objects.filter(id=categoria_id).first()
@@ -1191,14 +1181,13 @@ def post_producto(request):
 
         if not categoria or not unidad or not marca:
             return JsonResponse(
-                {"success": False, "message": "Categoría, unidad o marca inválida"},
-                status=400,
+                {"success": False, "message": "Datos inválidos"}, status=400
             )
 
-        # =========================
+        # =====================
         # CREAR PRODUCTO
-        # =========================
-        producto = Productos(
+        # =====================
+        producto = Productos.objects.create(
             nombre=nombre,
             descripcion=descripcion,
             categoria=categoria,
@@ -1210,46 +1199,36 @@ def post_producto(request):
             u_creo_id=request.user.id,
         )
 
-        # =========================
-        # IMAGEN (5 caracteres + nombre original)
-        # =========================
-        if imagen:
-            # Limpiar nombre original (quitar espacios)
-            nombre_original = imagen.name.replace(" ", "_")
+        # =====================
+        # GUARDAR IMÁGENES
+        # =====================
+        base_dir = os.path.join(settings.BASE_DIR, "manager", "media", "productos")
+        os.makedirs(base_dir, exist_ok=True)
 
-            # Generar prefijo de 5 caracteres
+        for imagen in imagenes:
+            original_name = imagen.name.replace(" ", "_")
             random_prefix = uuid.uuid4().hex[:5]
-
-            # Nuevo nombre
-            nuevo_nombre = f"{random_prefix}_{nombre_original}"
-
-            # Ruta física
-            base_dir = os.path.join(settings.BASE_DIR, "manager", "media", "productos")
-            os.makedirs(base_dir, exist_ok=True)
+            nuevo_nombre = f"{random_prefix}_{original_name}"
 
             file_path = os.path.join(base_dir, nuevo_nombre)
 
-            # Guardar archivo
             with open(file_path, "wb+") as destination:
                 for chunk in imagen.chunks():
                     destination.write(chunk)
 
-            # Guardar en BD
-            producto.imagen_nombre = nuevo_nombre
-            producto.imagen_url = f"/manager/media/productos/{nuevo_nombre}"
-
-        # =========================
-        # GUARDAR
-        # =========================
-        producto.save()
+            ProductosImagenes.objects.create(
+                producto=producto,
+                imagen_nombre=original_name,
+                imagen_url=f"/manager/media/productos/{nuevo_nombre}",
+            )
 
         return JsonResponse(
-            {"success": True, "message": "Producto registrado correctamente"}
+            {"success": True, "message": "Producto creado correctamente"}
         )
 
     except Exception as e:
         return JsonResponse(
-            {"success": False, "message": "Error interno: " + str(e)}, status=500
+            {"success": False, "message": f"Error interno: {str(e)}"}, status=500
         )
 
 
@@ -1259,6 +1238,7 @@ def get_producto(request, id):
 
     producto = (
         Productos.objects.select_related("categoria", "unidad_medida", "marca")
+        .prefetch_related("imagenes_producto")
         .filter(id=id, is_delete=False)
         .first()
     )
@@ -1266,6 +1246,17 @@ def get_producto(request, id):
     if not producto:
         return JsonResponse(
             {"success": False, "message": "Producto no encontrado"}, status=404
+        )
+
+    imagenes = []
+
+    for imagen in producto.imagenes_producto.all():
+        imagenes.append(
+            {
+                "id": imagen.id,
+                "nombre": imagen.imagen_nombre,
+                "url": imagen.imagen_url,
+            }
         )
 
     return JsonResponse(
@@ -1277,11 +1268,9 @@ def get_producto(request, id):
                 "descripcion": producto.descripcion,
                 "codigoSKU": producto.codigo_sku,
                 "precioVenta": float(producto.precio_venta),
-                "imagenNombre": producto.imagen_nombre,
-                "imagenUrl": producto.imagen_url,
                 "isActive": producto.is_active,
                 "vencimiento": producto.vencimiento,
-                # relaciones
+                "imagenes": imagenes,
                 "categoriaId": producto.categoria.id if producto.categoria else None,
                 "categoria": (
                     {"nombre": producto.categoria.nombre}
@@ -1300,7 +1289,9 @@ def get_producto(request, id):
                     else None
                 ),
                 "marcasId": producto.marca.id if producto.marca else None,
-                "marcas": {"nombre": producto.marca.nombre} if producto.marca else None,
+                "marcas": (
+                    {"nombre": producto.marca.nombre} if producto.marca else None
+                ),
             },
         }
     )
@@ -1312,23 +1303,31 @@ def get_producto(request, id):
 def put_producto(request, id):
 
     try:
-        # Buscar el producto
-        producto = Productos.objects.filter(id=id, is_delete=False).first()
+        import os
+        import uuid
+
+        producto = Productos.objects.filter(
+            id=id,
+            is_delete=False,
+        ).first()
 
         if not producto:
             return JsonResponse(
-                {"success": False, "message": "Producto no encontrado"}, status=404
+                {
+                    "success": False,
+                    "message": "Producto no encontrado",
+                },
+                status=404,
             )
 
         data = request.POST
 
         # =========================
-        # CAMPOS BÁSICOS
+        # DATOS BÁSICOS
         # =========================
         producto.nombre = data.get("Nombre", "").strip()
         producto.descripcion = data.get("Descripcion", "").strip()
 
-        # Validar campos obligatorios
         categoria_id = data.get("CategoriaId")
         unidad_id = data.get("UnidadMedidaId")
         marca_id = data.get("MarcaId")
@@ -1337,7 +1336,7 @@ def put_producto(request, id):
             return JsonResponse(
                 {
                     "success": False,
-                    "message": "Categoría, Unidad de Medida y Marca son obligatorios",
+                    "message": "Categoría, Presentación y Marca son obligatorias",
                 },
                 status=400,
             )
@@ -1348,68 +1347,107 @@ def put_producto(request, id):
 
         producto.codigo_sku = data.get("CodigoSKU", "").strip()
 
-        # Precio
         precio = data.get("precioVenta", "0").replace(",", ".")
         producto.precio_venta = float(precio)
 
-        # Booleanos
-        producto.vencimiento = str(data.get("Vencimiento")).lower() == "true"
         producto.is_active = str(data.get("IsActive")).lower() == "true"
 
-        # Auditoría
+        producto.vencimiento = str(data.get("Vencimiento")).lower() == "true"
+
         producto.f_modificacion = timezone.now()
         producto.u_modifico_id = request.user.id
 
         # =========================
-        # IMAGEN (REEMPLAZO)
-        # =========================
-        file = request.FILES.get("Imagen")
-
-        if file:
-            import os
-            import uuid
-
-            # Eliminar imagen anterior si existe
-            try:
-                if producto.imagen_nombre:
-                    ruta_anterior = os.path.join(
-                        settings.MEDIA_ROOT, "productos", producto.imagen_nombre
-                    )
-                    if os.path.exists(ruta_anterior):
-                        os.remove(ruta_anterior)
-            except Exception as e:
-                print("Error eliminando imagen anterior:", e)
-
-            # Generar nombre: 5 caracteres + "_" + nombre original
-            random_prefix = uuid.uuid4().hex[:5]
-            unique_name = f"{random_prefix}_{file.name}"
-            file.name = unique_name
-
-            upload_path = os.path.join("productos", file.name)
-
-            producto.imagen_nombre = file.name
-            producto.imagen_url = f"/manager/media/{upload_path}"
-
-            # Guardar archivo
-            full_path = os.path.join(settings.MEDIA_ROOT, "productos")
-            os.makedirs(full_path, exist_ok=True)
-
-            with open(os.path.join(full_path, file.name), "wb+") as destination:
-                for chunk in file.chunks():
-                    destination.write(chunk)
-
-        # =========================
-        # GUARDAR
+        # GUARDAR PRODUCTO
         # =========================
         producto.save()
 
+        # =========================
+        # ELIMINAR IMÁGENES
+        # =========================
+        imagenes_eliminar = request.POST.getlist("ImagenesEliminar[]")
+
+        if imagenes_eliminar:
+            imagenes_db = ProductosImagenes.objects.filter(
+                id__in=imagenes_eliminar,
+                producto=producto,
+            )
+
+            for imagen in imagenes_db:
+                try:
+                    ruta_imagen = os.path.join(
+                        settings.MEDIA_ROOT,
+                        "productos",
+                        imagen.imagen_nombre,
+                    )
+
+                    print("ELIMINANDO:", ruta_imagen)  # DEBUG útil
+
+                    if os.path.exists(ruta_imagen):
+                        os.remove(ruta_imagen)
+                    else:
+                        print("NO EXISTE:", ruta_imagen)
+
+                except Exception as e:
+                    print("ERROR eliminando archivo físico:", e)
+
+                imagen.delete()
+        # =========================
+        # NUEVAS IMÁGENES
+        # =========================
+        imagenes = request.FILES.getlist("Imagenes")
+
+        for imagen in imagenes:
+            nombre_original = imagen.name.replace(
+                " ",
+                "_",
+            )
+
+            random_prefix = uuid.uuid4().hex[:5]
+
+            nuevo_nombre = f"{random_prefix}_{nombre_original}"
+
+            # carpeta física
+            base_dir = os.path.join(
+                settings.BASE_DIR,
+                "manager",
+                "media",
+                "productos",
+            )
+
+            os.makedirs(base_dir, exist_ok=True)
+
+            file_path = os.path.join(
+                base_dir,
+                nuevo_nombre,
+            )
+
+            # guardar archivo
+            with open(file_path, "wb+") as destination:
+                for chunk in imagen.chunks():
+                    destination.write(chunk)
+
+            # guardar BD
+            ProductosImagenes.objects.create(
+                producto=producto,
+                imagen_nombre=nuevo_nombre,
+                imagen_url=f"/manager/media/productos/{nuevo_nombre}",
+            )
+
         return JsonResponse(
-            {"success": True, "message": "Producto actualizado correctamente"}
+            {
+                "success": True,
+                "message": "Producto actualizado correctamente",
+            }
         )
 
     except Exception as e:
         return JsonResponse(
-            {"success": False, "message": f"Error interno: {str(e)}"}, status=500
+            {
+                "success": False,
+                "message": f"Error interno: {str(e)}",
+            },
+            status=500,
         )
 
 
@@ -4142,73 +4180,70 @@ def post_descuento(request):
         # =========================
         # INFORMACION GENERAL
         # =========================
-
         nombre = (data.get("nombre") or "").strip()
-
         descripcion = (data.get("descripcion") or "").strip()
 
         # =========================
         # CUPONES
         # =========================
-
         es_cupon = data.get("es_cupon", False)
-
         codigo = (data.get("codigo") or "").strip()
 
         # =========================
         # TIPO DESCUENTO
         # =========================
-
         es_porcentaje = data.get("es_porcentaje", True)
+        valor = data.get("valor") or None
 
-        valor = data.get("valor")
+        # Convertir valor a decimal seguro
+        if valor is not None and valor != "":
+            try:
+                valor = float(valor)
+            except:
+                return JsonResponse(
+                    {"success": False, "message": "Valor inválido"}, status=400
+                )
+        else:
+            valor = None
+
+        # =========================
+        # CANTIDAD
+        # =========================
+        es_cantidad = data.get("es_cantidad", False)
+        cantidad_lleva = data.get("cantidad_lleva") or None
+        cantidad_paga = data.get("cantidad_paga") or None
 
         # =========================
         # APLICACION
         # =========================
-
         aplicar_productos = data.get("aplicar_productos", False)
-
         aplicar_categorias = data.get("aplicar_categorias", False)
 
-        productoid = data.get("productoid")
-
-        categoriaid = data.get("categoriaid")
+        productoid = data.get("productoid") or None
+        categoriaid = data.get("categoriaid") or None
 
         # =========================
         # LIMITES
         # =========================
-
-        limite_uso = data.get("limite_uso")
+        limite_uso = data.get("limite_uso") or None
 
         # =========================
         # FECHAS
         # =========================
-
         fecha_inicio = data.get("fecha_inicio") or None
-
         fecha_fin = data.get("fecha_fin") or None
 
         # =========================
         # CONFIGURACIONES
         # =========================
-
         acumulable = data.get("acumulable", False)
-
-        requiere_codigo = data.get("requiere_codigo", False)
 
         # =========================
         # VALIDACIONES
         # =========================
-
         if not nombre:
             return JsonResponse(
                 {"success": False, "message": "El nombre es obligatorio"}, status=400
-            )
-
-        if valor in [None, ""]:
-            return JsonResponse(
-                {"success": False, "message": "El valor es obligatorio"}, status=400
             )
 
         if Descuento.objects.filter(nombre=nombre, is_delete=False).exists():
@@ -4218,28 +4253,22 @@ def post_descuento(request):
             )
 
         # =========================
-        # VALIDAR CODIGO CUPON
+        # CUPON VALIDACION
         # =========================
-
         if es_cupon:
-            # Si escribió código manual
             if codigo:
                 if Descuento.objects.filter(codigo=codigo, is_delete=False).exists():
                     return JsonResponse(
                         {"success": False, "message": "El código ya existe"}, status=400
                     )
-
-            # Si no escribió código
             else:
                 codigo = None
-
         else:
             codigo = None
 
         # =========================
         # VALIDAR APLICACION
         # =========================
-
         if aplicar_productos and aplicar_categorias:
             return JsonResponse(
                 {
@@ -4264,7 +4293,6 @@ def post_descuento(request):
         # =========================
         # CREAR DESCUENTO
         # =========================
-
         descuento = Descuento.objects.create(
             nombre=nombre,
             descripcion=descripcion,
@@ -4272,31 +4300,32 @@ def post_descuento(request):
             codigo=codigo,
             es_porcentaje=es_porcentaje,
             valor=valor,
+            es_cantidad=es_cantidad,
+            cantidad_lleva=cantidad_lleva if es_cantidad else None,
+            cantidad_paga=cantidad_paga if es_cantidad else None,
             aplicar_productos=aplicar_productos,
             aplicar_categorias=aplicar_categorias,
             limite_uso=limite_uso if limite_uso else None,
             fecha_inicio=fecha_inicio,
             fecha_fin=fecha_fin,
             acumulable=acumulable,
-            requiere_codigo=requiere_codigo,
             u_creo_id=request.user.id,
         )
 
         # =========================
-        # MANY TO MANY
+        # RELACIONES (FOREIGN KEY FIX)
         # =========================
-
         if aplicar_productos and productoid:
             producto = Productos.objects.filter(id=productoid).first()
-
             if producto:
-                descuento.productos.add(producto)
+                descuento.productos = producto
 
         if aplicar_categorias and categoriaid:
             categoria = Categorias.objects.filter(id=categoriaid).first()
-
             if categoria:
-                descuento.categorias.add(categoria)
+                descuento.categorias = categoria
+
+        descuento.save()
 
         return JsonResponse(
             {"success": True, "message": "Descuento registrado correctamente"}
@@ -4318,27 +4347,47 @@ def get_descuento(request, id):
                 {"success": False, "message": "Descuento no encontrado"}, status=404
             )
 
-        producto = descuento.productos.first()
-
-        categoria = descuento.categorias.first()
+        producto = descuento.productos if descuento.productos_id else None
+        categoria = descuento.categorias if descuento.categorias_id else None
 
         return JsonResponse(
             {
                 "success": True,
                 "descuento": {
+                    # =========================
+                    # GENERAL
+                    # =========================
                     "id": descuento.id,
                     "nombre": descuento.nombre,
                     "descripcion": descuento.descripcion,
+                    # =========================
+                    # CUPON
+                    # =========================
                     "es_cupon": descuento.es_cupon,
                     "codigo": descuento.codigo,
+                    # =========================
+                    # TIPO DESCUENTO
+                    # =========================
                     "es_porcentaje": descuento.es_porcentaje,
-                    "valor": str(descuento.valor),
+                    "valor": str(descuento.valor) if descuento.valor else "",
+                    # =========================
+                    # CANTIDAD
+                    # =========================
+                    "es_cantidad": descuento.es_cantidad,
+                    "cantidad_lleva": descuento.cantidad_lleva,
+                    "cantidad_paga": descuento.cantidad_paga,
+                    # =========================
+                    # APLICACION
+                    # =========================
                     "aplicar_productos": descuento.aplicar_productos,
                     "aplicar_categorias": descuento.aplicar_categorias,
                     "productoid": producto.id if producto else None,
                     "productonombre": producto.nombre if producto else "",
                     "categoriaid": categoria.id if categoria else None,
                     "categorianombre": categoria.nombre if categoria else "",
+                    # =========================
+                    # LIMITES / FECHAS
+                    # =========================
                     "limite_uso": descuento.limite_uso,
                     "fecha_inicio": (
                         descuento.fecha_inicio.strftime("%Y-%m-%dT%H:%M")
@@ -4350,8 +4399,10 @@ def get_descuento(request, id):
                         if descuento.fecha_fin
                         else ""
                     ),
+                    # =========================
+                    # CONFIG
+                    # =========================
                     "acumulable": descuento.acumulable,
-                    "requiere_codigo": descuento.requiere_codigo,
                     "is_active": descuento.is_active,
                 },
             }
@@ -4371,98 +4422,91 @@ def put_descuento(request, id):
 
         if not descuento:
             return JsonResponse(
-                {
-                    "success": False,
-                    "message": "Descuento no encontrado",
-                },
-                status=404,
+                {"success": False, "message": "Descuento no encontrado"}, status=404
             )
 
         data = json.loads(request.body)
 
         # =========================
-        # INFORMACION GENERAL
+        # HELPERS
         # =========================
+        def to_bool(val):
+            return str(val).lower() in ["true", "1", "on", "yes"]
 
+        def to_int(val):
+            try:
+                return int(val)
+            except:
+                return None
+
+        # =========================
+        # GENERAL
+        # =========================
         nombre = (data.get("nombre") or "").strip()
-
         descripcion = (data.get("descripcion") or "").strip()
 
         # =========================
         # CUPON
         # =========================
-
-        es_cupon = data.get("es_cupon", False)
-
+        es_cupon = to_bool(data.get("es_cupon"))
         codigo = (data.get("codigo") or "").strip()
 
         # =========================
         # TIPO DESCUENTO
         # =========================
+        es_porcentaje = to_bool(data.get("es_porcentaje"))
+        valor = data.get("valor") or None
 
-        es_porcentaje = data.get("es_porcentaje", True)
-
-        valor = data.get("valor")
+        # =========================
+        # CANTIDAD
+        # =========================
+        es_cantidad = to_bool(data.get("es_cantidad"))
+        cantidad_lleva = to_int(data.get("cantidad_lleva"))
+        cantidad_paga = to_int(data.get("cantidad_paga"))
 
         # =========================
         # APLICACION
         # =========================
-
-        aplicar_productos = data.get("aplicar_productos", False)
-
-        aplicar_categorias = data.get("aplicar_categorias", False)
+        aplicar_productos = to_bool(data.get("aplicar_productos"))
+        aplicar_categorias = to_bool(data.get("aplicar_categorias"))
 
         productoid = data.get("productoid")
-
         categoriaid = data.get("categoriaid")
 
         # =========================
-        # LIMITES
+        # LIMITES / FECHAS
         # =========================
-
-        limite_uso = data.get("limite_uso") or None
-
-        # =========================
-        # FECHAS
-        # =========================
-
+        limite_uso = to_int(data.get("limite_uso"))
         fecha_inicio = data.get("fecha_inicio") or None
-
         fecha_fin = data.get("fecha_fin") or None
 
         # =========================
-        # CONFIGURACIONES
+        # CONFIG
         # =========================
-
-        acumulable = data.get("acumulable", False)
-
-        requiere_codigo = data.get("requiere_codigo", False)
-
-        is_active = data.get("is_active", True)
+        acumulable = to_bool(data.get("acumulable"))
+        is_active = to_bool(data.get("is_active"))
 
         # =========================
-        # VALIDACIONES
+        # VALIDACIONES BÁSICAS
         # =========================
-
         if not nombre:
             return JsonResponse(
-                {
-                    "success": False,
-                    "message": "El nombre es obligatorio",
-                },
-                status=400,
+                {"success": False, "message": "El nombre es obligatorio"}, status=400
             )
 
-        existe = Descuento.objects.filter(
-            nombre=nombre,
-            is_delete=False,
-        ).exclude(id=id)
+        existe = Descuento.objects.filter(nombre=nombre, is_delete=False).exclude(id=id)
 
         if existe.exists():
             return JsonResponse(
+                {"success": False, "message": "Ya existe un descuento con ese nombre"},
+                status=400,
+            )
+
+        if aplicar_productos and aplicar_categorias:
+            return JsonResponse(
                 {
                     "success": False,
-                    "message": "Ya existe un descuento con ese nombre",
+                    "message": "No puedes aplicar a productos y categorías al mismo tiempo",
                 },
                 status=400,
             )
@@ -4470,33 +4514,29 @@ def put_descuento(request, id):
         # =========================
         # UPDATE
         # =========================
-
         descuento.nombre = nombre
-
         descuento.descripcion = descripcion
 
         descuento.es_cupon = es_cupon
-
         descuento.codigo = codigo if es_cupon else None
 
         descuento.es_porcentaje = es_porcentaje
-
         descuento.valor = valor
 
-        descuento.aplicar_productos = aplicar_productos
+        # CANTIDAD
+        descuento.es_cantidad = es_cantidad
+        descuento.cantidad_lleva = cantidad_lleva if es_cantidad else None
+        descuento.cantidad_paga = cantidad_paga if es_cantidad else None
 
+        # APLICACION
+        descuento.aplicar_productos = aplicar_productos
         descuento.aplicar_categorias = aplicar_categorias
 
         descuento.limite_uso = limite_uso
-
-        descuento.fecha_inicio = fecha_inicio
-
-        descuento.fecha_fin = fecha_fin
+        descuento.fecha_inicio = fecha_inicio or None
+        descuento.fecha_fin = fecha_fin or None
 
         descuento.acumulable = acumulable
-
-        descuento.requiere_codigo = requiere_codigo
-
         descuento.is_active = is_active
 
         descuento.u_modifico_id = request.user.id
@@ -4504,39 +4544,28 @@ def put_descuento(request, id):
         descuento.save()
 
         # =========================
-        # MANY TO MANY
+        # RELACIONES (FK NO M2M)
         # =========================
-
-        descuento.productos.clear()
-
-        descuento.categorias.clear()
+        descuento.productos = None
+        descuento.categorias = None
 
         if aplicar_productos and productoid:
             producto = Productos.objects.filter(id=productoid, is_delete=False).first()
-
             if producto:
-                descuento.productos.add(producto)
+                descuento.productos = producto
 
         if aplicar_categorias and categoriaid:
             categoria = Categorias.objects.filter(
                 id=categoriaid, is_delete=False
             ).first()
-
             if categoria:
-                descuento.categorias.add(categoria)
+                descuento.categorias = categoria
+
+        descuento.save()
 
         return JsonResponse(
-            {
-                "success": True,
-                "message": "Descuento actualizado correctamente",
-            }
+            {"success": True, "message": "Descuento actualizado correctamente"}
         )
 
     except Exception as e:
-        return JsonResponse(
-            {
-                "success": False,
-                "message": str(e),
-            },
-            status=500,
-        )
+        return JsonResponse({"success": False, "message": str(e)}, status=500)
