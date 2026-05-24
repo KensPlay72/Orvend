@@ -4083,8 +4083,8 @@ def busqueda_codigo(request,codigo):
     if not request.user.groups.filter(name='cajeros').exists():
         return JsonResponse({
             "error":"Usuario no valido"
-        },status=403)
-
+        },status=403)    
+    
     try:
         producto = Productos.objects.get(
             codigo_sku =codigo
@@ -4094,8 +4094,12 @@ def busqueda_codigo(request,codigo):
             "id": producto.id,
             "codigo_sku":producto.codigo_sku,
             "nombre":producto.nombre,
-            "precio_venta":producto.precio_venta
+            "precio_venta":producto.precio_venta,
+            "id_categoria":producto.categoria_id
         }
+        descuento = valor_descuento(data)
+        data["descuentos"] = descuento.get("valor",0)
+        data["acumulable"] = descuento.get("es_acumulable",False)
 
         return JsonResponse(data)
     
@@ -4119,11 +4123,105 @@ def busqueda_nombre(request,producto):
             .filter(Q(nombre__icontains=producto)).order_by("nombre")[:20]
             )
 
-    data=[{"id":c.id,"codigo_sku":c.codigo_sku,"nombre":c.nombre,"precio_venta":c.precio_venta} for c in items]
+    data=[{"id":c.id,"codigo_sku":c.codigo_sku,"nombre":c.nombre,"precio_venta":c.precio_venta,"descuento":valor_descuento(data={"id":c.id,"id_categoria":c.categoria_id,"precio_venta":c.precio_venta})} for c in items]
 
     return JsonResponse(data,safe=False)
 
+@login_required
+def descuento_cupon(request,cupon,id):
+    
+    producto = Productos.objects.get(
+            id =id
+    )
 
+    data={
+        "precio_venta": producto.precio_venta
+    }
+
+    descuento_cupon_producto = Descuento.objects.filter(
+        productos__id=id,
+        is_active=True,
+        es_cupon=True,
+        codigo=cupon
+    ).values().first()
+
+    if not descuento_cupon_producto:
+           return JsonResponse({
+            "error":"Este cupon no aplica en este produco"
+        },status=403)
+    
+    valor_descuento_producto=0
+
+    if descuento_cupon_producto["es_porcentaje"]==True:
+            valor_descuento_producto = data["precio_venta"]*(descuento_cupon_producto["valor"]/100)
+    else:
+            valor_descuento_producto=descuento_cupon_producto["valor"]
+
+    descuento={
+        "descuento":valor_descuento_producto
+    }
+
+    return JsonResponse(descuento,safe=False)
+
+
+#función para el valor del desciuento 
+def valor_descuento(data):
+    descuento_producto = Descuento.objects.filter(
+            productos__id=data["id"],
+            is_active=True,
+            es_cupon=False
+        ).values().first()
+
+    descuento_categoria = Descuento.objects.filter(
+            categorias__id=data["id_categoria"],
+            is_active=True,
+            es_cupon=False
+        ).values().first()
+
+    if not descuento_categoria:
+            descuento_categoria = {
+                "es_porcentaje": False,
+                "valor": 0,
+            }
+        
+    if not descuento_categoria and not descuento_producto:
+            return {"valor": 0.00, "es_acumulable": False}
+
+    valor_descuento_producto = 0
+    valor_descuento_categoria = 0
+    total_descuento =0
+    acumulable = False
+
+    if descuento_producto:
+
+            #descuento por producto
+            if descuento_producto["es_porcentaje"]==True:
+                valor_descuento_producto = data["precio_venta"]*(descuento_producto["valor"]/100)
+            else:
+                valor_descuento_producto=descuento_producto["valor"]
+
+            ##descuento por categoria
+            if descuento_categoria["es_porcentaje"]==True:
+                valor_descuento_categoria = data["precio_venta"]*(descuento_categoria["valor"]/100)
+            else:
+                valor_descuento_categoria=descuento_categoria["valor"]
+
+
+            if descuento_producto["acumulable"]==True:
+                total_descuento = valor_descuento_producto+valor_descuento_categoria
+                acumulable=True
+            else:
+                total_descuento= valor_descuento_producto
+    else:
+            
+            if descuento_categoria["es_porcentaje"] == True:
+                valor_descuento_categoria  = data["precio_venta"] * (descuento_categoria["valor"] / 100)
+            else:
+                valor_descuento_categoria = descuento_categoria["valor"]
+
+            total_descuento = valor_descuento_categoria
+    
+    return {"valor": total_descuento, "es_acumulable": acumulable}
 
 @login_required
 @permission_required("manager.view_traslados", raise_exception=True)

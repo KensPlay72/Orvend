@@ -39,14 +39,23 @@ function productos(codigo) {
 //agregar producto si existe el codigo en la tabla
 function con_codigo(i) {
     datos[i].cantidad += 1;
+    
+    if(datos[i].estado ===1){
+        datos[i].descuento += datos[i].valor_descuento;
+    }
+    
+    
+
     datos[i].subtotal = datos[i].cantidad * datos[i].precio_venta;
 
     let tabla = document.getElementById('tablaProductos');
     let cantidad = tabla.rows[i + 1].cells[2].querySelector('.pre');
     let subtotal = tabla.rows[i + 1].cells[5];
+    let descuento = tabla.rows[i+1].cells[4];
 
     cantidad.textContent = datos[i].cantidad;
     subtotal.textContent = 'L. ' + datos[i].subtotal.toFixed(2);
+    descuento.textContent= 'L. '+datos[i].descuento.toFixed(2);
 
     
 }
@@ -67,19 +76,22 @@ async function sin_codigo(codigo) {
             return response.json();
         })
         .then(data => {
-
+            console.log(data);
             let producto = {
                 id: data.id,
                 codigo: data.codigo_sku,
                 nombre: data.nombre,
                 precio_venta: parseFloat(data.precio_venta),
                 cantidad: 1,
-                descuento: 0.00,
-                subtotal: parseFloat(data.precio_venta)
+                descuento: parseFloat(data.descuentos),
+                subtotal: parseFloat(data.precio_venta),
+                valor_descuento: parseFloat(data.descuentos),
+                acumulable: data.acumulable,
+                estado: 1
             }
             datos.push(producto)
 
-            tabla_codigo(data.codigo_sku, data.nombre, 1, parseFloat(data.precio_venta).toFixed(2), 0, parseFloat(data.precio_venta).toFixed(2));
+            tabla_codigo(data.codigo_sku, data.nombre, 1, parseFloat(data.precio_venta).toFixed(2),parseFloat(data.descuentos).toFixed(2) , parseFloat(data.precio_venta).toFixed(2));
         })
         .catch(error => {
             console.log(error);
@@ -130,6 +142,8 @@ busqueda.addEventListener('input', function () {
 
             productos_dato = [];
             resultados.innerHTML = "";
+
+            console.log(data);
 
             if (data.length > 0) {
 
@@ -207,13 +221,16 @@ document.getElementById('btnregis').addEventListener('click', function (e) {
             nombre: productos_dato[codex].nombre,
             precio_venta: productos_dato[codex].precio_venta,
             cantidad: parseInt(cantidad),
-            descuento: 0.00,
-            subtotal: (productos_dato[codex].precio_venta * cantidad)
+            descuento: parseFloat(productos_dato[codex].descuento.valor * cantidad),
+            subtotal: (productos_dato[codex].precio_venta * cantidad),
+            valor_descuento: parseFloat(productos_dato[codex].descuento.valor),
+            acumulable: productos_dato[codex].descuento.es_acumulable,
+            estado: 1
         }
         datos.push(producto)
 
         tabla_codigo(productos_dato[codex].codigo_sku, productos_dato[codex].nombre, parseInt(cantidad),
-            productos_dato[codex].precio_venta, 0, parseFloat(productos_dato[codex].precio_venta * parseInt(cantidad)).toFixed(2));
+            productos_dato[codex].precio_venta,parseFloat(productos_dato[codex].descuento.valor * cantidad).toFixed(2), parseFloat(productos_dato[codex].precio_venta * parseInt(cantidad)).toFixed(2));
 
         const modalEl = document.getElementById('modalagregar');
         const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -236,6 +253,7 @@ document.getElementById('btnregis').addEventListener('click', function (e) {
 busqueda.addEventListener('blur', function () {
     setTimeout(() => {
         resultados.style.display = 'none';
+        resultados.innerHTML = '';
     }, 300);
 });
 
@@ -265,7 +283,7 @@ function tabla_codigo(codigo, nombre, canti, sub, des, total) {
     fila.insertCell(1).textContent = nombre;
     let cantidad = fila.insertCell(2);
     fila.insertCell(3).textContent = 'L. ' + sub;
-    fila.insertCell(4).textContent = 'L. ' + des + '.00';
+    fila.insertCell(4).textContent = 'L. ' + des;
     fila.insertCell(5).textContent = 'L. ' + total;
 
     let boton = fila.insertCell(6);
@@ -308,7 +326,7 @@ function tabla_codigo(codigo, nombre, canti, sub, des, total) {
     let buton_descueto = document.createElement('button');
     buton_descueto.classList.add = 'btn_add';
     buton_descueto.className = 'btn_discunt';
-    buton_descueto.textContent = 'descuento';
+    buton_descueto.textContent = 'cupon';
 
     div_descueto.appendChild(buton_descueto);
 
@@ -329,12 +347,17 @@ tbody.addEventListener("click", (e) => {
         let indice = fila.sectionRowIndex;
         
         datos[indice].cantidad++;
+        if(datos[indice].estado===1){
+            datos[indice].descuento += datos[indice].valor_descuento ;
+        }
         datos[indice].subtotal = datos[indice].cantidad * datos[indice].precio_venta;
         
         let c = fila.querySelector('.pre');
         let s = fila.cells[5];
+        let d = fila.cells[4];
 
         s.textContent = 'L. '+datos[indice].subtotal.toFixed(2);
+        d.textContent = 'L. '+datos[indice].descuento.toFixed(2);
 
         c.textContent = datos[indice].cantidad;
 
@@ -346,6 +369,10 @@ tbody.addEventListener("click", (e) => {
         let indice =fila.sectionRowIndex;
         
         datos[indice].cantidad--;
+        if(datos[indice].estado===1){
+            datos[indice].descuento -= datos[indice].valor_descuento ;
+        }
+        
         datos[indice].subtotal = datos[indice].cantidad * datos[indice].precio_venta;
         
         if(datos[indice].cantidad===0){
@@ -357,10 +384,13 @@ tbody.addEventListener("click", (e) => {
 
         let c = fila.querySelector('.pre');
         let s = fila.cells[5];
+        let d = fila.cells[4];
 
         s.textContent = 'L. '+datos[indice].subtotal.toFixed(2);
 
         c.textContent = datos[indice].cantidad;
+
+        d.textContent = 'L. '+ datos[indice].descuento.toFixed(2);
 
         tabla_detalle_total();
     }
@@ -382,22 +412,50 @@ document.getElementById('btndescuento').addEventListener('click',function(e){
     e.preventDefault();
     let descuento = document.getElementById('Ddescuento');
     let indice = fila_descuento.sectionRowIndex;
-
-    datos[indice].descuento = parseFloat(descuento.value);
-
     let d=fila_descuento.cells[4]
-    d.textContent = 'L. '+datos[indice].descuento.toFixed(2);
 
-    fila_descuento=null;
+    fetch(`/manager/cupon_descuento/${descuento.value}/${datos[indice].id}/`,{
+        method:'GET',
+        headers:{
 
-    let modal = document.getElementById('modalDescuento');
-    let modalE = bootstrap.Modal.getOrCreateInstance(modal);
+        },
+    })
+    .then(response => {
+            if (!response.ok) {
+                throw new Error('error');
+            }
 
-    tabla_detalle_total();
+            return response.json();
+        })
+        .then(data => {
 
-    modalE.hide();
+            if(datos[indice].acumulable){
+                datos[indice].descuento += parseFloat(data.descuento);
+                
+            }
+            else{
+                if(datos[indice].estado===1){
+                datos[indice].descuento = parseFloat(data.descuento);
+                datos[indice].estado=0;
+                }
+                else{
+                    datos[indice].descuento += parseFloat(data.descuento);
+                }
+            }
 
-    modal.hide();
+            d.textContent = 'L. '+datos[indice].descuento.toFixed(2);
+            fila_descuento=null;
+            tabla_detalle_total();
+
+            let modal = document.getElementById('modalDescuento');
+            let modalE = bootstrap.Modal.getOrCreateInstance(modal);
+
+            modalE.hide();
+            
+        })
+        .catch(error => {
+            console.log(error);
+        });    
 
 })
 

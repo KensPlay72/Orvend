@@ -155,5 +155,6 @@ urlpatterns = [
     path("descuentos/put/<int:id>/", views.put_descuento, name="put_descuento"),
     path("caja/",views.caja_view, name="caja"),
     path("busquedacodigo/<int:codigo>/", views.busqueda_codigo,name="busqueda_codigo"),
-    path("busquedanombre/<str:producto>/",views.busqueda_nombre,name="busqueda_nombre")
+    path("busquedanombre/<str:producto>/",views.busqueda_nombre,name="busqueda_nombre"),
+    path("cupon_descuento/<str:cupon>/<int:id>/",views.descuento_cupon,name="descuento_cupon")
 ]

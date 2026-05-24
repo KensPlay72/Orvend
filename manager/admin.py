@@ -1,3 +1,5 @@
+from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import User
 from django.contrib import admin
 from .enums import EstadoCuenta
 from .models import (
@@ -11,21 +13,22 @@ from .models import (
     Proveedores,
     ProveedoresContactos,
     RegistroAbonos,
-    Ubicaciones,
     UMedidas,
     Traslados,
     DetalleTraslado,
     Inventarios,
     MovimientoInventario,
     TipoMovimientoInventario,
+    Descuento,
+    Ubicaciones,
     PerfilUsuario
 )
 from django.utils import timezone
 from django.utils.timezone import now
 from django.db import transaction
+from django import forms
 from decimal import Decimal
-from django.contrib.auth.admin import UserAdmin
-from django.contrib.auth.models import User
+
 
 @admin.register(UMedidas)
 class UMedidasAdmin(admin.ModelAdmin):
@@ -200,29 +203,6 @@ class ProductosAdmin(admin.ModelAdmin):
             },
         ),
     )
-
-
-@admin.register(Ubicaciones)
-class UbicacionesAdmin(admin.ModelAdmin):
-    list_display = ("id", "nombre", "get_tipo_display", "codigo")
-    list_filter = ("tipo",)
-    search_fields = ("nombre", "codigo")
-    ordering = ("id",)
-
-    def save_model(self, request, obj, form, change):
-        # Validar duplicados activos
-        if (
-            Ubicaciones.objects.filter(nombre=obj.nombre, is_delete=False)
-            .exclude(id=obj.id)
-            .exists()
-        ):
-            raise ValueError("Ya existe una ubicación con ese nombre")
-
-        # Auditoría (solo al crear)
-        if not obj.pk:
-            obj.u_creo_id = request.user.id
-
-        super().save_model(request, obj, form, change)
 
 
 class DetalleCompraInline(admin.TabularInline):
@@ -424,6 +404,7 @@ class ClientesAdmin(admin.ModelAdmin):
 
     nombre_completo.short_description = "Nombre completo"
 
+
 # =========================
 # INLINE DETALLE
 # =========================
@@ -552,6 +533,275 @@ class TrasladosAdmin(admin.ModelAdmin):
 
             formset.save_m2m()
 
+
+@admin.register(Descuento)
+class DescuentoAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "nombre",
+        "tipo_descuento",
+        "valor",
+        "codigo",
+        "aplicacion",
+        "is_active",
+        "fecha_inicio",
+        "fecha_fin",
+    )
+
+    list_filter = (
+        "es_cupon",
+        "es_porcentaje",
+        "aplicar_productos",
+        "aplicar_categorias",
+        "is_active",
+    )
+
+    search_fields = (
+        "nombre",
+        "codigo",
+        "descripcion",
+    )
+
+    ordering = ("-id",)
+
+    readonly_fields = (
+        "f_creacion",
+        "f_modificacion",
+    )  # si tu Abstracto los tiene
+
+    fieldsets = (
+        (
+            "Información general",
+            {
+                "fields": (
+                    "nombre",
+                    "descripcion",
+                    "is_active",
+                )
+            },
+        ),
+        (
+            "Cupón",
+            {
+                "fields": (
+                    "es_cupon",
+                    "codigo",
+                )
+            },
+        ),
+        (
+            "Tipo de descuento",
+            {
+                "fields": (
+                    "es_porcentaje",
+                    "valor",
+                    "acumulable",
+                    "requiere_codigo",
+                )
+            },
+        ),
+        (
+            "Aplicación",
+            {
+                "fields": (
+                    "aplicar_productos",
+                    "aplicar_categorias",
+                    "producto",
+                    "categoria",
+                )
+            },
+        ),
+        (
+            "Límites",
+            {
+                "fields": (
+                    "limite_uso",
+                    "fecha_inicio",
+                    "fecha_fin",
+                )
+            },
+        ),
+    )
+
+    def tipo_descuento(self, obj):
+        if obj.es_cupon:
+            return "Cupón"
+        return "Automático"
+
+    tipo_descuento.short_description = "Tipo"
+
+    def aplicacion(self, obj):
+        if obj.aplicar_productos:
+            return "Producto"
+        if obj.aplicar_categorias:
+            return "Categoría"
+        return "General"
+
+    aplicacion.short_description = "Aplica a"
+
+
+# =========================
+# FORM PERSONALIZADO
+# =========================
+class UbicacionesAdminForm(forms.ModelForm):
+    class Meta:
+        model = Ubicaciones
+        fields = "__all__"
+
+    def clean(self):
+
+        cleaned_data = super().clean()
+
+        es_bodega = cleaned_data.get("es_bodega")
+        es_tienda = cleaned_data.get("es_tienda")
+        bodega = cleaned_data.get("bodega")
+
+        # =========================
+        # VALIDAR TIPO
+        # =========================
+        if not es_bodega and not es_tienda:
+            raise forms.ValidationError("Debe seleccionar si es bodega o tienda.")
+
+        # =========================
+        # NO AMBOS
+        # =========================
+        if es_bodega and es_tienda:
+            raise forms.ValidationError("No puede ser bodega y tienda al mismo tiempo.")
+
+        # =========================
+        # SI ES BODEGA NO PUEDE
+        # TENER BODEGA PADRE
+        # =========================
+        if es_bodega and bodega:
+            raise forms.ValidationError("Una bodega no puede pertenecer a otra bodega.")
+
+        # =========================
+        # SI ES TIENDA
+        # VALIDAR QUE LA RELACION
+        # SEA UNA BODEGA
+        # =========================
+        if es_tienda and bodega:
+            if not bodega.es_bodega:
+                raise forms.ValidationError(
+                    "La ubicación relacionada debe ser una bodega."
+                )
+
+        return cleaned_data
+
+
+# =========================
+# ADMIN
+# =========================
+@admin.register(Ubicaciones)
+class UbicacionesAdmin(admin.ModelAdmin):
+    form = UbicacionesAdminForm
+
+    list_display = (
+        "id",
+        "nombre",
+        "codigo",
+        "tipo_visual",
+        "bodega",
+        "is_active",
+    )
+
+    list_filter = (
+        "es_bodega",
+        "es_tienda",
+        "is_active",
+    )
+
+    search_fields = (
+        "nombre",
+        "codigo",
+    )
+
+    autocomplete_fields = ("bodega",)
+
+    readonly_fields = (
+        "f_creacion",
+        "f_modificacion",
+    )
+
+    fieldsets = (
+        (
+            "Información General",
+            {
+                "fields": (
+                    "nombre",
+                    "codigo",
+                )
+            },
+        ),
+        (
+            "Tipo",
+            {
+                "fields": (
+                    "es_bodega",
+                    "es_tienda",
+                )
+            },
+        ),
+        (
+            "Relación",
+            {
+                "fields": ("bodega",),
+                "description": "Solo las tiendas pueden relacionarse con una bodega.",
+            },
+        ),
+        (
+            "Estado",
+            {
+                "fields": (
+                    "is_active",
+                    "is_delete",
+                )
+            },
+        ),
+        (
+            "Auditoría",
+            {
+                "fields": (
+                    "u_creo",
+                    "u_modifico",
+                    "f_creacion",
+                    "f_modificacion",
+                )
+            },
+        ),
+    )
+
+    # =========================
+    # VISUALIZACION TIPO
+    # =========================
+    def tipo_visual(self, obj):
+
+        if obj.es_bodega:
+            return "Bodega"
+
+        if obj.es_tienda:
+            return "Tienda"
+
+        return "Sin tipo"
+
+    tipo_visual.short_description = "Tipo"
+
+    # =========================
+    # FILTRAR SOLO BODEGAS
+    # =========================
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+
+        if db_field.name == "bodega":
+            kwargs["queryset"] = Ubicaciones.objects.filter(
+                es_bodega=True,
+                is_delete=False,
+            )
+
+        return super().formfield_for_foreignkey(
+            db_field,
+            request,
+            **kwargs,
+        )
 class PerfilUsuarioInline(admin.StackedInline):
     model = PerfilUsuario
     can_delete = False

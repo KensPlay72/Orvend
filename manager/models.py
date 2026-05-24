@@ -633,6 +633,8 @@ class Descuento(Abstracto):
 
     def __str__(self):
         return self.nombre
+    
+
 
 class PerfilUsuario(models.Model):
     usuarios = models.OneToOneField(User,on_delete=models.CASCADE)
