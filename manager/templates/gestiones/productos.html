@@ -119,6 +119,17 @@
                                            required>
                                 </div>
                                 <br>
+                                <div class="form-group">
+                                    <label for="impuesto">Impuesto</label>
+                                    <input type="text"
+                                           name="impuesto"
+                                           id="impuesto"
+                                           class="form-control"
+                                           placeholder="Impuesto (%)"
+                                           oninput="validateNumber(this)"
+                                           required>
+                                </div>
+                                <br>
                                 <div class="divproductos">
                                     <div class="form-group mb-3">
                                         <label for="vencimiento" class="d-block">Vencimiento</label>
@@ -262,6 +273,17 @@
                                            required>
                                 </div>
                                 <br>
+                                <div class="form-group">
+                                    <label for="impuestoedit">Impuesto</label>
+                                    <input type="text"
+                                           name="impuestoedit"
+                                           id="impuestoedit"
+                                           class="form-control"
+                                           placeholder="Impuesto (%)"
+                                           oninput="validateNumber(this)"
+                                           required>
+                                </div>
+                                <br>
                                 <div class="divproductos">
                                     <div class="form-group mb-3">
                                         <label for="isActiveedit" class="d-block">Estado</label>
@@ -376,6 +398,7 @@
                     <th>Marca</th>
                     <th>SKU</th>
                     <th>Precio</th>
+                    <th>Impuesto</th>
                     <th>Imagen</th>
                     <th>Estado</th>
                     <th>Acciones</th>
@@ -391,6 +414,7 @@
                         <td>{{ producto.marca.nombre }}</td>
                         <td>{{ producto.codigo_sku }}</td>
                         <td>L. {{ producto.precio_venta|floatformat:2 }}</td>
+                        <td>{{ producto.impuesto }}%</td>
                         <td class="image-cell">
                             {% if producto.imagenes_producto.all %}
                                 <div class="img-hover-wrapper">

@@ -1156,6 +1156,7 @@ def post_producto(request):
         codigo_sku = request.POST.get("codigo_sku", "").strip()
         precio_venta = request.POST.get("precio_venta")
         vencimiento = str(request.POST.get("Vencimiento")).lower() == "true"
+        impuesto = request.POST.get("impuesto", "0").strip()
 
         imagenes = request.FILES.getlist("Imagenes")
 
@@ -1163,7 +1164,15 @@ def post_producto(request):
         # VALIDACIONES
         # =====================
         if not all(
-            [nombre, categoria_id, unidad_medida_id, marca_id, codigo_sku, precio_venta]
+            [
+                nombre,
+                categoria_id,
+                unidad_medida_id,
+                marca_id,
+                codigo_sku,
+                precio_venta,
+                impuesto,
+            ]
         ):
             return JsonResponse(
                 {"success": False, "message": "Campos obligatorios faltantes"},
@@ -1196,6 +1205,7 @@ def post_producto(request):
             codigo_sku=codigo_sku,
             precio_venta=precio_venta,
             vencimiento=vencimiento,
+            impuesto=impuesto,
             u_creo_id=request.user.id,
         )
 
@@ -1270,6 +1280,7 @@ def get_producto(request, id):
                 "precioVenta": float(producto.precio_venta),
                 "isActive": producto.is_active,
                 "vencimiento": producto.vencimiento,
+                "impuesto": float(producto.impuesto),
                 "imagenes": imagenes,
                 "categoriaId": producto.categoria.id if producto.categoria else None,
                 "categoria": (
@@ -1349,6 +1360,8 @@ def put_producto(request, id):
 
         precio = data.get("precioVenta", "0").replace(",", ".")
         producto.precio_venta = float(precio)
+        impuesto = data.get("impuesto", "0").replace(",", ".")
+        producto.impuesto = float(impuesto)
 
         producto.is_active = str(data.get("IsActive")).lower() == "true"
 

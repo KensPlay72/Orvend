@@ -115,6 +115,8 @@ class Productos(Abstracto):
 
     precio_venta = models.DecimalField(max_digits=18, decimal_places=2)
 
+    impuesto = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+
     def __str__(self):
         return self.nombre
 
