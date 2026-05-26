@@ -76,6 +76,7 @@ document.addEventListener("DOMContentLoaded", function () {
       document.getElementById("precioVenta").value,
     );
 
+    formData.append("impuesto", document.getElementById("impuesto").value);
     const vencimientoCheckbox = document.getElementById("vencimiento");
     formData.append("Vencimiento", vencimientoCheckbox.checked);
 
@@ -208,9 +209,6 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 
-//----------------
-// LLENAR FORMULARIO
-//----------------
 const inputImagenEdit = document.getElementById("imagenproductoedit");
 const containerEdit = document.getElementById("imagenesContainerEdit");
 const addButtonEdit = document.getElementById("addImageBtnEdit");
@@ -299,7 +297,7 @@ inputImagenEdit.addEventListener("change", function (e) {
 });
 
 // =========================
-// CARGAR EDIT
+// LLENAR FORMULARIO
 // =========================
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".btn-edit").forEach((button) => {
@@ -346,6 +344,8 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("CodigoSKUedit").value = producto.codigoSKU;
 
       document.getElementById("precioVentaedit").value = producto.precioVenta;
+
+      document.getElementById("impuestoedit").value = producto.impuesto;
 
       // =========================
       // CATEGORÍA
@@ -471,6 +471,7 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
     { id: "MarcaIdedit", name: "Marca" },
     { id: "CodigoSKUedit", name: "Código de Barras" },
     { id: "precioVentaedit", name: "Precio de Venta" },
+    { id: "impuestoedit", name: "Impuesto" },
   ];
 
   let missingFields = [];
@@ -591,7 +592,7 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
     "precioVenta",
     document.getElementById("precioVentaedit").value,
   );
-
+  formData.append("impuesto", document.getElementById("impuestoedit").value);
   formData.append("IsActive", document.getElementById("isActiveedit").checked);
 
   formData.append(
