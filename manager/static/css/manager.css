@@ -246,3 +246,143 @@
 .displaynone {
   display: none;
 }
+.divproductos {
+  display: flex;
+  width: 100%;
+  gap: 2rem;
+}
+
+.maximg {
+  max-width: 80px;
+}
+
+.red {
+  color: #dc3545;
+}
+
+/*=================IMAGENES PRODUCTOS=================*/
+.imagenes-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.imagen-box {
+  width: 100px;
+  height: 100px;
+
+  border: 2px dashed #ccc;
+  border-radius: 10px;
+
+  position: relative;
+
+  overflow: visible;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  background: #f8f9fa;
+}
+
+.delete-image {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+
+  background: white;
+  color: black;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+
+  cursor: pointer;
+
+  z-index: 10;
+
+  transition: all 0.2s ease;
+}
+
+.delete-image:hover {
+  transform: scale(1.08);
+  background: #f3f3f3;
+}
+
+.imagen-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.add-image {
+  font-size: 40px;
+  color: #777;
+  transition: 0.2s;
+}
+
+.add-image:hover {
+  background: #eee;
+}
+
+.form-label-arriba {
+  z-index: 100;
+}
+
+.img-hover-wrapper {
+  display: inline-block;
+  position: relative;
+}
+
+/* imagen principal */
+.main-img {
+  cursor: pointer;
+  transition: transform 0.25s ease;
+  border-radius: 6px;
+}
+
+.img-hover-wrapper:hover .main-img {
+  transform: scale(1.25);
+}
+
+/* POPUP GLOBAL (FUERA DE FLUJO TABLA) */
+.img-hover-popup {
+  position: fixed; /* 🔥 clave importante */
+  display: none;
+
+  background: white;
+  padding: 12px;
+  border-radius: 12px;
+
+  width: 280px;
+  max-height: 240px;
+
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  z-index: 99999;
+
+  flex-wrap: wrap;
+  gap: 8px;
+
+  transform: scale(0.9);
+  transition: transform 0.2s ease;
+}
+
+/* mostrar */
+.img-hover-popup.show {
+  display: flex;
+  transform: scale(1);
+}
+
+/* imágenes dentro */
+.popup-img {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+}

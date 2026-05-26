@@ -1,15 +1,21 @@
 {% extends "menu.html" %}
 {% load static %}
-{% block title %}Productos{% endblock %}
+{% block title %}
+    Productos
+{% endblock title %}
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
-{% endblock %}
+{% endblock extra_css %}
 {% block titulo_content %}
     <div class="tituloscont">
-        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+        <img class="logop"
+             src="{% static 'img/LH.png' %}"
+             alt=""
+             width="0"
+             height="0">
         <p class="header__logo">| Productos</p>
     </div>
-{% endblock %}
+{% endblock titulo_content %}
 {% block main_content %}
     <div class="full2">
         <div class="ventanas">
@@ -19,7 +25,7 @@
             </div>
             <div class="ventanasd">
                 <div class="capsula">
-                    <i class='bx bx-package'></i>
+                    <i class="bx bx-package"></i>
                 </div>
             </div>
         </div>
@@ -30,7 +36,7 @@
             </div>
             <div class="ventanasd">
                 <div class="capsula">
-                    <i class='bx bx-check-circle'></i>
+                    <i class="bx bx-check-circle"></i>
                 </div>
             </div>
         </div>
@@ -41,7 +47,7 @@
             </div>
             <div class="ventanasd">
                 <div class="capsula">
-                    <i class='bx bx-x-circle' style="color: #dc3545;"></i>
+                    <i class="bx bx-x-circle red"></i>
                 </div>
             </div>
         </div>
@@ -113,7 +119,7 @@
                                            required>
                                 </div>
                                 <br>
-                                <div style="display:flex; width: 100%; gap: 2rem;">
+                                <div class="divproductos">
                                     <div class="form-group mb-3">
                                         <label for="vencimiento" class="d-block">Vencimiento</label>
                                         <label class="d-flex align-items-center">
@@ -170,14 +176,17 @@
                                 </div>
                                 <br>
                                 <div class="form-group mb-3">
-                                    <label>Imagen del Producto</label>
-                                    <div class="file-drop-area">
-                                        <span class="file-message">Arrastra tu archivo aquí o haz clic para seleccionar</span>
+                                    <label class="form-label-arriba">Imágenes del Producto</label>
+                                    <br>
+                                    <div class="imagenes-container" id="imagenesContainer">
+                                        <div class="imagen-box add-image" id="addImageBtn">+</div>
                                         <input type="file"
                                                id="imagenproducto"
-                                               class="file form-control"
-                                               accept=".jpg,.png,.webp,.jpeg">
+                                               accept=".jpg,.png,.webp,.jpeg"
+                                               multiple
+                                               hidden>
                                     </div>
+                                    <small class="text-muted">Máximo 5 imágenes</small>
                                 </div>
                             </div>
                         </div>
@@ -253,7 +262,7 @@
                                            required>
                                 </div>
                                 <br>
-                                <div style="display:flex; width: 100%; gap: 2rem;">
+                                <div class="divproductos">
                                     <div class="form-group mb-3">
                                         <label for="isActiveedit" class="d-block">Estado</label>
                                         <label class="d-flex align-items-center" for="isActiveedit">
@@ -330,14 +339,19 @@
                                 </div>
                                 <br>
                                 <div class="form-group mb-3">
-                                    <label>Imagen del Producto</label>
-                                    <div class="file-drop-area">
-                                        <span class="file-message" id="imagenNombreedit">Arrastra tu archivo aquí o haz clic para seleccionar</span>
+                                    <label class="form-label-arriba">Imágenes del Producto</label>
+                                    <br>
+                                    <div class="imagenes-container" id="imagenesContainerEdit">
+                                        <!-- previews dinámicos -->
+                                        <!-- botón agregar -->
+                                        <div class="imagen-box add-image" id="addImageBtnEdit">+</div>
                                         <input type="file"
                                                id="imagenproductoedit"
-                                               class="file form-control"
-                                               accept=".jpg,.png,.webp,.jpeg">
+                                               accept=".jpg,.png,.webp,.jpeg"
+                                               multiple
+                                               hidden>
                                     </div>
+                                    <small class="text-muted">Máximo 5 imágenes</small>
                                 </div>
                             </div>
                         </div>
@@ -377,12 +391,26 @@
                         <td>{{ producto.marca.nombre }}</td>
                         <td>{{ producto.codigo_sku }}</td>
                         <td>L. {{ producto.precio_venta|floatformat:2 }}</td>
-                        <td>
-                            {% if producto.imagen_url %}
-                                <img src="{{ producto.imagen_url }}"
-                                     alt="{{ producto.imagen_nombre }}"
-                                     class="img-thumbnail"
-                                     style="max-width: 80px">
+                        <td class="image-cell">
+                            {% if producto.imagenes_producto.all %}
+                                <div class="img-hover-wrapper">
+                                    <!-- imagen principal -->
+                                    <img src="{{ producto.imagenes_producto.first.imagen_url }}"
+                                         alt="{{ producto.imagenes_producto.first.imagen_nombre|default:'producto' }}"
+                                         width="60"
+                                         height="60"
+                                         class="main-img" />
+                                    <!-- popup gallery -->
+                                    <div class="img-hover-popup">
+                                        {% for img in producto.imagenes_producto.all %}
+                                            <img src="{{ img.imagen_url }}"
+                                                 alt="{{ img.imagen_nombre|default:'imagen producto' }}"
+                                                 width="90"
+                                                 height="90"
+                                                 class="popup-img" />
+                                        {% endfor %}
+                                    </div>
+                                </div>
                             {% else %}
                                 <span class="text-muted">Sin imagen</span>
                             {% endif %}
@@ -445,6 +473,14 @@
         </ul>
     </nav>
     <br>
+    <script>
+        //----------------
+        // VALIDAR NUMERO EN INPUT
+        //----------------
+        function validateNumber(input) {
+        input.value = input.value.replace(/[^0-9.+]/g, "");
+        }
+    </script>
     <script type="module" src="{% static 'js/gestiones/productos.js' %}"></script>
     <script type="module" src="{% static 'js/chektext.js' %}"></script>
-{% endblock %}
+{% endblock main_content %}

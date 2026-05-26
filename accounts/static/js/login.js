@@ -1,60 +1,76 @@
 /*===== FOCUS =====*/
-const inputs = document.querySelectorAll(".form__input")
+const inputs = document.querySelectorAll(".form__input");
 
 /*=== Add focus ===*/
-function addfocus(){
-    let parent = this.parentNode.parentNode
-    parent.classList.add("focus")
+function addfocus() {
+  let parent = this.parentNode.parentNode;
+  parent.classList.add("focus");
 }
 
 /*=== Remove focus ===*/
-function remfocus(){
-    let parent = this.parentNode.parentNode
-    if(this.value == ""){
-        parent.classList.remove("focus")
-    }
+function remfocus() {
+  let parent = this.parentNode.parentNode;
+  if (this.value == "") {
+    parent.classList.remove("focus");
+  }
 }
 
 /*=== To call function===*/
-inputs.forEach(input=>{
-    input.addEventListener("focus",addfocus)
-    input.addEventListener("blur",remfocus)
-})
+inputs.forEach((input) => {
+  input.addEventListener("focus", addfocus);
+  input.addEventListener("blur", remfocus);
+});
 
 //_____________________________________//
 //
 
 document.addEventListener("DOMContentLoaded", function () {
+  const form = document.querySelector(".form__content");
 
-    const form = document.querySelector(".form__content");
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
 
-    form.addEventListener("submit", async function (e) {
-        e.preventDefault();
+    const username = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
 
-        const username = document.getElementById("username").value;
-        const password = document.getElementById("password").value;
+    if (!username || !password) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Llena todos los campos",
+        confirmButtonText: "Aceptar",
+        customClass: { confirmButton: "classbotones" },
+      });
+      return;
+    }
 
-        if (!username || !password) {
-            Swal.fire("Error", "Llena todos los campos", "error");
-            return;
-        }
+    document.getElementById("loader").style.display = "flex";
 
-        document.getElementById("loader").style.display = "flex";
+    try {
+      const response = await fetch("/accounts/login/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken"),
+        },
+        body: JSON.stringify({
+          username,
+          password,
+        }),
+      });
 
-        try {
-            const response = await fetch("/accounts/login/", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": getCookie("csrftoken")
-                },
-                body: JSON.stringify({
-                    username,
-                    password
-                })
-            });
+      const data = await response.json();
 
-            const data = await response.json();
+      if (!response.ok) {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: data.message || "Error desconocido",
+          confirmButtonText: "Aceptar",
+          customClass: { confirmButton: "classbotones" },
+        });
+        return;
+      }
 
             if (!response.ok) {
                 Swal.fire({
@@ -89,20 +105,20 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function getCookie(name) {
-    let cookieValue = null;
+  let cookieValue = null;
 
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
+  if (document.cookie && document.cookie !== "") {
+    const cookies = document.cookie.split(";");
 
-        for (let cookie of cookies) {
-            cookie = cookie.trim();
+    for (let cookie of cookies) {
+      cookie = cookie.trim();
 
-            if (cookie.startsWith(name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
+      if (cookie.startsWith(name + "=")) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
     }
+  }
 
-    return cookieValue;
+  return cookieValue;
 }

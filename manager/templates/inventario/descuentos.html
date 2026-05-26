@@ -106,7 +106,7 @@
                              checked>
                       <label class="form-check-label" for="es_porcentaje">¿Es porcentaje?</label>
                     </div>
-                    <br>
+                    <br id="br_texto">
                     <div class="form-group">
                       <label for="valor">Valor del descuento</label>
                       <input type="text"
@@ -115,15 +115,13 @@
                              autocomplete="off"
                              class="form-control"
                              oninput="validateNumber(this)"
-                             placeholder="Ej: 10 o 150"
-                             required>
+                             placeholder="Ej: 10 o 150">
                     </div>
-                    <small class="text-muted">
+                    <small class="text-muted" id="textoporcentaje">
                       Si es porcentaje ingresa:
                       10 = 10%
                     </small>
-                    <br>
-                    <br>
+                    <br id="br_texto2">
                     <div class="form-check form-switch">
                       <input class="form-check-input"
                              type="checkbox"
@@ -135,9 +133,31 @@
                     <div class="form-check form-switch">
                       <input class="form-check-input"
                              type="checkbox"
-                             id="requiere_codigo"
-                             name="requiere_codigo">
-                      <label class="form-check-label" for="requiere_codigo">¿Requiere código?</label>
+                             id="es_cantidad"
+                             name="es_cantidad">
+                      <label class="form-check-label" for="es_cantidad">¿Descuento por cantidad?</label>
+                    </div>
+                    <br>
+                    <div id="contenedor_cantidad" class="displaynone">
+                      <div class="form-group">
+                        <label for="cantidad_lleva">Cantidad que lleva</label>
+                        <input type="number"
+                               min="1"
+                               name="cantidad_lleva"
+                               id="cantidad_lleva"
+                               class="form-control"
+                               placeholder="Ej: 3">
+                      </div>
+                      <br>
+                      <div class="form-group">
+                        <label for="cantidad_paga">Cantidad que paga</label>
+                        <input type="number"
+                               min="1"
+                               name="cantidad_paga"
+                               id="cantidad_paga"
+                               class="form-control"
+                               placeholder="Ej: 2">
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -314,24 +334,52 @@
                       <input class="form-check-input" type="checkbox" id="es_porcentajeedit">
                       <label class="form-check-label">¿Es porcentaje?</label>
                     </div>
-                    <br>
+                    <br id="br_textoedit">
                     <div class="form-group">
-                      <label>Valor</label>
+                      <label>Valor de descuento</label>
                       <input type="text"
                              id="valoredit"
                              class="form-control"
-                             oninput="validateNumber(this)"
-                             required>
+                             oninput="validateNumber(this)">
                     </div>
-                    <br>
+                    <small class="text-muted" id="textoporcentajeedit">
+                      Si es porcentaje ingresa:
+                      10 = 10%
+                    </small>
+                    <br id="br_texto2edit">
                     <div class="form-check form-switch">
                       <input class="form-check-input" type="checkbox" id="acumulableedit">
                       <label class="form-check-label">¿Acumulable?</label>
                     </div>
                     <br>
                     <div class="form-check form-switch">
-                      <input class="form-check-input" type="checkbox" id="requiere_codigoedit">
-                      <label class="form-check-label">¿Requiere código?</label>
+                      <input class="form-check-input"
+                             type="checkbox"
+                             id="es_cantidadedit"
+                             name="es_cantidadedit">
+                      <label class="form-check-label" for="es_cantidadedit">¿Descuento por cantidad?</label>
+                    </div>
+                    <br>
+                    <div id="contenedor_cantidadedit" class="displaynone">
+                      <div class="form-group">
+                        <label for="cantidad_llevaedit">Cantidad que lleva</label>
+                        <input type="number"
+                               min="1"
+                               name="cantidad_llevaedit"
+                               id="cantidad_llevaedit"
+                               class="form-control"
+                               placeholder="Ej: 3">
+                      </div>
+                      <br>
+                      <div class="form-group">
+                        <label for="cantidad_pagaedit">Cantidad que paga</label>
+                        <input type="number"
+                               min="1"
+                               name="cantidad_pagaedit"
+                               id="cantidad_pagaedit"
+                               class="form-control"
+                               placeholder="Ej: 2">
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -451,6 +499,8 @@
             <td>
               {% if descuento.es_cupon %}
                 <span class="badge bg-primary">Cupón</span>
+              {% elif descuento.es_cantidad %}
+                <span class="badge bg-warning text-dark">Cantidad</span>
               {% else %}
                 <span class="badge bg-success">Automático</span>
               {% endif %}
@@ -461,16 +511,36 @@
             </td>
             <!-- VALOR -->
             <td>
-              {% if descuento.es_porcentaje %}
-                {{ descuento.valor }}%
+              {% if descuento.es_cantidad %}
+                <span>{{ descuento.cantidad_lleva }} x {{ descuento.cantidad_paga }}</span>
+              {% elif descuento.es_porcentaje %}
+                <span>{{ descuento.valor }}%</span>
               {% else %}
-                L {{ descuento.valor }}
+                <span>L {{ descuento.valor }}</span>
               {% endif %}
             </td>
             <!-- APLICA -->
             <td>
-              {% if descuento.aplicar_productos %}<span class="badge bg-info">Producto</span>{% endif %}
-              {% if descuento.aplicar_categorias %}<span class="badge bg-warning text-dark">Categoría</span>{% endif %}
+              {% if descuento.aplicar_productos and descuento.productos %}
+                <div>
+                  <span class="badge bg-info">Producto</span>
+                  <br>
+                  <small>
+                    {{ descuento.productos.nombre }}
+                    {% if descuento.productos.sku %}
+                      <br>
+                      <span class="text-muted">SKU: {{ descuento.productos.sku }}</span>
+                    {% endif %}
+                  </small>
+                </div>
+              {% endif %}
+              {% if descuento.aplicar_categorias and descuento.categorias %}
+                <div class="mt-1">
+                  <span class="badge bg-warning text-dark">Categoría</span>
+                  <br>
+                  <small>{{ descuento.categorias.nombre }}</small>
+                </div>
+              {% endif %}
             </td>
             <!-- ESTADO -->
             <td>
@@ -495,7 +565,7 @@
           </tr>
         {% empty %}
           <tr>
-            <td colspan="7" class="text-center">No hay descuentos registrados</td>
+            <td colspan="8" class="text-center">No hay descuentos registrados</td>
           </tr>
         {% endfor %}
       </tbody>

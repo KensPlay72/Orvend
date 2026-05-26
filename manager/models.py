@@ -85,6 +85,7 @@ class Marcas(Abstracto):
 class UMedidas(Abstracto):
     nombre = models.CharField(max_length=30)
     abreviatura = models.CharField(max_length=10)
+    valor = models.IntegerField(null=False, blank=False, default=0)
 
     def __str__(self):
         return self.abreviatura
@@ -112,15 +113,22 @@ class Productos(Abstracto):
 
     vencimiento = models.BooleanField(default=False)
     codigo_sku = models.CharField(max_length=50, unique=True)
-    descripcion = models.CharField(max_length=200, blank=True, default="")
 
     precio_venta = models.DecimalField(max_digits=18, decimal_places=2)
 
+    def __str__(self):
+        return self.nombre
+
+
+class ProductosImagenes(models.Model):
+    producto = models.ForeignKey(
+        Productos, on_delete=models.CASCADE, related_name="imagenes_producto"
+    )
     imagen_nombre = models.CharField(max_length=100, null=True, blank=True)
     imagen_url = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
-        return self.nombre
+        return f"{self.producto.nombre} - {self.imagen_nombre or self.imagen_url}"
 
 
 # =========================
@@ -561,8 +569,16 @@ class Descuento(Abstracto):
 
     es_porcentaje = models.BooleanField(default=True)
 
-    valor = models.DecimalField(max_digits=10, decimal_places=2)
+    valor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
+    # =========================
+    # TIPO CANTIDAD
+    # =========================
+
+    es_cantidad = models.BooleanField(default=False)
+
+    cantidad_lleva = models.IntegerField(null=True, blank=True)
+    cantidad_paga = models.IntegerField(null=True, blank=True)
     # =========================
     # APLICACION
     # =========================
@@ -571,9 +587,13 @@ class Descuento(Abstracto):
 
     aplicar_categorias = models.BooleanField(default=False)
 
-    productos = models.ManyToManyField(Productos, blank=True, null=True)
+    productos = models.ForeignKey(
+        Productos, on_delete=models.SET_NULL, blank=True, null=True
+    )
 
-    categorias = models.ManyToManyField(Categorias, blank=True, null=True)
+    categorias = models.ForeignKey(
+        Categorias, on_delete=models.SET_NULL, blank=True, null=True
+    )
 
     # =========================
     # LIMITES
@@ -596,7 +616,6 @@ class Descuento(Abstracto):
     # =========================
 
     acumulable = models.BooleanField(default=False)
-    requiere_codigo = models.BooleanField(default=False)
 
     # =========================
     # METODOS
