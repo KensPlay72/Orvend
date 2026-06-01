@@ -4128,29 +4128,43 @@ def caja_view(request):
 
 #Busqueda de Productos por codigo de barra en caja.
 
+
+
 @login_required
 def busqueda_codigo(request,codigo):
-
     if not request.user.groups.filter(name='cajeros').exists():
-        return JsonResponse({
-            "error":"Usuario no valido"
-        },status=403)    
-    
+        return(JsonResponse({"error":"Usuario no valido"},status=403))
+
     try:
         producto = Productos.objects.get(
             codigo_sku =codigo
         )
+
+        isv = producto.precio_venta * (Decimal((producto.impuesto)/Decimal(100)))
 
         data = {
             "id": producto.id,
             "codigo_sku":producto.codigo_sku,
             "nombre":producto.nombre,
             "precio_venta":producto.precio_venta,
-            "id_categoria":producto.categoria_id
+            "id_categoria":producto.categoria_id,
+            "isv": isv,
+            "tipos_isv": producto.impuesto
         }
-        descuento = valor_descuento(data)
-        data["descuentos"] = descuento.get("valor",0)
-        data["acumulable"] = descuento.get("es_acumulable",False)
+
+        canitdad_descuento = descuento_cantidad(data)
+
+        if(canitdad_descuento["lleva"]>0):
+            data["lleva"] = canitdad_descuento["lleva"]
+            data["paga"] =  canitdad_descuento["paga"]
+            data["descuentos"] = 0
+            data["acumulable"] = canitdad_descuento["es_acumulable"]
+        else: 
+            descuento = valor_descuento(data)
+            data["lleva"] = 0
+            data["paga"] = 0
+            data["descuentos"] = descuento.get("valor",0)
+            data["acumulable"] = descuento.get("es_acumulable",False)
 
         return JsonResponse(data)
     
@@ -4174,7 +4188,49 @@ def busqueda_nombre(request,producto):
             .filter(Q(nombre__icontains=producto)).order_by("nombre")[:20]
             )
 
-    data=[{"id":c.id,"codigo_sku":c.codigo_sku,"nombre":c.nombre,"precio_venta":c.precio_venta,"descuento":valor_descuento(data={"id":c.id,"id_categoria":c.categoria_id,"precio_venta":c.precio_venta})} for c in items]
+    data = []
+    for c in items:
+            lleva = 0
+            paga = 0
+            descuento =0
+            es_acumulable = False
+
+            canitdad_descuento = descuento_cantidad(data={
+                "id": c.id})
+
+            if(canitdad_descuento["lleva"]>0):
+                lleva= canitdad_descuento["lleva"]
+                paga=  canitdad_descuento["paga"]
+                es_acumulable = canitdad_descuento["es_acumulable"]
+                descuento = 0
+            else:
+                descuento_data = valor_descuento(data={
+                "id": c.id,
+                "id_categoria": c.categoria_id,
+                "precio_venta": c.precio_venta
+                })
+                lleva=0
+                paga=0
+                descuento = descuento_data["valor"]
+                es_acumulable = descuento_data["es_acumulable"]
+
+            producto = {
+                "id": c.id,
+                "codigo_sku": c.codigo_sku,
+                "nombre": c.nombre,
+                "precio_venta": c.precio_venta,
+                "lleva": lleva,
+                "paga": paga,
+                "descuento": descuento,
+                "es_acumulable": es_acumulable,
+                "isv": (
+                    c.precio_venta *
+                    (Decimal(c.impuesto) / Decimal(100))
+                ),
+                "tipos_isv": c.impuesto
+            }
+
+            data.append(producto)
 
     return JsonResponse(data,safe=False)
 
@@ -4220,7 +4276,8 @@ def valor_descuento(data):
     descuento_producto = Descuento.objects.filter(
             productos__id=data["id"],
             is_active=True,
-            es_cupon=False
+            es_cupon=False,
+            es_cantidad=False
         ).values().first()
 
     descuento_categoria = Descuento.objects.filter(
@@ -4273,6 +4330,18 @@ def valor_descuento(data):
             total_descuento = valor_descuento_categoria
     
     return {"valor": total_descuento, "es_acumulable": acumulable}
+
+def descuento_cantidad(data):
+        descuento = Descuento.objects.filter(
+            productos__id=data["id"],
+            is_active=True,
+            es_cantidad=True
+        ).values().first()
+
+        if not descuento:
+            return {"lleva":0 , "paga":0, "es_acumulable": False}
+        else:
+            return {"lleva":descuento["cantidad_lleva"], "paga":descuento["cantidad_paga"], "es_acumulable": descuento["acumulable"]} 
 
 @login_required
 @permission_required("manager.view_traslados", raise_exception=True)

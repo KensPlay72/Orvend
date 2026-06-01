@@ -6,7 +6,7 @@ let productos_dato = [];
 
 let fila_descuento;
 
-let total_m=0;
+let total_m = 0;
 
 //evento de busqueda por codigo
 document.getElementById('codigo_busqueda').addEventListener('keydown', function (event) {
@@ -39,25 +39,25 @@ function productos(codigo) {
 //agregar producto si existe el codigo en la tabla
 function con_codigo(i) {
     datos[i].cantidad += 1;
-    
-    if(datos[i].estado ===1){
-        datos[i].descuento += datos[i].valor_descuento;
+
+    if (datos[i].estado === 1) {
+        descuento_cantidad(i);
     }
-    
-    
 
     datos[i].subtotal = datos[i].cantidad * datos[i].precio_venta;
+    datos[i].isv15_acumulable += datos[i].isv_15;
+    datos[i].isv18_acumulable += datos[i].isv_18;
 
     let tabla = document.getElementById('tablaProductos');
     let cantidad = tabla.rows[i + 1].cells[2].querySelector('.pre');
     let subtotal = tabla.rows[i + 1].cells[5];
-    let descuento = tabla.rows[i+1].cells[4];
+    let descuento = tabla.rows[i + 1].cells[4];
 
     cantidad.textContent = datos[i].cantidad;
     subtotal.textContent = 'L. ' + datos[i].subtotal.toFixed(2);
-    descuento.textContent= 'L. '+datos[i].descuento.toFixed(2);
+    descuento.textContent = 'L. ' + datos[i].descuento.toFixed(2);
 
-    
+
 }
 
 //fecth de busqueda sin el codigo no esta en la tabla
@@ -76,7 +76,17 @@ async function sin_codigo(codigo) {
             return response.json();
         })
         .then(data => {
+
+            let imp15 = 0;
+            let imp18 = 0;
             console.log(data);
+            if (parseFloat(data.tipos_isv) === 15) {
+                imp15 = parseFloat(data.isv);
+            }
+            else if (parseFloat(data.tipos_isv) === 18) {
+                imp18 = parseFloat(data.isv);
+            }
+
             let producto = {
                 id: data.id,
                 codigo: data.codigo_sku,
@@ -87,11 +97,19 @@ async function sin_codigo(codigo) {
                 subtotal: parseFloat(data.precio_venta),
                 valor_descuento: parseFloat(data.descuentos),
                 acumulable: data.acumulable,
-                estado: 1
+                estado: 1,
+                isv_15: imp15,
+                isv_18: imp18,
+                isv15_acumulable: imp15,
+                isv18_acumulable: imp18,
+                lleva: parseInt(data.lleva),
+                paga: parseInt(data.paga),
+                restarlleva: 0
             }
+
             datos.push(producto)
 
-            tabla_codigo(data.codigo_sku, data.nombre, 1, parseFloat(data.precio_venta).toFixed(2),parseFloat(data.descuentos).toFixed(2) , parseFloat(data.precio_venta).toFixed(2));
+            tabla_codigo(data.codigo_sku, data.nombre, 1, parseFloat(data.precio_venta).toFixed(2), parseFloat(data.descuentos).toFixed(2), parseFloat(data.precio_venta).toFixed(2));
         })
         .catch(error => {
             console.log(error);
@@ -186,7 +204,7 @@ let codex = 0;
 //funcion para agregar los datos seleccionados de busqueda por nombre al modal.
 function seleccionarProducto(index) {
     codex = index;
-    
+
     let codigo = document.getElementById('nCodigo');
     let nombre = document.getElementById('nNombre');
     let precio = document.getElementById('nPrecio');
@@ -215,29 +233,61 @@ document.getElementById('btnregis').addEventListener('click', function (e) {
     let producto = datos.findIndex(p => p.codigo === codigo);
 
     if (producto === -1) {
-        let producto = {
+
+        let imp15 = 0;
+        let imp18 = 0;
+        if (parseFloat(productos_dato[codex].tipos_isv) === 15) {
+            imp15 = parseFloat(productos_dato[codex].isv);
+        }
+        else if (parseFloat(productos_dato[codex].tipos_isv) === 18) {
+            imp18 = parseFloat(productos_dato[codex].isv);
+        }
+
+        let producto_b = {
             id: productos_dato[codex].id,
             codigo: productos_dato[codex].codigo_sku,
             nombre: productos_dato[codex].nombre,
             precio_venta: productos_dato[codex].precio_venta,
             cantidad: parseInt(cantidad),
-            descuento: parseFloat(productos_dato[codex].descuento.valor * cantidad),
+            descuento: parseFloat(productos_dato[codex].descuento * cantidad),
             subtotal: (productos_dato[codex].precio_venta * cantidad),
-            valor_descuento: parseFloat(productos_dato[codex].descuento.valor),
-            acumulable: productos_dato[codex].descuento.es_acumulable,
-            estado: 1
+            valor_descuento: parseFloat(productos_dato[codex].descuento),
+            acumulable: productos_dato[codex].es_acumulable,
+            estado: 1,
+            lleva: parseInt(productos_dato[codex].lleva),
+            paga: parseInt(productos_dato[codex].paga),
+            restarlleva: 0,
+            isv_15: imp15,
+            isv_18: imp18,
+            isv15_acumulable: imp15 * cantidad,
+            isv18_acumulable: imp18 * cantidad
         }
-        datos.push(producto)
+        if (producto_b.lleva > 0) {
+            if (cantidad >= producto_b.lleva) {
+                                
+                let grupos = Math.floor(cantidad / producto_b.lleva);
+                producto_b.descuento += (producto_b.precio_venta * (producto_b.lleva - producto_b.paga)) * grupos;
+                
+                if(cantidad % producto_b.lleva === 0){
+                producto_b.restarlleva = 1;
+                }
+
+            }
+        }
+
+
+        datos.push(producto_b)
+
 
         tabla_codigo(productos_dato[codex].codigo_sku, productos_dato[codex].nombre, parseInt(cantidad),
-            productos_dato[codex].precio_venta,parseFloat(productos_dato[codex].descuento.valor * cantidad).toFixed(2), parseFloat(productos_dato[codex].precio_venta * parseInt(cantidad)).toFixed(2));
+            productos_dato[codex].precio_venta, parseFloat(producto_b.descuento).toFixed(2), parseFloat(productos_dato[codex].precio_venta * parseInt(cantidad)).toFixed(2));
 
         const modalEl = document.getElementById('modalagregar');
         const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
 
         modal.hide();
 
-        document.getElementById('nCanitdad').value=0;
+        document.getElementById('nCanitdad').value = 0;
 
         tabla_detalle_total();
 
@@ -294,8 +344,8 @@ function tabla_codigo(codigo, nombre, canti, sub, des, total) {
     let div_pre = document.createElement('div');
 
     let p = document.createElement('p');
-    p.className='pre';
-    p.textContent=canti;
+    p.className = 'pre';
+    p.textContent = canti;
 
     div_pre.appendChild(p)
 
@@ -345,38 +395,55 @@ tbody.addEventListener("click", (e) => {
         const fila = e.target.closest("tr");
 
         let indice = fila.sectionRowIndex;
-        
+
         datos[indice].cantidad++;
-        if(datos[indice].estado===1){
-            datos[indice].descuento += datos[indice].valor_descuento ;
+        if (datos[indice].estado === 1) {
+            descuento_cantidad(indice);
         }
+
         datos[indice].subtotal = datos[indice].cantidad * datos[indice].precio_venta;
-        
+        datos[indice].isv15_acumulable += datos[indice].isv_15;
+        datos[indice].isv18_acumulable += datos[indice].isv_18;
+
         let c = fila.querySelector('.pre');
         let s = fila.cells[5];
         let d = fila.cells[4];
 
-        s.textContent = 'L. '+datos[indice].subtotal.toFixed(2);
-        d.textContent = 'L. '+datos[indice].descuento.toFixed(2);
+        s.textContent = 'L. ' + datos[indice].subtotal.toFixed(2);
+        d.textContent = 'L. ' + datos[indice].descuento.toFixed(2);
 
         c.textContent = datos[indice].cantidad;
 
         tabla_detalle_total();
     }
 
-    if(e.target.classList.contains('btn_remove')){
+    if (e.target.classList.contains('btn_remove')) {
         const fila = e.target.closest('tr');
-        let indice =fila.sectionRowIndex;
-        
+        let indice = fila.sectionRowIndex;
+
         datos[indice].cantidad--;
-        if(datos[indice].estado===1){
-            datos[indice].descuento -= datos[indice].valor_descuento ;
+        if (datos[indice].estado === 1) {
+            console.log(datos[indice].restarlleva);
+            if (datos[indice].lleva > 0) {
+                if (datos[indice].cantidad % (datos[indice].lleva) !== 0 && datos[indice].restarlleva === 1) {
+                    datos[indice].descuento -= (datos[indice].precio_venta * (datos[indice].lleva - datos[indice].paga));
+                    datos[indice].restarlleva = 0;
+                }
+                else if (datos[indice].cantidad % (datos[indice].lleva) === 0 && datos[indice].restarlleva === 0) {
+                    datos[indice].restarlleva = 1;
+                }
+            }
+            else {
+                datos[indice].descuento -= datos[indice].valor_descuento;
+            }
         }
-        
+
         datos[indice].subtotal = datos[indice].cantidad * datos[indice].precio_venta;
-        
-        if(datos[indice].cantidad===0){
-            datos.splice(indice,1);
+        datos[indice].isv15_acumulable -= datos[indice].isv_15;
+        datos[indice].isv18_acumulable -= datos[indice].isv_18;
+
+        if (datos[indice].cantidad === 0) {
+            datos.splice(indice, 1);
             fila.remove();
             tabla_detalle_total();
             return;
@@ -386,41 +453,57 @@ tbody.addEventListener("click", (e) => {
         let s = fila.cells[5];
         let d = fila.cells[4];
 
-        s.textContent = 'L. '+datos[indice].subtotal.toFixed(2);
+        s.textContent = 'L. ' + datos[indice].subtotal.toFixed(2);
 
         c.textContent = datos[indice].cantidad;
 
-        d.textContent = 'L. '+ datos[indice].descuento.toFixed(2);
+        d.textContent = 'L. ' + datos[indice].descuento.toFixed(2);
 
         tabla_detalle_total();
     }
 
-    if(e.target.classList.contains('btn_discunt')){
+    if (e.target.classList.contains('btn_discunt')) {
         const fila = e.target.closest('tr');
         add_descuento(fila);
     }
 
 });
 
-function add_descuento(fila){
-    fila_descuento=fila;
-    let modal = new bootstrap.Modal(document.getElementById('modalDescuento'));
-    modal.show(); 
+
+function descuento_cantidad(indice) {
+    if (datos[indice].lleva > 0) {
+        if (datos[indice].cantidad % (datos[indice].lleva) === 0) {
+            datos[indice].descuento += (datos[indice].precio_venta * (datos[indice].lleva - datos[indice].paga));
+            datos[indice].restarlleva = 1;
+        }
+        else if(datos[indice].cantidad % (datos[indice].lleva) !== 0 && datos[indice].restarlleva === 1){
+            datos[indice].restarlleva = 0;
+        }
+    }
+    else {
+        datos[indice].descuento += datos[indice].valor_descuento;
+    }
 }
 
-document.getElementById('btndescuento').addEventListener('click',function(e){
+function add_descuento(fila) {
+    fila_descuento = fila;
+    let modal = new bootstrap.Modal(document.getElementById('modalDescuento'));
+    modal.show();
+}
+
+document.getElementById('btndescuento').addEventListener('click', function (e) {
     e.preventDefault();
     let descuento = document.getElementById('Ddescuento');
     let indice = fila_descuento.sectionRowIndex;
-    let d=fila_descuento.cells[4]
+    let d = fila_descuento.cells[4]
 
-    fetch(`/manager/cupon_descuento/${descuento.value}/${datos[indice].id}/`,{
-        method:'GET',
-        headers:{
+    fetch(`/manager/cupon_descuento/${descuento.value}/${datos[indice].id}/`, {
+        method: 'GET',
+        headers: {
 
         },
     })
-    .then(response => {
+        .then(response => {
             if (!response.ok) {
                 throw new Error('error');
             }
@@ -429,100 +512,105 @@ document.getElementById('btndescuento').addEventListener('click',function(e){
         })
         .then(data => {
 
-            if(datos[indice].acumulable){
+            if (datos[indice].acumulable) {
                 datos[indice].descuento += parseFloat(data.descuento);
-                
+
             }
-            else{
-                if(datos[indice].estado===1){
-                datos[indice].descuento = parseFloat(data.descuento);
-                datos[indice].estado=0;
+            else {
+                if (datos[indice].estado === 1) {
+                    datos[indice].descuento = parseFloat(data.descuento);
+                    datos[indice].estado = 0;
                 }
-                else{
+                else {
                     datos[indice].descuento += parseFloat(data.descuento);
                 }
             }
 
-            d.textContent = 'L. '+datos[indice].descuento.toFixed(2);
-            fila_descuento=null;
+            d.textContent = 'L. ' + datos[indice].descuento.toFixed(2);
+            fila_descuento = null;
             tabla_detalle_total();
 
             let modal = document.getElementById('modalDescuento');
             let modalE = bootstrap.Modal.getOrCreateInstance(modal);
 
             modalE.hide();
-            
+
         })
         .catch(error => {
             console.log(error);
-        });    
+        });
 
 })
 
 function tabla_detalle_total() {
     let subtotal = 0;
     let descuento = 0;
+    let isv15 = 0;
+    let isv18 = 0;
 
     datos.forEach((item, index) => {
         subtotal += item.subtotal;
         descuento += item.descuento;
+        isv15 += item.isv15_acumulable;
+        isv18 += item.isv18_acumulable;
     })
 
 
-    let impuesto = subtotal * 0.15;
-    let total = (subtotal + impuesto) - descuento;
+    let total = (subtotal + isv15 + isv18) - descuento;
 
     let tabla = document.getElementById('detalle-total');
     let celda_subtotal = tabla.rows[0].cells[1];
     let celda_descuento = tabla.rows[1].cells[1];
-    let celda_impusto = tabla.rows[2].cells[1];
-    let celda_total = tabla.rows[3].cells[1];
+    let celda_isv15 = tabla.rows[2].cells[1];
+    let celda_isv18 = tabla.rows[3].cells[1];
+    let celda_total = tabla.rows[4].cells[1];
 
-    total_m=total;
+    total_m = total;
 
     celda_subtotal.textContent = 'L. ' + subtotal.toFixed(2);
     celda_descuento.textContent = 'L. ' + descuento.toFixed(2);
-    celda_impusto.textContent = 'L. ' + impuesto.toFixed(2);
+    celda_isv15.textContent = 'L. ' + isv15.toFixed(2);
+    celda_isv18.textContent = 'L. ' + isv18.toFixed(2);
     celda_total.textContent = 'L. ' + total.toFixed(2);
 }
 
 
 //pagos
 
-document.getElementById('Pagar').addEventListener('click',function(e){
+document.getElementById('Pagar').addEventListener('click', function (e) {
     let modal = new bootstrap.Modal(document.getElementById('modalPago'));
     modal.show();
 });
 
-document.getElementById('tipo_pago').addEventListener('change',function(e){
+document.getElementById('tipo_pago').addEventListener('change', function (e) {
 
     let opcion = e.target.value;
     let dinero = document.getElementById('div_dinero');
     let numero = document.getElementById('div_nuemro');
     let digito = document.getElementById('div_digito');
     let banco = document.getElementById('div_banco');
-    let red =document.getElementById('div_red');
+    let red = document.getElementById('div_red');
 
-    if(opcion==="pago_contado"){
-        dinero.style.display='block';
-        numero.style.display='none';
-        digito.style.display='none';
-        banco.style.display='none';
-        red.style.display='none';
+    if (opcion === "pago_contado") {
+        dinero.style.display = 'block';
+        numero.style.display = 'none';
+        digito.style.display = 'none';
+        banco.style.display = 'none';
+        red.style.display = 'none';
     }
-    else if(opcion==="pago_tarjeta"){
-        dinero.style.display='none';
-        numero.style.display='block';
-        digito.style.display='block';
-        banco.style.display='block';
-        red.style.display='block';
+    else if (opcion === "pago_tarjeta") {
+        dinero.style.display = 'none';
+        numero.style.display = 'block';
+        digito.style.display = 'block';
+        banco.style.display = 'block';
+        red.style.display = 'block';
     }
-    else{
-        dinero.style.display='none';
-        numero.style.display='none';
-        digito.style.display='none';
-        banco.style.display='none';
-        red.style.display='none';
+    else {
+        dinero.style.display = 'none';
+        numero.style.display = 'none';
+        digito.style.display = 'none';
+        banco.style.display = 'none';
+        red.style.display = 'none';
     }
 });
 
