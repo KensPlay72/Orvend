@@ -666,3 +666,130 @@ class PerfilUsuario(models.Model):
     )
     def __str__(self):
         return self.usuarios.username
+
+
+class datos_sat(models.Model):
+    id = models.AutoField(primary_key=True)
+    numero_cai = models.CharField(max_length=100)
+    rango_inicial = models.IntegerField()
+    rango_final= models.IntegerField()
+    fecha_de_emision = models.DateTimeField()
+    fecha_de_vencimiento = models.DateTimeField()
+    estado = models.BooleanField(default=True)
+   
+    id_sucursal = models.ForeignKey(
+        Ubicaciones,
+        on_delete=models.PROTECT,
+        related_name="sucursal_cai"
+    )
+   
+    id_usuario = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="usuario_cai"
+    )
+
+    creacion = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="usuario_creacion_cai"
+    )
+
+    modificacion = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="usuario_modificacion_cai"
+    )
+
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.numero_cai
+
+class facturas_cai(models.Model):
+    id = models.AutoField(primary_key=True)
+    numero_factura = models.IntegerField()
+    id_cai = models.ForeignKey(
+        datos_sat,
+        on_delete=models.PROTECT,
+        related_name="cai_facturas"
+    )
+    fecha_creacion =models.DateTimeField(auto_now_add=True)
+    id_usuario = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="usuario_factura_cai"
+    )
+
+    def __str__(self):
+        return f"Factura #{self.numero_factura} - CAI: {self.id_cai.numero_cai}"
+    
+class facturas(models.Model):
+    id = models.AutoField(primary_key=True)
+    id_factura_cai = models.ForeignKey(
+        facturas_cai,
+        on_delete=models.PROTECT,
+        related_name="factura_cai_detalles"
+    )
+    subtotal = models.DecimalField(max_digits=18, decimal_places=2)
+    impuesto_15 = models.DecimalField(max_digits=18, decimal_places=2)
+    impuesto_18 = models.DecimalField(max_digits=18, decimal_places=2)
+    descuento = models.DecimalField(max_digits=18, decimal_places=2)
+    total = models.DecimalField(max_digits=18, decimal_places=2)
+    tipo_pago = models.CharField(max_length=50)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    id_usuario = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="usuario_factura"
+    )
+
+    def __str__(self):
+        return f"Factura #{self.id_factura_cai.numero_factura} - Subtotal: {self.subtotal}"
+    
+class tarjetas(models.Model):
+    id = models.AutoField(primary_key=True)
+    id_factura = models.OneToOneField(
+        facturas,
+        on_delete=models.PROTECT,
+        related_name="factura_tarjetas"
+    )
+    digitos = models.CharField(max_length=4)
+    numero_autorizacion = models.CharField(max_length=50)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    id_usuario = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="usuario_tarjeta"
+    )
+    def __str__(self):
+        return f"Tarjeta ****{self.digitos} - Autorización: {self.numero_autorizacion}"
+
+class detalles_facturas(models.Model):
+    id = models.AutoField(primary_key=True)
+    id_factura = models.ForeignKey(
+        facturas,
+        on_delete=models.PROTECT,
+        related_name="factura_detalles"
+    )
+    id_producto = models.ForeignKey(
+        Productos,
+        on_delete=models.PROTECT,
+        related_name="producto_factura_detalles"
+    )
+    cantidad = models.DecimalField(max_digits=18, decimal_places=2)
+    precio_unitario = models.DecimalField(max_digits=18, decimal_places=2)
+    descuento = models.DecimalField(max_digits=18, decimal_places=2)
+    impuesto_15 = models.DecimalField(max_digits=18, decimal_places=2)
+    impuesto_18 = models.DecimalField(max_digits=18, decimal_places=2)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    id_usuario = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="usuario_detalle_factura"
+    )
+
+    def __str__(self):
+        return f"Detalle Factura #{self.id_factura.id} - Producto: {self.id_producto.nombre} - Cantidad: {self.cantidad}"
+
