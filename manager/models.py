@@ -669,7 +669,6 @@ class PerfilUsuario(models.Model):
 
 
 class datos_sat(models.Model):
-    id = models.AutoField(primary_key=True)
     numero_cai = models.CharField(max_length=100)
     rango_inicial = models.IntegerField()
     rango_final= models.IntegerField()
@@ -708,7 +707,6 @@ class datos_sat(models.Model):
         return self.numero_cai
 
 class facturas_cai(models.Model):
-    id = models.AutoField(primary_key=True)
     numero_factura = models.IntegerField()
     id_cai = models.ForeignKey(
         datos_sat,
@@ -726,7 +724,7 @@ class facturas_cai(models.Model):
         return f"Factura #{self.numero_factura} - CAI: {self.id_cai.numero_cai}"
     
 class facturas(models.Model):
-    id = models.AutoField(primary_key=True)
+    rtn=models.CharField(max_length=50, default="")
     id_factura_cai = models.ForeignKey(
         facturas_cai,
         on_delete=models.PROTECT,
@@ -749,7 +747,6 @@ class facturas(models.Model):
         return f"Factura #{self.id_factura_cai.numero_factura} - Subtotal: {self.subtotal}"
     
 class tarjetas(models.Model):
-    id = models.AutoField(primary_key=True)
     id_factura = models.OneToOneField(
         facturas,
         on_delete=models.PROTECT,
@@ -767,7 +764,6 @@ class tarjetas(models.Model):
         return f"Tarjeta ****{self.digitos} - Autorización: {self.numero_autorizacion}"
 
 class detalles_facturas(models.Model):
-    id = models.AutoField(primary_key=True)
     id_factura = models.ForeignKey(
         facturas,
         on_delete=models.PROTECT,

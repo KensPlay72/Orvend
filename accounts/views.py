@@ -2,7 +2,8 @@ import json
 from django.contrib.auth import authenticate, login, logout
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
-
+from django.views.decorators.csrf import csrf_exempt
+@csrf_exempt
 def login_view(request):
     if request.method == "POST":
 

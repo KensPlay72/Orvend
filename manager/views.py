@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import Q, Max, Sum
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
@@ -46,6 +46,12 @@ from .models import (
     UMedidas,
     Descuento,
     ProductosImagenes,
+    datos_sat,
+    facturas_cai,
+    facturas,
+    tarjetas,
+    detalles_facturas,
+    PerfilUsuario,
 )
 
 
@@ -4233,6 +4239,99 @@ def busqueda_nombre(request,producto):
             data.append(producto)
 
     return JsonResponse(data,safe=False)
+
+from django.views.decorators.http import require_http_methods
+
+@csrf_exempt
+@login_required
+@require_http_methods(["POST"])
+def guardar_compra(request):
+    if not request.user.groups.filter(name='cajeros').exists():
+        return JsonResponse({
+            'error':"Usuario no valido"
+        },status=403)
+    
+    try:
+        Perfil = PerfilUsuario.objects.get(usuarios=request.user)
+        sucursal_id = Perfil.ubicacion_id
+
+        sat = datos_sat.objects.filter(
+            id_usuario=request.user.id,
+            id_sucursal=sucursal_id,
+            estado=True
+        ).values().first()
+
+        if not sat:
+            return JsonResponse({
+                "error":"Solicite un datos sat activo para este usuario"
+            })
+        
+        numero_factura_actual = facturas_cai.objects.filter(
+            id_cai=sat["id"]
+        ).aggregate(Max('numero_factura'))["numero_factura__max"] or 0
+
+        if numero_factura_actual == sat["rango_final"]-1:
+            datos_sat.objects.filter(id=sat["id"]).update(estado=False)
+        
+        sat_obj = datos_sat.objects.get(id=sat["id"])
+
+        num_fact=facturas_cai.objects.create(
+            numero_factura=numero_factura_actual+1,
+            id_cai=sat_obj,
+            fecha_creacion=timezone.now(),
+            id_usuario=request.user
+        )
+        
+        data =json.loads(request.body)
+
+        pago = data.get("pagos")
+        productos = data.get("productos")
+        tarjeta = data.get("tarjeta")
+
+
+        datos_factura = facturas.objects.create(
+            rtn= pago[0].get("rtn"),
+            id_factura_cai_id = num_fact.id,
+            subtotal = pago[0].get("subtotal"),
+            impuesto_15 = pago[0].get("isv15"),
+            impuesto_18 = pago[0].get("isv18"),
+            descuento = pago[0].get("descuento"),
+            total = pago[0].get("total"),
+            tipo_pago = pago[0].get("tipo_pago"),
+            id_usuario_id=request.user.id
+        )
+
+        h=0
+
+        if pago[0].get("tipo_pago")=="tarjeta":
+            tarjetas.objects.create(
+                id_factura_id= datos_factura.id,
+                digitos= tarjeta[0].get("digitos"),
+                numero_autorizacion= tarjeta[0].get("numero_autorizacion"),
+                id_usuario_id=request.user.id
+            )
+
+        for p in productos:
+            detalle_factura = detalles_facturas.objects.create(
+                id_factura_id = datos_factura.id,
+                id_producto_id= p.get("id"),
+                cantidad = p.get("cantidad"),
+                precio_unitario = p.get("precio_venta"),
+                descuento = p.get("descuento"),
+                impuesto_15 = p.get("isv_15"),
+                impuesto_18 = p.get("isv_18"),
+                id_usuario_id = request.user.id
+            )
+
+        return JsonResponse({
+            "message":  pago,
+            "total_productos": h
+        })
+    except Exception as e:
+        return JsonResponse({
+            "success":False,
+            "message":str(e)
+        },status=500)
 
 @login_required
 def descuento_cupon(request,cupon,id):

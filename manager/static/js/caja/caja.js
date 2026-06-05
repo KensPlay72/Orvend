@@ -4,6 +4,10 @@ let datos = [];
 //contiene los datos del filtro de busqueda
 let productos_dato = [];
 
+let pagos= []
+
+let tarjetas = [];
+
 let fila_descuento;
 
 let total_m = 0;
@@ -79,7 +83,6 @@ async function sin_codigo(codigo) {
 
             let imp15 = 0;
             let imp18 = 0;
-            console.log(data);
             if (parseFloat(data.tipos_isv) === 15) {
                 imp15 = parseFloat(data.isv);
             }
@@ -160,8 +163,6 @@ busqueda.addEventListener('input', function () {
 
             productos_dato = [];
             resultados.innerHTML = "";
-
-            console.log(data);
 
             if (data.length > 0) {
 
@@ -423,7 +424,6 @@ tbody.addEventListener("click", (e) => {
 
         datos[indice].cantidad--;
         if (datos[indice].estado === 1) {
-            console.log(datos[indice].restarlleva);
             if (datos[indice].lleva > 0) {
                 if (datos[indice].cantidad % (datos[indice].lleva) !== 0 && datos[indice].restarlleva === 1) {
                     datos[indice].descuento -= (datos[indice].precio_venta * (datos[indice].lleva - datos[indice].paga));
@@ -543,6 +543,7 @@ document.getElementById('btndescuento').addEventListener('click', function (e) {
 })
 
 function tabla_detalle_total() {
+    pagos=[];
     let subtotal = 0;
     let descuento = 0;
     let isv15 = 0;
@@ -567,11 +568,24 @@ function tabla_detalle_total() {
 
     total_m = total;
 
+    pagos.push({
+        rtn:'',
+        subtotal:subtotal,
+        descuento:descuento,
+        isv15:isv15,
+        isv18:isv18,
+        total:total,
+        tipo_pago:''
+    })
+
     celda_subtotal.textContent = 'L. ' + subtotal.toFixed(2);
     celda_descuento.textContent = 'L. ' + descuento.toFixed(2);
     celda_isv15.textContent = 'L. ' + isv15.toFixed(2);
     celda_isv18.textContent = 'L. ' + isv18.toFixed(2);
     celda_total.textContent = 'L. ' + total.toFixed(2);
+
+    console.log(datos);
+    console.log(pagos);
 }
 
 
@@ -613,4 +627,3 @@ document.getElementById('tipo_pago').addEventListener('change', function (e) {
         red.style.display = 'none';
     }
 });
-
