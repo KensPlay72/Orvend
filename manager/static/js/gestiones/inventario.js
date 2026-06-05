@@ -45,12 +45,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const data = await response.json();
 
-      console.log("Respuesta Python:", data);
-
       //aquí luego pintamos imagen + tabla
       renderInventario(data);
     } catch (err) {
-      console.error("Error:", err);
     } finally {
       if (loader) loader.style.display = "none";
     }
@@ -58,11 +55,6 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function renderInventario(data) {
-  if (data.error) {
-    console.error(data.error);
-    return;
-  }
-
   const producto = data.producto;
 
   // imagen

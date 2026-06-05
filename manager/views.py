@@ -3549,7 +3549,7 @@ def inventario_view(request):
 
     productos_qs = Productos.objects.select_related(
         "unidad_medida", "marca", "categoria"
-    )
+    ).prefetch_related("imagenes_producto")  # 👈 IMPORTANTE
 
     if search:
         productos_qs = productos_qs.filter(
@@ -3559,12 +3559,7 @@ def inventario_view(request):
         )
 
     paginator = Paginator(productos_qs.order_by("nombre"), 12)
-
     page_obj = paginator.get_page(request.GET.get("page"))
-
-    # =========================
-    # DESCUENTOS AUTOMÁTICOS
-    # =========================
 
     descuentos = Descuento.objects.filter(
         is_active=True,
@@ -3576,79 +3571,37 @@ def inventario_view(request):
 
     for p in page_obj:
         precio_original = Decimal(p.precio_venta)
-
         precio_final = precio_original
 
         descuento_producto = None
-
         descuento_categoria = None
-
-        # =========================
-        # BUSCAR DESCUENTOS
-        # =========================
 
         for d in descuentos:
             if not d.vigente():
                 continue
 
-            # =========================
-            # PRODUCTO
-            # =========================
+            if d.aplicar_productos and d.productos.filter(id=p.id).exists():
+                descuento_producto = d
 
-            if d.aplicar_productos:
-                if d.productos.filter(id=p.id).exists():
-                    descuento_producto = d
-
-            # =========================
-            # CATEGORIA
-            # =========================
-
-            if d.aplicar_categorias:
-                if d.categorias.filter(id=p.categoria_id).exists():
-                    descuento_categoria = d
-
-        # =========================
-        # CALCULAR DESCUENTO
-        # =========================
+            if d.aplicar_categorias and d.categorias.filter(id=p.categoria_id).exists():
+                descuento_categoria = d
 
         descuentos_aplicados = []
-
-        # =========================
-        # SI EXISTE PRODUCTO
-        # =========================
 
         if descuento_producto:
             descuentos_aplicados.append(descuento_producto)
 
-            # SI ES ACUMULABLE
             if descuento_producto.acumulable and descuento_categoria:
                 descuentos_aplicados.append(descuento_categoria)
-
-        # =========================
-        # SI NO HAY PRODUCTO
-        # =========================
 
         elif descuento_categoria:
             descuentos_aplicados.append(descuento_categoria)
 
-        # =========================
-        # APLICAR TODOS
-        # =========================
-
         total_descuento = Decimal("0.00")
 
-        nombres_descuentos = []
-
         for d in descuentos_aplicados:
-            nombres_descuentos.append(d.nombre)
-
-            # =========================
-            # PORCENTAJE
-            # =========================
-
             if d.es_porcentaje:
                 descuento = (precio_original * Decimal(d.valor)) / Decimal(100)
-
             else:
                 descuento = Decimal(d.valor)
 
@@ -3656,9 +3609,19 @@ def inventario_view(request):
 
         precio_final = precio_original - total_descuento
 
-        # evitar negativos
         if precio_final < 0:
             precio_final = Decimal("0.00")
+
+        # ==========================================
+        # IMAGEN (NUEVO MODELO)
+        # ==========================================
+        imagen = p.imagenes_producto.first()
+
+        imagen_url = (
+            imagen.imagen_url
+            if imagen and imagen.imagen_url
+            else "/static/img/noimage.png"
+        )
 
         productos_list.append(
             {
@@ -3669,9 +3632,7 @@ def inventario_view(request):
                 },
                 "marcas": {"nombre": getattr(p.marca, "nombre", "N/A")},
                 "codigoSKU": p.codigo_sku,
-                # =========================
                 # PRECIOS
-                # =========================
                 "precioVenta": float(precio_original),
                 "precioFinal": float(precio_final),
                 "tieneDescuento": len(descuentos_aplicados) > 0,
@@ -3683,22 +3644,26 @@ def inventario_view(request):
                     }
                     for d in descuentos_aplicados
                 ],
+                # 👇 NUEVO
+                "imagenUrl": imagen_url,
             }
         )
 
     ubicaciones = Ubicaciones.objects.filter(is_delete=False).order_by("nombre")
 
-    context = {
-        "productos": productos_list,
-        "ubicaciones": ubicaciones,
-        "page": page_obj.number,
-        "total_pages": paginator.num_pages,
-        "page_range": paginator.page_range,
-        "search": search,
-        "mostrar_buscador": True,
-    }
-
-    return render(request, "inventario/inventario.html", context,)
+    return render(
+        request,
+        "inventario/inventario.html",
+        {
+            "productos": productos_list,
+            "ubicaciones": ubicaciones,
+            "page": page_obj.number,
+            "total_pages": paginator.num_pages,
+            "page_range": paginator.page_range,
+            "search": search,
+            "mostrar_buscador": True,
+        },
+    )
 
 
 @login_required
@@ -3707,14 +3672,13 @@ def get_inventario_producto(request, id):
 
     try:
         producto = get_object_or_404(
-            Productos.objects.select_related("marca"),
+            Productos.objects.select_related("marca").prefetch_related(
+                "imagenes_producto"
+            ),
             id=id,
             is_delete=False,
         )
 
-        # ==========================================
-        # STOCK FISICO AGRUPADO POR UBICACION
-        # ==========================================
         inventarios = (
             Inventarios.objects.select_related("ubicacion")
             .filter(
@@ -3733,9 +3697,6 @@ def get_inventario_producto(request, id):
             ubicacion_id = inv["ubicacion__id"]
             stock_fisico = Decimal(str(inv["total_cantidad"] or 0))
 
-            # ==========================================
-            # STOCK RESERVADO EN TRASLADOS PENDIENTES
-            # ==========================================
             reservado = DetalleTraslado.objects.filter(
                 producto_id=id,
                 traslado__ubicacion_origen_id=ubicacion_id,
@@ -3755,16 +3716,23 @@ def get_inventario_producto(request, id):
                 }
             )
 
+        # ==========================================
+        # IMAGEN (NUEVO MODELO)
+        # ==========================================
+        imagen = producto.imagenes_producto.first()
+
+        imagen_url = (
+            imagen.imagen_url
+            if imagen and imagen.imagen_url
+            else "/static/img/noimage.png"
+        )
+
         return JsonResponse(
             {
                 "producto": {
                     "id": producto.id,
                     "nombre": producto.nombre,
-                    "imagenUrl": (
-                        producto.imagen_url
-                        if producto.imagen_url
-                        else "/static/img/noimage.png"
-                    ),
+                    "imagenUrl": imagen_url,
                 },
                 "inventario": inventario_list,
             }
@@ -4111,237 +4079,242 @@ def post_traslado(request):
             status=500,
         )
 
-#__________________________
+
+# __________________________
 ## RUTA DE CAJA##
-#_________________________
+# _________________________
 @login_required
-def caja_view(request):    
+def caja_view(request):
     if not request.user.groups.filter(name="cajeros").exists():
         raise PermissionDenied("No tienes permiso")
 
-    context = {
-        "mostrar_buscador":False,
-        "mostrar_codigo":True
-    }
+    context = {"mostrar_buscador": False, "mostrar_codigo": True}
 
-    return render(request,"caja/caja.html",context)
+    return render(request, "caja/caja.html", context)
 
-#Busqueda de Productos por codigo de barra en caja.
 
+# Busqueda de Productos por codigo de barra en caja.
 
 
 @login_required
-def busqueda_codigo(request,codigo):
-    if not request.user.groups.filter(name='cajeros').exists():
-        return(JsonResponse({"error":"Usuario no valido"},status=403))
+def busqueda_codigo(request, codigo):
+    if not request.user.groups.filter(name="cajeros").exists():
+        return JsonResponse({"error": "Usuario no valido"}, status=403)
 
     try:
-        producto = Productos.objects.get(
-            codigo_sku =codigo
-        )
+        producto = Productos.objects.get(codigo_sku=codigo)
 
-        isv = producto.precio_venta * (Decimal((producto.impuesto)/Decimal(100)))
+        isv = producto.precio_venta * (Decimal((producto.impuesto) / Decimal(100)))
 
         data = {
             "id": producto.id,
-            "codigo_sku":producto.codigo_sku,
-            "nombre":producto.nombre,
-            "precio_venta":producto.precio_venta,
-            "id_categoria":producto.categoria_id,
+            "codigo_sku": producto.codigo_sku,
+            "nombre": producto.nombre,
+            "precio_venta": producto.precio_venta,
+            "id_categoria": producto.categoria_id,
             "isv": isv,
-            "tipos_isv": producto.impuesto
+            "tipos_isv": producto.impuesto,
         }
 
         canitdad_descuento = descuento_cantidad(data)
 
-        if(canitdad_descuento["lleva"]>0):
+        if canitdad_descuento["lleva"] > 0:
             data["lleva"] = canitdad_descuento["lleva"]
-            data["paga"] =  canitdad_descuento["paga"]
+            data["paga"] = canitdad_descuento["paga"]
             data["descuentos"] = 0
             data["acumulable"] = canitdad_descuento["es_acumulable"]
-        else: 
+        else:
             descuento = valor_descuento(data)
             data["lleva"] = 0
             data["paga"] = 0
-            data["descuentos"] = descuento.get("valor",0)
-            data["acumulable"] = descuento.get("es_acumulable",False)
+            data["descuentos"] = descuento.get("valor", 0)
+            data["acumulable"] = descuento.get("es_acumulable", False)
 
         return JsonResponse(data)
-    
+
     except Productos.DoesNotExist:
-        return JsonResponse({
-            "error":"Producto no encontrado"
-        },status=404)
+        return JsonResponse({"error": "Producto no encontrado"}, status=404)
+
 
 @login_required
-def busqueda_nombre(request,producto):
+def busqueda_nombre(request, producto):
 
-    if not request.user.groups.filter(name='cajeros').exists():
-        return JsonResponse({
-            "error":"Usuario no valido"
-        },status=403)    
+    if not request.user.groups.filter(name="cajeros").exists():
+        return JsonResponse({"error": "Usuario no valido"}, status=403)
 
-    if not producto or len(producto)<2:
-        return JsonResponse({},safe=False)
+    if not producto or len(producto) < 2:
+        return JsonResponse({}, safe=False)
 
-    items =(Productos.objects.filter(is_delete=False,is_active=True)
-            .filter(Q(nombre__icontains=producto)).order_by("nombre")[:20]
-            )
+    items = (
+        Productos.objects.filter(is_delete=False, is_active=True)
+        .filter(Q(nombre__icontains=producto))
+        .order_by("nombre")[:20]
+    )
 
     data = []
     for c in items:
+        lleva = 0
+        paga = 0
+        descuento = 0
+        es_acumulable = False
+
+        canitdad_descuento = descuento_cantidad(data={"id": c.id})
+
+        if canitdad_descuento["lleva"] > 0:
+            lleva = canitdad_descuento["lleva"]
+            paga = canitdad_descuento["paga"]
+            es_acumulable = canitdad_descuento["es_acumulable"]
+            descuento = 0
+        else:
+            descuento_data = valor_descuento(
+                data={
+                    "id": c.id,
+                    "id_categoria": c.categoria_id,
+                    "precio_venta": c.precio_venta,
+                }
+            )
             lleva = 0
             paga = 0
-            descuento =0
-            es_acumulable = False
+            descuento = descuento_data["valor"]
+            es_acumulable = descuento_data["es_acumulable"]
 
-            canitdad_descuento = descuento_cantidad(data={
-                "id": c.id})
+        producto = {
+            "id": c.id,
+            "codigo_sku": c.codigo_sku,
+            "nombre": c.nombre,
+            "precio_venta": c.precio_venta,
+            "lleva": lleva,
+            "paga": paga,
+            "descuento": descuento,
+            "es_acumulable": es_acumulable,
+            "isv": (c.precio_venta * (Decimal(c.impuesto) / Decimal(100))),
+            "tipos_isv": c.impuesto,
+        }
 
-            if(canitdad_descuento["lleva"]>0):
-                lleva= canitdad_descuento["lleva"]
-                paga=  canitdad_descuento["paga"]
-                es_acumulable = canitdad_descuento["es_acumulable"]
-                descuento = 0
-            else:
-                descuento_data = valor_descuento(data={
-                "id": c.id,
-                "id_categoria": c.categoria_id,
-                "precio_venta": c.precio_venta
-                })
-                lleva=0
-                paga=0
-                descuento = descuento_data["valor"]
-                es_acumulable = descuento_data["es_acumulable"]
+        data.append(producto)
 
-            producto = {
-                "id": c.id,
-                "codigo_sku": c.codigo_sku,
-                "nombre": c.nombre,
-                "precio_venta": c.precio_venta,
-                "lleva": lleva,
-                "paga": paga,
-                "descuento": descuento,
-                "es_acumulable": es_acumulable,
-                "isv": (
-                    c.precio_venta *
-                    (Decimal(c.impuesto) / Decimal(100))
-                ),
-                "tipos_isv": c.impuesto
-            }
+    return JsonResponse(data, safe=False)
 
-            data.append(producto)
-
-    return JsonResponse(data,safe=False)
 
 @login_required
-def descuento_cupon(request,cupon,id):
-    
-    producto = Productos.objects.get(
-            id =id
+def descuento_cupon(request, cupon, id):
+
+    producto = Productos.objects.get(id=id)
+
+    data = {"precio_venta": producto.precio_venta}
+
+    descuento_cupon_producto = (
+        Descuento.objects.filter(
+            productos__id=id, is_active=True, es_cupon=True, codigo=cupon
+        )
+        .values()
+        .first()
     )
 
-    data={
-        "precio_venta": producto.precio_venta
-    }
-
-    descuento_cupon_producto = Descuento.objects.filter(
-        productos__id=id,
-        is_active=True,
-        es_cupon=True,
-        codigo=cupon
-    ).values().first()
-
     if not descuento_cupon_producto:
-           return JsonResponse({
-            "error":"Este cupon no aplica en este produco"
-        },status=403)
-    
-    valor_descuento_producto=0
+        return JsonResponse(
+            {"error": "Este cupon no aplica en este produco"}, status=403
+        )
 
-    if descuento_cupon_producto["es_porcentaje"]==True:
-            valor_descuento_producto = data["precio_venta"]*(descuento_cupon_producto["valor"]/100)
+    valor_descuento_producto = 0
+
+    if descuento_cupon_producto["es_porcentaje"] == True:
+        valor_descuento_producto = data["precio_venta"] * (
+            descuento_cupon_producto["valor"] / 100
+        )
     else:
-            valor_descuento_producto=descuento_cupon_producto["valor"]
+        valor_descuento_producto = descuento_cupon_producto["valor"]
 
-    descuento={
-        "descuento":valor_descuento_producto
-    }
+    descuento = {"descuento": valor_descuento_producto}
 
-    return JsonResponse(descuento,safe=False)
+    return JsonResponse(descuento, safe=False)
 
 
-#función para el valor del desciuento 
+# función para el valor del desciuento
 def valor_descuento(data):
-    descuento_producto = Descuento.objects.filter(
-            productos__id=data["id"],
-            is_active=True,
-            es_cupon=False,
-            es_cantidad=False
-        ).values().first()
+    descuento_producto = (
+        Descuento.objects.filter(
+            productos__id=data["id"], is_active=True, es_cupon=False, es_cantidad=False
+        )
+        .values()
+        .first()
+    )
 
-    descuento_categoria = Descuento.objects.filter(
-            categorias__id=data["id_categoria"],
-            is_active=True,
-            es_cupon=False
-        ).values().first()
+    descuento_categoria = (
+        Descuento.objects.filter(
+            categorias__id=data["id_categoria"], is_active=True, es_cupon=False
+        )
+        .values()
+        .first()
+    )
 
     if not descuento_categoria:
-            descuento_categoria = {
-                "es_porcentaje": False,
-                "valor": 0,
-            }
-        
+        descuento_categoria = {
+            "es_porcentaje": False,
+            "valor": 0,
+        }
+
     if not descuento_categoria and not descuento_producto:
-            return {"valor": 0.00, "es_acumulable": False}
+        return {"valor": 0.00, "es_acumulable": False}
 
     valor_descuento_producto = 0
     valor_descuento_categoria = 0
-    total_descuento =0
+    total_descuento = 0
     acumulable = False
 
     if descuento_producto:
+        # descuento por producto
+        if descuento_producto["es_porcentaje"] == True:
+            valor_descuento_producto = data["precio_venta"] * (
+                descuento_producto["valor"] / 100
+            )
+        else:
+            valor_descuento_producto = descuento_producto["valor"]
 
-            #descuento por producto
-            if descuento_producto["es_porcentaje"]==True:
-                valor_descuento_producto = data["precio_venta"]*(descuento_producto["valor"]/100)
-            else:
-                valor_descuento_producto=descuento_producto["valor"]
+        ##descuento por categoria
+        if descuento_categoria["es_porcentaje"] == True:
+            valor_descuento_categoria = data["precio_venta"] * (
+                descuento_categoria["valor"] / 100
+            )
+        else:
+            valor_descuento_categoria = descuento_categoria["valor"]
 
-            ##descuento por categoria
-            if descuento_categoria["es_porcentaje"]==True:
-                valor_descuento_categoria = data["precio_venta"]*(descuento_categoria["valor"]/100)
-            else:
-                valor_descuento_categoria=descuento_categoria["valor"]
-
-
-            if descuento_producto["acumulable"]==True:
-                total_descuento = valor_descuento_producto+valor_descuento_categoria
-                acumulable=True
-            else:
-                total_descuento= valor_descuento_producto
+        if descuento_producto["acumulable"] == True:
+            total_descuento = valor_descuento_producto + valor_descuento_categoria
+            acumulable = True
+        else:
+            total_descuento = valor_descuento_producto
     else:
-            
-            if descuento_categoria["es_porcentaje"] == True:
-                valor_descuento_categoria  = data["precio_venta"] * (descuento_categoria["valor"] / 100)
-            else:
-                valor_descuento_categoria = descuento_categoria["valor"]
+        if descuento_categoria["es_porcentaje"] == True:
+            valor_descuento_categoria = data["precio_venta"] * (
+                descuento_categoria["valor"] / 100
+            )
+        else:
+            valor_descuento_categoria = descuento_categoria["valor"]
 
-            total_descuento = valor_descuento_categoria
-    
+        total_descuento = valor_descuento_categoria
+
     return {"valor": total_descuento, "es_acumulable": acumulable}
 
-def descuento_cantidad(data):
-        descuento = Descuento.objects.filter(
-            productos__id=data["id"],
-            is_active=True,
-            es_cantidad=True
-        ).values().first()
 
-        if not descuento:
-            return {"lleva":0 , "paga":0, "es_acumulable": False}
-        else:
-            return {"lleva":descuento["cantidad_lleva"], "paga":descuento["cantidad_paga"], "es_acumulable": descuento["acumulable"]} 
+def descuento_cantidad(data):
+    descuento = (
+        Descuento.objects.filter(
+            productos__id=data["id"], is_active=True, es_cantidad=True
+        )
+        .values()
+        .first()
+    )
+
+    if not descuento:
+        return {"lleva": 0, "paga": 0, "es_acumulable": False}
+    else:
+        return {
+            "lleva": descuento["cantidad_lleva"],
+            "paga": descuento["cantidad_paga"],
+            "es_acumulable": descuento["acumulable"],
+        }
+
 
 @login_required
 @permission_required("manager.view_traslados", raise_exception=True)
