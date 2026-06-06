@@ -1112,9 +1112,15 @@ def api_productos(request):
     page = int(request.GET.get("page", 1))
     limit = int(request.GET.get("limit", 10))
 
-    query = Productos.objects.select_related(
-        "categoria", "unidad_medida", "marca"
-    ).filter(is_delete=False)
+    query = (
+        Productos.objects.select_related(
+            "categoria",
+            "unidad_medida",
+            "marca",
+        )
+        .prefetch_related("imagenes_producto")
+        .filter(is_delete=False)
+    )
 
     # SEARCH
     if search:
@@ -1126,9 +1132,19 @@ def api_productos(request):
     paginator = Paginator(query.order_by("id"), limit)
     page_obj = paginator.get_page(page)
 
-    # RESPONSE JSON
-    data = {
-        "results": [
+    results = []
+
+    for p in page_obj:
+        # ==========================================
+        # IMAGEN DEL PRODUCTO
+        # ==========================================
+        imagen = p.imagenes_producto.first()
+
+        imagen_url = imagen.imagen_url if imagen and imagen.imagen_url else ""
+
+        imagen_nombre = imagen.imagen_nombre if imagen and imagen.imagen_nombre else ""
+
+        results.append(
             {
                 "id": p.id,
                 "nombre": p.nombre,
@@ -1139,11 +1155,13 @@ def api_productos(request):
                 },
                 "categoria": {"nombre": p.categoria.nombre if p.categoria else ""},
                 "marca": {"nombre": p.marca.nombre if p.marca else ""},
-                "imagenUrl": p.imagen_url or "",
-                "imagenNombre": p.imagen_nombre or "",
+                "imagenUrl": imagen_url,
+                "imagenNombre": imagen_nombre,
             }
-            for p in page_obj
-        ],
+        )
+
+    data = {
+        "results": results,
         "page": page_obj.number,
         "totalPages": paginator.num_pages,
     }
