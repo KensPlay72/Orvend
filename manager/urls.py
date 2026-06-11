@@ -157,5 +157,6 @@ urlpatterns = [
     path("busquedacodigo/<int:codigo>/", views.busqueda_codigo,name="busqueda_codigo"),
     path("busquedanombre/<str:producto>/",views.busqueda_nombre,name="busqueda_nombre"),
     path("cupon_descuento/<str:cupon>/<int:id>/",views.descuento_cupon,name="descuento_cupon"),
-    path("realizar_venta/", views.guardar_compra, name="guardar_compra")
+    path("realizar_venta/", views.guardar_compra, name="guardar_compra"),
+    path("recibo_pdf/<int:id_factura>/",views.imprimir_factura, name="imprimir_factura")
 ]

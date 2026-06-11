@@ -1,4 +1,3 @@
-
 //contiene los productos que se van a agregar a caja
 let datos = [];
 //contiene los datos del filtro de busqueda
@@ -17,6 +16,11 @@ document.getElementById('codigo_busqueda').addEventListener('keydown', function 
     if (event.key == "Enter") {
         event.preventDefault();
         let codigo = document.getElementById('codigo_busqueda').value;
+
+        if(codigo.trim()==="" || isNaN(codigo)){
+            mensaje('Ingrese un codigo Valido','error','');
+            return;
+        }
 
         productos(codigo);
     }
@@ -72,9 +76,12 @@ async function sin_codigo(codigo) {
 
         },
     })
-        .then(response => {
+        .then(async response => {
             if (!response.ok) {
-                throw new Error('error');
+                const dato = await response.json();
+                throw new Error(
+                dato.error || dato.mensaje || "Error desconocido"
+                );
             }
 
             return response.json();
@@ -115,7 +122,7 @@ async function sin_codigo(codigo) {
             tabla_codigo(data.codigo_sku, data.nombre, 1, parseFloat(data.precio_venta).toFixed(2), parseFloat(data.descuentos).toFixed(2), parseFloat(data.precio_venta).toFixed(2));
         })
         .catch(error => {
-            console.log(error);
+            mensaje(error.message,"error",'');
         })
 }
 
@@ -227,7 +234,8 @@ document.getElementById('btnregis').addEventListener('click', function (e) {
 
     let cantidad = document.getElementById('nCanitdad').value;
 
-    if (cantidad.trim() === "") {
+    if (cantidad.trim() === "" || cantidad<=0||isNaN(cantidad)) {
+        mensaje('La cantidad debe ser mayor que 0','error','')
         return;
     }
 
@@ -503,9 +511,13 @@ document.getElementById('btndescuento').addEventListener('click', function (e) {
 
         },
     })
-        .then(response => {
+        .then(async response => {
             if (!response.ok) {
-                throw new Error('error');
+                const dato = await response.json();
+                throw new Error(
+                dato.error || dato.mensaje || "Error desconocido"
+                );
+
             }
 
             return response.json();
@@ -537,7 +549,7 @@ document.getElementById('btndescuento').addEventListener('click', function (e) {
 
         })
         .catch(error => {
-            console.log(error);
+            mensaje(error.message,"error",'');
         });
 
 })
@@ -591,6 +603,106 @@ function tabla_detalle_total() {
 
 //pagos
 
+document.getElementById('postpagar').addEventListener('submit', function (e) {
+    e.preventDefault();
+
+        if(datos.length ===0){
+            mensaje('Agregue productos a la venta','error','');
+            return;
+        }
+
+        let tipo_pago = document.getElementById('tipo_pago').value;
+
+        let tarjeta = []
+
+        let canitdad =document.getElementById('Pdinero').value;
+        let digitos =document.getElementById('Pdigitos').value;
+        let autoriza=document.getElementById('Pautorizacion').value;
+
+        let rtn = document.getElementById('PRTN').value;
+
+
+        pagos[0].rtn = rtn;
+
+
+        if(tipo_pago ==="pago_contado"){
+            
+                if(canitdad.trim() === "" || isNaN(canitdad) || parseFloat(canitdad) < pagos[0].total){
+                    mensaje('Ingrese una cantidad valida','error','');
+                    return;
+                }
+
+            pagos[0].tipo_pago ="contado"
+            console.log(pagos.rtn);
+            tarjeta.push({
+                digitos:'',
+                numero_autorizacion:'',
+            })
+
+
+        }
+        else if(tipo_pago === "pago_tarjeta"){
+            pagos[0].tipo_pago ="tarjeta"
+
+            if(autoriza.trim() === ""){
+                mensaje("escriba el nuemro de autorización",'error','')
+                return;
+            }
+
+            if(digitos.trim() === ""){
+                mensaje("Escriba los ultimos cuatro digitos",'error','')
+                return;
+            }
+
+            tarjeta.push({
+                digitos: digitos,
+                numero_autorizacion: autoriza,
+            })
+        }
+        else{
+            mensaje('Seleccione un tipo de pago',"error",'');
+            return;
+        }
+        
+        let data = {
+            productos:datos,
+            pagos:pagos,
+            tarjeta:tarjeta
+        }
+
+        fetch('/manager/realizar_venta/',{
+            method:'POST',
+            headers:{
+               
+            },
+            body: JSON.stringify(data)
+        })
+        .then(async response=>{
+            if(!response.ok){
+                const dato = await response.json();
+                throw new Error(
+                dato.error || dato.mensaje || "Error desconocido"
+                );
+            }
+            return response.json();
+        })
+        .then(data=>{
+            console.log(data)
+            if(tipo_pago === "pago_contado"){
+                let recargar = ()=>location.reload();
+                mensaje(`Cambio: L. ${(parseFloat(parseFloat(canitdad)-pagos[0].total)).toFixed(2)}`,"success",recargar)
+            }
+
+            window.open(`/manager/recibo_pdf/${data.id_facutura}/`,'_blank')
+
+            
+        })
+        .catch(error=>{
+            mensaje(error.message,"error",'');
+        })
+        
+});
+
 document.getElementById('Pagar').addEventListener('click', function (e) {
     let modal = new bootstrap.Modal(document.getElementById('modalPago'));
     modal.show();
@@ -627,3 +739,16 @@ document.getElementById('tipo_pago').addEventListener('change', function (e) {
         red.style.display = 'none';
     }
 });
+
+function mensaje(mensaje,tipo,funcion){
+    Swal.fire({
+        title:mensaje,
+        icon:tipo,
+        confirmButtonText:"Aceptar",
+        customClass: { confirmButton: "classbotones" }
+    }).then(()=>{
+        if(typeof funcion==="function"){
+            funcion();
+        }
+    })
+}

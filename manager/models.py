@@ -669,6 +669,7 @@ class PerfilUsuario(models.Model):
 
 
 class datos_sat(models.Model):
+    nombre_cai= models.CharField(max_length=100,null=True)
     numero_cai = models.CharField(max_length=100)
     rango_inicial = models.IntegerField()
     rango_final= models.IntegerField()

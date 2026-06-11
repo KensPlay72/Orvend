@@ -185,7 +185,20 @@
                                 aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <form id="postregistro" enctype="">
+                        <form id="postpagar" enctype="">
+                            
+                            <div class="form-group" id="div_rtn">
+                                <label for="nmarca">RTN</label>
+                                <input type="text"
+                                       name="DRRTN"
+                                       id="PRTN"
+                                       class="form-control"
+                                       value=""
+                                       placeholder="RTN"
+                                       >
+                                       <br>
+                            </div>
+
                             <div class="form-group">
                                 <label for="nmarca">Tipo de pago</label>
                                 <br>
@@ -203,7 +216,7 @@
                                        id="Pdinero"
                                        class="form-control"
                                        value="0.00"
-                                       placeholder="dienro del cliente" required
+                                       placeholder="dienro del cliente" 
                                        >
                                        <br>
                             </div>
@@ -214,7 +227,7 @@
                                        name="Pautorizacion"
                                        id="Pautorizacion"
                                        class="form-control"
-                                       placeholder="Numero de autorización" required
+                                       placeholder="Numero de autorización" 
                                 >
                                 <br>
                             </div>
@@ -225,36 +238,14 @@
                                        name="Pdigitos"
                                        id="Pdigitos"
                                        class="form-control"
-                                       placeholder="Ultimos 4 digitos" required
-                                >
-                                <br>
-                            </div>
-                            
-                            <div class="form-group" style="display: none;" id="div_banco">
-                                <label for="nmarca">Nombre del banco</label>
-                                <input type="text"
-                                       name="Pbanco"
-                                       id="Pbanco"
-                                       class="form-control"
-                                       placeholder="Nombre del banco" required
-                                >
-                                <br>
-                            </div>
-                            
-                            <div class="form-group" style="display: none;" id="div_red">
-                                <label for="nmarca">Red de pago</label>
-                                <input type="text"
-                                       name="Pred"
-                                       id="Pred"
-                                       class="form-control"
-                                       placeholder="Red de pago" required
+                                       placeholder="Ultimos 4 digitos"
                                 >
                                 <br>
                             </div>
                             
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                                <button type="submit" id="btndescuento" class="btn btn classbotones">Descuento</button>
+                                <button type="submit" id="btndescuento" class="btn btn classbotones">Realizar compra</button>
                             </div>
                         </form>
                     </div>
