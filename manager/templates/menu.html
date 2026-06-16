@@ -30,23 +30,34 @@
                     </div>
                     {% if mostrar_codigo %}
                         <!-- Campo de búsqueda -->
-                        <form id="codigo_form" class="header__search codigo" style="margin-top:15px">
-                            <input name="" placeholder="codigo" class="header__input codigo" id="codigo_busqueda"
-                                value="{{ search }}" autocomplete="off" />
-                            <i class="bx bx-search header__icon" id="buscarIcono" style="margin-top:4px;cursor: pointer"></i>
+                        <form id="codigo_form"
+                              class="header__search codigo"
+                              style="margin-top:15px">
+                            <input name=""
+                                   placeholder="codigo"
+                                   class="header__input codigo"
+                                   id="codigo_busqueda"
+                                   value="{{ search }}"
+                                   autocomplete="off" />
+                            <i class="bx bx-search header__icon"
+                               id="buscarIcono"
+                               style="margin-top:4px;
+                                      cursor: pointer"></i>
                         </form>
-                        
-                            <div class="filtro-container" style="margin-right: 500px;">
-                                <div class="search-box">
-                                    <input type="search" name="search" class="header__input" id="busqueda" 
-                                        placeholder="{% if mostrar_codigo %}Buscar Producto{% else %}Buscar{% endif %}" 
-                                        value="{{ search }}" autocomplete="off" />
-                                    <i class="bx bx-search header__icon" id="buscarIcono"></i>
-                                </div>
-                                
-                                <div id="resultadoBusquda" class="resultados-busqueda"></div>
+                        <div class="filtro-container" style="margin-right: 500px;">
+                            <div class="search-box">
+                                <input type="search"
+                                       name="search"
+                                       class="header__input"
+                                       id="busqueda"
+                                       placeholder="{% if mostrar_codigo %}Buscar Producto{% else %}Buscar{% endif %}"
+                                       value="{{ search }}"
+                                       autocomplete="off" />
+                                <i class="bx bx-search header__icon" id="buscarIcono"></i>
                             </div>
-                        {% endif %}
+                            <div id="resultadoBusquda" class="resultados-busqueda"></div>
+                        </div>
+                    {% endif %}
                     <!-- Campo de búsqueda -->
                     {% if mostrar_buscador %}
                         <form method="get" class="header__search" style="margin-top:15px">
@@ -93,53 +104,58 @@
                 <nav class="nav__container">
                     <div>
                         {% if request.user.groups.all.0.name == "cajeros" %}
-                        <div class="nav__items">
-                            <h3 class="nav__subtitle">Caja</h3>
-                            <a href="{% url 'caja' %}"
-                                class="nav__link {% if request.path == '/manager/caja/' %}active{% endif %}">
-                                <i class="bx bx-store nav__icon"></i>
-                                <span class="nav__name">Caja</span>
-                            </a>
-                            <a href="#" class="nav__link">
-                                <i class="bx bx-wallet nav__icon"></i>
-                                <span class="nav__name">Cierre de caja</span>
-                            </a>
-                        </div>
-                        <br>
-                        <br>
-                        {% endif %}
-                        {% if not request.user.groups.all.0.name == "cajeros" %}
-                        <div class="nav__list">
                             <div class="nav__items">
-                                <h3 class="nav__subtitle">Tiendas</h3>
-                                <a href="{% url 'dashboard' %}"
-                                   class="nav__link {% if request.path == '/manager/dashboard/' %}active{% endif %}">
-                                    <i class="bx bx-home nav__icon"></i>
-                                    <span class="nav__name">Dashboard</span>
-                                </a>
-                                <a href="#" class="nav__link">
-                                    <i class="bx bx-cart nav__icon"></i>
-                                    <span class="nav__name">Ventas</span>
-                                </a>
-                                <a href="#" class="nav__link">
-                                    <i class="bx bx-transfer-alt nav__icon"></i>
-                                    <span class="nav__name">Cambios</span>
-                                </a>
-                                {% if perms.manager.view_descuento %}
-                                  <a href="{% url 'descuentos' %}" class="nav__link">
-                                      <i class="bx bx-purchase-tag nav__icon"></i>
-                                      <span class="nav__name">Descuentos</span>
-                                  </a>
-                                {% endif %}
-                                <a href="#" class="nav__link">
-                                    <i class="bx bx-credit-card nav__icon"></i>
-                                    <span class="nav__name">Ceditos</span>
+                                <h3 class="nav__subtitle">Caja</h3>
+                                <a href="{% url 'caja' %}"
+                                   class="nav__link {% if request.path == '/manager/caja/' %}active{% endif %}">
+                                    <i class="bx bx-store nav__icon"></i>
+                                    <span class="nav__name">Caja</span>
                                 </a>
                                 <a href="#" class="nav__link">
                                     <i class="bx bx-wallet nav__icon"></i>
                                     <span class="nav__name">Cierre de caja</span>
                                 </a>
                             </div>
+                            <br>
+                            <br>
+                        {% endif %}
+                        {% if not request.user.groups.all.0.name == "cajeros" %}
+                            <div class="nav__list">
+                                <div class="nav__items">
+                                    <h3 class="nav__subtitle">Tiendas</h3>
+                                    <a href="{% url 'dashboard' %}"
+                                       class="nav__link {% if request.path == '/manager/dashboard/' %}active{% endif %}">
+                                        <i class="bx bx-home nav__icon"></i>
+                                        <span class="nav__name">Dashboard</span>
+                                    </a>
+                                    <a href="#" class="nav__link">
+                                        <i class="bx bx-cart nav__icon"></i>
+                                        <span class="nav__name">Ventas</span>
+                                    </a>
+                                    <a href="#" class="nav__link">
+                                        <i class="bx bx-transfer-alt nav__icon"></i>
+                                        <span class="nav__name">Cambios</span>
+                                    </a>
+                                    {% if perms.manager.view_descuento %}
+                                        <a href="{% url 'descuentos' %}" class="nav__link">
+                                            <i class="bx bx-purchase-tag nav__icon"></i>
+                                            <span class="nav__name">Descuentos</span>
+                                        </a>
+                                    {% endif %}
+                                    <a href="#" class="nav__link">
+                                        <i class="bx bx-credit-card nav__icon"></i>
+                                        <span class="nav__name">Ceditos</span>
+                                    </a>
+                                    <a href="{% url 'caja' %}"
+                                       class="nav__link {% if request.path == '/manager/caja/' %}active{% endif %}">
+                                        <i class="bx bx-store nav__icon"></i>
+                                        <span class="nav__name">Caja</span>
+                                    </a>
+                                    <a href="#" class="nav__link">
+                                        <i class="bx bx-wallet nav__icon"></i>
+                                        <span class="nav__name">Cierre de caja</span>
+                                    </a>
+                                </div>
                             {% endif %}
                             <div class="nav__items">
                                 <h3 class="nav__subtitle">Gestiones</h3>
@@ -221,20 +237,20 @@
                                     </a>
                                 {% endif %}
                             </div>
-                             {% if not request.user.groups.all.0.name == "cajeros" %}
-                            <div class="nav__items">
-                                <h3 class="nav__subtitle">Bodega</h3>
-                                <a href="{% url 'dashboard_bodega' %}"
-                                   class="nav__link {% if request.path == '/manager/bodega/dashboard/' %}active{% endif %}">
-                                    <i class="bx bx-home nav__icon"></i>
-                                    <span class="nav__name">Dashboard</span>
-                                </a>
-                                <a href="{% url 'recepcion_inventario' %}"
-                                   class="nav__link {% if request.path == '/manager/bodega/recepcion_inventario/' %}active{% endif %}">
-                                    <i class="bx bx-package nav__icon"></i>
-                                    <span class="nav__name">Recepción</span>
-                                </a>
-                            </div>
+                            {% if not request.user.groups.all.0.name == "cajeros" %}
+                                <div class="nav__items">
+                                    <h3 class="nav__subtitle">Bodega</h3>
+                                    <a href="{% url 'dashboard_bodega' %}"
+                                       class="nav__link {% if request.path == '/manager/bodega/dashboard/' %}active{% endif %}">
+                                        <i class="bx bx-home nav__icon"></i>
+                                        <span class="nav__name">Dashboard</span>
+                                    </a>
+                                    <a href="{% url 'recepcion_inventario' %}"
+                                       class="nav__link {% if request.path == '/manager/bodega/recepcion_inventario/' %}active{% endif %}">
+                                        <i class="bx bx-package nav__icon"></i>
+                                        <span class="nav__name">Recepción</span>
+                                    </a>
+                                </div>
                             {% endif %}
                             {% comment %} <div class="nav__items">
                                 <h3 class="nav__subtitle">GESTIONES</h3>
