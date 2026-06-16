@@ -176,6 +176,7 @@ class ProveedoresContactos(Abstracto):
 # =========================
 class Ubicaciones(Abstracto):
     nombre = models.CharField(max_length=120)
+    ubicacion= models.CharField(max_length=255,null=True, blank=True)
     codigo = models.CharField(max_length=10, null=True, blank=True)
     es_bodega = models.BooleanField(default=False)
     es_tienda = models.BooleanField(default=False)

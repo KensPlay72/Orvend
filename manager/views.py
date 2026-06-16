@@ -1589,7 +1589,7 @@ def post_ubicaciones(request):
 
         nombre = (data.get("nombre") or "").strip()
         codigo = (data.get("codigo") or "").strip()
-
+        ubicaciones = (data.get("ubicacion") or "").strip()
         es_bodega = data.get("es_bodega", False)
         es_tienda = data.get("es_tienda", False)
 
@@ -1625,6 +1625,7 @@ def post_ubicaciones(request):
         # =========================
         ubicacion = Ubicaciones(
             nombre=nombre,
+            ubicacion=ubicaciones,
             codigo=codigo,
             es_bodega=es_bodega,
             es_tienda=es_tienda,
@@ -1668,6 +1669,7 @@ def get_ubicaciones(request, id):
                 "ubicacion": {
                     "id": ubicacion.id,
                     "nombre": ubicacion.nombre,
+                    "detalle": ubicacion.ubicacion,
                     "codigo": ubicacion.codigo,
                     "es_bodega": ubicacion.es_bodega,
                     "es_tienda": ubicacion.es_tienda,
@@ -1694,7 +1696,7 @@ def put_ubicaciones(request, id):
 
         nombre = (data.get("Nombre") or "").strip()
         codigo = (data.get("Codigo") or "").strip()
-
+        ubicaciones =(data.get("ubicacion") or "").strip()
         es_bodega = data.get("es_bodega", False)
         es_tienda = data.get("es_tienda", False)
 
@@ -1734,7 +1736,7 @@ def put_ubicaciones(request, id):
         # =========================
         ubicacion.nombre = nombre
         ubicacion.codigo = codigo
-
+        ubicacion.ubicacion = ubicaciones
         ubicacion.es_bodega = es_bodega
         ubicacion.es_tienda = es_tienda
 
@@ -4348,108 +4350,187 @@ def guardar_compra(request):
 
 def imprimir_factura(request,id_factura):
     
-    factura_cai = facturas_cai.objects.select_related("id_cai").get(id=id_factura)
-    factura = facturas.objects.select_related("id_usuario").get(id_factura_cai_id=factura_cai.id)
-    detalle_factura = detalles_facturas.objects.select_related("id_producto").filter(id_factura_id=factura.id)
+    # =========================
+    # FACTURA + CAI + SUCURSAL
+    # =========================
+    factura_cai = facturas_cai.objects.select_related(
+        "id_cai__id_sucursal"
+    ).get(id=id_factura)
 
+    sucursal = factura_cai.id_cai.id_sucursal
+    ubicacion_texto = sucursal.ubicacion if sucursal else "Sucursal no disponible"
+
+    # =========================
+    # FACTURA GENERAL
+    # =========================
+    factura = facturas.objects.select_related("id_usuario").get(
+        id_factura_cai_id=factura_cai.id
+    )
+
+    detalle_factura = detalles_facturas.objects.select_related(
+        "id_producto"
+    ).filter(id_factura_id=factura.id)
+
+    # =========================
+    # PDF CONFIG
+    # =========================
     buffer = BytesIO()
 
-    pdf = canvas.Canvas(buffer,pagesize=letter)
+    ancho_pagina = 226.77
+    alto_pagina = 800
 
-    ancho,alto = letter
+    pdf = canvas.Canvas(buffer, pagesize=(ancho_pagina, alto_pagina))
 
+    ancho, alto = letter
+
+    # =========================
+    # ENCABEZADO
+    # =========================
     pdf.setFont("Helvetica-Bold", 14)
+    pdf.drawString(70, alto - 50, "OrvendMart")
 
-    pdf.drawString(50,alto-50,"OrvendMart")
 
+    pdf.setFont("Helvetica", 8)
+    pdf.drawString(60, alto - 65, ubicacion_texto[:40])
+
+    # =========================
+    # DATOS CAI
+    # =========================
     numero_factura_formateado = str(factura_cai.numero_factura).zfill(
         len(str(factura_cai.id_cai.rango_final))
     )
 
     fecha_formateada = str(factura_cai.fecha_creacion)
-
     hora = fecha_formateada[11:16]
+    hora_format = datetime.strptime(hora, "%H:%M").strftime("%I:%M %p")
 
-    hora_format = datetime.strptime(hora,"%H:%M").strftime("%I:%M %p")
+    pdf.setFont("Helvetica", 8)
+    pdf.drawString(10, alto - 85, f"CAI: {factura_cai.id_cai.nombre_cai}")
 
-    pdf.setFont("Helvetica",10)
-    pdf.drawString(50,alto-70, f"CAI: {factura_cai.id_cai.nombre_cai}")
-    pdf.drawString(50,alto-85, f"Factura No: {factura_cai.id_cai.numero_cai}-{numero_factura_formateado}")
-    pdf.drawString(50,alto-100, f"Fecha emisión: {fecha_formateada[:10]} {hora_format}")
-    
+    pdf.drawString(
+        10,
+        alto - 100,
+        f"Factura No: {factura_cai.id_cai.numero_cai}-{numero_factura_formateado}"
+    )
 
-    pdf.drawString(50, alto-125,f"Cliente: ")
-    pdf.drawString(50,alto-140,f"RTN: {factura.rtn or 'Cosumidor final'}")
-    pdf.drawString(50,alto-155,f"Atendido por: {factura.id_usuario}")
+    pdf.drawString(10, alto - 115, "RTN Tienda: 08019016832362")
 
-    y= alto-190
+    pdf.drawString(
+        10,
+        alto - 130,
+        f"Fecha emisión: {fecha_formateada[:10]} {hora_format}"
+    )
 
-    pdf.setFont("Helvetica-Bold", 8)
+    # =========================
+    # CLIENTE
+    # =========================
+    pdf.drawString(10, alto - 150, "Cliente:")
 
-    pdf.drawString(20,  y, "Producto")
-    pdf.drawString(200, y, "Cant.")
-    pdf.drawString(245, y, "Precio")
-    pdf.drawString(300, y, "Sub.")
-    pdf.drawString(355, y, "ISV15%")
-    pdf.drawString(410, y, "ISV18%")
-    pdf.drawString(465, y, "Desc.")
-    pdf.drawString(530, y, "Total")
+    pdf.drawString(
+        10,
+        alto - 165,
+        f"RTN: {factura.rtn or 'Consumidor final'}"
+    )
 
-    y-=20
+    pdf.drawString(
+        10,
+        alto - 180,
+        f"Atendido por: {factura.id_usuario}"
+    )
 
-    pdf.setFont("Helvetica",10)
+    # =========================
+    # DETALLE
+    # =========================
+    y = alto - 200
+
+    pdf.setFont("Helvetica-Bold", 9)
+    pdf.drawString(10, y, "DETALLE DE PRODUCTOS")
+
+    y -= 15
+
+    pdf.setFont("Helvetica", 8)
 
     for d in detalle_factura:
 
-        sub=round((d.cantidad*d.precio_unitario),2)
+        sub = round(d.cantidad * d.precio_unitario, 2)
 
-        pdf.drawString(20,y,str(d.id_producto))
-        pdf.drawString(200, y,str(d.cantidad))
-        pdf.drawString(245, y, f"L. {d.precio_unitario}")
-        pdf.drawString(300, y, f"L. {sub}")
-        pdf.drawString(355, y, f"L. {round(d.impuesto_15*d.cantidad,2)}")
-        pdf.drawString(410, y, f"L. {round(d.impuesto_18*d.cantidad,2)}")
-        pdf.drawString(465, y, f"L. {d.descuento}")
-        pdf.drawString(530, y, f"L. {round(sub+(d.impuesto_15*d.cantidad)+(d.impuesto_18*d.cantidad),2)-d.descuento}")
+        pdf.drawString(10, y, f"{d.id_producto}")
+        y -= 12
 
-        y-=18
+        pdf.drawString(10, y, f"Cant: {d.cantidad}  Precio: L {d.precio_unitario}")
+        y -= 12
 
-        if y<100:
+        pdf.drawString(10, y, f"Subtotal: L {sub}")
+        y -= 12
+
+        pdf.drawString(
+            10,
+            y,
+            f"ISV15%: L {round(d.impuesto_15 * d.cantidad, 2)}"
+        )
+        y -= 12
+
+        pdf.drawString(
+            10,
+            y,
+            f"ISV18%: L {round(d.impuesto_18 * d.cantidad, 2)}"
+        )
+        y -= 12
+
+        pdf.drawString(10, y, f"Desc: L {d.descuento}")
+        y -= 12
+
+        total_linea = round(
+            sub + (d.impuesto_15 * d.cantidad) + (d.impuesto_18 * d.cantidad)
+            - d.descuento,
+            2
+        )
+
+        pdf.drawString(10, y, f"Total: L {total_linea}")
+
+        y -= 20
+
+        # salto de página
+        if y < 120:
             pdf.showPage()
-            y= alto-50    
+            pdf.setFont("Helvetica", 8)
+            y = alto - 40
 
-    y-=20
-
-    pdf.line(200,y, 570,y)
-    
-    y-= 15
-    pdf.drawString(465, y, f"Subtotal:     L. {factura.subtotal:.2f}")
-
-    y -= 15
-    pdf.drawString(465, y, f"ISV 15%:    L. {factura.impuesto_15:.2f}")
+    # =========================
+    # TOTALES FINALES
+    # =========================
+    y -= 10
+    pdf.line(10, y, 215, y)
 
     y -= 15
-    pdf.drawString(465, y, f"ISV 18%:    L. {factura.impuesto_18:.2f}")
+    pdf.drawString(10, y, f"Subtotal: L {factura.subtotal:.2f}")
 
-    y -= 15
-    pdf.drawString(465, y, f"Descuento: L. {factura.descuento:.2f}")
+    y -= 12
+    pdf.drawString(10, y, f"ISV 15%: L {factura.impuesto_15:.2f}")
 
-    y -= 25
+    y -= 12
+    pdf.drawString(10, y, f"ISV 18%: L {factura.impuesto_18:.2f}")
 
-    pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(465, y, f"TOTAL:   L. {factura.total:.2f}")
+    y -= 12
+    pdf.drawString(10, y, f"Descuento: L {factura.descuento:.2f}")
 
+    y -= 18
+    pdf.setFont("Helvetica-Bold", 10)
+    pdf.drawString(10, y, f"TOTAL: L {factura.total:.2f}")
+
+    # =========================
+    # FINALIZAR PDF
+    # =========================
     pdf.showPage()
-
     pdf.save()
 
     buffer.seek(0)
 
     return HttpResponse(
         buffer.getvalue(),
-        content_type='application/pdf',
+        content_type="application/pdf",
         headers={
-            'Content-Disposition': 'inline; filename="recibo.pdf"'
+            "Content-Disposition": 'inline; filename="recibo.pdf"'
         }
     )
 

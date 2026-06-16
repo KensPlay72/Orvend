@@ -56,6 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // PRINCIPAL
       // =========================
       nombre: document.getElementById("nubicacion").value.trim(),
+      ubicacion:document.getElementById("nubicaciondeta").value.trim(),
 
       es_bodega: document.getElementById("es_bodega").checked,
       es_tienda: document.getElementById("es_tienda").checked,
@@ -146,7 +147,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const ubicacion = data.ubicacion;
-
+        console.log(ubicacion)
         // =========================
         // INPUTS
         // =========================
@@ -158,6 +159,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         document.getElementById("cubicacionedit").value =
           ubicacion.codigo || "";
+
+        document.getElementById("nubicaciondetac").value = 
+        ubicacion.detalle || "";
 
         // =========================
         // SWITCHES
@@ -278,6 +282,7 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
 
   const payload = {
     Nombre: document.getElementById("nubicacionedit").value,
+    ubicacion:document.getElementById("nubicaciondetac").value,
     Codigo: document.getElementById("cubicacionedit").value,
 
     // TIPOS
