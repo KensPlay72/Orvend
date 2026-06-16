@@ -4407,7 +4407,7 @@ def imprimir_factura(request,id_factura):
     ancho_pagina = 226.77
     alto_pagina = 800
 
-    pdf = canvas.Canvas(buffer, pagesize=(ancho_pagina, alto_pagina))
+    pdf = canvas.Canvas(buffer, pagesize=letter)
 
     ancho, alto = letter
 
@@ -4471,7 +4471,7 @@ def imprimir_factura(request,id_factura):
     pdf.drawString(
         10,
         alto - 240,
-        f"Atendido por: {factura.id_usuario}"
+        f"Cajero: {factura.id_usuario}"
     )
 
     # =========================
@@ -4482,84 +4482,35 @@ def imprimir_factura(request,id_factura):
 
     pdf.setFont("Helvetica-Bold", 12)
     y -= 10
-    pdf.drawString(10, y, "." * 60)
+    pdf.drawString(10, y, "." * 88)
 
     pdf.setFont("Helvetica-Bold", 9)
     pdf.drawString(10, y-15, "DETALLE DE PRODUCTOS")
 
     y -= 30
 
+    pdf.setFont("Helvetica-Bold", 8)
+    y -= 10
+
+    # ENCABEZADOS
+    pdf.drawString(10, y, "PRODUCTO")
+    pdf.drawString(160, y, "CANT")
+    pdf.drawString(270, y, "PRECIO")
+    pdf.drawString(220, y, "DESC")
+
+    y -= 12
+    pdf.line(10, y, 305, y)
+    y -= 12    
 
     for d in detalle_factura:
-        sub = round((d.cantidad * d.precio_unitario), 2)
 
-        sub = round(d.cantidad * d.precio_unitario, 2)
-        
-        pdf.setFont("Helvetica-Bold", 8)
-        pdf.drawString(10, y, f"{d.id_producto}")
+        pdf.drawString(10, y, str(d.id_producto)[:20])
+
+        pdf.drawRightString(180, y, str(d.cantidad))
+        pdf.drawRightString(300, y, f"L {d.precio_unitario+d.impuesto_15+d.impuesto_18}")
+        pdf.drawRightString(241, y, f"L {d.descuento}")
+
         y -= 12
-        
-        pdf.setFont("Helvetica", 8)
-        pdf.drawString(10, y, f"Cant:")
-        pdf.drawString(34, y, "." * 6)
-        pdf.drawString(52, y, f"{d.cantidad}")
-        y -= 12
-
-        pdf.drawString(10, y, f"Precio:")
-        pdf.drawString(37, y, "." * 5)
-        pdf.drawString(52, y, f"L {d.precio_unitario}")
-        y -= 12
-
-        pdf.drawString(10, y, f"Subtotal:")
-        pdf.drawString(43, y, "." * 3)
-        pdf.drawString(52, y, f"L {sub}")
-        y -= 12
-
-        pdf.drawString(
-            10,
-            y,
-            f"ISV15%:"
-        )
-        pdf.drawString(43, y, "." * 3)
-        pdf.drawString(
-            52,
-            y,
-            f"L {round(d.impuesto_15 * d.cantidad, 2)}"
-        )
-        y -= 12
-
-        pdf.drawString(
-            10,
-            y,
-            f"ISV18%:"
-        )
-
-        pdf.drawString(43, y, "." * 3)
-
-        pdf.drawString(
-            52,
-            y,
-            f"L {round(d.impuesto_18 * d.cantidad, 2)}"
-        )
-        y -= 12
-
-        pdf.drawString(10, y, f"Desc:")
-        pdf.drawString(34, y, "." * 6)
-        pdf.drawString(52, y, f"L {d.descuento}")
-        
-        y -= 12
-
-        total_linea = round(
-            sub + (d.impuesto_15 * d.cantidad) + (d.impuesto_18 * d.cantidad)
-            - d.descuento,
-            2
-        )
-
-        pdf.drawString(10, y, f"Total:")
-        pdf.drawString(34, y, "." * 6)
-        pdf.drawString(52, y, f"L {total_linea}")
-
-        y -= 20
 
         # salto de página
         if y < 120:
@@ -4572,7 +4523,7 @@ def imprimir_factura(request,id_factura):
     # =========================
     pdf.setFont("Helvetica-Bold", 12)
     y -= 10
-    pdf.drawString(10, y, "." * 60)
+    pdf.drawString(10, y, "." * 88)
     pdf.setFont("Helvetica", 9)
     y -= 15
     pdf.drawString(10, y, f"Subtotal:")
