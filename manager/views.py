@@ -19,7 +19,6 @@ from django.views.decorators.http import require_http_methods, require_POST
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from django.core.exceptions import PermissionDenied
-from django.db import transaction
 
 import os
 import uuid
@@ -3572,9 +3571,17 @@ def inventario_view(request):
 
     search = request.GET.get("search", "").strip()
 
-    productos_qs = Productos.objects.select_related(
-        "unidad_medida", "marca", "categoria"
-    ).prefetch_related("imagenes_producto")  # 👈 IMPORTANTE
+    productos_qs = (
+        Productos.objects.select_related(
+            "unidad_medida",
+            "marca",
+            "categoria",
+        )
+        .prefetch_related(
+            "imagenes_producto"  # 👈 importante para la tabla nueva
+        )
+        .filter(is_delete=False)
+    )
 
     if search:
         productos_qs = productos_qs.filter(
@@ -3590,7 +3597,7 @@ def inventario_view(request):
         is_active=True,
         is_delete=False,
         es_cupon=False,
-    ).prefetch_related("productos", "categorias")
+    ).select_related("productos", "categorias")
 
     productos_list = []
 
@@ -3605,10 +3612,14 @@ def inventario_view(request):
             if not d.vigente():
                 continue
 
-            if d.aplicar_productos and d.productos.filter(id=p.id).exists():
+            if d.aplicar_productos and d.productos_id and d.productos_id == p.id:
                 descuento_producto = d
 
-            if d.aplicar_categorias and d.categorias.filter(id=p.categoria_id).exists():
+            if (
+                d.aplicar_categorias
+                and d.categorias_id
+                and d.categorias_id == p.categoria_id
+            ):
                 descuento_categoria = d
 
         descuentos_aplicados = []
@@ -3626,7 +3637,7 @@ def inventario_view(request):
 
         for d in descuentos_aplicados:
             if d.es_porcentaje:
-                descuento = (precio_original * Decimal(d.valor)) / Decimal(100)
+                descuento = (precio_original * Decimal(d.valor)) / Decimal("100")
             else:
                 descuento = Decimal(d.valor)
 
@@ -3638,13 +3649,14 @@ def inventario_view(request):
             precio_final = Decimal("0.00")
 
         # ==========================================
-        # IMAGEN (NUEVO MODELO)
+        # IMAGEN (NUEVA TABLA CORREGIDA)
         # ==========================================
-        imagen = p.imagenes_producto.first()
+
+        imagen_obj = p.imagenes_producto.all().first()
 
         imagen_url = (
-            imagen.imagen_url
-            if imagen and imagen.imagen_url
+            imagen_obj.imagen_url
+            if imagen_obj and imagen_obj.imagen_url
             else "/static/img/noimage.png"
         )
 
@@ -3653,13 +3665,24 @@ def inventario_view(request):
                 "id": p.id,
                 "nombre": p.nombre,
                 "unidadMedida": {
-                    "abreviatura": getattr(p.unidad_medida, "abreviatura", "N/A")
+                    "abreviatura": getattr(
+                        p.unidad_medida,
+                        "abreviatura",
+                        "N/A",
+                    )
                 },
-                "marcas": {"nombre": getattr(p.marca, "nombre", "N/A")},
+                "marcas": {
+                    "nombre": getattr(
+                        p.marca,
+                        "nombre",
+                        "N/A",
+                    )
+                },
                 "codigoSKU": p.codigo_sku,
                 # PRECIOS
                 "precioVenta": float(precio_original),
                 "precioFinal": float(precio_final),
+                # DESCUENTOS
                 "tieneDescuento": len(descuentos_aplicados) > 0,
                 "descuentos": [
                     {
@@ -3669,7 +3692,7 @@ def inventario_view(request):
                     }
                     for d in descuentos_aplicados
                 ],
-                # 👇 NUEVO
+                # IMAGEN CORREGIDA
                 "imagenUrl": imagen_url,
             }
         )
@@ -4223,98 +4246,105 @@ def busqueda_nombre(request, producto):
 
 from django.views.decorators.http import require_http_methods
 
+
 @csrf_exempt
 @login_required
 @require_http_methods(["POST"])
 def guardar_compra(request):
-    
-    if not request.user.groups.filter(name='cajeros').exists():
-        return JsonResponse({
-            'error':"Usuario no valido"
-        },status=403)
-    
+
+    if not request.user.groups.filter(name="cajeros").exists():
+        return JsonResponse({"error": "Usuario no valido"}, status=403)
+
     try:
         with transaction.atomic():
             Perfil = PerfilUsuario.objects.get(usuarios=request.user)
             sucursal_id = Perfil.ubicacion_id
 
-            data =json.loads(request.body)
+            data = json.loads(request.body)
 
             pago = data.get("pagos")
             productos = data.get("productos")
             tarjeta = data.get("tarjeta")
 
-            sat = datos_sat.objects.filter(
-                id_usuario=request.user.id,
-                id_sucursal=sucursal_id,
-                estado=True
-            ).values().first()
+            sat = (
+                datos_sat.objects.filter(
+                    id_usuario=request.user.id, id_sucursal=sucursal_id, estado=True
+                )
+                .values()
+                .first()
+            )
 
             if not sat:
-                return JsonResponse({
-                    "error":"Solicite un datos sat activo para este usuario"
-                })
-            
-            numero_factura_actual = facturas_cai.objects.filter(
-                id_cai=sat["id"]
-            ).aggregate(Max('numero_factura'))["numero_factura__max"] or 0
+                return JsonResponse(
+                    {"error": "Solicite un datos sat activo para este usuario"}
+                )
 
-            if numero_factura_actual == sat["rango_final"]-1:
+            numero_factura_actual = (
+                facturas_cai.objects.filter(id_cai=sat["id"]).aggregate(
+                    Max("numero_factura")
+                )["numero_factura__max"]
+                or 0
+            )
+
+            if numero_factura_actual == sat["rango_final"] - 1:
                 datos_sat.objects.filter(id=sat["id"]).update(estado=False)
-            
+
             sat_obj = datos_sat.objects.get(id=sat["id"])
 
-            num_fact=facturas_cai.objects.create(
-                numero_factura=numero_factura_actual+1,
+            num_fact = facturas_cai.objects.create(
+                numero_factura=numero_factura_actual + 1,
                 id_cai=sat_obj,
                 fecha_creacion=timezone.now(),
-                id_usuario=request.user
+                id_usuario=request.user,
             )
 
             datos_factura = facturas.objects.create(
-                rtn= pago[0].get("rtn"),
-                id_factura_cai_id = num_fact.id,
-                subtotal = pago[0].get("subtotal"),
-                impuesto_15 = pago[0].get("isv15"),
-                impuesto_18 = pago[0].get("isv18"),
-                descuento = pago[0].get("descuento"),
-                total = pago[0].get("total"),
-                tipo_pago = pago[0].get("tipo_pago"),
-                id_usuario_id=request.user.id
+                rtn=pago[0].get("rtn"),
+                id_factura_cai_id=num_fact.id,
+                subtotal=pago[0].get("subtotal"),
+                impuesto_15=pago[0].get("isv15"),
+                impuesto_18=pago[0].get("isv18"),
+                descuento=pago[0].get("descuento"),
+                total=pago[0].get("total"),
+                tipo_pago=pago[0].get("tipo_pago"),
+                id_usuario_id=request.user.id,
             )
 
-            if pago[0].get("tipo_pago")=="tarjeta":
+            if pago[0].get("tipo_pago") == "tarjeta":
                 tarjetas.objects.create(
-                    id_factura_id= datos_factura.id,
-                    digitos= tarjeta[0].get("digitos"),
-                    numero_autorizacion= tarjeta[0].get("numero_autorizacion"),
-                    id_usuario_id=request.user.id
+                    id_factura_id=datos_factura.id,
+                    digitos=tarjeta[0].get("digitos"),
+                    numero_autorizacion=tarjeta[0].get("numero_autorizacion"),
+                    id_usuario_id=request.user.id,
                 )
 
             inven = []
             for p in productos:
-                total_inventario = Inventarios.objects.filter(
-                    producto_id=p.get("id"),
-                    ubicacion_id=sucursal_id,
-                    cantidad__gt=0
-                ).aggregate(total=Sum('cantidad'))["total"] or 0
+                total_inventario = (
+                    Inventarios.objects.filter(
+                        producto_id=p.get("id"),
+                        ubicacion_id=sucursal_id,
+                        cantidad__gt=0,
+                    ).aggregate(total=Sum("cantidad"))["total"]
+                    or 0
+                )
 
                 if total_inventario < p.get("cantidad"):
-                    raise Exception("Stock insuficiente para el producto: " + p.get("nombre"))
+                    raise Exception(
+                        "Stock insuficiente para el producto: " + p.get("nombre")
+                    )
 
                 lotes = Inventarios.objects.filter(
-                    producto_id=p.get("id"),
-                    ubicacion_id=sucursal_id,
-                    cantidad__gt=0
+                    producto_id=p.get("id"), ubicacion_id=sucursal_id, cantidad__gt=0
                 ).order_by("f_creacion")
 
                 cantidad_nesesaria = p.get("cantidad")
 
                 for lote in lotes:
-                    if cantidad_nesesaria <=0:
+                    if cantidad_nesesaria <= 0:
                         break
 
-                    if lote.cantidad <=cantidad_nesesaria:
+                    if lote.cantidad <= cantidad_nesesaria:
                         cantidad_nesesaria -= lote.cantidad
                         lote.cantidad = 0
                         lote.save()
@@ -4323,44 +4353,45 @@ def guardar_compra(request):
                         lote.save()
                         cantidad_nesesaria = 0
 
-
                 detalles_facturas.objects.create(
-                    id_factura_id = datos_factura.id,
-                    id_producto_id= p.get("id"),
-                    cantidad = p.get("cantidad"),
-                    precio_unitario = p.get("precio_venta"),
-                    descuento = p.get("descuento"),
-                    impuesto_15 = p.get("isv_15"),
-                    impuesto_18 = p.get("isv_18"),
-                    id_usuario_id = request.user.id
+                    id_factura_id=datos_factura.id,
+                    id_producto_id=p.get("id"),
+                    cantidad=p.get("cantidad"),
+                    precio_unitario=p.get("precio_venta"),
+                    descuento=p.get("descuento"),
+                    impuesto_15=p.get("isv_15"),
+                    impuesto_18=p.get("isv_18"),
+                    id_usuario_id=request.user.id,
                 )
 
-            return JsonResponse({
-                "id_facutura": num_fact.id ,
-                
-            })
+            return JsonResponse(
+                {
+                    "id_facutura": num_fact.id,
+                }
+            )
     except Exception as e:
-        return JsonResponse({
-            "success":False,
-            "message":str(e)
-        },status=500)
+        return JsonResponse({"success": False, "message": str(e)}, status=500)
 
 
-def imprimir_factura(request,id_factura):
-    
+def imprimir_factura(request, id_factura):
+
     factura_cai = facturas_cai.objects.select_related("id_cai").get(id=id_factura)
-    factura = facturas.objects.select_related("id_usuario").get(id_factura_cai_id=factura_cai.id)
-    detalle_factura = detalles_facturas.objects.select_related("id_producto").filter(id_factura_id=factura.id)
+    factura = facturas.objects.select_related("id_usuario").get(
+        id_factura_cai_id=factura_cai.id
+    )
+    detalle_factura = detalles_facturas.objects.select_related("id_producto").filter(
+        id_factura_id=factura.id
+    )
 
     buffer = BytesIO()
 
-    pdf = canvas.Canvas(buffer,pagesize=letter)
+    pdf = canvas.Canvas(buffer, pagesize=letter)
 
-    ancho,alto = letter
+    ancho, alto = letter
 
     pdf.setFont("Helvetica-Bold", 14)
 
-    pdf.drawString(50,alto-50,"OrvendMart")
+    pdf.drawString(50, alto - 50, "OrvendMart")
 
     numero_factura_formateado = str(factura_cai.numero_factura).zfill(
         len(str(factura_cai.id_cai.rango_final))
@@ -4370,23 +4401,28 @@ def imprimir_factura(request,id_factura):
 
     hora = fecha_formateada[11:16]
 
-    hora_format = datetime.strptime(hora,"%H:%M").strftime("%I:%M %p")
+    hora_format = datetime.strptime(hora, "%H:%M").strftime("%I:%M %p")
 
-    pdf.setFont("Helvetica",10)
-    pdf.drawString(50,alto-70, f"CAI: {factura_cai.id_cai.nombre_cai}")
-    pdf.drawString(50,alto-85, f"Factura No: {factura_cai.id_cai.numero_cai}-{numero_factura_formateado}")
-    pdf.drawString(50,alto-100, f"Fecha emisión: {fecha_formateada[:10]} {hora_format}")
-    
+    pdf.setFont("Helvetica", 10)
+    pdf.drawString(50, alto - 70, f"CAI: {factura_cai.id_cai.nombre_cai}")
+    pdf.drawString(
+        50,
+        alto - 85,
+        f"Factura No: {factura_cai.id_cai.numero_cai}-{numero_factura_formateado}",
+    )
+    pdf.drawString(
+        50, alto - 100, f"Fecha emisión: {fecha_formateada[:10]} {hora_format}"
+    )
 
-    pdf.drawString(50, alto-125,f"Cliente: ")
-    pdf.drawString(50,alto-140,f"RTN: {factura.rtn or 'Cosumidor final'}")
-    pdf.drawString(50,alto-155,f"Atendido por: {factura.id_usuario}")
+    pdf.drawString(50, alto - 125, "Cliente: ")
+    pdf.drawString(50, alto - 140, f"RTN: {factura.rtn or 'Cosumidor final'}")
+    pdf.drawString(50, alto - 155, f"Atendido por: {factura.id_usuario}")
 
-    y= alto-190
+    y = alto - 190
 
     pdf.setFont("Helvetica-Bold", 8)
 
-    pdf.drawString(20,  y, "Producto")
+    pdf.drawString(20, y, "Producto")
     pdf.drawString(200, y, "Cant.")
     pdf.drawString(245, y, "Precio")
     pdf.drawString(300, y, "Sub.")
@@ -4395,34 +4431,37 @@ def imprimir_factura(request,id_factura):
     pdf.drawString(465, y, "Desc.")
     pdf.drawString(530, y, "Total")
 
-    y-=20
+    y -= 20
 
-    pdf.setFont("Helvetica",10)
+    pdf.setFont("Helvetica", 10)
 
     for d in detalle_factura:
+        sub = round((d.cantidad * d.precio_unitario), 2)
 
-        sub=round((d.cantidad*d.precio_unitario),2)
-
-        pdf.drawString(20,y,str(d.id_producto))
-        pdf.drawString(200, y,str(d.cantidad))
+        pdf.drawString(20, y, str(d.id_producto))
+        pdf.drawString(200, y, str(d.cantidad))
         pdf.drawString(245, y, f"L. {d.precio_unitario}")
         pdf.drawString(300, y, f"L. {sub}")
-        pdf.drawString(355, y, f"L. {round(d.impuesto_15*d.cantidad,2)}")
-        pdf.drawString(410, y, f"L. {round(d.impuesto_18*d.cantidad,2)}")
+        pdf.drawString(355, y, f"L. {round(d.impuesto_15 * d.cantidad, 2)}")
+        pdf.drawString(410, y, f"L. {round(d.impuesto_18 * d.cantidad, 2)}")
         pdf.drawString(465, y, f"L. {d.descuento}")
-        pdf.drawString(530, y, f"L. {round(sub+(d.impuesto_15*d.cantidad)+(d.impuesto_18*d.cantidad),2)-d.descuento}")
+        pdf.drawString(
+            530,
+            y,
+            f"L. {round(sub + (d.impuesto_15 * d.cantidad) + (d.impuesto_18 * d.cantidad), 2) - d.descuento}",
+        )
 
-        y-=18
+        y -= 18
 
-        if y<100:
+        if y < 100:
             pdf.showPage()
-            y= alto-50    
+            y = alto - 50
 
-    y-=20
+    y -= 20
 
-    pdf.line(200,y, 570,y)
-    
-    y-= 15
+    pdf.line(200, y, 570, y)
+
+    y -= 15
     pdf.drawString(465, y, f"Subtotal:     L. {factura.subtotal:.2f}")
 
     y -= 15
@@ -4447,10 +4486,8 @@ def imprimir_factura(request,id_factura):
 
     return HttpResponse(
         buffer.getvalue(),
-        content_type='application/pdf',
-        headers={
-            'Content-Disposition': 'inline; filename="recibo.pdf"'
-        }
+        content_type="application/pdf",
+        headers={"Content-Disposition": 'inline; filename="recibo.pdf"'},
     )
 
 
