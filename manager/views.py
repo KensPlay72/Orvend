@@ -4365,6 +4365,7 @@ def guardar_compra(request):
                     impuesto_15=p.get("isv_15"),
                     impuesto_18=p.get("isv_18"),
                     id_usuario_id=request.user.id,
+                    
                 )
 
             return JsonResponse(
