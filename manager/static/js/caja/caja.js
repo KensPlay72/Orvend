@@ -596,8 +596,7 @@ function tabla_detalle_total() {
     celda_isv18.textContent = 'L. ' + isv18.toFixed(2);
     celda_total.textContent = 'L. ' + total.toFixed(2);
 
-    console.log(datos);
-    console.log(pagos);
+    
 }
 
 
@@ -633,7 +632,7 @@ document.getElementById('postpagar').addEventListener('submit', function (e) {
                 }
 
             pagos[0].tipo_pago ="contado"
-            console.log(pagos.rtn);
+            
             tarjeta.push({
                 digitos:'',
                 numero_autorizacion:'',
@@ -680,14 +679,15 @@ document.getElementById('postpagar').addEventListener('submit', function (e) {
         .then(async response=>{
             if(!response.ok){
                 const dato = await response.json();
+                console.log(dato)
                 throw new Error(
-                dato.error || dato.mensaje || "Error desconocido"
+                dato.error || dato.message || "Error desconocido"
                 );
             }
             return response.json();
         })
         .then(data=>{
-            console.log(data)
+          
             if(tipo_pago === "pago_contado"){
                 let recargar = ()=>location.reload();
                 mensaje(`Cambio: L. ${(parseFloat(parseFloat(canitdad)-pagos[0].total)).toFixed(2)}`,"success",recargar)
