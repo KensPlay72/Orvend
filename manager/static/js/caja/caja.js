@@ -689,7 +689,16 @@ document.getElementById('postpagar').addEventListener('submit', function (e) {
         .then(data=>{
           
             if(tipo_pago === "pago_contado"){
-                let recargar = ()=>location.reload();
+                
+                let recargar = ()=>{
+                    document.getElementById('PRTN').value="";
+                    document.getElementById('Pdinero').value="0.00";
+                    document.getElementById('Pautorizacion').value="";
+                    document.getElementById('Pdigitos').value="";
+                    document.getElementById('tipo_pago').value="0";
+                    location.reload()
+                };
+
                 mensaje(`Cambio: L. ${(parseFloat(parseFloat(canitdad)-pagos[0].total)).toFixed(2)}`,"success",recargar)
             }
             console.log(data.id_facutura)
@@ -752,6 +761,7 @@ function mensaje(mensaje,tipo,funcion){
         }
     })
 }
+
 document.getElementById("postapertura").addEventListener("submit",function(e){
     e.preventDefault();
 

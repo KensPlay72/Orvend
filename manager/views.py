@@ -4260,6 +4260,7 @@ def busqueda_nombre(request, producto):
 
 from django.views.decorators.http import require_http_methods
 
+
 @login_required
 @require_http_methods(["POST"])
 def guardar_compra(request):
@@ -4384,7 +4385,8 @@ def guardar_compra(request):
             )
     except Exception as e:
         return JsonResponse({"success": False, "message": str(e)}, status=500)
-    
+
+   
 @require_http_methods(["POST"])
 def apertura_caja_admin(request):
     try:
@@ -4412,7 +4414,7 @@ def apertura_caja_admin(request):
     
     except Exception as e:
         return JsonResponse({"messaje":f"{e}"})
-
+@login_required
 @require_http_methods(["POST"])
 def apertura_cajero(request):
     
@@ -4426,7 +4428,7 @@ def apertura_cajero(request):
     
     efectivo_turno=0
 
-    cantidad_efectivo=facturas.objects.filter(
+    cantidad_efectivo= facturas.objects.filter(
         id_usuario_id=user,
         fecha_creacion__date = timezone.localtime()
     ).values()
@@ -4449,6 +4451,49 @@ def apertura_cajero(request):
     )
     
     return JsonResponse({"Message":"Apertura Exitosa"})  
+
+@login_required 
+@require_http_methods(["POST"])
+def cierre_turno(request):
+    
+    data = json.loads(request.body)
+    user = request.user.id
+
+    date = timezone.localtime()
+
+    admin_efectivo= aperturas_admin.objects.filter(
+        id_cajero_id = user,
+        fecha_creacion__date = date  
+    ).values().first()
+
+    efectivo_turno=0
+
+    total_factura = facturas.objects.filter(
+        id_usuario_id=user,
+        fecha_creacion__date = timezone.localtime()
+    ).values()
+
+    if total_factura:
+        for t in total_factura:
+            efectivo_turno+= t.get("total",0)
+
+    total = float(admin_efectivo.get("apertura_enfectivo")+efectivo_turno)
+
+    efectivo = data.get("efectio_encaja")
+
+    if total != efectivo:
+        return JsonResponse({"error":"El efectivo no cuadra"},status=401) 
+
+    turnos_caja.objects.filter(
+        id_usuario_caja_id = user,
+        estado=True,
+        fecha_creacion__date= timezone.localtime()
+    ).update(estado=False,
+             cierre=efectivo)
+
+    return JsonResponse({"message":"Turno cerrado"})
+
+    
 
 def imprimir_factura(request,id_factura):
     

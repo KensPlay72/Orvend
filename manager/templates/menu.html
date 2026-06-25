@@ -85,7 +85,13 @@
                             <img class="logoencabezado"
                                  src="{% static 'img/LH.png' %}"
                                  alt="Logo Orvend">
-                            <a href="#" id="btn-logout" class="logout-link">Cerrar Sesión</a>
+                            {% if request.user.groups.all.0.name == "cajeros" %}
+                                <a href="#" id="btn-logout-caja" class="logout-link">Cerrar Sesión</a>
+                            {% endif%}
+                               
+                            {% if not request.user.groups.all.0.name == "cajeros" %}
+                                <a href="#" id="btn-logout" class="logout-link">Cerrar Sesión</a>
+                            {% endif %}
                         </div>
                         <!-- Profile Info -->
                         <div class="modal-header">
@@ -331,6 +337,44 @@
                     </div>
                 </nav>
             </div>
+
+
+            <!--========== Modal cierre caja ========-->
+
+                <div 
+                class="modal fade"
+                id="modalCierre"
+                tabindex="-1"
+                aria-labelledby="exampleModalCenterTitle"
+                aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="exampleModalLongTitle">Cierre de turno</h5>
+                        </div>
+                        <div class="modal-body">
+                            <form id="postcierre" enctype="">
+                                {% csrf_token %}
+                                <div class="form-group">
+                                    <label for="nmarca">Cantidad de efectivo </label>
+                                    <input type="text"
+                                        name="efectivo_cierre"
+                                        id="efectivo_cierre"
+                                        class="form-control"
+                                        placeholder="efectivo"
+                                        required>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                    <button type="submit" class="btn btn classbotones">Cerrar turno</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
             <!--========== CONTENTS ========-->
             <main class="main">
                 {% block main_content %}
@@ -342,6 +386,11 @@
             <script src="{% static 'plugins/jquery.min.js' %}"></script>
             <script src="{% static 'plugins/bootstrap.min.js' %}"></script>
             <script src="{% static 'plugins/sweetalert2.min.js' %}"></script>
+
+            {% if request.user.groups.all.0.name == "cajeros"%}
+                <script type="module" src="{% static 'js/cierre_caja.js '%}"></script>
+            {% endif %}
+
         </body>
     </html>
 {% endblock %}

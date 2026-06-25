@@ -160,5 +160,6 @@ urlpatterns = [
     path("realizar_venta/", views.guardar_compra, name="guardar_compra"),
     path("recibo_pdf/<int:id_factura>/",views.imprimir_factura, name="imprimir_factura"),
     path("apertura_admin/",views.apertura_caja_admin,name="apertura_caja_admin"),
-    path("apertura_caja/",views.apertura_cajero,name="apertura_cajero")
+    path("apertura_caja/",views.apertura_cajero,name="apertura_cajero"),
+    path("cierre_caja/",views.cierre_turno,name="cierre_turno")
 ]
