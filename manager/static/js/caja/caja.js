@@ -671,8 +671,8 @@ document.getElementById('postpagar').addEventListener('submit', function (e) {
 
         fetch('/manager/realizar_venta/',{
             method:'POST',
-            headers:{
-               
+            headers: {
+                "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
             },
             body: JSON.stringify(data)
         })
@@ -692,7 +692,7 @@ document.getElementById('postpagar').addEventListener('submit', function (e) {
                 let recargar = ()=>location.reload();
                 mensaje(`Cambio: L. ${(parseFloat(parseFloat(canitdad)-pagos[0].total)).toFixed(2)}`,"success",recargar)
             }
-
+            console.log(data.id_facutura)
             window.open(`/manager/recibo_pdf/${data.id_facutura}/`,'_blank')
 
             
@@ -752,3 +752,35 @@ function mensaje(mensaje,tipo,funcion){
         }
     })
 }
+document.getElementById("postapertura").addEventListener("submit",function(e){
+    e.preventDefault();
+
+    let data = {
+        efectio_encaja: parseFloat(document.getElementById("efectivo").value)
+    }
+    console.log(data)
+    fetch("/manager/apertura_caja/",{
+        method:"POST",
+        headers: {
+                "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(data)
+    })
+    .then(async response=>{
+        if (!response.ok){
+            const dato = await response.json();
+                console.log(dato)
+                throw new Error(
+                dato.error || dato.message || "Error desconocido"
+                );
+        }
+        return response.json();
+    })
+    .then(data=>{
+        document.getElementById("efectivo").value=""
+        location.reload();
+    })
+    .catch(error=>{
+        mensaje(error.message,"error","");
+    })
+})

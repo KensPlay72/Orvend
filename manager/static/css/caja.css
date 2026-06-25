@@ -248,3 +248,6 @@ th{
     background-color: white;
     font-size: 16px;
 }
+.modal.show {
+    background: rgba(0, 0, 0, 0.5);
+}

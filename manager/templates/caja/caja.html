@@ -138,6 +138,40 @@
             </div>
         </div>
     </div>
+    {% if not apertura %}
+    <div 
+        class="modal show d-block"
+         id="modalApertura"
+         tabindex="-1"
+         aria-labelledby="exampleModalCenterTitle"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLongTitle">Apertura de caja</h5>
+                </div>
+                <div class="modal-body">
+                    <form id="postapertura" enctype="">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="nmarca">Cantidad de apertura</label>
+                            <input type="text"
+                                   name="efectivo"
+                                   id="efectivo"
+                                   class="form-control"
+                                   placeholder="efectivo"
+                                   required>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn classbotones">Aperturar caja</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
     <div class="modal fade"
          id="modalDescuento"
          tabindex="-1"
@@ -172,6 +206,8 @@
             </div>
         </div>
     </div>
+
+    
     <div class="modal fade"
          id="modalPago"
          tabindex="-1"
@@ -188,6 +224,7 @@
                 </div>
                 <div class="modal-body">
                     <form id="postpagar" enctype="">
+                        {% csrf_token %}
                         <div class="form-group" id="div_rtn">
                             <label for="nmarca">RTN</label>
                             <input type="text"

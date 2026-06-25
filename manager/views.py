@@ -53,6 +53,8 @@ from .models import (
     tarjetas,
     detalles_facturas,
     PerfilUsuario,
+    aperturas_admin,
+    turnos_caja
 )
 
 
@@ -4139,7 +4141,16 @@ def caja_view(request):
     if not request.user.groups.filter(name="cajeros").exists():
         raise PermissionDenied("No tienes permiso")
 
-    context = {"mostrar_buscador": False, "mostrar_codigo": True}
+    mensaje_apertura=False
+
+    if turnos_caja.objects.filter(
+        id_usuario_caja_id = request.user.id,
+        fecha_creacion__date = timezone.localtime(),
+        estado=True
+    ).exists():
+        mensaje_apertura=True
+    
+    context = {"mostrar_buscador": False, "mostrar_codigo": True,"apertura":mensaje_apertura}
 
     return render(request, "caja/caja.html", context)
 
@@ -4249,8 +4260,6 @@ def busqueda_nombre(request, producto):
 
 from django.views.decorators.http import require_http_methods
 
-
-@csrf_exempt
 @login_required
 @require_http_methods(["POST"])
 def guardar_compra(request):
@@ -4279,7 +4288,7 @@ def guardar_compra(request):
 
             if not sat:
                 return JsonResponse(
-                    {"error": "Solicite un datos sat activo para este usuario"}
+                    {"error": "Solicite un datos sat activo para este usuario"},status=401
                 )
 
             numero_factura_actual = (
@@ -4297,7 +4306,7 @@ def guardar_compra(request):
             num_fact = facturas_cai.objects.create(
                 numero_factura=numero_factura_actual + 1,
                 id_cai=sat_obj,
-                fecha_creacion=timezone.now(),
+                fecha_creacion=timezone.localdate(),
                 id_usuario=request.user,
             )
 
@@ -4375,7 +4384,71 @@ def guardar_compra(request):
             )
     except Exception as e:
         return JsonResponse({"success": False, "message": str(e)}, status=500)
+    
+@require_http_methods(["POST"])
+def apertura_caja_admin(request):
+    try:
+        data = json.loads(request.body)
 
+        usuario = data.get("usuario")
+        efectivo = data.get("efectivo")
+
+        if aperturas_admin.objects.filter(
+            id_cajero_id=usuario,
+            fecha_creacion__date=timezone.localdate()
+        ).exists():
+            return JsonResponse(
+                {"error": "La apertura de caja ya fue creada el día de hoy"},
+                status=401
+            )
+
+        aperturas_admin.objects.create(
+            apertura_enfectivo= efectivo,
+            id_cajero_id = usuario,
+            id_usuario_id=1
+        )
+
+        return JsonResponse({"messaje":"Exito"})
+    
+    except Exception as e:
+        return JsonResponse({"messaje":f"{e}"})
+
+@require_http_methods(["POST"])
+def apertura_cajero(request):
+    
+    data = json.loads(request.body)
+    user = request.user.id
+
+    efectivo_encaja = aperturas_admin.objects.filter(
+        id_cajero_id = user,
+        fecha_creacion__date = timezone.localtime()
+    ).values().first()
+    
+    efectivo_turno=0
+
+    cantidad_efectivo=facturas.objects.filter(
+        id_usuario_id=user,
+        fecha_creacion__date = timezone.localtime()
+    ).values()
+    
+    if cantidad_efectivo:
+        for e in cantidad_efectivo:
+          efectivo_turno += e.get("total",0)
+
+    total = efectivo_encaja.get("apertura_enfectivo")+efectivo_turno
+
+
+    if float(total) != data.get("efectio_encaja"):
+        return JsonResponse({"error":"El efectivo no cuadra"},status=401)
+
+    turnos_caja.objects.create(
+        apertura=data.get("efectio_encaja"),
+        cierre=0.00,
+        id_usuario_caja_id = user,
+        estado = True        
+    )
+    
+    return JsonResponse({"Message":"Apertura Exitosa"})  
 
 def imprimir_factura(request,id_factura):
     

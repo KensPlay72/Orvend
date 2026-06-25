@@ -791,3 +791,33 @@ class detalles_facturas(models.Model):
     def __str__(self):
         return f"Detalle Factura #{self.id_factura.id} - Producto: {self.id_producto.nombre} - Cantidad: {self.cantidad}"
 
+class aperturas_admin(models.Model):
+    apertura_enfectivo= models.DecimalField(max_digits=18,decimal_places=2)
+    id_cajero=models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="usuario_apertura_cajero"
+    )
+    id_usuario = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="usuario_apertura_admin"
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Cajero: {self.id_cajero.username}"
+    
+
+class turnos_caja(models.Model):
+    apertura=models.DecimalField(max_digits=18,decimal_places=2)
+    cierre=models.DecimalField(max_digits=18,decimal_places=2)
+    id_usuario_caja = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="usuario_turno_caja"
+    )
+    fecha_creacion= models.DateTimeField(auto_now_add=True)
+    estado = models.BooleanField(default=True)
+    def __str__(self):
+        return f"Cajero: {self.id_usuario_caja.username}"
