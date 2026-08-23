@@ -3,6 +3,8 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
 import uuid
+from decimal import Decimal
+
 
 from .enums import (
     EstadoCompra,
@@ -118,10 +120,43 @@ class Productos(Abstracto):
 
     impuesto = models.DecimalField(max_digits=5, decimal_places=2, default=0)
 
+    equival_unid = models.PositiveIntegerField(
+        default=1
+    )
+    is_master = models.BooleanField(default=False)
+
     def __str__(self):
         return self.nombre
 
 
+class ProductosRel(Abstracto):
+    producto_master = models.ForeignKey(
+        Productos,
+        on_delete=models.CASCADE,
+        related_name="producto_master_rel"
+    )
+
+    producto_relacionado = models.ForeignKey(
+        Productos,
+        on_delete=models.CASCADE,
+        related_name="producto_relacionado_rel"
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["producto_master", "producto_relacionado"],
+                name="unique_producto_rel"
+            )
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.producto_master.nombre} - "
+            f"{self.producto_relacionado.nombre}"
+        )
+
+        
 class ProductosImagenes(models.Model):
     producto = models.ForeignKey(
         Productos, on_delete=models.CASCADE, related_name="imagenes_producto"
@@ -176,7 +211,7 @@ class ProveedoresContactos(Abstracto):
 # =========================
 class Ubicaciones(Abstracto):
     nombre = models.CharField(max_length=120)
-    ubicacion= models.CharField(max_length=255,null=True, blank=True)
+    ubicacion = models.CharField(max_length=255, null=True, blank=True)
     codigo = models.CharField(max_length=10, null=True, blank=True)
     es_bodega = models.BooleanField(default=False)
     es_tienda = models.BooleanField(default=False)
@@ -549,6 +584,9 @@ class MovimientoInventario(models.Model):
         return f"Movimiento {self.id} - {self.get_tipo_movimiento_display()}"
 
 
+
+
+
 class Descuento(Abstracto):
     # =========================
     # IDENTIFICACION
@@ -655,139 +693,249 @@ class Descuento(Abstracto):
 
     def __str__(self):
         return self.nombre
-    
 
 
 class PerfilUsuario(models.Model):
-    usuarios = models.OneToOneField(User,on_delete=models.CASCADE)
+    usuarios = models.OneToOneField(User, on_delete=models.CASCADE)
     ubicacion = models.ForeignKey(
-        Ubicaciones,
-        on_delete=models.PROTECT,
-        related_name="usuarios_ubicacion"
+        Ubicaciones, on_delete=models.PROTECT, related_name="usuarios_ubicacion"
     )
+
     def __str__(self):
         return self.usuarios.username
 
 
-class datos_sat(models.Model):
-    nombre_cai= models.CharField(max_length=100,null=True)
+class datos_sat(Abstracto):
+    nombre_cai = models.CharField(max_length=100, null=True)
     numero_cai = models.CharField(max_length=100)
     rango_inicial = models.IntegerField()
-    rango_final= models.IntegerField()
+    rango_final = models.IntegerField()
     fecha_de_emision = models.DateTimeField()
     fecha_de_vencimiento = models.DateTimeField()
-    estado = models.BooleanField(default=True)
-   
+
     id_sucursal = models.ForeignKey(
         Ubicaciones,
         on_delete=models.PROTECT,
-        related_name="sucursal_cai"
+        related_name="sucursal_cai",
+        blank=True,
+        null=False,
     )
-   
-    id_usuario = models.ForeignKey(
-        User,
-        on_delete=models.PROTECT,
-        related_name="usuario_cai"
-    )
-
-    creacion = models.ForeignKey(
-        User,
-        on_delete=models.PROTECT,
-        related_name="usuario_creacion_cai"
-    )
-
-    modificacion = models.ForeignKey(
-        User,
-        on_delete=models.PROTECT,
-        related_name="usuario_modificacion_cai"
-    )
-
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-    fecha_modificacion = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.numero_cai
 
-class facturas_cai(models.Model):
-    numero_factura = models.IntegerField()
+
+class facturas_cai(Abstracto):
+    numero_factura = models.IntegerField(unique=True)
     id_cai = models.ForeignKey(
         datos_sat,
         on_delete=models.PROTECT,
-        related_name="cai_facturas"
+        related_name="cai_facturas",
+        null=True,
+        blank=True,
     )
-    fecha_creacion =models.DateTimeField(auto_now_add=True)
-    id_usuario = models.ForeignKey(
-        User,
-        on_delete=models.PROTECT,
-        related_name="usuario_factura_cai"
-    )
+    es_sat = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Factura #{self.numero_factura} - CAI: {self.id_cai.numero_cai}"
-    
-class facturas(models.Model):
-    rtn=models.CharField(max_length=50, default="")
+
+
+class Ventas(Abstracto):
     id_factura_cai = models.ForeignKey(
         facturas_cai,
         on_delete=models.PROTECT,
-        related_name="factura_cai_detalles"
-    )
-    subtotal = models.DecimalField(max_digits=18, decimal_places=2)
-    impuesto_15 = models.DecimalField(max_digits=18, decimal_places=2)
-    impuesto_18 = models.DecimalField(max_digits=18, decimal_places=2)
-    descuento = models.DecimalField(max_digits=18, decimal_places=2)
-    total = models.DecimalField(max_digits=18, decimal_places=2)
-    tipo_pago = models.CharField(max_length=50)
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-    id_usuario = models.ForeignKey(
-        User,
-        on_delete=models.PROTECT,
-        related_name="usuario_factura"
+        related_name="factura_ventas",
+        null=True,
+        blank=True,
     )
 
-    def __str__(self):
-        return f"Factura #{self.id_factura_cai.numero_factura} - Subtotal: {self.subtotal}"
-    
-class tarjetas(models.Model):
-    id_factura = models.OneToOneField(
-        facturas,
+    id_cliente = models.ForeignKey(
+        Clientes,
         on_delete=models.PROTECT,
-        related_name="factura_tarjetas"
+        related_name="cliente_ventas",
+        null=True,
+        blank=True,
+    )
+
+    sucursal = models.ForeignKey(
+        Ubicaciones, on_delete=models.PROTECT, related_name="sucursal_ventas"
+    )
+
+    subtotal = models.DecimalField(max_digits=18, decimal_places=2)
+
+    impuesto_15 = models.DecimalField(max_digits=18, decimal_places=2)
+
+    impuesto_18 = models.DecimalField(max_digits=18, decimal_places=2)
+
+    descuento = models.DecimalField(max_digits=18, decimal_places=2)
+
+    costo_total = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+
+    utilidad_total = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+
+    total = models.DecimalField(max_digits=18, decimal_places=2)
+
+    tipo_pago = models.CharField(max_length=50)
+
+    def __str__(self):
+        return f"Venta #{self.id}"
+
+
+class DetalleVenta(Abstracto):
+    venta = models.ForeignKey(
+        Ventas, on_delete=models.PROTECT, related_name="venta_detalles"
+    )
+
+    producto = models.ForeignKey(
+        Productos, on_delete=models.PROTECT, related_name="producto_venta_detalles"
+    )
+
+    cantidad = models.DecimalField(max_digits=18, decimal_places=2)
+
+    precio_unitario = models.DecimalField(max_digits=18, decimal_places=2)
+
+    costo_unitario = models.DecimalField(max_digits=18, decimal_places=2)
+
+    utilidad_unitaria = models.DecimalField(max_digits=18, decimal_places=2)
+
+    utilidad_total = models.DecimalField(max_digits=18, decimal_places=2)
+
+    descuento = models.DecimalField(max_digits=18, decimal_places=2)
+
+    impuesto_15 = models.DecimalField(max_digits=18, decimal_places=2)
+
+    impuesto_18 = models.DecimalField(max_digits=18, decimal_places=2)
+
+
+class tarjetas(Abstracto):
+    id_factura = models.OneToOneField(
+        Ventas, on_delete=models.PROTECT, related_name="factura_tarjetas"
     )
     digitos = models.CharField(max_length=4)
     numero_autorizacion = models.CharField(max_length=50)
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-    id_usuario = models.ForeignKey(
-        User,
-        on_delete=models.PROTECT,
-        related_name="usuario_tarjeta"
-    )
+
     def __str__(self):
         return f"Tarjeta ****{self.digitos} - Autorización: {self.numero_autorizacion}"
 
-class detalles_facturas(models.Model):
-    id_factura = models.ForeignKey(
-        facturas,
-        on_delete=models.PROTECT,
-        related_name="factura_detalles"
+
+
+# =========================
+# APERTURA CAJA
+# =========================
+class CajaAC(Abstracto):
+
+    ESTADO_CHOICES = (
+        ("abierta", "Abierta"),
+        ("cuadre", "Cuadre"),
+        ("cerrada", "Cerrada"),
     )
-    id_producto = models.ForeignKey(
+
+    usuario_id = models.IntegerField()
+
+    estado = models.CharField(
+        max_length=10,
+        choices=ESTADO_CHOICES,
+        default="abierta"
+    )
+
+    fecha_apertura = models.DateTimeField(auto_now_add=True)
+
+    monto_apertura = models.DecimalField(
+        max_digits=12,
+        decimal_places=2
+    )
+
+    fecha_cierre = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    monto_cierre = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+
+    ventas = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+
+    diferencia = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+
+class DetalleCuadreCaja(models.Model):
+
+    caja = models.ForeignKey(
+        CajaAC,
+        on_delete=models.CASCADE,
+        related_name="detalles_cuadre"
+    )
+
+    denominacion = models.DecimalField(
+        max_digits=8,
+        decimal_places=2
+    )
+
+    cantidad = models.PositiveIntegerField(
+        default=0
+    )
+
+    subtotal = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+
+
+class ReservaInventario(Abstracto):
+
+    class Estado(models.TextChoices):
+        RESERVADA = "RESERVADA", "Reservada"
+        CONSUMIDA = "CONSUMIDA", "Consumida"
+        CANCELADA = "CANCELADA", "Cancelada"
+
+    producto = models.ForeignKey(
         Productos,
         on_delete=models.PROTECT,
-        related_name="producto_factura_detalles"
+        related_name="reservas_inventario",
     )
-    cantidad = models.DecimalField(max_digits=18, decimal_places=2)
-    precio_unitario = models.DecimalField(max_digits=18, decimal_places=2)
-    descuento = models.DecimalField(max_digits=18, decimal_places=2)
-    impuesto_15 = models.DecimalField(max_digits=18, decimal_places=2)
-    impuesto_18 = models.DecimalField(max_digits=18, decimal_places=2)
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-    id_usuario = models.ForeignKey(
-        User,
+
+    ubicacion = models.ForeignKey(
+        Ubicaciones,
         on_delete=models.PROTECT,
-        related_name="usuario_detalle_factura"
+        related_name="reservas_inventario",
     )
 
-    def __str__(self):
-        return f"Detalle Factura #{self.id_factura.id} - Producto: {self.id_producto.nombre} - Cantidad: {self.cantidad}"
+    cantidad = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+    )
 
+    estado = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.RESERVADA,
+    )
+
+    traslado = models.ForeignKey(
+        Traslados,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="reservas_inventario",
+    )
+
+    venta = models.ForeignKey(
+        Ventas,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="reservas_inventario",
+    )
+    

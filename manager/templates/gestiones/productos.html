@@ -51,14 +51,21 @@
                 </div>
             </div>
         </div>
-        {% if perms.manager.add_productos %}
-            <button id="toggleDropdownPanel"
-                    class="btn-dropdown"
-                    data-bs-toggle="modal"
-                    data-bs-target="#modalregis">
-                <i class="bx bx-plus-circle"></i> Agregar
-            </button>
-        {% endif %}
+        <div class="divbuttons10">
+            {% if perms.manager.add_productos %}
+                <button id="toggleDropdownPanel"
+                        class="btn-dropdown"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalregis">
+                    <i class="bx bx-plus-circle"></i> Agregar
+                </button>
+            {% endif %}
+            {% if perms.manager.view_proveedorescontactos %}
+            <a class="btn-dropdown" href="{% url 'productos_rel' %}">
+                <i class="bx bx-transfer-alt"></i> ProductoREL
+            </a>
+            {% endif %}
+        </div>
     </div>
     <div class="modal fade"
          id="modalregis"
@@ -149,7 +156,7 @@
                                         <button type="button" class="btn w-100 text-start form-control">Escriba para buscar...</button>
                                         <div class="dropdown-menu w-100 p-0">
                                             <div class="search-box p-2">
-                                                <input type="text" class="form-control" placeholder="Buscar categoría...">
+                                                <input type="text" class="form-control" placeholder="Buscar categoría..." autocomplete="off">
                                             </div>
                                             <div class="options list-group list-group-flush"></div>
                                         </div>
@@ -163,7 +170,7 @@
                                         <button type="button" class="btn w-100 text-start form-control">Escriba para buscar...</button>
                                         <div class="dropdown-menu w-100 p-0">
                                             <div class="search-box p-2">
-                                                <input type="text" class="form-control" placeholder="Buscar presentación...">
+                                                <input type="text" class="form-control" placeholder="Buscar presentación..." autocomplete="off">
                                             </div>
                                             <div class="options list-group list-group-flush"></div>
                                         </div>
@@ -177,13 +184,47 @@
                                         <button type="button" class="btn w-100 text-start form-control">Escriba para buscar...</button>
                                         <div class="dropdown-menu w-100 p-0">
                                             <div class="search-box p-2">
-                                                <input type="text" class="form-control" placeholder="Buscar marca...">
+                                                <input type="text" class="form-control" placeholder="Buscar marca..." autocomplete="off">
                                             </div>
                                             <div class="options list-group list-group-flush">
                                                 <!-- Las marcas se cargan por JS -->
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                                <br>
+                                <div class="divproductos">
+                                    <div class="form-group mb-3">
+                                        <label for="espadre" class="d-block">
+                                            Es Padre
+                                        </label>
+
+                                        <label class="d-flex align-items-center">
+                                            <input
+                                                type="checkbox"
+                                                id="espadre"
+                                                name="espadre"
+                                                class="me-2"
+                                            >
+
+                                            <span
+                                                id="espadreText"
+                                                class="fw-bold text-success"
+                                            >
+                                                SI
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <br>
+                                <div class="form-group">
+                                    <label for="vunid">Valor en Unidades</label>
+                                    <input type="text"
+                                        name="vunid"
+                                        id="vunid"
+                                        class="form-control"
+                                        placeholder="Valor en Unidades"
+                                        oninput="validateNumber(this)">
                                 </div>
                                 <br>
                                 <div class="form-group mb-3">
@@ -317,7 +358,7 @@
                                         <button type="button" class="btn w-100 text-start form-control">Escriba para buscar...</button>
                                         <div class="dropdown-menu w-100 p-0">
                                             <div class="search-box p-2">
-                                                <input type="text" class="form-control" placeholder="Buscar categoría...">
+                                                <input type="text" class="form-control" placeholder="Buscar categoría..." autocomplete="off">
                                             </div>
                                             <div class="options list-group list-group-flush"></div>
                                         </div>
@@ -334,7 +375,7 @@
                                         <button type="button" class="btn w-100 text-start form-control">Escriba para buscar...</button>
                                         <div class="dropdown-menu w-100 p-0">
                                             <div class="search-box p-2">
-                                                <input type="text" class="form-control" placeholder="Buscar presentación...">
+                                                <input type="text" class="form-control" placeholder="Buscar presentación..." autocomplete="off">
                                             </div>
                                             <div class="options list-group list-group-flush"></div>
                                         </div>
@@ -351,13 +392,48 @@
                                                 <input type="text"
                                                        class="form-control"
                                                        placeholder="Buscar marca..."
-                                                       value="">
+                                                       value=""
+                                                       autocomplete="off">
                                             </div>
                                             <div class="options list-group list-group-flush">
                                                 <!-- Las marcas se cargan por JS -->
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                                <br>
+                                <div class="divproductos">
+                                    <div class="form-group mb-3">
+                                        <label for="espadreedit" class="d-block">
+                                            Es Padre
+                                        </label>
+
+                                        <label class="d-flex align-items-center">
+                                            <input
+                                                type="checkbox"
+                                                id="espadreedit"
+                                                name="espadreedit"
+                                                class="me-2"
+                                            >
+
+                                            <span
+                                                id="espadreTextedit"
+                                                class="fw-bold text-success"
+                                            >
+                                                SI
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <br>
+                                <div class="form-group">
+                                    <label for="vunidedit">Valor en Unidades</label>
+                                    <input type="text"
+                                        name="vunidedit"
+                                        id="vunidedit"
+                                        class="form-control"
+                                        placeholder="Valor en Unidades"
+                                        oninput="validateNumber(this)">
                                 </div>
                                 <br>
                                 <div class="form-group mb-3">
@@ -387,90 +463,186 @@
             </div>
         </div>
     </div>
-    <div class="tabla-container">
-        <table class="tablas-todo" id="tablacont">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Nombre</th>
-                    <th>Categoria</th>
-                    <th>Present</th>
-                    <th>Marca</th>
-                    <th>SKU</th>
-                    <th>Precio</th>
-                    <th>Impuesto</th>
-                    <th>Imagen</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for producto in page_obj %}
-                    <tr data-id="{{ producto.id }}">
-                        <td>{{ producto.id }}</td>
-                        <td>{{ producto.nombre }}</td>
-                        <td>{{ producto.categoria.nombre }}</td>
-                        <td>{{ producto.unidad_medida.abreviatura }}</td>
-                        <td>{{ producto.marca.nombre }}</td>
-                        <td>{{ producto.codigo_sku }}</td>
-                        <td>L. {{ producto.precio_venta|floatformat:2 }}</td>
-                        <td>{{ producto.impuesto }}%</td>
-                        <td class="image-cell">
-                            {% if producto.imagenes_producto.all %}
+<div class="tabla-container">
+    <table class="tablas-todo" id="tablacont">
+
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Nombre</th>
+                <th>Categoria</th>
+                <th>Present</th>
+                <th>Marca</th>
+                <th>SKU</th>
+                <th>Precio</th>
+                <th>Impuesto</th>
+                <th>Imagen</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            {% for producto in page_obj %}
+
+                <tr data-id="{{ producto.id }}">
+
+                    <td>
+                        {{ producto.id }}
+                    </td>
+
+                    <td>
+                        {{ producto.nombre }}
+                    </td>
+
+                    <td>
+                        {{ producto.categoria.nombre }}
+                    </td>
+
+                    <td>
+                        {{ producto.unidad_medida.abreviatura }}
+                    </td>
+
+                    <td>
+                        {{ producto.marca.nombre }}
+                    </td>
+
+                    <td>
+                        {{ producto.codigo_sku }}
+                    </td>
+
+                    <td>
+                        L. {{ producto.precio_venta|floatformat:2 }}
+                    </td>
+
+                    <td>
+                        {{ producto.impuesto }}%
+                    </td>
+
+                    <!-- ========================= -->
+                    <!-- IMÁGENES -->
+                    <!-- ========================= -->
+
+                    <td class="image-cell">
+
+                        {% with imagen_principal=producto.imagenes_producto.first %}
+
+                            {% if imagen_principal %}
+
                                 <div class="img-hover-wrapper">
-                                    <!-- imagen principal -->
-                                    <img src="{{ producto.imagenes_producto.first.imagen_url }}"
-                                         alt="{{ producto.imagenes_producto.first.imagen_nombre|default:'producto' }}"
-                                         width="60"
-                                         height="60"
-                                         class="main-img" />
-                                    <!-- popup gallery -->
+
+                                    <!-- IMAGEN PRINCIPAL -->
+
+                                    <img
+                                        src="{% url 'producto_imagen' imagen_principal.id %}"
+                                        alt="{{ imagen_principal.imagen_nombre|default:'producto' }}"
+                                        width="60"
+                                        height="60"
+                                        class="main-img"
+                                    />
+
+                                    <!-- GALERÍA -->
+
                                     <div class="img-hover-popup">
+
                                         {% for img in producto.imagenes_producto.all %}
-                                            <img src="{{ img.imagen_url }}"
-                                                 alt="{{ img.imagen_nombre|default:'imagen producto' }}"
-                                                 width="90"
-                                                 height="90"
-                                                 class="popup-img" />
+
+                                            <img
+                                                src="{% url 'producto_imagen' img.id %}"
+                                                alt="{{ img.imagen_nombre|default:'imagen producto' }}"
+                                                width="90"
+                                                height="90"
+                                                class="popup-img"
+                                            />
+
                                         {% endfor %}
+
                                     </div>
+
                                 </div>
+
                             {% else %}
-                                <span class="text-muted">Sin imagen</span>
+
+                                <span class="text-muted">
+                                    Sin imagen
+                                </span>
+
                             {% endif %}
-                        </td>
-                        <td class="estado-centrado">
-                            {% if producto.is_active %}
-                                <span class="estado-circulo estado-activo"></span>
-                            {% else %}
-                                <span class="estado-circulo estado-inactivo"></span>
+
+                        {% endwith %}
+
+                    </td>
+
+                    <!-- ========================= -->
+                    <!-- ESTADO -->
+                    <!-- ========================= -->
+
+                    <td class="estado-centrado">
+
+                        {% if producto.is_active %}
+
+                            <span
+                                class="estado-circulo estado-activo">
+                            </span>
+
+                        {% else %}
+
+                            <span
+                                class="estado-circulo estado-inactivo">
+                            </span>
+
+                        {% endif %}
+
+                    </td>
+
+                    <!-- ========================= -->
+                    <!-- ACCIONES -->
+                    <!-- ========================= -->
+
+                    <td>
+
+                        {% if not producto.is_delete %}
+
+                            {% if perms.manager.change_productos %}
+
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-primary btn-edit"
+                                    data-id="{{ producto.id }}"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalput"
+                                >
+                                    <i class="bx bx-edit"></i>
+                                </button>
+
                             {% endif %}
-                        </td>
-                        <td>
-                            {% if not producto.is_delete %}
-                                {% if perms.manager.change_productos %}
-                                    <button type="button"
-                                            class="btn btn-sm btn-primary btn-edit"
-                                            data-id="{{ producto.id }}"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#modalput">
-                                        <i class="bx bx-edit"></i>
-                                    </button>
-                                {% endif %}
-                                {% if perms.manager.delete_productos %}
-                                    <button type="button"
-                                            class="btn btn-sm btn-danger btn-delete"
-                                            data-id="{{ producto.id }}">
-                                        <i class="bx bx-trash"></i>
-                                    </button>
-                                {% endif %}
+
+
+                            {% if perms.manager.delete_productos %}
+
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-danger btn-delete"
+                                    data-id="{{ producto.id }}"
+                                >
+                                    <i class="bx bx-trash"></i>
+                                </button>
+
                             {% endif %}
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+
+                        {% endif %}
+
+                    </td>
+
+                </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+</div>
     <nav class="d-flex justify-content-center mt-4">
         <ul class="pagination">
             <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">

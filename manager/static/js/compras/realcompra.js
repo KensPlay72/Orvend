@@ -191,9 +191,7 @@ initDropdown("recepcionid", fetchUbicaciones);
 //--------------
 // llenar modal envio
 //--------------
-document
-  .getElementById("toggleDropdownPanel32")
-  .addEventListener("click", function () {
+document.getElementById("toggleDropdownPanel32").addEventListener("click", function () {
     const proveedorId = document.getElementById("proveedoresid").value;
     const productosSeleccionados = document.querySelectorAll(
       "#tablacont tbody tr",
@@ -317,9 +315,7 @@ function mostrarPaginaComprar(page = 1) {
 //--------------
 // ENVIAR
 //--------------
-document
-  .getElementById("enviarCompraBtn")
-  .addEventListener("click", async function () {
+document.getElementById("enviarCompraBtn").addEventListener("click", async function () {
     const proveedorInput = document.getElementById("proveedoresid");
     if (!proveedorInput) {
       Swal.fire({
@@ -347,7 +343,16 @@ document
     const proveedorId = parseInt(proveedorInput.value);
     const tipoCompraValue = parseInt(document.getElementById("tcompra").value);
     const observaciones = document.getElementById("observaciones").value.trim();
-
+    if (!tipoCompraValue) {
+      Swal.fire({
+        title: "Error",
+        text: "Tipo de compra en requerido.",
+        icon: "error",
+        confirmButtonText: "Aceptar",
+        customClass: { confirmButton: "classbotones" },
+      });
+      return;
+    }
     const detalles = [];
 
     document.querySelectorAll("#tablacont tbody tr").forEach((fila) => {

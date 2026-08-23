@@ -1,0 +1,153 @@
+{% extends "menu.html" %}
+{% load static %}
+{% block title %}
+    Ventas
+{% endblock title %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}">
+    <link rel="stylesheet" href="{% static 'css/ventas.css' %}">
+{% endblock extra_css %}
+{% block titulo_content %}
+    <div class="tituloscont">
+        <p class="header__logo">| Ventas</p>
+    </div>
+{% endblock titulo_content %}
+{% block main_content %}
+    <div class="container-fluid">
+        <!-- FILTROS -->
+        <form method="get" class="ventas-filter-form">
+            <div class="ventas-filter-group">
+                <label class="ventas-filter-label">Fecha inicial</label>
+                <input type="date"
+                       name="fecha_inicio"
+                       class="form-control"
+                       value="{{ fecha_inicio }}">
+            </div>
+            <div class="ventas-filter-group">
+                <label class="ventas-filter-label">Fecha final</label>
+                <input type="date"
+                       name="fecha_fin"
+                       class="form-control"
+                       value="{{ fecha_fin }}">
+            </div>
+            <div class="ventas-filter-group">
+                <label class="ventas-filter-label">Sucursal</label>
+                <select name="sucursal" class="form-control">
+                    <option value="">Todas las sucursales</option>
+                    {% for s in sucursales %}
+                        <option value="{{ s.id }}"
+                                {% if sucursal_seleccionada == s.id|stringformat:"s" %}selected{% endif %}>
+                            {{ s.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="ventas-filter-group">
+                <button type="submit" class="ventas-search-btn w-100">Buscar</button>
+            </div>
+        </form>
+        <div class="ventas-resumen-grid">
+            <div class="ventas-resumen-card">
+                <div>
+                    <p class="ventas-resumen-title">Total Vendido</p>
+                    <p class="ventas-resumen-value">L {{ total_vendido|floatformat:2 }}</p>
+                </div>
+                <div class="ventas-resumen-icon">
+                    <i class='bx bx-dollar-circle'></i>
+                </div>
+            </div>
+            <div class="ventas-resumen-card">
+                <div>
+                    <p class="ventas-resumen-title">Utilidad Generada</p>
+                    <p class="ventas-resumen-value">L {{ total_utilidad|floatformat:2 }}</p>
+                </div>
+                <div class="ventas-resumen-icon">
+                    <i class='bx bx-trending-up'></i>
+                </div>
+            </div>
+        </div>
+        <!-- TABLA -->
+        <div class="tabla-container">
+            <table class="tablas-todo" id="tablaVentas">
+                <thead>
+                    <tr>
+                        <th>Factura</th>
+                        <th>Fecha</th>
+                        <th>Cliente</th>
+                        <th>Cajero</th>
+                        <th>Sucursal</th>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th>P/U</th>
+                        <th>Costo U.</th>
+                        <th>Utilidad U.</th>
+                        <th>Utilidad T.</th>
+                        <th>Total Línea</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in page_obj %}
+                        <tr>
+                            <td>{{ d.venta.id_factura_cai.numero_factura }}</td>
+                            <td>{{ d.venta.f_creacion|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                {% if d.venta.id_cliente %}
+                                    {{ d.venta.id_cliente.id }}
+                                    |
+                                    {{ d.venta.id_cliente.nombre_completo }}
+                                {% else %}
+                                    Consumidor Final
+                                {% endif %}
+                            </td>
+                            <td>{{ d.cajero_nombre }}</td>
+                            <td>{{ d.venta.sucursal.nombre }}</td>
+                            <td>{{ d.producto.nombre }}</td>
+                            <td>{{ d.cantidad }}</td>
+                            <td>L {{ d.precio_unitario|floatformat:2 }}</td>
+                            <td>L {{ d.costo_unitario|floatformat:2 }}</td>
+                            <td>L {{ d.utilidad_unitaria|floatformat:2 }}</td>
+                            <td>L {{ d.utilidad_total|floatformat:2 }}</td>
+                            <td>L {% widthratio d.cantidad 1 d.precio_unitario %}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="12" class="text-center">No se encontraron ventas</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <nav class="d-flex justify-content-center mt-4">
+            <ul class="pagination">
+                <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+                    {% if page_obj.has_previous %}
+                        <a class="page-link"
+                           href="?page={{ page_obj.previous_page_number }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&sucursal={{ sucursal_seleccionada }}">
+                            «
+                        </a>
+                    {% else %}
+                        <span class="page-link">«</span>
+                    {% endif %}
+                </li>
+                {% for p in page_obj.paginator.page_range %}
+                    <li class="page-item {% if p == page_obj.number %}active{% endif %}">
+                        <a class="page-link"
+                           href="?page={{ p }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&sucursal={{ sucursal_seleccionada }}">
+                            {{ p }}
+                        </a>
+                    </li>
+                {% endfor %}
+                <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+                    {% if page_obj.has_next %}
+                        <a class="page-link"
+                           href="?page={{ page_obj.next_page_number }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&sucursal={{ sucursal_seleccionada }}">
+                            »
+                        </a>
+                    {% else %}
+                        <span class="page-link">»</span>
+                    {% endif %}
+                </li>
+            </ul>
+        </nav>
+    </div>
+{% endblock main_content %}

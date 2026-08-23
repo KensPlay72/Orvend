@@ -1,4 +1,11 @@
 //----------------
+// VALIDAR NUMERO EN INPUT
+//----------------
+function validateNumber(input) {
+  input.value = input.value.replace(/[^0-9.+]/g, '');
+}
+
+//----------------
 // REGISTRAR
 //----------------
 document.addEventListener("DOMContentLoaded", function () {
@@ -79,6 +86,12 @@ document.addEventListener("DOMContentLoaded", function () {
     formData.append("impuesto", document.getElementById("impuesto").value);
     const vencimientoCheckbox = document.getElementById("vencimiento");
     formData.append("Vencimiento", vencimientoCheckbox.checked);
+    const espadreCheckbox = document.getElementById("espadre");
+    formData.append("Espadre", espadreCheckbox.checked)
+    formData.append(
+        "vunid",
+        parseFloat(document.getElementById("vunid").value)
+    );
 
     // =====================
     // VALIDACIÓN IMÁGENES (USANDO ARRAY REAL)
@@ -347,6 +360,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       document.getElementById("impuestoedit").value = producto.impuesto;
 
+      document.getElementById("vunidedit").value = producto.equival_unid;
+
       // =========================
       // CATEGORÍA
       // =========================
@@ -393,6 +408,17 @@ document.addEventListener("DOMContentLoaded", () => {
       activeText.classList.toggle("text-success", producto.isActive);
 
       activeText.classList.toggle("text-danger", !producto.isActive);
+
+      const esPadreCheckbox = document.getElementById("espadreedit");
+      const esPadreText = document.getElementById("espadreTextedit");
+
+      esPadreCheckbox.checked = producto.is_master;
+
+      esPadreText.textContent = producto.is_master ? "Sí" : "No";
+
+      esPadreText.classList.toggle("text-success", producto.is_master);
+
+      esPadreText.classList.toggle("text-danger", !producto.is_master);
 
       // =========================
       // VENCIMIENTO
@@ -599,6 +625,10 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
     "Vencimiento",
     document.getElementById("vencimientoedit").checked,
   );
+
+  formData.append("Espadre", document.getElementById("espadreedit").checked);
+
+  formData.append("vunid", parseFloat(document.getElementById("vunidedit").value));
 
   // =========================
   // IMÁGENES A ELIMINAR
@@ -890,15 +920,27 @@ function initDropdown(hiddenInputId, remoteSearchFn = null) {
   const dropdown = container.querySelector(".dropdown-menu");
   const searchInput = container.querySelector(".search-box input");
   const optionsContainer = container.querySelector(".options");
+  const placeholderText = selectBtn.textContent.trim();
+
+  const renderInitialState = () => {
+    if (!remoteSearchFn) return;
+
+    optionsContainer.innerHTML = `
+      <div class="list-group-item text-muted">
+        Escriba al menos 2 letras
+      </div>`;
+  };
 
   // Selección de opción
   optionsContainer.addEventListener("click", (e) => {
-    if (e.target.matches(".list-group-item")) {
-      hiddenInput.value = e.target.dataset.value;
-      selectBtn.textContent = e.target.textContent;
-      dropdown.classList.remove("show");
-      searchInput.value = "";
-    }
+    const option = e.target.closest(".list-group-item-action");
+
+    if (!option) return;
+
+    hiddenInput.value = option.dataset.value;
+    selectBtn.textContent = option.textContent.trim();
+    dropdown.classList.remove("show");
+    searchInput.value = "";
   });
 
   // Abrir/ocultar dropdown
@@ -908,10 +950,7 @@ function initDropdown(hiddenInputId, remoteSearchFn = null) {
     searchInput.focus();
 
     if (remoteSearchFn) {
-      optionsContainer.innerHTML = `
-                <div class="list-group-item text-muted">
-                    Escriba al menos 2 letras
-                </div>`;
+      renderInitialState();
     }
   });
 
@@ -920,10 +959,31 @@ function initDropdown(hiddenInputId, remoteSearchFn = null) {
     "input",
     debounce(() => {
       if (remoteSearchFn) {
-        remoteSearchFn(searchInput.value.trim(), optionsContainer);
+        const term = searchInput.value.trim();
+
+        if (term.length < 2) {
+          renderInitialState();
+          return;
+        }
+
+        remoteSearchFn(term, optionsContainer);
       }
     }, 300),
   );
+
+  searchInput.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+
+    e.preventDefault();
+
+    const firstOption = optionsContainer.querySelector(
+      ".list-group-item-action:not(.text-muted)",
+    );
+
+    if (firstOption) {
+      firstOption.click();
+    }
+  });
 
   // Cerrar dropdown al hacer click fuera
   document.addEventListener("click", (e) => {
@@ -932,8 +992,80 @@ function initDropdown(hiddenInputId, remoteSearchFn = null) {
     }
   });
 
+  if (hiddenInput.value) {
+    selectBtn.textContent = placeholderText;
+  }
+
   return { hiddenInput, selectBtn, optionsContainer };
 }
+
+
+
+//----------------CHECKBOX----------------
+
+document.addEventListener("DOMContentLoaded", () => {
+    const espadreCheckbox = document.getElementById("espadre");
+    const espadreCheckboxText = document.getElementById("espadreText");
+
+    if (espadreCheckbox && espadreCheckboxText) {
+
+        const toggleEsPadreText = () => {
+            if (espadreCheckbox.checked) {
+                espadreCheckboxText.textContent = "SI";
+
+                espadreCheckboxText.classList.remove("text-danger");
+                espadreCheckboxText.classList.add("text-success");
+            } else {
+                espadreCheckboxText.textContent = "NO";
+
+                espadreCheckboxText.classList.remove("text-success");
+                espadreCheckboxText.classList.add("text-danger");
+            }
+        };
+
+        // Estado inicial
+        toggleEsPadreText();
+
+        // Cuando cambia el checkbox
+        espadreCheckbox.addEventListener(
+            "change",
+            toggleEsPadreText
+        );
+    }
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+    const espadreCheckboxedit = document.getElementById("espadreedit");
+    const espadreCheckboxTextedit = document.getElementById("espadreTextedit");
+
+    if (espadreCheckboxedit && espadreCheckboxTextedit) {
+
+        const toggleEsPadreText = () => {
+            if (espadreCheckboxedit.checked) {
+                espadreCheckboxTextedit.textContent = "SI";
+
+                espadreCheckboxTextedit.classList.remove("text-danger");
+                espadreCheckboxTextedit.classList.add("text-success");
+            } else {
+                espadreCheckboxTextedit.textContent = "NO";
+
+                espadreCheckboxTextedit.classList.remove("text-success");
+                espadreCheckboxTextedit.classList.add("text-danger");
+            }
+        };
+
+        // Estado inicial
+        toggleEsPadreText();
+
+        // Cuando cambia el checkbox
+        espadreCheckboxedit.addEventListener(
+            "change",
+            toggleEsPadreText
+        );
+    }
+});
+
+
 
 /*--------------------------------------*/
 /* INICIALIZACIÓN DE DROPDOWNS */

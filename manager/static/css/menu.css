@@ -125,11 +125,29 @@ Modal Inner Content
 .modal-header {
   display: flex;
   align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.modal-header .initials-circle {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  margin-right: 0;
+}
+
+.modal-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .modal-info p {
-  margin: 2px 0;
+  margin: 0;
   line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 .username {
   font-size: 1rem;
@@ -158,8 +176,10 @@ Modal Inner Content
 .header__container {
   display: flex;
   align-items: center;
-  height: var(--header-height);
+  min-height: var(--header-height);
   justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem 0;
 }
 .header__img {
   width: 35px;
@@ -172,18 +192,59 @@ Modal Inner Content
   font-weight: var(--font-medium);
   display: none;
 }
+.header__search-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
 .header__search {
   display: flex;
-  padding: 0.4rem 0.75rem;
+  align-items: center;
+  padding: 0.45rem 0.8rem;
   background-color: var(--first-color-light);
-  border-radius: 0.25rem;
-  margin-left: -500px;
+  border: 1px solid #c9c9c9;
+  border-radius: 0.35rem;
+  margin: 0;
+  width: min(100%, 360px);
+  max-width: 420px;
+  flex: 1 1 280px;
+  min-height: 2.6rem;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.header__search--wide {
+  width: min(100%, 420px);
+  max-width: 420px;
+}
+
+.filtro-container {
+  flex: 1 1 280px;
+  max-width: 420px;
+  margin: 0;
+}
+
+.filtro-container .search-box {
+  display: flex;
+  align-items: center;
+  padding: 0.45rem 0.8rem;
+  background-color: var(--first-color-light);
+  border: 1px solid #c9c9c9;
+  border-radius: 0.35rem;
+  width: 100%;
+  min-height: 2.6rem;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 .header__input {
   width: 100%;
   border: none;
   outline: none;
-  background-color: var(--first-color-light);
+  background-color: transparent;
+  font-size: 0.95rem;
+  color: var(--text-color);
 }
 .header__input::placeholder {
   font-family: var(--body-font);
@@ -196,6 +257,12 @@ Modal Inner Content
 .header__toggle {
   color: var(--title-color);
   cursor: pointer;
+  flex-shrink: 0;
+}
+
+.initials-circle {
+  flex-shrink: 0;
+  margin-left: auto;
 }
 /*========== NAV ==========*/
 .nav {
@@ -462,10 +529,57 @@ Modal Inner Content
 .classbotones {
   background-color: #3f8886 !important;
   color: white !important;
+  border: none !important;
 }
 .classbotones:hover {
   background-color: #10463e !important;
   color: white !important;
+}
+
+.filters-card {
+  background: linear-gradient(135deg, #ffffff, #f5fcfb);
+  border: 1px solid #e4efec;
+  border-radius: 1rem;
+  padding: 1.1rem 1.2rem;
+  box-shadow: 0 10px 24px rgba(25, 42, 38, 0.06);
+}
+
+.filter-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  color: #2f5d56;
+  margin-bottom: 0.4rem;
+}
+
+.filter-input-wrap {
+  position: relative;
+}
+
+.filter-input {
+  border: 1px solid #d8e8e4 !important;
+  border-radius: 0.8rem !important;
+  padding: 0.7rem 0.9rem !important;
+  background-color: #ffffff;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.filter-input:focus {
+  border-color: #3f8886 !important;
+  box-shadow: 0 0 0 0.2rem rgba(63, 136, 134, 0.16) !important;
+}
+
+.filter-btn {
+  min-width: 110px;
+}
+
+.filter-btn--secondary {
+  background-color: #6c757d !important;
+}
+
+.filter-btn--secondary:hover {
+  background-color: #565e64 !important;
 }
 
 .classbotones:focus {
@@ -473,7 +587,39 @@ Modal Inner Content
   box-shadow: none !important;
 }
 .modal-footer {
-  height: 30px;
+  height: auto;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 1rem;
+}
+#modalAperturaCaja .modal-content {
+  border-radius: 10px;
+  border: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+#modalAperturaCaja .modal-dialog {
+  max-width: 420px;
+}
+#modalAperturaCaja .modal-footer {
+  padding-top: 0.75rem;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+#modalAperturaCaja #btnAbrirCaja {
+  background-color: #3f8886;
+  border: 1px solid #3f8886;
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  width: auto;
+  white-space: nowrap;
+}
+#modalAperturaCaja #btnAbrirCaja:hover {
+  background-color: #31706c;
+  border-color: #31706c;
 }
 .altura-footer {
   height: 40px;
@@ -545,6 +691,37 @@ a {
 }
 
 .tablas-todo tbody tr:nth-child(even) {
+  background-color: #f8fefd;
+}
+
+.table-picker-cliente {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.95rem;
+  background: white;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.table-picker-cliente thead {
+  background: linear-gradient(135deg, #32877f);
+  color: white;
+}
+
+.table-picker-cliente th,
+.table-picker-cliente td {
+  padding: 0.8rem 0.9rem;
+  text-align: center;
+  vertical-align: middle;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.table-picker-cliente tbody tr:hover {
+  background-color: #f1fdfc;
+}
+
+.table-picker-cliente tbody tr:nth-child(even) {
   background-color: #f8fefd;
 }
 

@@ -60,12 +60,40 @@ urlpatterns = [
         name="delete_proveedor_contacto",
     ),
     path("productos/", views.productos_view, name="productos"),
+    path(
+    "productos/imagen/<int:imagen_id>/",
+    views.producto_imagen,
+    name="producto_imagen",
+    ),
     path("productos/post/", views.post_producto, name="post_producto"),
     path("productos/get/<int:id>/", views.get_producto, name="get_producto"),
     path("productos/put/<int:id>/", views.put_producto, name="put_producto"),
     path("productos/delete/<int:id>/", views.delete_producto, name="delete_producto"),
     path("productos/search/", views.search_productos, name="search_productos"),
     path("api/proxy/productos/", views.api_productos, name="api_productos"),
+    path("api/proxy/productos/padre/", views.get_productos_padre, name="api_productos_padre"),
+    path("api/proxy/productos/hijos/", views.get_productos_hijos, name="api_productos_hijos"),
+    path(
+    "productos-rel/",
+        views.productos_rel_view,
+        name="productos_rel"
+    ),
+    path(
+        "productosrel/post/",
+        views.post_productosrel,
+        name="post_productosrel",
+    ),
+    path(
+        "productosrel/get/<int:id>/",
+        views.get_productosrel,
+        name="get_productosrel",
+    ),
+
+    path(
+        "productosrel/put/<int:id>/",
+        views.put_productosrel,
+        name="put_productosrel",
+    ),
     path("ubicaciones/", views.ubicaciones_view, name="ubicaciones"),
     path("ubicaciones/post/", views.post_ubicaciones, name="post_ubicaciones"),
     path("ubicaciones/get/<int:id>/", views.get_ubicaciones, name="get_ubicaciones"),
@@ -94,6 +122,11 @@ urlpatterns = [
     path("clientes/post/", views.post_clientes, name="post_cliente"),
     path("clientes/get/<int:id>/", views.get_cliente, name="get_cliente"),
     path("clientes/put/<int:id>/", views.put_cliente, name="put_cliente"),
+    path(
+        "clientes/search/",
+        views.search_clientes,
+        name="search_clientes",
+    ),
     path("bodega/dashboard/", views.dashboard_bodega, name="dashboard_bodega"),
     path(
         "bodega/recepcion_inventario/",
@@ -153,10 +186,53 @@ urlpatterns = [
     path("descuentos/post/", views.post_descuento, name="post_descuento"),
     path("descuentos/get/<int:id>/", views.get_descuento, name="get_descuento"),
     path("descuentos/put/<int:id>/", views.put_descuento, name="put_descuento"),
-    path("caja/",views.caja_view, name="caja"),
-    path("busquedacodigo/<int:codigo>/", views.busqueda_codigo,name="busqueda_codigo"),
-    path("busquedanombre/<str:producto>/",views.busqueda_nombre,name="busqueda_nombre"),
-    path("cupon_descuento/<str:cupon>/<int:id>/",views.descuento_cupon,name="descuento_cupon"),
+    path("caja/", views.caja_view, name="caja"),
+    path("busquedacodigo/<int:codigo>/", views.busqueda_codigo, name="busqueda_codigo"),
+    path(
+        "busquedanombre/<str:producto>/", views.busqueda_nombre, name="busqueda_nombre"
+    ),
+    path(
+        "cupon_descuento/<str:cupon>/<int:id>/",
+        views.descuento_cupon,
+        name="descuento_cupon",
+    ),
+    path(
+        "datos_sat/",
+        views.datos_sat_view,
+        name="datos_sat",
+    ),
+    path(
+        "datos_sat/get/<int:id>/",
+        views.get_datos_sat,
+        name="get_datos_sat",
+    ),
+    path(
+        "datos_sat/put/<int:id>/",
+        views.put_datos_sat,
+        name="get_datos_sat",
+    ),
+    path("datos_sat/post/", views.post_datos_sat, name="post_datos_sat"),
     path("realizar_venta/", views.guardar_compra, name="guardar_compra"),
-    path("recibo_pdf/<int:id_factura>/",views.imprimir_factura, name="imprimir_factura")
+    path(
+        "recibo_pdf/<int:id_factura>/", views.imprimir_factura, name="imprimir_factura"
+    ),
+    path("ventas/", views.ventas_view, name="ventas"),
+
+
+    path("abrir/", views.abrir_caja, name="abrir_caja"),
+    path("iniciar_cuadre/", views.iniciar_cuadre, name="iniciar_cuadre"),
+    path(
+    "caja/cuadre/",
+    views.cuadre_caja,
+    name="cuadre_caja"
+    ),
+
+    path(
+        "caja/cuadre/cerrar/",
+        views.cerrar_cuadre_caja,
+        name="cerrar_cuadre_caja"
+    ),
+
+    path("cajas_manager/", views.cajas_manager_view, name="cajas_manager"),
+
 ]

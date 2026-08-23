@@ -1,18 +1,18 @@
 import json
+import textwrap
 import traceback
-from datetime import datetime, timedelta
-from decimal import Decimal
+from datetime import datetime, timedelta, date
+from decimal import Decimal, InvalidOperation
 from io import BytesIO
-
+from django.urls import reverse
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q, Max, Sum
-import textwrap
+from django.db.models import Q, Sum, OuterRef, Subquery
 from django.http import Http404, HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.csrf import csrf_exempt
@@ -20,7 +20,9 @@ from django.views.decorators.http import require_http_methods, require_POST
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from django.core.exceptions import PermissionDenied
-
+from django.db.models import Max
+from reportlab.lib.units import mm
+from .nextcloud import subir_archivo, obtener_archivo,eliminar_archivo
 import os
 import uuid
 from .enums import EstadoCompra, EstadoCuenta, EstadoDevolucionCompra, Estados
@@ -47,12 +49,16 @@ from .models import (
     UMedidas,
     Descuento,
     ProductosImagenes,
+    PerfilUsuario,
     datos_sat,
     facturas_cai,
-    facturas,
+    Ventas,
+    DetalleVenta,
     tarjetas,
-    detalles_facturas,
-    PerfilUsuario,
+    CajaAC,
+    DetalleCuadreCaja,
+    ProductosRel,
+    ReservaInventario,
 )
 
 
@@ -901,6 +907,7 @@ def proveedores_contactos_view(request):
         "page_obj": page_obj,
         "proveedorescontactos": page_obj.object_list,
         "search": search,
+        "mostrar_buscador": True,
     }
 
     return render(request, "gestiones/proveedorescontactos.html", context)
@@ -1076,8 +1083,12 @@ def productos_view(request):
     search = request.GET.get("search", "").strip()
 
     query = Productos.objects.select_related(
-        "categoria", "unidad_medida", "marca"
-    ).prefetch_related("imagenes_producto")
+        "categoria",
+        "unidad_medida",
+        "marca",
+    ).prefetch_related(
+        "imagenes_producto"
+    )
 
     query = query.filter(is_delete=False)
 
@@ -1087,11 +1098,18 @@ def productos_view(request):
 
     if search:
         query = query.filter(
-            Q(nombre__icontains=search) | Q(codigo_sku__icontains=search)
+            Q(nombre__icontains=search)
+            | Q(codigo_sku__icontains=search)
         )
 
-    paginator = Paginator(query.order_by("id"), 10)
-    page_obj = paginator.get_page(request.GET.get("page"))
+    paginator = Paginator(
+        query.order_by("id"),
+        10,
+    )
+
+    page_obj = paginator.get_page(
+        request.GET.get("page")
+    )
 
     return render(
         request,
@@ -1102,8 +1120,50 @@ def productos_view(request):
             "total_productos": total_productos,
             "productos_activos": productos_activos,
             "productos_inactivos": productos_inactivos,
+            "mostrar_buscador": True,
         },
     )
+
+
+@login_required
+def producto_imagen(request, imagen_id):
+
+    try:
+
+        imagen = ProductosImagenes.objects.get(
+            id=imagen_id,
+            producto__is_delete=False,
+        )
+
+        # Consultar la imagen directamente en Nextcloud
+        response_nextcloud = obtener_archivo(
+            imagen.imagen_url
+        )
+
+        # Devolver la imagen al navegador
+        response = HttpResponse(
+            response_nextcloud.content,
+            content_type=response_nextcloud.headers.get(
+                "Content-Type",
+                "application/octet-stream",
+            ),
+        )
+
+        return response
+
+    except ProductosImagenes.DoesNotExist:
+
+        return HttpResponse(
+            "Imagen no encontrada",
+            status=404,
+        )
+
+    except Exception as e:
+
+        return HttpResponse(
+            f"Error obteniendo imagen: {str(e)}",
+            status=500,
+        )
 
 
 @login_required
@@ -1120,30 +1180,72 @@ def api_productos(request):
             "marca",
         )
         .prefetch_related("imagenes_producto")
-        .filter(is_delete=False)
+        .filter(is_delete=False,is_active=True)
     )
 
+    # =========================
     # SEARCH
+    # =========================
+
     if search:
         query = query.filter(
-            Q(nombre__icontains=search) | Q(codigo_sku__icontains=search)
+            Q(nombre__icontains=search)
+            | Q(codigo_sku__icontains=search)
         )
 
+    # =========================
     # PAGINADOR
-    paginator = Paginator(query.order_by("id"), limit)
+    # =========================
+
+    paginator = Paginator(
+        query.order_by("id"),
+        limit,
+    )
+
     page_obj = paginator.get_page(page)
 
     results = []
 
     for p in page_obj:
-        # ==========================================
-        # IMAGEN DEL PRODUCTO
-        # ==========================================
-        imagen = p.imagenes_producto.first()
 
-        imagen_url = imagen.imagen_url if imagen and imagen.imagen_url else ""
+        # ==========================================
+        # IMÁGENES DEL PRODUCTO
+        # ==========================================
 
-        imagen_nombre = imagen.imagen_nombre if imagen and imagen.imagen_nombre else ""
+        imagenes = []
+
+        for imagen in p.imagenes_producto.all():
+
+            imagenes.append(
+                {
+                    "id": imagen.id,
+                    "nombre": (
+                        imagen.imagen_nombre
+                        if imagen.imagen_nombre
+                        else ""
+                    ),
+                    "url": request.build_absolute_uri(
+                        reverse(
+                            "producto_imagen",
+                            args=[imagen.id],
+                        )
+                    ),
+                }
+            )
+
+        # ==========================================
+        # IMAGEN PRINCIPAL
+        # ==========================================
+
+        imagen_principal = (
+            imagenes[0]
+            if imagenes
+            else None
+        )
+
+        # ==========================================
+        # RESULTADO
+        # ==========================================
 
         results.append(
             {
@@ -1151,13 +1253,52 @@ def api_productos(request):
                 "nombre": p.nombre,
                 "codigoSKU": p.codigo_sku,
                 "precioVenta": str(p.precio_venta),
+
                 "unidadMedida": {
-                    "nombre": p.unidad_medida.nombre if p.unidad_medida else ""
+                    "nombre": (
+                        p.unidad_medida.nombre
+                        if p.unidad_medida
+                        else ""
+                    )
                 },
-                "categoria": {"nombre": p.categoria.nombre if p.categoria else ""},
-                "marca": {"nombre": p.marca.nombre if p.marca else ""},
-                "imagenUrl": imagen_url,
-                "imagenNombre": imagen_nombre,
+
+                "categoria": {
+                    "nombre": (
+                        p.categoria.nombre
+                        if p.categoria
+                        else ""
+                    )
+                },
+
+                "marca": {
+                    "nombre": (
+                        p.marca.nombre
+                        if p.marca
+                        else ""
+                    )
+                },
+
+                # ==================================
+                # IMAGEN PRINCIPAL
+                # ==================================
+
+                "imagenUrl": (
+                    imagen_principal["url"]
+                    if imagen_principal
+                    else ""
+                ),
+
+                "imagenNombre": (
+                    imagen_principal["nombre"]
+                    if imagen_principal
+                    else ""
+                ),
+
+                # ==================================
+                # TODAS LAS IMÁGENES
+                # ==================================
+
+                "imagenes": imagenes,
             }
         )
 
@@ -1186,6 +1327,8 @@ def post_producto(request):
         impuesto = request.POST.get("impuesto", "0").strip()
 
         imagenes = request.FILES.getlist("Imagenes")
+        espadre = str(request.POST.get("Espadre")).lower() == "true"
+        vunid = int(request.POST.get("vunid", "0").strip())
 
         # =====================
         # VALIDACIONES
@@ -1208,7 +1351,8 @@ def post_producto(request):
 
         if Productos.objects.filter(codigo_sku=codigo_sku).exists():
             return JsonResponse(
-                {"success": False, "message": "SKU ya existe"}, status=400
+                {"success": False, "message": "SKU ya existe"},
+                status=400,
             )
 
         categoria = Categorias.objects.filter(id=categoria_id).first()
@@ -1217,7 +1361,8 @@ def post_producto(request):
 
         if not categoria or not unidad or not marca:
             return JsonResponse(
-                {"success": False, "message": "Datos inválidos"}, status=400
+                {"success": False, "message": "Datos inválidos"},
+                status=400,
             )
 
         # =====================
@@ -1233,72 +1378,97 @@ def post_producto(request):
             precio_venta=precio_venta,
             vencimiento=vencimiento,
             impuesto=impuesto,
+            is_master=espadre,
+            equival_unid=vunid,
             u_creo_id=request.user.id,
         )
 
         # =====================
-        # GUARDAR IMÁGENES
+        # GUARDAR IMÁGENES EN NEXTCLOUD
         # =====================
-        base_dir = os.path.join(settings.BASE_DIR, "manager", "media", "productos")
-        os.makedirs(base_dir, exist_ok=True)
 
         for imagen in imagenes:
             original_name = imagen.name.replace(" ", "_")
             random_prefix = uuid.uuid4().hex[:5]
             nuevo_nombre = f"{random_prefix}_{original_name}"
 
-            file_path = os.path.join(base_dir, nuevo_nombre)
-
-            with open(file_path, "wb+") as destination:
-                for chunk in imagen.chunks():
-                    destination.write(chunk)
+            # Subir directamente el archivo recibido a Nextcloud
+            imagen_url = subir_archivo(
+                imagen,
+                nuevo_nombre
+            )
 
             ProductosImagenes.objects.create(
                 producto=producto,
                 imagen_nombre=original_name,
-                imagen_url=f"/manager/media/productos/{nuevo_nombre}",
+                imagen_url=imagen_url,
             )
 
         return JsonResponse(
-            {"success": True, "message": "Producto creado correctamente"}
+            {
+                "success": True,
+                "message": "Producto creado correctamente"
+            }
         )
 
     except Exception as e:
         return JsonResponse(
-            {"success": False, "message": f"Error interno: {str(e)}"}, status=500
+            {
+                "success": False,
+                "message": f"Error interno: {str(e)}"
+            },
+            status=500,
         )
-
 
 @login_required
 @permission_required("manager.view_productos", raise_exception=True)
 def get_producto(request, id):
 
     producto = (
-        Productos.objects.select_related("categoria", "unidad_medida", "marca")
+        Productos.objects.select_related(
+            "categoria",
+            "unidad_medida",
+            "marca",
+        )
         .prefetch_related("imagenes_producto")
-        .filter(id=id, is_delete=False)
+        .filter(
+            id=id,
+            is_delete=False,
+        )
         .first()
     )
 
     if not producto:
         return JsonResponse(
-            {"success": False, "message": "Producto no encontrado"}, status=404
+            {
+                "success": False,
+                "message": "Producto no encontrado",
+            },
+            status=404,
         )
 
     imagenes = []
 
     for imagen in producto.imagenes_producto.all():
+
         imagenes.append(
             {
                 "id": imagen.id,
                 "nombre": imagen.imagen_nombre,
-                "url": imagen.imagen_url,
+
+                # IMPORTANTE:
+                # Ya no mandamos directamente la URL de Nextcloud
+                "url": reverse(
+                    "producto_imagen",
+                    args=[imagen.id],
+                ),
             }
         )
 
     return JsonResponse(
         {
             "success": True,
+
             "producto": {
                 "id": producto.id,
                 "nombre": producto.nombre,
@@ -1308,16 +1478,31 @@ def get_producto(request, id):
                 "isActive": producto.is_active,
                 "vencimiento": producto.vencimiento,
                 "impuesto": float(producto.impuesto),
+                "equival_unid": producto.equival_unid,
+                "is_master": producto.is_master,
+
                 "imagenes": imagenes,
-                "categoriaId": producto.categoria.id if producto.categoria else None,
-                "categoria": (
-                    {"nombre": producto.categoria.nombre}
+
+                "categoriaId": (
+                    producto.categoria.id
                     if producto.categoria
                     else None
                 ),
-                "unidadMedidaId": (
-                    producto.unidad_medida.id if producto.unidad_medida else None
+
+                "categoria": (
+                    {
+                        "nombre": producto.categoria.nombre
+                    }
+                    if producto.categoria
+                    else None
                 ),
+
+                "unidadMedidaId": (
+                    producto.unidad_medida.id
+                    if producto.unidad_medida
+                    else None
+                ),
+
                 "unidadMedida": (
                     {
                         "nombre": producto.unidad_medida.nombre,
@@ -1326,14 +1511,23 @@ def get_producto(request, id):
                     if producto.unidad_medida
                     else None
                 ),
-                "marcasId": producto.marca.id if producto.marca else None,
+
+                "marcasId": (
+                    producto.marca.id
+                    if producto.marca
+                    else None
+                ),
+
                 "marcas": (
-                    {"nombre": producto.marca.nombre} if producto.marca else None
+                    {
+                        "nombre": producto.marca.nombre
+                    }
+                    if producto.marca
+                    else None
                 ),
             },
         }
     )
-
 
 @login_required
 @permission_required("manager.change_productos", raise_exception=True)
@@ -1341,7 +1535,7 @@ def get_producto(request, id):
 def put_producto(request, id):
 
     try:
-        import os
+
         import uuid
 
         producto = Productos.objects.filter(
@@ -1363,6 +1557,7 @@ def put_producto(request, id):
         # =========================
         # DATOS BÁSICOS
         # =========================
+
         producto.nombre = data.get("Nombre", "").strip()
         producto.descripcion = data.get("Descripcion", "").strip()
 
@@ -1383,16 +1578,38 @@ def put_producto(request, id):
         producto.unidad_medida_id = unidad_id
         producto.marca_id = marca_id
 
-        producto.codigo_sku = data.get("CodigoSKU", "").strip()
+        producto.codigo_sku = data.get(
+            "CodigoSKU",
+            "",
+        ).strip()
 
-        precio = data.get("precioVenta", "0").replace(",", ".")
+        precio = data.get(
+            "precioVenta",
+            "0",
+        ).replace(",", ".")
+
         producto.precio_venta = float(precio)
-        impuesto = data.get("impuesto", "0").replace(",", ".")
+
+        impuesto = data.get(
+            "impuesto",
+            "0",
+        ).replace(",", ".")
+
         producto.impuesto = float(impuesto)
 
-        producto.is_active = str(data.get("IsActive")).lower() == "true"
+        producto.is_active = (
+            str(data.get("IsActive")).lower() == "true"
+        )
 
-        producto.vencimiento = str(data.get("Vencimiento")).lower() == "true"
+        producto.is_master = (
+            str(data.get("Espadre")).lower() == "true"
+        )
+
+        producto.vencimiento = (
+            str(data.get("Vencimiento")).lower() == "true"
+        )
+
+        producto.equival_unid = data.get("vunid")
 
         producto.f_modificacion = timezone.now()
         producto.u_modifico_id = request.user.id
@@ -1400,44 +1617,68 @@ def put_producto(request, id):
         # =========================
         # GUARDAR PRODUCTO
         # =========================
+
         producto.save()
 
         # =========================
         # ELIMINAR IMÁGENES
         # =========================
-        imagenes_eliminar = request.POST.getlist("ImagenesEliminar[]")
+
+        imagenes_eliminar = request.POST.getlist(
+            "ImagenesEliminar[]"
+        )
 
         if imagenes_eliminar:
+
             imagenes_db = ProductosImagenes.objects.filter(
                 id__in=imagenes_eliminar,
                 producto=producto,
             )
 
             for imagen in imagenes_db:
+
                 try:
-                    ruta_imagen = os.path.join(
-                        settings.MEDIA_ROOT,
-                        "productos",
-                        imagen.imagen_nombre,
+
+                    # URL real donde está el archivo en Nextcloud
+                    url_nextcloud = imagen.imagen_url
+
+                    # Limpiar doble slash
+                    url_nextcloud = url_nextcloud.replace(
+                        "/Productos//",
+                        "/Productos/",
                     )
 
-                    print("ELIMINANDO:", ruta_imagen)  # DEBUG útil
-
-                    if os.path.exists(ruta_imagen):
-                        os.remove(ruta_imagen)
-                    else:
-                        print("NO EXISTE:", ruta_imagen)
+                    eliminar_archivo(
+                        url_nextcloud
+                    )
 
                 except Exception as e:
-                    print("ERROR eliminando archivo físico:", e)
 
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "message": (
+                                "No se pudo eliminar "
+                                f"la imagen {imagen.imagen_nombre}: "
+                                f"{str(e)}"
+                            ),
+                        },
+                        status=500,
+                    )
+
+                # Eliminar registro de BD
                 imagen.delete()
+
         # =========================
         # NUEVAS IMÁGENES
         # =========================
-        imagenes = request.FILES.getlist("Imagenes")
+
+        imagenes = request.FILES.getlist(
+            "Imagenes"
+        )
 
         for imagen in imagenes:
+
             nombre_original = imagen.name.replace(
                 " ",
                 "_",
@@ -1445,33 +1686,27 @@ def put_producto(request, id):
 
             random_prefix = uuid.uuid4().hex[:5]
 
-            nuevo_nombre = f"{random_prefix}_{nombre_original}"
-
-            # carpeta física
-            base_dir = os.path.join(
-                settings.BASE_DIR,
-                "manager",
-                "media",
-                "productos",
+            nuevo_nombre = (
+                f"{random_prefix}_{nombre_original}"
             )
 
-            os.makedirs(base_dir, exist_ok=True)
+            # =========================
+            # SUBIR A NEXTCLOUD
+            # =========================
 
-            file_path = os.path.join(
-                base_dir,
+            imagen_url = subir_archivo(
+                imagen,
                 nuevo_nombre,
             )
 
-            # guardar archivo
-            with open(file_path, "wb+") as destination:
-                for chunk in imagen.chunks():
-                    destination.write(chunk)
+            # =========================
+            # GUARDAR EN BD
+            # =========================
 
-            # guardar BD
             ProductosImagenes.objects.create(
                 producto=producto,
-                imagen_nombre=nuevo_nombre,
-                imagen_url=f"/manager/media/productos/{nuevo_nombre}",
+                imagen_nombre=nombre_original,
+                imagen_url=imagen_url,
             )
 
         return JsonResponse(
@@ -1482,6 +1717,7 @@ def put_producto(request, id):
         )
 
     except Exception as e:
+
         return JsonResponse(
             {
                 "success": False,
@@ -1545,6 +1781,707 @@ def search_productos(request):
     ]
 
     return JsonResponse(data, safe=False)
+
+
+
+@login_required
+@permission_required("manager.view_productos", raise_exception=True)
+def get_productos_padre(request):
+
+    productos = (
+        Productos.objects.select_related(
+            "categoria",
+            "unidad_medida",
+            "marca",
+        )
+        .filter(
+            is_delete=False,
+            is_master=True,
+        )
+        .order_by("nombre")
+    )
+
+    data = []
+
+    for producto in productos:
+        data.append(
+            {
+                "id": producto.id,
+                "nombre": producto.nombre,
+                "descripcion": producto.descripcion,
+                "codigoSKU": producto.codigo_sku,
+                "precioVenta": float(producto.precio_venta),
+                "isActive": producto.is_active,
+                "vencimiento": producto.vencimiento,
+                "impuesto": float(producto.impuesto),
+                "equival_unid": producto.equival_unid,
+                "is_master": producto.is_master,
+
+                "categoriaId": (
+                    producto.categoria.id
+                    if producto.categoria
+                    else None
+                ),
+
+                "categoria": (
+                    {
+                        "nombre": producto.categoria.nombre
+                    }
+                    if producto.categoria
+                    else None
+                ),
+
+                "unidadMedidaId": (
+                    producto.unidad_medida.id
+                    if producto.unidad_medida
+                    else None
+                ),
+
+                "unidadMedida": (
+                    {
+                        "nombre": producto.unidad_medida.nombre,
+                        "abreviatura": producto.unidad_medida.abreviatura,
+                    }
+                    if producto.unidad_medida
+                    else None
+                ),
+
+                "marcasId": (
+                    producto.marca.id
+                    if producto.marca
+                    else None
+                ),
+
+                "marcas": (
+                    {
+                        "nombre": producto.marca.nombre
+                    }
+                    if producto.marca
+                    else None
+                ),
+            }
+        )
+
+    return JsonResponse(
+        {
+            "success": True,
+            "productos": data,
+        }
+    )
+
+@login_required
+@permission_required("manager.view_productos", raise_exception=True)
+def get_productos_hijos(request):
+
+    productos = (
+        Productos.objects.select_related(
+            "categoria",
+            "unidad_medida",
+            "marca",
+        )
+        .filter(
+            is_delete=False,
+            is_master=False,
+        )
+        .order_by("nombre")
+    )
+
+    data = []
+
+    for producto in productos:
+        data.append(
+            {
+                "id": producto.id,
+                "nombre": producto.nombre,
+                "descripcion": producto.descripcion,
+                "codigoSKU": producto.codigo_sku,
+                "precioVenta": float(producto.precio_venta),
+                "isActive": producto.is_active,
+                "vencimiento": producto.vencimiento,
+                "impuesto": float(producto.impuesto),
+                "equival_unid": producto.equival_unid,
+                "is_master": producto.is_master,
+
+                "categoriaId": (
+                    producto.categoria.id
+                    if producto.categoria
+                    else None
+                ),
+
+                "categoria": (
+                    {
+                        "nombre": producto.categoria.nombre
+                    }
+                    if producto.categoria
+                    else None
+                ),
+
+                "unidadMedidaId": (
+                    producto.unidad_medida.id
+                    if producto.unidad_medida
+                    else None
+                ),
+
+                "unidadMedida": (
+                    {
+                        "nombre": producto.unidad_medida.nombre,
+                        "abreviatura": producto.unidad_medida.abreviatura,
+                    }
+                    if producto.unidad_medida
+                    else None
+                ),
+
+                "marcasId": (
+                    producto.marca.id
+                    if producto.marca
+                    else None
+                ),
+
+                "marcas": (
+                    {
+                        "nombre": producto.marca.nombre
+                    }
+                    if producto.marca
+                    else None
+                ),
+            }
+        )
+
+    return JsonResponse(
+        {
+            "success": True,
+            "productos": data,
+        }
+    )
+
+@login_required
+@permission_required("manager.view_productosrel", raise_exception=True)
+def productos_rel_view(request):
+
+    search = request.GET.get("search", "").strip()
+
+    query = (
+        ProductosRel.objects
+        .select_related(
+            "producto_master",
+            "producto_relacionado",
+        )
+        .all()
+    )
+
+    # =========================
+    # OCULTAR ELIMINADOS
+    # =========================
+    if not request.user.is_superuser:
+        query = query.filter(is_delete=False)
+
+    # =========================
+    # BUSCADOR
+    # =========================
+    if search:
+        query = query.filter(
+            Q(producto_master__nombre__icontains=search)
+            | Q(producto_master__codigo_sku__icontains=search)
+            | Q(producto_relacionado__nombre__icontains=search)
+            | Q(producto_relacionado__codigo_sku__icontains=search)
+        )
+
+    # =========================
+    # PAGINACIÓN
+    # =========================
+    paginator = Paginator(
+        query.order_by("id"),
+        10
+    )
+
+    page_number = request.GET.get("page", 1)
+
+    page_obj = paginator.get_page(page_number)
+
+    # =========================
+    # CONTEXT
+    # =========================
+    context = {
+        "page_obj": page_obj,
+        "search": search,
+        "mostrar_buscador": True,
+    }
+
+    return render(
+        request,
+        "gestiones/productosrel.html",
+        context
+    )
+
+
+
+@login_required
+@permission_required(
+    "manager.add_productosrel",
+    raise_exception=True
+)
+@require_POST
+def post_productosrel(request):
+
+    try:
+
+        # =========================
+        # LEER JSON
+        # =========================
+
+        data = json.loads(request.body)
+
+        producto_master_id = data.get("producto_master")
+        producto_relacionado_id = data.get("producto_relacionado")
+
+
+        # =========================
+        # VALIDAR CAMPOS
+        # =========================
+
+        if not producto_master_id:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Debe seleccionar un producto padre"
+                },
+                status=400
+            )
+
+
+        if not producto_relacionado_id:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Debe seleccionar un producto hijo"
+                },
+                status=400
+            )
+
+
+        # =========================
+        # EVITAR MISMO PRODUCTO
+        # =========================
+
+        if producto_master_id == producto_relacionado_id:
+
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "El producto padre y el producto hijo no pueden ser el mismo"
+                },
+                status=400
+            )
+
+
+        # =========================
+        # BUSCAR PRODUCTO PADRE
+        # =========================
+
+        producto_master = (
+            Productos.objects
+            .filter(
+                id=producto_master_id,
+                is_delete=False,
+                is_master=True,
+            )
+            .first()
+        )
+
+
+        if not producto_master:
+
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "El producto padre no existe o no es un producto padre"
+                },
+                status=404
+            )
+
+
+        # =========================
+        # BUSCAR PRODUCTO HIJO
+        # =========================
+
+        producto_relacionado = (
+            Productos.objects
+            .filter(
+                id=producto_relacionado_id,
+                is_delete=False,
+                is_master=False,
+            )
+            .first()
+        )
+
+
+        if not producto_relacionado:
+
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "El producto hijo no existe o es un producto padre"
+                },
+                status=404
+            )
+
+
+        # =========================
+        # VALIDAR RELACIÓN DUPLICADA
+        # =========================
+
+        if ProductosRel.objects.filter(
+            producto_master=producto_master,
+            producto_relacionado=producto_relacionado,
+        ).exists():
+
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Esta relación de productos ya existe"
+                },
+                status=400
+            )
+
+
+        # =========================
+        # CREAR RELACIÓN
+        # =========================
+
+        relacion = ProductosRel.objects.create(
+            producto_master=producto_master,
+            producto_relacionado=producto_relacionado,
+            u_creo_id=request.user.id,
+        )
+
+
+        # =========================
+        # RESPUESTA
+        # =========================
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "Relación de productos registrada correctamente",
+                "id": relacion.id,
+            }
+        )
+
+
+    except json.JSONDecodeError:
+
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Los datos enviados no tienen un formato JSON válido"
+            },
+            status=400
+        )
+
+
+    except Exception as e:
+
+        return JsonResponse(
+            {
+                "success": False,
+                "message": str(e)
+            },
+            status=500
+        )
+
+@login_required
+@permission_required(
+    "manager.view_productosrel",
+    raise_exception=True
+)
+def get_productosrel(request, id):
+
+    relacion = (
+        ProductosRel.objects
+        .select_related(
+            "producto_master",
+            "producto_relacionado",
+        )
+        .filter(
+            id=id,
+            is_delete=False,
+        )
+        .first()
+    )
+
+    if not relacion:
+
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Relación de productos no encontrada",
+            },
+            status=404,
+        )
+
+
+    return JsonResponse(
+        {
+            "success": True,
+
+            "productosrel": {
+
+                "id": relacion.id,
+
+                "productoMasterId":
+                    relacion.producto_master.id,
+
+                "productoMaster":
+                    relacion.producto_master.nombre,
+
+                "productoRelacionadoId":
+                    relacion.producto_relacionado.id,
+
+                "productoRelacionado":
+                    relacion.producto_relacionado.nombre,
+
+                "isActive":
+                    relacion.is_active,
+
+            },
+        }
+    )
+
+
+@login_required
+@permission_required(
+    "manager.change_productosrel",
+    raise_exception=True
+)
+@require_http_methods(["PUT"])
+def put_productosrel(request, id):
+
+    try:
+
+        # =========================
+        # LEER JSON
+        # =========================
+
+        data = json.loads(request.body)
+
+        producto_master_id = data.get(
+            "producto_master"
+        )
+
+        producto_relacionado_id = data.get(
+            "producto_relacionado"
+        )
+
+        is_active = data.get(
+            "IsActive",
+            True
+        )
+
+
+        # =========================
+        # VALIDAR CAMPOS
+        # =========================
+
+        if not producto_master_id:
+
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Debe seleccionar un producto padre",
+                },
+                status=400,
+            )
+
+
+        if not producto_relacionado_id:
+
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Debe seleccionar un producto hijo",
+                },
+                status=400,
+            )
+
+
+        # =========================
+        # EVITAR MISMO PRODUCTO
+        # =========================
+
+        if (
+            str(producto_master_id)
+            == str(producto_relacionado_id)
+        ):
+
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message":
+                        "El producto padre y el producto hijo no pueden ser el mismo",
+                },
+                status=400,
+            )
+
+
+        # =========================
+        # BUSCAR RELACIÓN
+        # =========================
+
+        relacion = (
+            ProductosRel.objects
+            .filter(id=id)
+            .first()
+        )
+
+
+        if not relacion or relacion.is_delete:
+
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message":
+                        "Relación de productos no encontrada",
+                },
+                status=404,
+            )
+
+
+        # =========================
+        # BUSCAR PADRE
+        # =========================
+
+        producto_master = (
+            Productos.objects
+            .filter(
+                id=producto_master_id,
+                is_delete=False,
+                is_master=True,
+            )
+            .first()
+        )
+
+
+        if not producto_master:
+
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message":
+                        "El producto padre no existe o no es un producto padre",
+                },
+                status=404,
+            )
+
+
+        # =========================
+        # BUSCAR HIJO
+        # =========================
+
+        producto_relacionado = (
+            Productos.objects
+            .filter(
+                id=producto_relacionado_id,
+                is_delete=False,
+                is_master=False,
+            )
+            .first()
+        )
+
+
+        if not producto_relacionado:
+
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message":
+                        "El producto hijo no existe o es un producto padre",
+                },
+                status=404,
+            )
+
+
+        # =========================
+        # VALIDAR DUPLICADO
+        # =========================
+
+        existe = (
+            ProductosRel.objects
+            .filter(
+                producto_master=producto_master,
+                producto_relacionado=producto_relacionado,
+                is_delete=False,
+            )
+            .exclude(id=id)
+            .exists()
+        )
+
+
+        if existe:
+
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message":
+                        "Ya existe esta relación de productos",
+                },
+                status=400,
+            )
+
+
+        # =========================
+        # ACTUALIZAR
+        # =========================
+
+        relacion.producto_master = producto_master
+
+        relacion.producto_relacionado = (
+            producto_relacionado
+        )
+
+        relacion.is_active = is_active
+
+        relacion.u_modifico_id = request.user.id
+
+        relacion.f_modificacion = timezone.now()
+
+        relacion.save()
+
+
+        # =========================
+        # RESPUESTA
+        # =========================
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message":
+                    "Relación de productos actualizada correctamente",
+            }
+        )
+
+
+    except json.JSONDecodeError:
+
+        return JsonResponse(
+            {
+                "success": False,
+                "message":
+                    "Los datos enviados no tienen un formato JSON válido",
+            },
+            status=400,
+        )
+
+
+    except Exception as e:
+
+        return JsonResponse(
+            {
+                "success": False,
+                "message": str(e),
+            },
+            status=500,
+        )
+
 
 
 # ───────────────────────────────────────────────────────────────
@@ -1696,7 +2633,7 @@ def put_ubicaciones(request, id):
 
         nombre = (data.get("Nombre") or "").strip()
         codigo = (data.get("Codigo") or "").strip()
-        ubicaciones =(data.get("ubicacion") or "").strip()
+        ubicaciones = (data.get("ubicacion") or "").strip()
         es_bodega = data.get("es_bodega", False)
         es_tienda = data.get("es_tienda", False)
 
@@ -2054,7 +2991,6 @@ def post_compra(request):
         )
 
     except Exception as e:
-        print(traceback.format_exc())
         return JsonResponse(
             {"success": False, "message": f"Error interno: {str(e)}"}, status=500
         )
@@ -2312,7 +3248,6 @@ def editar_compra(request, id):
             for d in detalles
         ],
     }
-    print(compra_data)
 
     return render(
         request, "compras/editarcompra.html", {"compra": compra_data, "idcompra": id}
@@ -2671,6 +3606,7 @@ def clientes_view(request):
         "total_clientes": total_clientes,
         "clientes_activos": clientes_activos,
         "clientes_inactivos": clientes_inactivos,
+        "mostrar_buscador": True,
     }
 
     return render(request, "clientes.html", context)
@@ -2824,6 +3760,47 @@ def put_cliente(request, id):
 
     except Exception as e:
         return JsonResponse({"success": False, "message": str(e)}, status=500)
+
+
+@login_required
+@permission_required("manager.view_clientes", raise_exception=True)
+def search_clientes(request):
+
+    search = request.GET.get("search", "").strip()
+
+    items = Clientes.objects.filter(is_delete=False, is_active=True)
+
+    if search:
+        items = (
+            items.filter(
+                Q(nombre__icontains=search)
+                | Q(nombre2__icontains=search)
+                | Q(apellido__icontains=search)
+                | Q(apellido2__icontains=search)
+                | Q(empresa__icontains=search)
+                | Q(dni__icontains=search)
+                | Q(telefono__icontains=search)
+            )
+            .distinct()
+            .order_by("nombre")
+        )
+    else:
+        items = items.order_by("-id")
+
+    items = items[:8]
+
+    data = [
+        {
+            "id": c.id,
+            "dni": c.dni,
+            "nombre_completo": c.nombre_completo,
+            "empresa": c.empresa,
+            "telefono": c.telefono,
+        }
+        for c in items
+    ]
+
+    return JsonResponse(data, safe=False)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -3081,8 +4058,6 @@ def autorizar_entrada_view(request, tipo, id):
     else:
         raise Http404("Tipo no válido")
 
-    print(compra_data)
-
     return render(
         request,
         "bodega/confiinventario.html",
@@ -3093,6 +4068,114 @@ def autorizar_entrada_view(request, tipo, id):
     )
 
 
+def obtener_productos_relacionados(producto, cantidad):
+
+    productos_inventario = []
+
+    # ==========================================
+    # OBTENER RELACIONES DONDE ES PRODUCTO PADRE
+    # ==========================================
+
+    relaciones_padre = (
+        ProductosRel.objects
+        .select_related(
+            "producto_master",
+            "producto_relacionado",
+        )
+        .filter(
+            producto_master=producto,
+            is_active=True,
+            is_delete=False,
+        )
+    )
+
+    # ==========================================
+    # OBTENER RELACIONES DONDE ES PRODUCTO HIJO
+    # ==========================================
+
+    relaciones_hijo = (
+        ProductosRel.objects
+        .select_related(
+            "producto_master",
+            "producto_relacionado",
+        )
+        .filter(
+            producto_relacionado=producto,
+            is_active=True,
+            is_delete=False,
+        )
+    )
+
+    # ==========================================
+    # PRODUCTOS INVOLUCRADOS
+    # ==========================================
+
+    productos = {
+        producto.id: producto
+    }
+
+    # ==========================================
+    # AGREGAR PRODUCTOS HIJOS
+    # ==========================================
+
+    for rel in relaciones_padre:
+
+        productos[
+            rel.producto_relacionado.id
+        ] = rel.producto_relacionado
+
+    # ==========================================
+    # AGREGAR PRODUCTOS PADRE
+    # ==========================================
+
+    for rel in relaciones_hijo:
+
+        productos[
+            rel.producto_master.id
+        ] = rel.producto_master
+
+    # ==========================================
+    # CONVERTIR A UNIDAD BASE
+    # ==========================================
+
+    equivalencia_producto = (
+        Decimal(producto.equival_unid)
+        if producto.equival_unid
+        else Decimal("1")
+    )
+
+    cantidad_base = (
+        Decimal(cantidad)
+        * equivalencia_producto
+    )
+
+    # ==========================================
+    # CALCULAR CANTIDAD PARA CADA PRODUCTO
+    # ==========================================
+
+    for prod in productos.values():
+
+        equivalencia = (
+            Decimal(prod.equival_unid)
+            if prod.equival_unid
+            else Decimal("1")
+        )
+
+        cantidad_convertida = (
+            cantidad_base
+            / equivalencia
+        )
+
+        productos_inventario.append(
+            {
+                "producto": prod,
+                "cantidad": cantidad_convertida,
+            }
+        )
+
+    return productos_inventario
+
+        
 @csrf_exempt
 @transaction.atomic
 @login_required
@@ -3116,100 +4199,222 @@ def post_autorizar_inventario(request):
                 {"success": False, "message": "Datos incompletos"}, status=400
             )
 
+
         # =====================================================
         # COMPRA
         # =====================================================
         if tipo == "COMPRA":
+
             entrada = get_object_or_404(
-                Compras.objects.select_related("ubicacion").prefetch_related(
-                    "compra_detalles"
-                ),
+                Compras.objects
+                .select_related("ubicacion")
+                .prefetch_related("compra_detalles"),
                 id=entrada_id,
             )
 
             ubicacion_destino = entrada.ubicacion
+
             detalles = entrada.compra_detalles.all()
 
             for p in productos:
+
                 producto_id = p.get("ProductoId")
-                cantidad = Decimal(str(p.get("Cantidad", 0)))
+
+                cantidad = Decimal(
+                    str(p.get("Cantidad", 0))
+                )
+
                 fvencimiento = p.get("Fvencimiento")
 
                 if cantidad <= 0:
                     continue
 
-                detalle = detalles.filter(producto_id=producto_id).first()
+                detalle = detalles.filter(
+                    producto_id=producto_id
+                ).first()
+
                 if not detalle:
                     continue
 
-                autorizado_actual = HAutorizarCompra.objects.filter(
-                    compra_id=entrada.id,
-                    producto_id=producto_id,
-                ).aggregate(total=Sum("cantidad_autorizada"))["total"] or Decimal("0")
+                autorizado_actual = (
+                    HAutorizarCompra.objects
+                    .filter(
+                        compra_id=entrada.id,
+                        producto_id=producto_id,
+                    )
+                    .aggregate(
+                        total=Sum("cantidad_autorizada")
+                    )["total"]
+                    or Decimal("0")
+                )
 
-                pendiente = detalle.cantidad - autorizado_actual
+                pendiente = (
+                    detalle.cantidad
+                    - autorizado_actual
+                )
 
                 if cantidad > pendiente:
+
                     return JsonResponse(
                         {
                             "success": False,
-                            "message": f"Excede cantidad pendiente producto {producto_id}",
+                            "message":
+                                f"Excede cantidad pendiente producto {producto_id}",
                         },
                         status=400,
                     )
+
+                producto = (
+                    Productos.objects
+                    .filter(
+                        id=producto_id,
+                        is_delete=False,
+                    )
+                    .first()
+                )
+
+                if not producto:
+
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "message":
+                                f"Producto {producto_id} no existe",
+                        },
+                        status=400,
+                    )
+
+                fecha_vencimiento = (
+                    parse_datetime(fvencimiento)
+                    if fvencimiento
+                    else None
+                )
+
+                # =====================================================
+                # REGISTRAR AUTORIZACION
+                # =====================================================
 
                 HAutorizarCompra.objects.create(
                     compra_id=entrada.id,
                     producto_id=producto_id,
                     cantidad_comprada=detalle.cantidad,
                     cantidad_autorizada=cantidad,
-                    fvencimiento=parse_datetime(fvencimiento) if fvencimiento else None,
+                    fvencimiento=fecha_vencimiento,
                     u_creo_id=request.user.id,
                 )
 
-                Inventarios.objects.create(
-                    producto_id=producto_id,
-                    ubicacion=ubicacion_destino,
-                    compra=entrada,
-                    cantidad=cantidad,
-                    fvencimiento=parse_datetime(fvencimiento) if fvencimiento else None,
-                    u_creo_id=request.user.id,
+                # =====================================================
+                # PRODUCTO + RELACIONES
+                # =====================================================
+
+                productos_inventario = (
+                    obtener_productos_relacionados(
+                        producto,
+                        cantidad,
+                    )
                 )
 
-                MovimientoInventario.objects.create(
-                    tipo_movimiento=TipoMovimientoInventario.ENTRADA_COMPRA,
-                    producto_id=producto_id,
-                    ubicacion_destino=ubicacion_destino,
-                    cantidad=cantidad,
-                    stock_anterior=0,
-                    stock_resultante=cantidad,
-                    compra_id=entrada.id,
-                )
+                # =====================================================
+                # CREAR INVENTARIO
+                # =====================================================
+
+                for item in productos_inventario:
+
+                    producto_inventario = item["producto"]
+                    cantidad_inventario = item["cantidad"]
+
+                    stock_anterior = (
+                        Inventarios.objects
+                        .filter(
+                            producto=producto_inventario,
+                            ubicacion=ubicacion_destino,
+                        )
+                        .aggregate(
+                            total=Sum("cantidad")
+                        )["total"]
+                        or Decimal("0")
+                    )
+
+                    stock_resultante = (
+                        stock_anterior
+                        + cantidad_inventario
+                    )
+
+                    Inventarios.objects.create(
+                        producto=producto_inventario,
+                        ubicacion=ubicacion_destino,
+                        compra=entrada,
+                        cantidad=cantidad_inventario,
+                        fvencimiento=fecha_vencimiento,
+                        u_creo_id=request.user.id,
+                    )
+
+                    MovimientoInventario.objects.create(
+                        tipo_movimiento=TipoMovimientoInventario.ENTRADA_COMPRA,
+                        producto=producto_inventario,
+                        ubicacion_destino=ubicacion_destino,
+                        cantidad=cantidad_inventario,
+                        stock_anterior=stock_anterior,
+                        stock_resultante=stock_resultante,
+                        compra_id=entrada.id,
+                    )
+
+            # =====================================================
+            # ACTUALIZAR ESTADO DE LA COMPRA
+            # =====================================================
 
             autorizados = (
-                HAutorizarCompra.objects.filter(compra_id=entrada.id)
+                HAutorizarCompra.objects
+                .filter(compra_id=entrada.id)
                 .values("producto_id")
-                .annotate(total=Sum("cantidad_autorizada"))
+                .annotate(
+                    total=Sum("cantidad_autorizada")
+                )
             )
 
-            map_aut = {a["producto_id"]: a["total"] for a in autorizados}
+            map_autorizados = {
+                a["producto_id"]: a["total"]
+                for a in autorizados
+            }
 
             completado = all(
-                map_aut.get(d.producto_id, Decimal("0")) >= d.cantidad for d in detalles
+                map_autorizados.get(
+                    detalle.producto_id,
+                    Decimal("0")
+                ) >= detalle.cantidad
+                for detalle in detalles
             )
 
-            entrada.estado = (
-                EstadoCompra.COMPLETADO if completado else EstadoCompra.PENDIENTE
+            alguno_autorizado = any(
+                map_autorizados.get(
+                    detalle.producto_id,
+                    Decimal("0")
+                ) > 0
+                for detalle in detalles
             )
-            entrada.save()
 
+            if completado:
+                entrada.estado = EstadoCompra.COMPLETADO
+
+            elif alguno_autorizado:
+                entrada.estado = EstadoCompra.RECEPCION_PARCIAL
+
+            else:
+                entrada.estado = EstadoCompra.PENDIENTE
+
+            entrada.save(
+                update_fields=["estado"]
+            )
+                
         # =====================================================
         # TRASLADO
         # =====================================================
         elif tipo == "TRASLADO":
+
             entrada = get_object_or_404(
                 Traslados.objects.select_related(
-                    "ubicacion_origen", "ubicacion_destino"
+                    "ubicacion_origen",
+                    "ubicacion_destino",
                 ),
                 id=entrada_id,
             )
@@ -3217,58 +4422,398 @@ def post_autorizar_inventario(request):
             origen = entrada.ubicacion_origen
             destino = entrada.ubicacion_destino
 
-            detalles = DetalleTraslado.objects.filter(traslado_id=entrada.id)
+            detalles = DetalleTraslado.objects.filter(
+                traslado_id=entrada.id
+            )
 
             for p in productos:
+
                 producto_id = p.get("ProductoId")
-                cantidad = Decimal(str(p.get("Cantidad", 0)))
+
+                cantidad = Decimal(
+                    str(p.get("Cantidad", 0))
+                )
+
                 fvencimiento = p.get("Fvencimiento")
 
                 if cantidad <= 0:
                     continue
 
-                detalle = detalles.filter(producto_id=producto_id).first()
+                detalle = detalles.filter(
+                    producto_id=producto_id
+                ).first()
+
                 if not detalle:
-                    continue
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "message":
+                                f"No existe detalle de traslado para el producto {producto_id}",
+                        },
+                        status=400,
+                    )
 
                 # =====================================================
-                # NO SUMA → SOLO REEMPLAZA
+                # VALIDAR CANTIDAD PENDIENTE DEL TRASLADO
                 # =====================================================
-                detalle.cantidad_entregada = cantidad
-                detalle.save(update_fields=["cantidad_entregada"])
 
-                Inventarios.objects.create(
-                    producto_id=producto_id,
-                    ubicacion=destino,
-                    cantidad=cantidad,
-                    fvencimiento=parse_datetime(fvencimiento) if fvencimiento else None,
-                    u_creo_id=request.user.id,
+                cantidad_ya_entregada = (
+                    detalle.cantidad_entregada
+                    or Decimal("0")
                 )
 
-                MovimientoInventario.objects.create(
-                    tipo_movimiento=TipoMovimientoInventario.TRASLADO_ENTRADA,
-                    producto_id=producto_id,
-                    ubicacion_origen=origen,
-                    ubicacion_destino=destino,
-                    cantidad=cantidad,
-                    stock_anterior=0,
-                    stock_resultante=cantidad,
-                    traslado_id=entrada.id,
+                cantidad_pendiente = (
+                    detalle.cantidad_solicitada
+                    - cantidad_ya_entregada
                 )
+
+                if cantidad > cantidad_pendiente:
+
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "message":
+                                f"La cantidad autorizada excede la cantidad pendiente "
+                                f"para {detalle.producto.nombre}. "
+                                f"Pendiente: {cantidad_pendiente}",
+                        },
+                        status=400,
+                    )
+
+                # =====================================================
+                # PRODUCTO PRINCIPAL + RELACIONES
+                # =====================================================
+
+                producto = Productos.objects.get(
+                    id=producto_id,
+                    is_delete=False,
+                )
+
+                productos_transferir = (
+                    obtener_productos_relacionados(
+                        producto,
+                        cantidad,
+                    )
+                )
+
+                # =====================================================
+                # PROCESAR CADA PRODUCTO / RELACIÓN
+                # =====================================================
+
+                for item in productos_transferir:
+
+                    producto_transferir = item["producto"]
+
+                    cantidad_transferir = Decimal(
+                        str(item["cantidad"])
+                    )
+
+                    if cantidad_transferir <= 0:
+                        continue
+
+                    # =================================================
+                    # RESERVA DEL PRODUCTO
+                    # =================================================
+
+                    reserva = (
+                        ReservaInventario.objects
+                        .select_for_update()
+                        .filter(
+                            producto=producto_transferir,
+                            ubicacion=origen,
+                            traslado=entrada,
+                            estado=ReservaInventario.Estado.RESERVADA,
+                            is_delete=False,
+                            cantidad__gt=0,
+                        )
+                        .order_by("f_creacion")
+                        .first()
+                    )
+
+                    if not reserva:
+
+                        return JsonResponse(
+                            {
+                                "success": False,
+                                "message":
+                                    f"No existe una reserva activa para "
+                                    f"{producto_transferir.nombre} "
+                                    f"en {origen.nombre}",
+                            },
+                            status=400,
+                        )
+
+                    # =================================================
+                    # VALIDAR QUE LA RESERVA ALCANCE
+                    # =================================================
+
+                    if reserva.cantidad < cantidad_transferir:
+
+                        return JsonResponse(
+                            {
+                                "success": False,
+                                "message":
+                                    f"La reserva de {producto_transferir.nombre} "
+                                    f"no es suficiente. "
+                                    f"Reservada: {reserva.cantidad}, "
+                                    f"solicitada: {cantidad_transferir}",
+                            },
+                            status=400,
+                        )
+
+                    # =================================================
+                    # BUSCAR INVENTARIO DE ORIGEN FIFO
+                    # =================================================
+
+                    capas_origen = (
+                        Inventarios.objects
+                        .select_for_update()
+                        .filter(
+                            producto=producto_transferir,
+                            ubicacion=origen,
+                            is_delete=False,
+                            cantidad__gt=0,
+                        )
+                        .order_by("f_creacion")
+                    )
+
+                    stock_total = (
+                        capas_origen.aggregate(
+                            total=Sum("cantidad")
+                        )["total"]
+                        or Decimal("0")
+                    )
+
+                    if stock_total < cantidad_transferir:
+
+                        return JsonResponse(
+                            {
+                                "success": False,
+                                "message":
+                                    f"El inventario físico de "
+                                    f"{producto_transferir.nombre} "
+                                    f"no es suficiente. "
+                                    f"Disponible: {stock_total}, "
+                                    f"necesario: {cantidad_transferir}",
+                            },
+                            status=400,
+                        )
+
+                    # =================================================
+                    # TRANSFERIR FIFO
+                    # =================================================
+
+                    restante = cantidad_transferir
+
+                    for capa in capas_origen:
+
+                        if restante <= 0:
+                            break
+
+                        stock_anterior_origen = Decimal(
+                            str(capa.cantidad)
+                        )
+
+                        consumir = min(
+                            stock_anterior_origen,
+                            restante,
+                        )
+
+                        # =============================================
+                        # COSTO DEL LOTE
+                        # =============================================
+
+                        costo_unitario = Decimal("0")
+
+                        if capa.compra_id:
+
+                            detalle_compra = (
+                                DetalleCompra.objects
+                                .filter(
+                                    compra_id=capa.compra_id,
+                                    producto_id=producto_transferir.id,
+                                )
+                                .first()
+                            )
+
+                            if detalle_compra:
+                                costo_unitario = (
+                                    detalle_compra.precio_compra
+                                )
+
+                        # =============================================
+                        # DESCONTAR ORIGEN
+                        # =============================================
+
+                        capa.cantidad -= consumir
+
+                        stock_resultante_origen = (
+                            capa.cantidad
+                        )
+
+                        capa.save(
+                            update_fields=["cantidad"]
+                        )
+
+                        # =============================================
+                        # MOVIMIENTO SALIDA
+                        # =============================================
+
+                        MovimientoInventario.objects.create(
+                            tipo_movimiento=
+                                TipoMovimientoInventario.TRASLADO_SALIDA,
+
+                            producto=producto_transferir,
+
+                            ubicacion_origen=origen,
+                            ubicacion_destino=destino,
+
+                            cantidad=consumir,
+
+                            stock_anterior=
+                                stock_anterior_origen,
+
+                            stock_resultante=
+                                stock_resultante_origen,
+
+                            traslado=entrada,
+                        )
+
+                        # =============================================
+                        # CREAR INVENTARIO EN DESTINO
+                        # =============================================
+
+                        stock_anterior_destino = (
+                            Inventarios.objects
+                            .filter(
+                                producto=producto_transferir,
+                                ubicacion=destino,
+                                is_delete=False,
+                            )
+                            .aggregate(
+                                total=Sum("cantidad")
+                            )["total"]
+                            or Decimal("0")
+                        )
+
+                        stock_resultante_destino = (
+                            stock_anterior_destino
+                            + consumir
+                        )
+
+                        Inventarios.objects.create(
+                            producto=producto_transferir,
+                            ubicacion=destino,
+                            cantidad=consumir,
+                            compra=capa.compra,
+                            fvencimiento=(
+                                capa.fvencimiento
+                                if capa.fvencimiento
+                                else (
+                                    parse_datetime(fvencimiento)
+                                    if fvencimiento
+                                    else None
+                                )
+                            ),
+                            u_creo_id=request.user.id,
+                        )
+
+                        # =============================================
+                        # MOVIMIENTO ENTRADA
+                        # =============================================
+
+                        MovimientoInventario.objects.create(
+                            tipo_movimiento=
+                                TipoMovimientoInventario.TRASLADO_ENTRADA,
+
+                            producto=producto_transferir,
+
+                            ubicacion_origen=origen,
+                            ubicacion_destino=destino,
+
+                            cantidad=consumir,
+
+                            stock_anterior=
+                                stock_anterior_destino,
+
+                            stock_resultante=
+                                stock_resultante_destino,
+
+                            traslado=entrada,
+                        )
+
+                        restante -= consumir
+
+                    # =================================================
+                    # CONSUMIR RESERVA
+                    # =================================================
+
+                    reserva.cantidad -= cantidad_transferir
+
+                    if reserva.cantidad <= 0:
+
+                        reserva.cantidad = Decimal("0")
+
+                        reserva.estado = (
+                            ReservaInventario.Estado.CONSUMIDA
+                        )
+
+                    reserva.save(
+                        update_fields=[
+                            "cantidad",
+                            "estado",
+                        ]
+                    )
+
+                # =====================================================
+                # ACTUALIZAR CANTIDAD ENTREGADA
+                # =====================================================
+
+                detalle.cantidad_entregada = (
+                    cantidad_ya_entregada
+                    + cantidad
+                )
+
+                detalle.save(
+                    update_fields=[
+                        "cantidad_entregada"
+                    ]
+                )
+
+            # =========================================================
+            # AUTORIZACIÓN
+            # =========================================================
 
             entrada.autorizado_por = request.user
             entrada.fecha_autorizacion = timezone.now()
 
-            # =====================================================
-            # ESTADO SOLO SI ES IGUAL EXACTO
-            # =====================================================
-            detalles_refresh = DetalleTraslado.objects.filter(traslado_id=entrada.id)
+            # =========================================================
+            # DETERMINAR ESTADO
+            # =========================================================
 
-            completado = all(
-                d.cantidad_entregada == d.cantidad_solicitada for d in detalles_refresh
+            detalles_refresh = (
+                DetalleTraslado.objects
+                .filter(
+                    traslado_id=entrada.id
+                )
             )
 
-            entrada.estado = Estados.COMPLETADO if completado else Estados.PENDIENTE
+            completado = all(
+                (
+                    d.cantidad_entregada
+                    or Decimal("0")
+                )
+                >= d.cantidad_solicitada
+                for d in detalles_refresh
+            )
+
+            if completado:
+
+                entrada.estado = Estados.COMPLETADO
+
+            else:
+
+                entrada.estado = Estados.PENDIENTE
 
             entrada.save()
 
@@ -3720,63 +5265,135 @@ def inventario_view(request):
 @login_required
 @permission_required("manager.view_inventarios", raise_exception=True)
 def get_inventario_producto(request, id):
-
     try:
         producto = get_object_or_404(
-            Productos.objects.select_related("marca").prefetch_related(
+            Productos.objects.select_related(
+                "marca"
+            ).prefetch_related(
                 "imagenes_producto"
             ),
             id=id,
             is_delete=False,
         )
 
+        # ==========================================
+        # INVENTARIO FÍSICO POR UBICACIÓN
+        # ==========================================
+
         inventarios = (
-            Inventarios.objects.select_related("ubicacion")
+            Inventarios.objects.select_related(
+                "ubicacion"
+            )
             .filter(
                 producto_id=id,
                 is_delete=False,
                 cantidad__gt=0,
             )
-            .values("ubicacion__id", "ubicacion__nombre")
-            .annotate(total_cantidad=Sum("cantidad"))
-            .order_by("ubicacion__nombre")
+            .values(
+                "ubicacion__id",
+                "ubicacion__nombre",
+            )
+            .annotate(
+                total_cantidad=Sum("cantidad")
+            )
+            .order_by(
+                "ubicacion__nombre"
+            )
         )
 
         inventario_list = []
 
         for inv in inventarios:
+
             ubicacion_id = inv["ubicacion__id"]
-            stock_fisico = Decimal(str(inv["total_cantidad"] or 0))
 
-            reservado = DetalleTraslado.objects.filter(
-                producto_id=id,
-                traslado__ubicacion_origen_id=ubicacion_id,
-                traslado__estado__in=["PENDIENTE", "EN_TRANSITO"],
-                traslado__is_delete=False,
-            ).aggregate(total=Sum("cantidad_solicitada"))["total"] or Decimal("0.00")
+            # ==========================================
+            # STOCK FÍSICO
+            # ==========================================
 
-            stock_disponible = stock_fisico - Decimal(str(reservado))
+            stock_fisico = Decimal(
+                str(
+                    inv["total_cantidad"] or 0
+                )
+            )
+
+            # ==========================================
+            # STOCK RESERVADO
+            #
+            # Solo tomamos reservas:
+            #
+            #   estado = RESERVADA
+            #
+            # Y de esta ubicación específicamente.
+            # ==========================================
+
+            reservado = (
+                ReservaInventario.objects
+                .filter(
+                    producto_id=id,
+                    ubicacion_id=ubicacion_id,
+                    estado=ReservaInventario.Estado.RESERVADA,
+                    is_delete=False,
+                )
+                .aggregate(
+                    total=Sum("cantidad")
+                )["total"]
+                or Decimal("0.00")
+            )
+
+            reservado = Decimal(
+                str(reservado)
+            )
+
+            # ==========================================
+            # STOCK DISPONIBLE
+            # ==========================================
+
+            stock_disponible = (
+                stock_fisico - reservado
+            )
 
             if stock_disponible < 0:
-                stock_disponible = Decimal("0.00")
+                stock_disponible = Decimal(
+                    "0.00"
+                )
+
+            # ==========================================
+            # AGREGAR RESULTADO
+            # ==========================================
 
             inventario_list.append(
                 {
-                    "ubicacion": inv["ubicacion__nombre"],
-                    "cantidad": float(stock_disponible),
+                    "ubicacion": inv[
+                        "ubicacion__nombre"
+                    ],
+                    "cantidad": float(
+                        stock_disponible
+                    ),
                 }
             )
 
         # ==========================================
-        # IMAGEN (NUEVO MODELO)
+        # IMAGEN DESDE NEXTCLOUD
         # ==========================================
-        imagen = producto.imagenes_producto.first()
 
-        imagen_url = (
-            imagen.imagen_url
-            if imagen and imagen.imagen_url
-            else "/static/img/noimage.png"
+        imagen = (
+            producto.imagenes_producto.first()
         )
+
+        if imagen:
+            imagen_url = request.build_absolute_uri(
+                reverse(
+                    "producto_imagen",
+                    args=[imagen.id],
+                )
+            )
+        else:
+            imagen_url = "/static/img/noimage.png"
+
+        # ==========================================
+        # RESPUESTA
+        # ==========================================
 
         return JsonResponse(
             {
@@ -3790,7 +5407,12 @@ def get_inventario_producto(request, id):
         )
 
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+        return JsonResponse(
+            {
+                "error": str(e)
+            },
+            status=500,
+        )
 
 
 @login_required
@@ -3938,8 +5560,20 @@ def traslados_view(request):
 @permission_required("manager.view_traslados", raise_exception=True)
 def inventario_por_ubicacion(request, ubicacion_id):
 
+    imagen_subquery = (
+        ProductosImagenes.objects
+        .filter(
+            producto_id=OuterRef("producto_id"),
+            imagen_url__isnull=False,
+        )
+        .exclude(
+            imagen_url=""
+        )
+        .values("id")[:1]
+    )
+
     inventario = (
-        Inventarios.objects.select_related("producto", "producto__unidad_medida")
+        Inventarios.objects
         .filter(
             ubicacion_id=ubicacion_id,
             cantidad__gt=0,
@@ -3948,79 +5582,174 @@ def inventario_por_ubicacion(request, ubicacion_id):
             "producto_id",
             "producto__nombre",
             "producto__codigo_sku",
-            "producto__imagen_url",
             "producto__unidad_medida__nombre",
         )
-        .annotate(total_stock=Sum("cantidad"))
+        .annotate(
+            total_stock=Sum("cantidad"),
+            imagen_id=Subquery(imagen_subquery),
+        )
     )
 
     data = []
 
     for item in inventario:
-        stock = float(item["total_stock"] or 0)
+
+        stock = float(
+            item["total_stock"] or 0
+        )
 
         if stock <= 0:
             continue
+
+        imagen_url = ""
+
+        if item["imagen_id"]:
+
+            imagen_url = request.build_absolute_uri(
+                reverse(
+                    "producto_imagen",
+                    args=[item["imagen_id"]],
+                )
+            )
 
         data.append(
             {
                 "producto_id": item["producto_id"],
                 "nombre": item["producto__nombre"],
                 "sku": item["producto__codigo_sku"],
-                "imagen": item["producto__imagen_url"],
-                "unidad": item["producto__unidad_medida__nombre"],
+                "imagen": imagen_url,
+                "unidad": item[
+                    "producto__unidad_medida__nombre"
+                ],
                 "stock": stock,
             }
         )
 
-    return JsonResponse(data, safe=False)
+    return JsonResponse(
+        data,
+        safe=False,
+    )
 
 
 @login_required
-@permission_required("manager.add_traslados", raise_exception=True)
+@permission_required(
+    "manager.add_traslados",
+    raise_exception=True
+)
 @require_http_methods(["POST"])
 def post_traslado(request):
+
     try:
+
+        # =====================================================
+        # LEER JSON
+        # =====================================================
+
         try:
             data = json.loads(request.body)
-        except:
+
+        except Exception:
             return JsonResponse(
-                {"success": False, "message": "JSON inválido"}, status=400
+                {
+                    "success": False,
+                    "message": "JSON inválido"
+                },
+                status=400
             )
 
         origen_id = data.get("origenId")
         destino_id = data.get("destinoId")
-        observaciones = data.get("observaciones", "").strip()
-        detalles = data.get("detalles", [])
+        observaciones = data.get(
+            "observaciones",
+            ""
+        ).strip()
+
+        detalles = data.get(
+            "detalles",
+            []
+        )
+
+        # =====================================================
+        # VALIDACIONES GENERALES
+        # =====================================================
 
         if not origen_id or not destino_id:
+
             return JsonResponse(
-                {"success": False, "message": "Debe seleccionar origen y destino"},
-                status=400,
+                {
+                    "success": False,
+                    "message":
+                        "Debe seleccionar origen y destino"
+                },
+                status=400
             )
 
         if origen_id == destino_id:
+
             return JsonResponse(
-                {"success": False, "message": "Origen y destino no pueden ser iguales"},
-                status=400,
+                {
+                    "success": False,
+                    "message":
+                        "Origen y destino no pueden ser iguales"
+                },
+                status=400
             )
 
         if not detalles:
+
             return JsonResponse(
-                {"success": False, "message": "Debe incluir al menos un producto"},
-                status=400,
+                {
+                    "success": False,
+                    "message":
+                        "Debe incluir al menos un producto"
+                },
+                status=400
             )
 
-        origen = Ubicaciones.objects.filter(id=origen_id, is_delete=False).first()
-        destino = Ubicaciones.objects.filter(id=destino_id, is_delete=False).first()
+        # =====================================================
+        # UBICACIONES
+        # =====================================================
+
+        origen = (
+            Ubicaciones.objects
+            .filter(
+                id=origen_id,
+                is_active=True,
+                is_delete=False,
+            )
+            .first()
+        )
+
+        destino = (
+            Ubicaciones.objects
+            .filter(
+                id=destino_id,
+                is_active=True,
+                is_delete=False,
+            )
+            .first()
+        )
 
         if not origen or not destino:
+
             return JsonResponse(
-                {"success": False, "message": "Ubicaciones inválidas"},
-                status=400,
+                {
+                    "success": False,
+                    "message": "Ubicaciones inválidas"
+                },
+                status=400
             )
 
+        # =====================================================
+        # TRANSACCIÓN
+        # =====================================================
+
         with transaction.atomic():
+
+            # =================================================
+            # CREAR TRASLADO
+            # =================================================
+
             traslado = Traslados.objects.create(
                 solicitado_por_id=request.user.id,
                 ubicacion_origen=origen,
@@ -4030,53 +5759,162 @@ def post_traslado(request):
                 u_creo_id=request.user.id,
             )
 
+            # =================================================
+            # PRODUCTOS DEL TRASLADO
+            # =================================================
+
             for item in detalles:
-                producto_id = item.get("productoId")
+
+                producto_id = item.get(
+                    "productoId"
+                )
+
+                # ---------------------------------------------
+                # CANTIDAD
+                # ---------------------------------------------
 
                 try:
-                    cantidad_solicitada = Decimal(str(item.get("cantidad") or 0))
-                except:
-                    return JsonResponse(
-                        {"success": False, "message": "Cantidad inválida"},
-                        status=400,
+
+                    cantidad_solicitada = Decimal(
+                        str(
+                            item.get(
+                                "cantidad",
+                                0
+                            )
+                        )
+                    )
+
+                except Exception:
+
+                    raise Exception(
+                        "Cantidad inválida"
                     )
 
                 if cantidad_solicitada <= 0:
-                    return JsonResponse(
-                        {"success": False, "message": "Cantidad debe ser mayor a 0"},
-                        status=400,
+
+                    raise Exception(
+                        "Cantidad debe ser mayor a 0"
                     )
 
-                producto = Productos.objects.filter(
-                    id=producto_id, is_delete=False
-                ).first()
+                # ---------------------------------------------
+                # PRODUCTO
+                # ---------------------------------------------
+
+                producto = (
+                    Productos.objects
+                    .filter(
+                        id=producto_id,
+                        is_active=True,
+                        is_delete=False,
+                    )
+                    .first()
+                )
 
                 if not producto:
-                    return JsonResponse(
-                        {
-                            "success": False,
-                            "message": f"Producto {producto_id} no existe",
-                        },
-                        status=400,
+
+                    raise Exception(
+                        f"Producto {producto_id} no existe"
                     )
 
-                capas_origen = Inventarios.objects.filter(
-                    producto_id=producto_id,
-                    ubicacion_id=origen_id,
-                    is_delete=False,
-                    cantidad__gt=0,
-                ).order_by("f_creacion")
+                # =================================================
+                # OBTENER TODAS LAS RELACIONES
+                # =================================================
 
-                stock_total = sum([Decimal(str(x.cantidad)) for x in capas_origen])
-
-                if stock_total < cantidad_solicitada:
-                    return JsonResponse(
-                        {
-                            "success": False,
-                            "message": f"Stock insuficiente para {producto.nombre}. Disponible {stock_total}",
-                        },
-                        status=400,
+                productos_relacionados = (
+                    obtener_productos_relacionados(
+                        producto,
+                        cantidad_solicitada
                     )
+                )
+
+                # =================================================
+                # VALIDAR STOCK DISPONIBLE DE TODO EL GRUPO
+                #
+                # STOCK DISPONIBLE =
+                # STOCK FÍSICO - STOCK RESERVADO
+                # =================================================
+
+                for relacion in productos_relacionados:
+
+                    producto_inventario = (
+                        relacion["producto"]
+                    )
+
+                    cantidad_reservar = (
+                        relacion["cantidad"]
+                    )
+
+                    # -----------------------------------------
+                    # STOCK FÍSICO
+                    # -----------------------------------------
+
+                    stock_fisico = (
+                        Inventarios.objects
+                        .filter(
+                            producto=producto_inventario,
+                            ubicacion=origen,
+                            is_active=True,
+                            is_delete=False,
+                            cantidad__gt=0,
+                        )
+                        .aggregate(
+                            total=Sum("cantidad")
+                        )["total"]
+                        or Decimal("0")
+                    )
+
+                    # -----------------------------------------
+                    # STOCK RESERVADO
+                    # -----------------------------------------
+
+                    stock_reservado = (
+                        ReservaInventario.objects
+                        .filter(
+                            producto=producto_inventario,
+                            ubicacion=origen,
+                            estado=(
+                                ReservaInventario
+                                .Estado
+                                .RESERVADA
+                            ),
+                            is_active=True,
+                            is_delete=False,
+                        )
+                        .aggregate(
+                            total=Sum("cantidad")
+                        )["total"]
+                        or Decimal("0")
+                    )
+
+                    # -----------------------------------------
+                    # STOCK DISPONIBLE
+                    # -----------------------------------------
+
+                    stock_disponible = (
+                        stock_fisico
+                        - stock_reservado
+                    )
+
+                    # -----------------------------------------
+                    # VALIDAR
+                    # -----------------------------------------
+
+                    if stock_disponible < cantidad_reservar:
+
+                        raise Exception(
+                            f"Stock insuficiente para "
+                            f"{producto_inventario.nombre}. "
+                            f"Disponible: "
+                            f"{stock_disponible}"
+                        )
+
+                # =================================================
+                # CREAR DETALLE DEL TRASLADO
+                #
+                # IMPORTANTE:
+                # Aquí guardamos solamente lo que el usuario
+                # solicitó originalmente.
+                # =================================================
 
                 DetalleTraslado.objects.create(
                     traslado=traslado,
@@ -4085,77 +5923,658 @@ def post_traslado(request):
                     u_creo_id=request.user.id,
                 )
 
-                restante = cantidad_solicitada
+                # =================================================
+                # CREAR RESERVAS
+                #
+                # AQUÍ YA NO TOCAMOS INVENTARIOS
+                # =================================================
 
-                # ===============================
-                # DESCONTAR SOLO ORIGEN FIFO
-                # ===============================
-                for capa in capas_origen:
-                    if restante <= 0:
-                        break
+                for relacion in productos_relacionados:
 
-                    stock_capa = Decimal(str(capa.cantidad))
-                    stock_anterior_origen = stock_capa
-
-                    consumir = min(stock_capa, restante)
-
-                    capa.cantidad -= consumir
-                    capa.save()
-
-                    MovimientoInventario.objects.create(
-                        tipo_movimiento=TipoMovimientoInventario.TRASLADO_SALIDA,
-                        producto=producto,
-                        ubicacion_origen=origen,
-                        ubicacion_destino=destino,
-                        cantidad=consumir,
-                        stock_anterior=stock_anterior_origen,
-                        stock_resultante=capa.cantidad,
-                        traslado=traslado,
+                    producto_inventario = (
+                        relacion["producto"]
                     )
 
-                    restante -= consumir
+                    cantidad_reservar = (
+                        relacion["cantidad"]
+                    )
+
+                    ReservaInventario.objects.create(
+                        producto=producto_inventario,
+                        ubicacion=origen,
+                        cantidad=cantidad_reservar,
+                        estado=(
+                            ReservaInventario
+                            .Estado
+                            .RESERVADA
+                        ),
+                        traslado=traslado,
+                        u_creo_id=request.user.id,
+                    )
+
+            # =====================================================
+            # TODO CORRECTO
+            # =====================================================
 
         return JsonResponse(
             {
                 "success": True,
-                "message": "Traslado registrado correctamente y stock reservado",
+                "message":
+                    "Traslado registrado y stock reservado correctamente",
                 "trasladoId": traslado.id,
             }
         )
 
     except Exception as e:
-        print(traceback.format_exc())
-        return JsonResponse(
-            {"success": False, "message": f"Error interno: {str(e)}"},
-            status=500,
-        )
 
+        return JsonResponse(
+            {
+                "success": False,
+                "message":
+                    f"Error interno: {str(e)}"
+            },
+            status=500
+        )
 
 # __________________________
 ## RUTA DE CAJA##
 # _________________________
 @login_required
 def caja_view(request):
+
     if not request.user.groups.filter(name="cajeros").exists():
         raise PermissionDenied("No tienes permiso")
 
-    context = {"mostrar_buscador": False, "mostrar_codigo": True}
+    hoy = timezone.localdate()
+
+    caja_hoy = CajaAC.objects.filter(
+        usuario_id=request.user.id,
+        fecha_apertura__date=hoy
+    ).first()
+
+    mostrar_modal_apertura = False
+    caja_cerrada_hoy = False
+    caja_abierta = False
+
+    if caja_hoy is None:
+        # El usuario todavía no ha abierto caja hoy.
+        mostrar_modal_apertura = True
+
+    elif caja_hoy.estado == "abierta":
+        # La caja está abierta.
+        caja_abierta = True
+
+    elif caja_hoy.estado == "cuadre":
+        # Ya inició el cierre pero todavía no ha
+        # terminado el cuadre.
+        return redirect("cuadre_caja")
+
+    elif caja_hoy.estado == "cerrada":
+        # Ya terminó completamente la caja del día.
+        caja_cerrada_hoy = True
+
+    context = {
+        "mostrar_buscador": False,
+        "mostrar_codigo": True,
+        "mostrar_modal_apertura": mostrar_modal_apertura,
+        "caja_cerrada_hoy": caja_cerrada_hoy,
+        "caja_abierta": caja_abierta,
+    }
 
     return render(request, "caja/caja.html", context)
 
 
+@login_required
+@require_POST
+def abrir_caja(request):
+
+    try:
+        monto = Decimal(
+            request.POST.get("monto_apertura", "0")
+        )
+    except (InvalidOperation, TypeError):
+        return JsonResponse({
+            "ok": False,
+            "mensaje": "El monto de apertura no es válido."
+        }, status=400)
+
+    # ... existing code ...
+
+    if monto < 0:
+        return JsonResponse({
+            "ok": False,
+            "mensaje": "El monto de apertura no puede ser negativo."
+        }, status=400)
+
+    hoy = timezone.localdate()
+
+    caja_hoy = CajaAC.objects.filter(
+        usuario_id=request.user.id,
+        fecha_apertura__date=hoy
+    ).first()
+
+    if caja_hoy:
+
+        if caja_hoy.estado == "cerrada":
+            mensaje = "Esta caja ya fue cerrada por el día de hoy."
+
+        elif caja_hoy.estado == "cuadre":
+            mensaje = "Esta caja ya se encuentra en proceso de cuadre."
+
+        else:
+            mensaje = "Ya existe una caja abierta para el día de hoy."
+
+        return JsonResponse({
+            "ok": False,
+            "mensaje": mensaje
+        }, status=400)
+
+    caja = CajaAC.objects.create(
+        usuario_id=request.user.id,
+        monto_apertura=monto,
+        estado="abierta",
+        u_creo_id=request.user.id
+    )
+
+    return JsonResponse({
+        "ok": True,
+        "mensaje": "Caja abierta correctamente.",
+        "caja_id": caja.id
+    })
 # Busqueda de Productos por codigo de barra en caja.
 
 
 @login_required
-def busqueda_codigo(request, codigo):
+@require_POST
+def iniciar_cuadre(request):
+
+    hoy = timezone.localdate()
+
+    caja = CajaAC.objects.filter(
+        usuario_id=request.user.id,
+        fecha_apertura__date=hoy,
+        estado="abierta"
+    ).first()
+
+    if not caja:
+        return JsonResponse({
+            "ok": False,
+            "mensaje": "No existe una caja abierta para iniciar el cuadre."
+        }, status=400)
+
+    caja.estado = "cuadre"
+    caja.u_modifico_id = request.user.id
+    caja.save()
+
+    return JsonResponse({
+        "ok": True,
+        "redirect_url": reverse("cuadre_caja")
+    })
+
+
+@login_required
+def cuadre_caja(request):
+
     if not request.user.groups.filter(name="cajeros").exists():
-        return JsonResponse({"error": "Usuario no valido"}, status=403)
+        raise PermissionDenied("No tienes permiso")
+
+    hoy = timezone.localdate()
+
+    caja = CajaAC.objects.filter(
+        usuario_id=request.user.id,
+        fecha_apertura__date=hoy,
+        estado="cuadre"
+    ).first()
+
+    if not caja:
+        return redirect("caja")
+
+    # =========================
+    # VENTAS DEL USUARIO HOY
+    # =========================
+
+    ventas_hoy = Ventas.objects.filter(
+        u_creo_id=request.user.id,
+        f_creacion__date=hoy
+    ).aggregate(
+        total=Sum("total")
+    )["total"] or Decimal("0.00")
+
+    # =========================
+    # TOTAL ESPERADO
+    # =========================
+
+    total_esperado = (
+        caja.monto_apertura + ventas_hoy
+    )
+
+    context = {
+        "caja": caja,
+        "ventas_hoy": ventas_hoy,
+        "total_esperado": total_esperado,
+    }
+
+    return render(
+        request,
+        "caja/cuadre_caja.html",
+        context
+    )
+
+@login_required
+@transaction.atomic
+def cerrar_cuadre_caja(request):
+
+    if request.method != "POST":
+        return JsonResponse(
+            {
+                "ok": False,
+                "mensaje": "Método no permitido."
+            },
+            status=405
+        )
+
+    if not request.user.groups.filter(name="cajeros").exists():
+        raise PermissionDenied("No tienes permiso")
+
+    hoy = timezone.localdate()
+
+    caja = CajaAC.objects.filter(
+        usuario_id=request.user.id,
+        fecha_apertura__date=hoy,
+        estado="cuadre"
+    ).first()
+
+    if not caja:
+        return JsonResponse(
+            {
+                "ok": False,
+                "mensaje": "No existe una caja en estado de cuadre."
+            },
+            status=400
+        )
 
     try:
-        producto = Productos.objects.get(codigo_sku=codigo)
+        data = request.POST
 
-        isv = producto.precio_venta * (Decimal((producto.impuesto) / Decimal(100)))
+        # =========================
+        # DENOMINACIONES
+        # =========================
+
+        denominaciones = [
+            Decimal("1.00"),
+            Decimal("2.00"),
+            Decimal("5.00"),
+            Decimal("10.00"),
+            Decimal("20.00"),
+            Decimal("50.00"),
+            Decimal("100.00"),
+            Decimal("200.00"),
+            Decimal("500.00"),
+        ]
+
+        total_contado = Decimal("0.00")
+
+        detalles = []
+
+        for denominacion in denominaciones:
+
+            cantidad_key = f"cantidad_{denominacion}"
+
+            cantidad = int(data.get(cantidad_key, 0) or 0)
+
+            if cantidad < 0:
+                return JsonResponse(
+                    {
+                        "ok": False,
+                        "mensaje": "La cantidad no puede ser negativa."
+                    },
+                    status=400
+                )
+
+            subtotal = denominacion * cantidad
+
+            total_contado += subtotal
+
+            detalles.append({
+                "denominacion": denominacion,
+                "cantidad": cantidad,
+                "subtotal": subtotal,
+            })
+
+        # =========================
+        # VENTAS DEL DÍA
+        # =========================
+
+        ventas_hoy = Ventas.objects.filter(
+            u_creo_id=request.user.id,
+            f_creacion__date=hoy
+        ).aggregate(
+            total=Sum("total")
+        )["total"] or Decimal("0.00")
+
+        # =========================
+        # TOTAL ESPERADO
+        # =========================
+
+        total_esperado = (
+            caja.monto_apertura + ventas_hoy
+        )
+
+        # =========================
+        # DIFERENCIA
+        # =========================
+
+        diferencia = (
+            total_contado - total_esperado
+        )
+
+        # =========================
+        # GUARDAR DETALLES
+        # =========================
+
+        DetalleCuadreCaja.objects.filter(
+            caja=caja
+        ).delete()
+
+        for detalle in detalles:
+
+            DetalleCuadreCaja.objects.create(
+                caja=caja,
+                denominacion=detalle["denominacion"],
+                cantidad=detalle["cantidad"],
+                subtotal=detalle["subtotal"],
+            )
+
+        # =========================
+        # CERRAR CAJA
+        # =========================
+
+        caja.ventas = ventas_hoy
+        caja.monto_cierre = total_contado
+        caja.diferencia = diferencia
+        caja.fecha_cierre = timezone.now()
+        caja.estado = "cerrada"
+
+        caja.save()
+
+        return JsonResponse({
+            "ok": True,
+            "mensaje": "El cuadre de caja se cerró correctamente.",
+            "total_contado": str(total_contado),
+            "total_esperado": str(total_esperado),
+            "diferencia": str(diferencia),
+        })
+
+    except (ValueError, InvalidOperation) as e:
+
+        return JsonResponse(
+            {
+                "ok": False,
+                "mensaje": "Los datos enviados no son válidos."
+            },
+            status=400
+        )
+
+
+@login_required
+def cajas_manager_view(request):
+
+    # =========================
+    # VALIDAR PERMISO
+    # =========================
+
+    if not request.user.has_perm("manager.view_cajaac"):
+        raise PermissionDenied("No tienes permiso")
+
+
+    # =========================
+    # FECHA
+    # =========================
+
+    fecha = request.GET.get("fecha", "").strip()
+
+    if fecha:
+
+        try:
+            fecha_filtro = datetime.strptime(
+                fecha,
+                "%Y-%m-%d"
+            ).date()
+
+        except ValueError:
+
+            fecha_filtro = timezone.localdate()
+
+    else:
+
+        fecha_filtro = timezone.localdate()
+
+
+    # =========================
+    # BUSCAR
+    # =========================
+
+    search = request.GET.get(
+        "search",
+        ""
+    ).strip()
+
+
+    # =========================
+    # CAJAS DEL DÍA
+    # =========================
+
+    cajas = CajaAC.objects.filter(
+        fecha_apertura__date=fecha_filtro
+    ).order_by(
+        "-fecha_apertura"
+    )
+
+
+    # =========================
+    # FILTRO POR USUARIO
+    # =========================
+
+    if search:
+
+        usuarios_ids = User.objects.filter(
+            Q(username__icontains=search) |
+            Q(first_name__icontains=search) |
+            Q(last_name__icontains=search)
+        ).values_list(
+            "id",
+            flat=True
+        )
+
+        cajas = cajas.filter(
+            usuario_id__in=usuarios_ids
+        )
+
+
+    # =========================
+    # USUARIOS
+    # =========================
+
+    usuarios = User.objects.in_bulk(
+        [caja.usuario_id for caja in cajas]
+    )
+
+
+    # =========================
+    # PAGINACIÓN
+    # =========================
+
+    paginator = Paginator(
+        cajas,
+        10
+    )
+
+    page_number = request.GET.get(
+        "page"
+    )
+
+    page_obj = paginator.get_page(
+        page_number
+    )
+
+
+    # =========================
+    # DATOS DE LA TABLA
+    # =========================
+
+    for caja in page_obj:
+
+        usuario = usuarios.get(
+            caja.usuario_id
+        )
+
+        if usuario:
+
+            caja.usuario_nombre = (
+                usuario.get_full_name()
+                or usuario.username
+            )
+
+        else:
+
+            caja.usuario_nombre = (
+                f"Usuario #{caja.usuario_id}"
+            )
+
+
+        # =========================
+        # TOTAL CIERRE
+        # =========================
+
+        if caja.estado == "cerrada":
+
+            caja.total_cierre = (
+                caja.monto_apertura +
+                caja.ventas
+            )
+
+        else:
+
+            caja.total_cierre = None
+
+
+    context = {
+        "page_obj": page_obj,
+        "search": search,
+        "fecha": fecha_filtro,
+    }
+
+
+    return render(
+        request,
+        "caja/cajas_manager.html",
+        context
+    )
+
+@login_required
+def busqueda_codigo(request, codigo):
+
+    if not request.user.groups.filter(name="cajeros").exists():
+        return JsonResponse(
+            {"error": "Usuario no valido"},
+            status=403
+        )
+
+    # ==========================================
+    # VERIFICAR PERFIL Y UBICACIÓN
+    # ==========================================
+
+    try:
+        perfil = PerfilUsuario.objects.get(
+            usuarios=request.user
+        )
+    except PerfilUsuario.DoesNotExist:
+        return JsonResponse(
+            {"error": "El usuario no pertenece a ninguna ubicación"},
+            status=400
+        )
+
+    if not perfil.ubicacion_id:
+        return JsonResponse(
+            {"error": "El usuario no pertenece a ninguna ubicación"},
+            status=400
+        )
+
+    sucursal_id = perfil.ubicacion_id
+
+    # ==========================================
+    # BUSCAR PRODUCTO
+    # ==========================================
+
+    try:
+        producto = Productos.objects.get(
+            codigo_sku=codigo,
+            is_delete=False,
+            is_active=True
+        )
+
+        # ==========================================
+        # EXISTENCIA FÍSICA
+        # ==========================================
+
+        existencia = (
+            Inventarios.objects.filter(
+                producto_id=producto.id,
+                ubicacion_id=sucursal_id,
+                is_delete=False,
+                cantidad__gt=0
+            )
+            .aggregate(
+                total=Sum("cantidad")
+            )["total"]
+            or Decimal("0")
+        )
+
+        existencia = Decimal(str(existencia))
+
+        # ==========================================
+        # RESERVAS ACTIVAS
+        # ==========================================
+
+        reservado = (
+            ReservaInventario.objects.filter(
+                producto_id=producto.id,
+                ubicacion_id=sucursal_id,
+                estado=ReservaInventario.Estado.RESERVADA,
+                is_delete=False,
+            )
+            .aggregate(
+                total=Sum("cantidad")
+            )["total"]
+            or Decimal("0")
+        )
+
+        reservado = Decimal(str(reservado))
+
+        # ==========================================
+        # EXISTENCIA DISPONIBLE
+        # ==========================================
+
+        stock_disponible = existencia - reservado
+
+        if stock_disponible < 0:
+            stock_disponible = Decimal("0")
+
+        if stock_disponible <= 0:
+            return JsonResponse(
+                {
+                    "error": "El producto no tiene existencia disponible en esta sucursal"
+                },
+                status=400,
+            )
+
+        # ==========================================
+        # CALCULAR ISV
+        # ==========================================
+
+        isv = producto.precio_venta * (
+            Decimal(producto.impuesto) / Decimal(100)
+        )
 
         data = {
             "id": producto.id,
@@ -4165,397 +6584,1225 @@ def busqueda_codigo(request, codigo):
             "id_categoria": producto.categoria_id,
             "isv": isv,
             "tipos_isv": producto.impuesto,
+            "stock": stock_disponible,
         }
 
-        canitdad_descuento = descuento_cantidad(data)
+        # ==========================================
+        # DESCUENTO POR CANTIDAD
+        # ==========================================
 
-        if canitdad_descuento["lleva"] > 0:
-            data["lleva"] = canitdad_descuento["lleva"]
-            data["paga"] = canitdad_descuento["paga"]
+        cantidad_descuento = descuento_cantidad(data)
+
+        if cantidad_descuento["lleva"] > 0:
+
+            data["lleva"] = cantidad_descuento["lleva"]
+            data["paga"] = cantidad_descuento["paga"]
             data["descuentos"] = 0
-            data["acumulable"] = canitdad_descuento["es_acumulable"]
+            data["acumulable"] = (
+                cantidad_descuento["es_acumulable"]
+            )
+
         else:
+
             descuento = valor_descuento(data)
+
             data["lleva"] = 0
             data["paga"] = 0
-            data["descuentos"] = descuento.get("valor", 0)
-            data["acumulable"] = descuento.get("es_acumulable", False)
+            data["descuentos"] = descuento.get(
+                "valor",
+                0
+            )
+            data["acumulable"] = descuento.get(
+                "es_acumulable",
+                False
+            )
 
         return JsonResponse(data)
 
     except Productos.DoesNotExist:
-        return JsonResponse({"error": "Producto no encontrado"}, status=404)
-
+        return JsonResponse(
+            {"error": "Producto no encontrado"},
+            status=404
+        )
+    
 
 @login_required
 def busqueda_nombre(request, producto):
 
     if not request.user.groups.filter(name="cajeros").exists():
-        return JsonResponse({"error": "Usuario no valido"}, status=403)
+        return JsonResponse(
+            {"error": "Usuario no valido"},
+            status=403
+        )
+
+    # ==========================================
+    # VERIFICAR PERFIL Y UBICACIÓN
+    # ==========================================
+
+    try:
+        perfil = PerfilUsuario.objects.get(
+            usuarios=request.user
+        )
+    except PerfilUsuario.DoesNotExist:
+        return JsonResponse(
+            {"error": "El usuario no pertenece a ninguna ubicación"},
+            status=400
+        )
+
+    if not perfil.ubicacion_id:
+        return JsonResponse(
+            {"error": "El usuario no pertenece a ninguna ubicación"},
+            status=400
+        )
+
+    sucursal_id = perfil.ubicacion_id
+
+    # ==========================================
+    # VALIDAR BÚSQUEDA
+    # ==========================================
 
     if not producto or len(producto) < 2:
-        return JsonResponse({}, safe=False)
+        return JsonResponse([], safe=False)
+
+    # ==========================================
+    # BUSCAR PRODUCTOS
+    # ==========================================
 
     items = (
-        Productos.objects.filter(is_delete=False, is_active=True)
-        .filter(Q(nombre__icontains=producto))
+        Productos.objects.filter(
+            is_delete=False,
+            is_active=True,
+            nombre__icontains=producto,
+        )
+        .distinct()
         .order_by("nombre")[:20]
     )
 
     data = []
+
     for c in items:
+
+        # ==========================================
+        # EXISTENCIA FÍSICA
+        # ==========================================
+
+        existencia = (
+            Inventarios.objects.filter(
+                producto_id=c.id,
+                ubicacion_id=sucursal_id,
+                is_delete=False,
+            )
+            .aggregate(
+                total=Sum("cantidad")
+            )["total"]
+            or Decimal("0")
+        )
+
+        existencia = Decimal(str(existencia))
+
+        # ==========================================
+        # RESERVAS ACTIVAS
+        # ==========================================
+
+        reservado = (
+            ReservaInventario.objects.filter(
+                producto_id=c.id,
+                ubicacion_id=sucursal_id,
+                estado=ReservaInventario.Estado.RESERVADA,
+                is_delete=False,
+            )
+            .aggregate(
+                total=Sum("cantidad")
+            )["total"]
+            or Decimal("0")
+        )
+
+        reservado = Decimal(str(reservado))
+
+        # ==========================================
+        # STOCK DISPONIBLE
+        # ==========================================
+
+        stock_disponible = existencia - reservado
+
+        if stock_disponible < 0:
+            stock_disponible = Decimal("0")
+
+        # ==========================================
+        # SI NO HAY STOCK DISPONIBLE
+        # NO MOSTRAR PRODUCTO
+        # ==========================================
+
+        if stock_disponible <= 0:
+            continue
+
+        # ==========================================
+        # VALORES INICIALES
+        # ==========================================
+
         lleva = 0
         paga = 0
         descuento = 0
         es_acumulable = False
 
-        canitdad_descuento = descuento_cantidad(data={"id": c.id})
+        # ==========================================
+        # DESCUENTO POR CANTIDAD
+        # ==========================================
 
-        if canitdad_descuento["lleva"] > 0:
-            lleva = canitdad_descuento["lleva"]
-            paga = canitdad_descuento["paga"]
-            es_acumulable = canitdad_descuento["es_acumulable"]
-            descuento = 0
+        cantidad_descuento = descuento_cantidad(
+            data={
+                "id": c.id
+            }
+        )
+
+        if cantidad_descuento["lleva"] > 0:
+
+            lleva = cantidad_descuento["lleva"]
+            paga = cantidad_descuento["paga"]
+
+            es_acumulable = (
+                cantidad_descuento[
+                    "es_acumulable"
+                ]
+            )
+
         else:
+
             descuento_data = valor_descuento(
-                data={
+                {
                     "id": c.id,
                     "id_categoria": c.categoria_id,
                     "precio_venta": c.precio_venta,
                 }
             )
-            lleva = 0
-            paga = 0
-            descuento = descuento_data["valor"]
-            es_acumulable = descuento_data["es_acumulable"]
 
-        producto = {
+            descuento = descuento_data["valor"]
+
+            es_acumulable = (
+                descuento_data[
+                    "es_acumulable"
+                ]
+            )
+
+        # ==========================================
+        # DATOS DEL PRODUCTO
+        # ==========================================
+
+        producto_data = {
             "id": c.id,
             "codigo_sku": c.codigo_sku,
             "nombre": c.nombre,
             "precio_venta": c.precio_venta,
+
             "lleva": lleva,
             "paga": paga,
+
             "descuento": descuento,
             "es_acumulable": es_acumulable,
-            "isv": (c.precio_venta * (Decimal(c.impuesto) / Decimal(100))),
+
+            "isv": c.precio_venta * (
+                Decimal(c.impuesto) / Decimal(100)
+            ),
+
             "tipos_isv": c.impuesto,
+
+            # IMPORTANTE:
+            # Enviar disponible, no físico
+            "stock": stock_disponible,
         }
 
-        data.append(producto)
+        data.append(producto_data)
 
-    return JsonResponse(data, safe=False)
+    return JsonResponse(
+        data,
+        safe=False
+    )
 
 
-from django.views.decorators.http import require_http_methods
 
-
-@csrf_exempt
 @login_required
 @require_http_methods(["POST"])
 def guardar_compra(request):
-
-    if not request.user.groups.filter(name="cajeros").exists():
-        return JsonResponse({"error": "Usuario no valido"}, status=403)
-
     try:
         with transaction.atomic():
-            Perfil = PerfilUsuario.objects.get(usuarios=request.user)
-            sucursal_id = Perfil.ubicacion_id
+
+            # =====================================================
+            # PERFIL / SUCURSAL
+            # =====================================================
+
+            perfil = PerfilUsuario.objects.get(
+                usuarios=request.user
+            )
+
+            sucursal_id = perfil.ubicacion_id
+
+            # =====================================================
+            # DATOS RECIBIDOS
+            # =====================================================
 
             data = json.loads(request.body)
 
-            pago = data.get("pagos")
-            productos = data.get("productos")
-            tarjeta = data.get("tarjeta")
+            pago = data.get("pagos", [])
+            productos = data.get("productos", [])
+            tarjeta = data.get("tarjeta", [])
+            cliente = data.get("cliente", {})
 
-            sat = (
-                datos_sat.objects.filter(
-                    id_usuario=request.user.id, id_sucursal=sucursal_id, estado=True
+            if not pago:
+                raise Exception("No se recibieron los datos de pago")
+
+            if not productos:
+                raise Exception("No se recibieron productos")
+
+            # =====================================================
+            # GENERAR NUMERO DE FACTURA
+            # =====================================================
+
+            sat = datos_sat.objects.filter(
+                id_sucursal_id=sucursal_id,
+                is_active=True,
+                is_delete=False,
+            ).first()
+
+            numero_factura = None
+            id_cai = None
+            es_sat = False
+
+            if sat:
+
+                hoy = timezone.now().date()
+
+                if sat.fecha_de_vencimiento.date() < hoy:
+                    raise Exception(
+                        f"El CAI {sat.numero_cai} está vencido"
+                    )
+
+                ultimo_numero = (
+                    facturas_cai.objects
+                    .filter(id_cai=sat)
+                    .aggregate(
+                        Max("numero_factura")
+                    )["numero_factura__max"]
                 )
-                .values()
-                .first()
-            )
 
-            if not sat:
-                return JsonResponse(
-                    {"error": "Solicite un datos sat activo para este usuario"}
+                if ultimo_numero is None:
+                    numero_factura = sat.rango_inicial
+                else:
+                    numero_factura = ultimo_numero + 1
+
+                if numero_factura > sat.rango_final:
+                    raise Exception(
+                        f"El CAI {sat.numero_cai} agotó su rango autorizado"
+                    )
+
+                id_cai = sat
+                es_sat = True
+
+            else:
+
+                ultimo_numero = (
+                    facturas_cai.objects
+                    .aggregate(
+                        Max("numero_factura")
+                    )["numero_factura__max"]
+                    or 100000000
                 )
 
-            numero_factura_actual = (
-                facturas_cai.objects.filter(id_cai=sat["id"]).aggregate(
-                    Max("numero_factura")
-                )["numero_factura__max"]
-                or 0
+                numero_factura = ultimo_numero + 1
+
+            # =====================================================
+            # CREAR FACTURA
+            # =====================================================
+
+            factura_cai = facturas_cai.objects.create(
+                numero_factura=numero_factura,
+                id_cai=id_cai,
+                es_sat=es_sat,
+                u_creo_id=request.user.id,
             )
 
-            if numero_factura_actual == sat["rango_final"] - 1:
-                datos_sat.objects.filter(id=sat["id"]).update(estado=False)
+            # =====================================================
+            # TOTALES GENERALES
+            # =====================================================
 
-            sat_obj = datos_sat.objects.get(id=sat["id"])
+            costo_total_venta = Decimal("0")
+            utilidad_total_venta = Decimal("0")
 
-            num_fact = facturas_cai.objects.create(
-                numero_factura=numero_factura_actual + 1,
-                id_cai=sat_obj,
-                fecha_creacion=timezone.now(),
-                id_usuario=request.user,
-            )
+            # =====================================================
+            # CREAR VENTA
+            # =====================================================
 
-            datos_factura = facturas.objects.create(
-                rtn=pago[0].get("rtn"),
-                id_factura_cai_id=num_fact.id,
+            venta = Ventas.objects.create(
+                id_factura_cai=factura_cai,
+                id_cliente_id=cliente.get("id"),
+                sucursal_id=sucursal_id,
                 subtotal=pago[0].get("subtotal"),
                 impuesto_15=pago[0].get("isv15"),
                 impuesto_18=pago[0].get("isv18"),
                 descuento=pago[0].get("descuento"),
                 total=pago[0].get("total"),
                 tipo_pago=pago[0].get("tipo_pago"),
-                id_usuario_id=request.user.id,
+                costo_total=0,
+                utilidad_total=0,
+                u_creo_id=request.user.id,
             )
 
-            if pago[0].get("tipo_pago") == "tarjeta":
-                tarjetas.objects.create(
-                    id_factura_id=datos_factura.id,
-                    digitos=tarjeta[0].get("digitos"),
-                    numero_autorizacion=tarjeta[0].get("numero_autorizacion"),
-                    id_usuario_id=request.user.id,
-                )
+            # =====================================================
+            # TARJETA
+            # =====================================================
 
-            inven = []
-            for p in productos:
-                total_inventario = (
-                    Inventarios.objects.filter(
-                        producto_id=p.get("id"),
-                        ubicacion_id=sucursal_id,
-                        cantidad__gt=0,
-                    ).aggregate(total=Sum("cantidad"))["total"]
-                    or 0
-                )
+            if venta.tipo_pago == "tarjeta":
 
-                if total_inventario < p.get("cantidad"):
+                if not tarjeta:
                     raise Exception(
-                        "Stock insuficiente para el producto: " + p.get("nombre")
+                        "Información de tarjeta no recibida"
                     )
 
-                lotes = Inventarios.objects.filter(
-                    producto_id=p.get("id"), ubicacion_id=sucursal_id, cantidad__gt=0
-                ).order_by("f_creacion")
+                digitos = (
+                    tarjeta[0].get("digitos") or ""
+                ).strip()
 
-                cantidad_nesesaria = p.get("cantidad")
+                autorizacion = (
+                    tarjeta[0].get("numero_autorizacion") or ""
+                ).strip()
 
-                for lote in lotes:
-                    if cantidad_nesesaria <= 0:
-                        break
+                if not digitos:
+                    raise Exception(
+                        "Debe ingresar los últimos 4 dígitos"
+                    )
 
-                    if lote.cantidad <= cantidad_nesesaria:
-                        cantidad_nesesaria -= lote.cantidad
-                        lote.cantidad = 0
-                        lote.save()
-                    else:
-                        lote.cantidad -= cantidad_nesesaria
-                        lote.save()
-                        cantidad_nesesaria = 0
+                if not digitos.isdigit():
+                    raise Exception(
+                        "Los últimos 4 dígitos deben ser numéricos"
+                    )
 
-                detalles_facturas.objects.create(
-                    id_factura_id=datos_factura.id,
-                    id_producto_id=p.get("id"),
-                    cantidad=p.get("cantidad"),
-                    precio_unitario=p.get("precio_venta"),
-                    descuento=p.get("descuento"),
-                    impuesto_15=p.get("isv_15"),
-                    impuesto_18=p.get("isv_18"),
-                    id_usuario_id=request.user.id,
-                    
+                if len(digitos) != 4:
+                    raise Exception(
+                        "Los últimos 4 dígitos deben contener exactamente 4 números"
+                    )
+
+                if not autorizacion:
+                    raise Exception(
+                        "Debe ingresar el número de autorización"
+                    )
+
+                tarjetas.objects.create(
+                    id_factura=venta,
+                    digitos=digitos,
+                    numero_autorizacion=autorizacion,
+                    u_creo_id=request.user.id,
                 )
+
+            # =====================================================
+            # DETALLE DE PRODUCTOS
+            # =====================================================
+
+            for p in productos:
+
+                producto_id = p.get("id")
+
+                cantidad_vendida = Decimal(
+                    str(p.get("cantidad"))
+                )
+
+                precio_venta = Decimal(
+                    str(p.get("precio_venta"))
+                )
+
+                if cantidad_vendida <= 0:
+                    raise Exception(
+                        f"La cantidad debe ser mayor a cero para "
+                        f"{p.get('nombre')}"
+                    )
+
+                # =================================================
+                # OBTENER PRODUCTO VENDIDO
+                # =================================================
+
+                producto = (
+                    Productos.objects
+                    .filter(
+                        id=producto_id,
+                        is_active=True,
+                        is_delete=False,
+                    )
+                    .first()
+                )
+
+                if not producto:
+                    raise Exception(
+                        f"El producto {producto_id} no existe o está inactivo"
+                    )
+
+                # =================================================
+                # OBTENER TODOS LOS PRODUCTOS RELACIONADOS
+                #
+                # Ejemplo:
+                #
+                # Caja = equival_unid 12
+                # Lapiz = equival_unid 1
+                #
+                # Venta:
+                # Caja 1
+                #
+                # Resultado:
+                # Caja  = 1
+                # Lapiz = 12
+                #
+                # Venta:
+                # Lapiz 8
+                #
+                # Resultado:
+                # Lapiz = 8
+                # Caja  = 0.666666...
+                # =================================================
+
+                productos_inventario = (
+                    obtener_productos_relacionados(
+                        producto,
+                        cantidad_vendida,
+                    )
+                )
+
+                # =================================================
+                # COSTO TOTAL DE ESTA LÍNEA DE VENTA
+                #
+                # IMPORTANTE:
+                #
+                # Aquí NO usamos únicamente el producto vendido.
+                #
+                # Calculamos el costo de todos los productos que
+                # realmente se están rebajando del inventario.
+                # =================================================
+
+                costo_total_producto = Decimal("0")
+
+                # =================================================
+                # PROCESAR CADA PRODUCTO DEL GRUPO
+                # =================================================
+
+                for item in productos_inventario:
+
+                    producto_inventario = item["producto"]
+
+                    cantidad_a_rebajar = Decimal(
+                        item["cantidad"]
+                    )
+
+                    if cantidad_a_rebajar <= 0:
+                        continue
+
+                    # =================================================
+                    # STOCK DEL PRODUCTO RELACIONADO
+                    # =================================================
+
+                    stock_total = (
+                        Inventarios.objects
+                        .filter(
+                            producto=producto_inventario,
+                            ubicacion_id=sucursal_id,
+                            cantidad__gt=0,
+                        )
+                        .aggregate(
+                            total=Sum("cantidad")
+                        )["total"]
+                        or Decimal("0")
+                    )
+
+                    # =================================================
+                    # VALIDAR STOCK
+                    #
+                    # Ejemplo:
+                    #
+                    # Caja = 10
+                    # Lapiz = 120
+                    #
+                    # Venta 8 lapices:
+                    #
+                    # Lapiz necesita 8
+                    # Caja necesita 0.666666
+                    #
+                    # Ambos deben tener stock.
+                    # =================================================
+
+                    if stock_total < cantidad_a_rebajar:
+
+                        raise Exception(
+                            f"Stock insuficiente para "
+                            f"{producto_inventario.nombre}. "
+                            f"Disponible: {stock_total}, "
+                            f"necesario: {cantidad_a_rebajar}"
+                        )
+
+                    # =================================================
+                    # LOTES FIFO
+                    # =================================================
+
+                    lotes = (
+                        Inventarios.objects
+                        .filter(
+                            producto=producto_inventario,
+                            ubicacion_id=sucursal_id,
+                            cantidad__gt=0,
+                        )
+                        .order_by("f_creacion", "id")
+                    )
+
+                    cantidad_necesaria = (
+                        cantidad_a_rebajar
+                    )
+
+                    # =================================================
+                    # REBAJAR LOTES
+                    # =================================================
+
+                    for lote in lotes:
+
+                        if cantidad_necesaria <= 0:
+                            break
+
+                        # =================================================
+                        # CANTIDAD QUE SALE DE ESTE LOTE
+                        # =================================================
+
+                        cantidad_consumida = min(
+                            lote.cantidad,
+                            cantidad_necesaria,
+                        )
+
+                        # =================================================
+                        # OBTENER COSTO DEL LOTE
+                        # =================================================
+
+                        detalle_compra = (
+                            DetalleCompra.objects
+                            .filter(
+                                compra_id=lote.compra_id,
+                                producto_id=lote.producto_id,
+                            )
+                            .first()
+                        )
+
+                        # =================================================
+                        # COSTO DIRECTO
+                        #
+                        # Si el producto fue comprado directamente:
+                        #
+                        # Compra:
+                        # Lapiz 100 unidades
+                        # Precio = 2.00
+                        #
+                        # Entonces:
+                        # costo = 2.00
+                        # =================================================
+
+                        if detalle_compra:
+
+                            costo_unitario_lote = (
+                                detalle_compra.precio_compra
+                            )
+
+                        else:
+
+                            # =================================================
+                            # COSTO DERIVADO
+                            #
+                            # Esto sucede cuando:
+                            #
+                            # Compramos:
+                            # Caja Lapiz = L20
+                            #
+                            # Caja contiene:
+                            # 12 Lapices
+                            #
+                            # Inventario crea:
+                            #
+                            # Caja = 1
+                            # Lapiz = 12
+                            #
+                            # El lote de Lapiz no tiene DetalleCompra
+                            # porque realmente compramos una Caja.
+                            #
+                            # Entonces buscamos el costo del producto
+                            # padre/master.
+                            # =================================================
+
+                            relaciones_hacia_padre = (
+                                ProductosRel.objects
+                                .filter(
+                                    producto_relacionado=producto_inventario,
+                                    is_active=True,
+                                    is_delete=False,
+                                )
+                                .select_related(
+                                    "producto_master"
+                                )
+                            )
+
+                            costo_unitario_lote = None
+
+                            for relacion in relaciones_hacia_padre:
+
+                                producto_padre = (
+                                    relacion.producto_master
+                                )
+
+                                detalle_padre = (
+                                    DetalleCompra.objects
+                                    .filter(
+                                        compra_id=lote.compra_id,
+                                        producto_id=producto_padre.id,
+                                    )
+                                    .first()
+                                )
+
+                                if detalle_padre:
+
+                                    equivalencia_padre = (
+                                        Decimal(
+                                            producto_padre.equival_unid
+                                        )
+                                        if producto_padre.equival_unid
+                                        else Decimal("1")
+                                    )
+
+                                    equivalencia_hijo = (
+                                        Decimal(
+                                            producto_inventario.equival_unid
+                                        )
+                                        if producto_inventario.equival_unid
+                                        else Decimal("1")
+                                    )
+
+                                    # ==========================================
+                                    # COSTO POR UNIDAD DEL PRODUCTO HIJO
+                                    #
+                                    # Ejemplo:
+                                    #
+                                    # Caja = L20
+                                    # equival_unid Caja = 12
+                                    #
+                                    # Lapiz:
+                                    # equival_unid = 1
+                                    #
+                                    # costo:
+                                    #
+                                    # 20 * 1 / 12 = 1.666666
+                                    # ==========================================
+
+                                    costo_unitario_lote = (
+                                        Decimal(
+                                            detalle_padre.precio_compra
+                                        )
+                                        * equivalencia_hijo
+                                        / equivalencia_padre
+                                    )
+
+                                    break
+
+                            # =================================================
+                            # SI NO SE PUDO ENCONTRAR COSTO
+                            # =================================================
+
+                            if costo_unitario_lote is None:
+
+                                raise Exception(
+                                    f"No existe costo registrado para "
+                                    f"{producto_inventario.nombre} "
+                                    f"en el lote {lote.id}"
+                                )
+
+                        # =================================================
+                        # ACUMULAR COSTO
+                        # =================================================
+
+                        costo_total_producto += (
+                            cantidad_consumida
+                            * costo_unitario_lote
+                        )
+
+                        # =================================================
+                        # STOCK ANTES
+                        # =================================================
+
+                        stock_anterior = lote.cantidad
+
+                        # =================================================
+                        # REBAJAR LOTE
+                        # =================================================
+
+                        lote.cantidad -= cantidad_consumida
+
+                        cantidad_necesaria -= (
+                            cantidad_consumida
+                        )
+
+                        lote.save(
+                            update_fields=["cantidad"]
+                        )
+
+                        # =================================================
+                        # STOCK RESULTANTE DEL PRODUCTO
+                        # =================================================
+
+                        stock_resultante = (
+                            Inventarios.objects
+                            .filter(
+                                producto=producto_inventario,
+                                ubicacion_id=sucursal_id,
+                            )
+                            .aggregate(
+                                total=Sum("cantidad")
+                            )["total"]
+                            or Decimal("0")
+                        )
+
+                        # =================================================
+                        # MOVIMIENTO DE INVENTARIO
+                        # =================================================
+
+                        MovimientoInventario.objects.create(
+                            tipo_movimiento=TipoMovimientoInventario.SALIDA_VENTA,
+                            producto=producto_inventario,
+                            ubicacion_origen_id=sucursal_id,
+                            cantidad=cantidad_consumida,
+                            stock_anterior=stock_anterior,
+                            stock_resultante=stock_resultante,
+                        )
+
+                    # =================================================
+                    # SEGURIDAD
+                    # =================================================
+
+                    if cantidad_necesaria > 0:
+
+                        raise Exception(
+                            f"No fue posible completar la salida de "
+                            f"{producto_inventario.nombre}. "
+                            f"Faltan {cantidad_necesaria} unidades."
+                        )
+
+                # =================================================
+                # COSTO PROMEDIO DE LA LÍNEA
+                #
+                # OJO:
+                #
+                # Aquí dividimos entre la cantidad vendida del
+                # producto original.
+                #
+                # Si vendemos 1 Caja:
+                #
+                # costo_total = costo Caja + costo de sus 12 Lapices
+                #
+                # Pero para evitar duplicar el costo, realmente
+                # debemos considerar que los productos relacionados
+                # representan el MISMO inventario económico.
+                #
+                # Por eso usamos el costo del producto vendido.
+                # =================================================
+
+                costo_promedio = (
+                    costo_total_producto / cantidad_vendida
+                )
+
+                utilidad_unitaria = (
+                    precio_venta - costo_promedio
+                )
+
+                utilidad_total = (
+                    utilidad_unitaria
+                    * cantidad_vendida
+                )
+
+                costo_total_venta += (
+                    costo_total_producto
+                )
+
+                utilidad_total_venta += (
+                    utilidad_total
+                )
+
+                # =================================================
+                # CREAR DETALLE DE VENTA
+                # =================================================
+
+                DetalleVenta.objects.create(
+                    venta=venta,
+                    producto_id=producto_id,
+                    cantidad=cantidad_vendida,
+                    precio_unitario=precio_venta,
+                    costo_unitario=costo_promedio,
+                    utilidad_unitaria=utilidad_unitaria,
+                    utilidad_total=utilidad_total,
+
+                    descuento=Decimal(
+                        str(
+                            p.get(
+                                "descuento",
+                                0,
+                            )
+                        )
+                    ),
+
+                    impuesto_15=Decimal(
+                        str(
+                            p.get(
+                                "isv_15",
+                                0,
+                            )
+                        )
+                    ),
+
+                    impuesto_18=Decimal(
+                        str(
+                            p.get(
+                                "isv_18",
+                                0,
+                            )
+                        )
+                    ),
+
+                    u_creo_id=request.user.id,
+                )
+
+            # =====================================================
+            # ACTUALIZAR TOTALES DE LA VENTA
+            # =====================================================
+
+            venta.costo_total = costo_total_venta
+            venta.utilidad_total = utilidad_total_venta
+
+            venta.save(
+                update_fields=[
+                    "costo_total",
+                    "utilidad_total",
+                ]
+            )
+
+            # =====================================================
+            # RESPUESTA
+            # =====================================================
 
             return JsonResponse(
                 {
-                    "id_facutura": num_fact.id,
+                    "success": True,
+                    "id_factura": factura_cai.id,
+                    "numero_factura": numero_factura,
+                    "es_sat": es_sat,
                 }
             )
+
     except Exception as e:
-        return JsonResponse({"success": False, "message": str(e)}, status=500)
 
+        return JsonResponse(
+            {
+                "success": False,
+                "message": str(e),
+            },
+            status=500,
+        )
 
-def imprimir_factura(request,id_factura):
-    
-    # =========================
-    # FACTURA + CAI + SUCURSAL
-    # =========================
-    factura_cai = facturas_cai.objects.select_related(
-        "id_cai__id_sucursal"
-    ).get(id=id_factura)
+@login_required
+def imprimir_factura(request, id_factura):
 
-    sucursal = factura_cai.id_cai.id_sucursal
-    ubicacion_texto = sucursal.ubicacion if sucursal else "Sucursal no disponible"
+    # ==========================================
+    # FACTURA CAI
+    # ==========================================
 
-    # =========================
-    # FACTURA GENERAL
-    # =========================
-    factura = facturas.objects.select_related("id_usuario").get(
-        id_factura_cai_id=factura_cai.id
+    factura_cai = (
+        facturas_cai.objects.select_related(
+            "id_cai",
+            "id_cai__id_sucursal",
+        )
+        .filter(id=id_factura)
+        .first()
     )
 
-    detalle_factura = detalles_facturas.objects.select_related(
-        "id_producto"
-    ).filter(id_factura_id=factura.id)
+    if not factura_cai:
+        return HttpResponse("Factura no encontrada", status=404)
 
-    # =========================
-    # PDF CONFIG
-    # =========================
+    # ==========================================
+    # VENTA
+    # ==========================================
+
+    venta = (
+        Ventas.objects.select_related(
+            "id_cliente",
+            "sucursal",
+            "id_factura_cai",
+        )
+        .filter(id_factura_cai=factura_cai)
+        .first()
+    )
+
+    if not venta:
+        return HttpResponse("Venta no encontrada", status=404)
+
+    # ==========================================
+    # DETALLE
+    # ==========================================
+
+    detalles = (
+        DetalleVenta.objects.select_related("producto")
+        .filter(venta=venta)
+        .order_by("id")
+    )
+
+    # ==========================================
+    # TARJETA
+    # ==========================================
+
+    tarjeta = tarjetas.objects.filter(id_factura=venta).first()
+
+    # ==========================================
+    # CAJERO
+    # ==========================================
+
+    cajero = "No disponible"
+
+    if venta.u_creo_id:
+        usuario = User.objects.filter(id=venta.u_creo_id).first()
+
+        if usuario:
+            nombre = (f"{usuario.first_name} {usuario.last_name}").strip()
+
+            cajero = nombre if nombre else usuario.username
+
+    # ==========================================
+    # DATOS SAT
+    # ==========================================
+
+    cai = factura_cai.id_cai
+
+    es_sat = factura_cai.es_sat
+
+    # ==========================================
+    # SUCURSAL
+    # ==========================================
+
+    direccion = ""
+
+    if venta.sucursal:
+        direccion = getattr(venta.sucursal, "ubicacion", "")
+
+    # ==========================================
+    # CALCULAR ALTO DINAMICO
+    # ==========================================
+
+    ancho_ticket = 80 * mm
+
+    lineas_direccion = len(textwrap.wrap(direccion, width=35))
+
+    alto_ticket = (
+        130 * mm  # encabezado, cliente, totales y pie
+        + (len(detalles) * 12)
+        + (lineas_direccion * 10)
+    )
+
+    if tarjeta:
+        alto_ticket += 15 * mm
+
+    # ==========================================
+    # CREAR PDF
+    # ==========================================
+
     buffer = BytesIO()
 
-    ancho_pagina = 226.77
-    alto_pagina = 800
+    pdf = canvas.Canvas(buffer, pagesize=(ancho_ticket, alto_ticket))
 
-    pdf = canvas.Canvas(buffer, pagesize=letter)
+    ancho = ancho_ticket
 
-    ancho, alto = letter
+    y = alto_ticket - 25
 
-    # =========================
+    # ==========================================
     # ENCABEZADO
-    # =========================
+    # ==========================================
+
     pdf.setFont("Helvetica-Bold", 14)
-    pdf.drawString(70, alto - 50, "OrvendMart")
 
+    pdf.drawCentredString(ancho / 2, y, "ORVEND MART")
 
-    pdf.setFont("Helvetica", 8)
-    
-    y=alto-65
-    limite = 43
-    
-    lineas = textwrap.wrap(ubicacion_texto,width=40)
-
-    for linea in lineas:
-        pdf.drawCentredString(110,y,linea)
-        y-=12
-
-    # =========================
-    # DATOS CAI
-    # =========================
-    numero_factura_formateado = str(factura_cai.numero_factura).zfill(
-        len(str(factura_cai.id_cai.rango_final))
-    )
-
-    fecha_formateada = str(factura_cai.fecha_creacion)
-    hora = fecha_formateada[11:16]
-    hora_format = datetime.strptime(hora, "%H:%M").strftime("%I:%M %p")
+    y -= 18
 
     pdf.setFont("Helvetica", 8)
-    pdf.drawString(10, alto - 120, f"CAI: {factura_cai.id_cai.nombre_cai}")
 
-    pdf.drawString(
-        10,
-        alto - 140,
-        f"Factura No: {factura_cai.id_cai.numero_cai}-{numero_factura_formateado}"
-    )
+    for linea in textwrap.wrap(direccion, width=35):
+        pdf.drawCentredString(ancho / 2, y, linea)
 
-    pdf.drawString(10, alto - 160, "RTN Tienda: 08019016832362")
+        y -= 10
 
-    pdf.drawString(
-        10,
-        alto - 180,
-        f"Fecha emisión: {fecha_formateada[:10]} {hora_format}"
-    )
+    y -= 5
 
-    # =========================
-    # CLIENTE
-    # =========================
-    pdf.drawString(10, alto - 200, "Cliente:")
+    pdf.line(10, y, ancho - 10, y)
 
-    pdf.drawString(
-        10,
-        alto - 220,
-        f"RTN: {factura.rtn or 'Consumidor final'}"
-    )
-
-    pdf.drawString(
-        10,
-        alto - 240,
-        f"Cajero: {factura.id_usuario}"
-    )
-
-    # =========================
-    # DETALLE
-    # =========================
-    
-    y = alto - 260
-
-    pdf.setFont("Helvetica-Bold", 12)
-    y -= 10
-    pdf.drawString(10, y, "." * 88)
+    y -= 15
+    # ==========================================
+    # DATOS FACTURA
+    # ==========================================
 
     pdf.setFont("Helvetica-Bold", 9)
-    pdf.drawString(10, y-15, "DETALLE DE PRODUCTOS")
 
-    y -= 30
+    pdf.drawCentredString(ancho / 2, y, "DATOS FACTURA")
 
-    pdf.setFont("Helvetica-Bold", 8)
-    y -= 10
+    y -= 15
 
-    # ENCABEZADOS
-    pdf.drawString(10, y, "PRODUCTO")
-    pdf.drawString(160, y, "CANT")
-    pdf.drawString(270, y, "PRECIO")
-    pdf.drawString(220, y, "DESC")
+    pdf.setFont("Helvetica", 8)
 
-    y -= 12
-    pdf.line(10, y, 305, y)
-    y -= 12    
+    if es_sat and cai:
+        numero = str(factura_cai.numero_factura).zfill(len(str(cai.rango_final)))
 
-    for d in detalle_factura:
-
-        pdf.drawString(10, y, str(d.id_producto)[:20])
-
-        pdf.drawRightString(180, y, str(d.cantidad))
-        pdf.drawRightString(300, y, f"L {d.precio_unitario+d.impuesto_15+d.impuesto_18}")
-        pdf.drawRightString(241, y, f"L {d.descuento}")
+        pdf.drawCentredString(ancho / 2, y, f"CAI: {cai.nombre_cai}")
 
         y -= 12
 
-        # salto de página
-        if y < 120:
-            pdf.showPage()
-            pdf.setFont("Helvetica", 8)
-            y = alto - 40
+        pdf.drawCentredString(ancho / 2, y, f"No: {cai.numero_cai}-{numero}")
 
-    # =========================
-    # TOTALES FINALES
-    # =========================
-    pdf.setFont("Helvetica-Bold", 12)
+    else:
+        pdf.drawCentredString(ancho / 2, y, f"No Factura: {factura_cai.numero_factura}")
+
+        y -= 12
+
+        pdf.drawCentredString(ancho / 2, y, "Factura personalizada")
+
+    y -= 12
+
+    pdf.drawCentredString(
+        ancho / 2, y, f"Fecha: {venta.f_creacion.strftime('%d/%m/%Y %I:%M %p')}"
+    )
+
+    y -= 12
+
+    pdf.drawCentredString(ancho / 2, y, f"Cajero: {cajero}")
+
+    y -= 20
+
+    # ==========================================
+    # CLIENTE
+    # ==========================================
+
+    pdf.setFont("Helvetica-Bold", 9)
+
+    pdf.drawString(10, y, "CLIENTE")
+
+    y -= 12
+
+    pdf.setFont("Helvetica", 8)
+
+    if venta.id_cliente:
+        pdf.drawString(10, y, f"{venta.id_cliente}")
+
+    else:
+        pdf.drawString(10, y, "Consumidor Final")
+
+    y -= 20
+
+    # ==========================================
+    # DETALLE PRODUCTOS
+    # ==========================================
+
+    pdf.setFont("Helvetica-Bold", 8)
+
+    pdf.drawString(10, y, "PRODUCTO")
+
+    pdf.drawRightString(150, y, "CANT")
+
+    pdf.drawRightString(205, y, "P/U")
+
+    pdf.drawRightString(290, y, "TOTAL")
+
     y -= 10
-    pdf.drawString(10, y, "." * 88)
-    pdf.setFont("Helvetica", 9)
+
+    pdf.line(10, y, ancho - 10, y)
+
+    y -= 12
+
+    pdf.setFont("Helvetica", 8)
+
+    for detalle in detalles:
+        total_linea = detalle.cantidad * detalle.precio_unitario
+
+        # producto limitado para no invadir columnas
+        nombre_producto = str(detalle.producto)[:18]
+
+        pdf.drawString(10, y, nombre_producto)
+
+        pdf.drawRightString(150, y, str(detalle.cantidad))
+
+        pdf.drawRightString(205, y, f"{detalle.precio_unitario:.2f}")
+
+        pdf.drawRightString(290, y, f"{total_linea:.2f}")
+
+        y -= 12
+
+    # ==========================================
+    # TOTALES
+    # ==========================================
+
+    y -= 5
+
+    pdf.line(10, y, ancho - 10, y)
+
     y -= 15
-    pdf.drawString(10, y, f"Subtotal:")
-    pdf.drawString(50, y, "." * 20)
-    pdf.drawString(108, y, f"L {factura.subtotal:.2f}")
 
-    y -= 12
-    pdf.drawString(10, y, f"ISV 15%:")
-    pdf.drawString(50, y, "." * 20)
-    pdf.drawString(108, y, f"L {factura.impuesto_15:.2f}")
+    pdf.setFont("Helvetica", 8)
 
-    y -= 12
-    pdf.drawString(10, y, f"ISV 18%:")
-    pdf.drawString(50, y, "." * 20)
-    pdf.drawString(108, y, f"L {factura.impuesto_18:.2f}")
+    for nombre, valor in [
+        ("Subtotal", venta.subtotal),
+        ("ISV 15%", venta.impuesto_15),
+        ("ISV 18%", venta.impuesto_18),
+        ("Descuento", venta.descuento),
+    ]:
+        # Etiqueta a la izquierda
+        pdf.drawString(10, y, nombre)
 
-    y -= 12
-    pdf.drawString(10, y, f"Descuento:")
-    pdf.drawString(60, y, "." * 16)
-    pdf.drawString(108, y, f"L {factura.descuento:.2f}")
+        # Valor alineado a la derecha
+        pdf.drawRightString(ancho - 10, y, f"L {valor:.2f}")
 
-    y -= 18
+        y -= 12
+
+    y -= 3
+
+    pdf.line(10, y, ancho - 10, y)
+
+    y -= 15
+
     pdf.setFont("Helvetica-Bold", 10)
-    pdf.drawString(10, y, f"TOTAL:")
-    pdf.drawString(50, y, "." * 20)
-    pdf.drawString(108, y, f"L {factura.total:.2f}")
 
-    # =========================
-    # FINALIZAR PDF
-    # =========================
-    pdf.showPage()
+    pdf.drawString(10, y, "TOTAL")
+
+    pdf.drawRightString(
+        ancho - 10,
+        y,
+        f"L {venta.total:.2f}",
+    )
+
+    if tarjeta:
+        y -= 20
+
+    # ==========================================
+    # TARJETA
+    # ==========================================
+
+    if tarjeta:
+        pdf.setFont("Helvetica", 8)
+
+        pdf.drawString(10, y, f"Tarjeta ****{tarjeta.digitos}")
+
+        y -= 12
+
+        pdf.drawString(10, y, f"Autorizacion: {tarjeta.numero_autorizacion}")
+
+        y -= 15
+
+    # ==========================================
+    # PIE
+    # ==========================================
+
+    y -= 25
+
+    pdf.setFont("Helvetica", 8)
+
+    pdf.drawCentredString(ancho / 2, y, "Gracias por su compra")
+
     pdf.save()
 
     buffer.seek(0)
@@ -4563,10 +7810,218 @@ def imprimir_factura(request,id_factura):
     return HttpResponse(
         buffer.getvalue(),
         content_type="application/pdf",
-        headers={
-            "Content-Disposition": 'inline; filename="recibo.pdf"'
+        headers={"Content-Disposition": 'inline; filename="factura.pdf"'},
+    )
+
+
+@login_required
+@permission_required("manager.view_datos_sat", raise_exception=True)
+def datos_sat_view(request):
+    search = request.GET.get("search", "").strip()
+
+    query = datos_sat.objects.all()
+
+    if search:
+        query = query.filter(
+            Q(id_sucursal__nombre__icontains=search)
+            | Q(nombre_cai__icontains=search)
+            | Q(numero_cai__icontains=search)
+        )
+
+    sucursales = Ubicaciones.objects.filter(is_active=True, is_delete=False).order_by(
+        "nombre"
+    )
+
+    paginator = Paginator(query.order_by("-id"), 10)
+
+    page_number = request.GET.get("page", 1)
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        "page_obj": page_obj,
+        "search": search,
+        "mostrar_buscador": True,
+        "sucursales": sucursales,
+    }
+
+    return render(request, "sat/datos_sat.html", context)
+
+
+@login_required
+@permission_required("manager.view_datos_sat", raise_exception=True)
+def get_datos_sat(request, id):
+
+    sat = (
+        datos_sat.objects.filter(id=id, is_delete=False)
+        .select_related("id_sucursal")
+        .first()
+    )
+
+    if not sat:
+        return JsonResponse(
+            {"success": False, "message": "Datos SAT no encontrados"}, status=404
+        )
+
+    return JsonResponse(
+        {
+            "success": True,
+            "datos_sat": {
+                "id": sat.id,
+                "nombre_cai": sat.nombre_cai,
+                "numero_cai": sat.numero_cai,
+                "rango_inicial": sat.rango_inicial,
+                "rango_final": sat.rango_final,
+                "fecha_de_emision": sat.fecha_de_emision.strftime("%Y-%m-%d"),
+                "fecha_de_vencimiento": sat.fecha_de_vencimiento.strftime("%Y-%m-%d"),
+                "id_sucursal": sat.id_sucursal.id,
+                "isActive": sat.is_active,
+            },
         }
     )
+
+
+@login_required
+@permission_required("manager.change_datos_sat", raise_exception=True)
+@require_http_methods(["PUT"])
+def put_datos_sat(request, id):
+
+    try:
+        data = json.loads(request.body)
+
+        nombre_cai = (data.get("nombre_cai") or "").strip()
+        numero_cai = (data.get("numero_cai") or "").strip()
+        rango_inicial = data.get("rango_inicial")
+        rango_final = data.get("rango_final")
+        fecha_de_emision = data.get("fecha_de_emision")
+        fecha_de_vencimiento = data.get("fecha_de_vencimiento")
+        id_sucursal = data.get("id_sucursal")
+        is_active = data.get("IsActive", True)
+        if not all(
+            [
+                nombre_cai,
+                numero_cai,
+                rango_inicial,
+                rango_final,
+                fecha_de_emision,
+                fecha_de_vencimiento,
+                id_sucursal,
+            ]
+        ):
+            return JsonResponse(
+                {"success": False, "message": "Todos los campos son obligatorios"},
+                status=400,
+            )
+
+        sat = datos_sat.objects.filter(id=id).first()
+
+        if not sat or sat.is_delete:
+            return JsonResponse(
+                {"success": False, "message": "Datos SAT no encontrado"}, status=404
+            )
+
+        # Validar CAI duplicado
+        if (
+            datos_sat.objects.filter(numero_cai=numero_cai, is_delete=False)
+            .exclude(id=id)
+            .exists()
+        ):
+            return JsonResponse(
+                {"success": False, "message": "Ya existe un CAI con ese número"},
+                status=400,
+            )
+
+        # Validar rango
+        if int(rango_inicial) > int(rango_final):
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "El rango inicial no puede ser mayor al rango final",
+                },
+                status=400,
+            )
+
+        sat.nombre_cai = nombre_cai
+        sat.numero_cai = numero_cai
+        sat.rango_inicial = rango_inicial
+        sat.rango_final = rango_final
+        sat.fecha_de_emision = fecha_de_emision
+        sat.fecha_de_vencimiento = fecha_de_vencimiento
+        sat.id_sucursal_id = id_sucursal
+        sat.is_active = is_active
+
+        sat.u_modifico_id = request.user.id
+        sat.f_modificacion = timezone.now()
+
+        sat.save()
+
+        return JsonResponse(
+            {"success": True, "message": "Datos SAT actualizado correctamente"}
+        )
+
+    except Exception as e:
+        return JsonResponse({"success": False, "message": str(e)}, status=500)
+
+
+@login_required
+@permission_required("manager.add_datos_sat", raise_exception=True)
+@require_POST
+def post_datos_sat(request):
+    try:
+        data = json.loads(request.body)
+
+        id_sucursal = data.get("id_sucursal")
+        nombre_cai = data.get("nombre_cai")
+        numero_cai = data.get("numero_cai")
+        rango_inicial = data.get("rango_inicial")
+        rango_final = data.get("rango_final")
+        fecha_de_emision = data.get("fecha_de_emision")
+        fecha_de_vencimiento = data.get("fecha_de_vencimiento")
+
+        if not all(
+            [
+                id_sucursal,
+                nombre_cai,
+                numero_cai,
+                rango_inicial,
+                rango_final,
+                fecha_de_emision,
+                fecha_de_vencimiento,
+            ]
+        ):
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Todos los campos son requeridos",
+                },
+                status=400,
+            )
+
+        datos_sat.objects.create(
+            id_sucursal_id=id_sucursal,
+            nombre_cai=nombre_cai,
+            numero_cai=numero_cai,
+            rango_inicial=int(rango_inicial),
+            rango_final=int(rango_final),
+            fecha_de_emision=fecha_de_emision,
+            fecha_de_vencimiento=fecha_de_vencimiento,
+            u_creo_id=request.user.id,
+        )
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "Datos SAT creados correctamente",
+            }
+        )
+
+    except Exception as e:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": str(e),
+            },
+            status=500,
+        )
 
 
 @login_required
@@ -4668,6 +8123,7 @@ def valor_descuento(data):
         total_descuento = valor_descuento_categoria
 
     return {"valor": total_descuento, "es_acumulable": acumulable}
+
 
 
 def descuento_cantidad(data):
@@ -5161,3 +8617,81 @@ def put_descuento(request, id):
 
     except Exception as e:
         return JsonResponse({"success": False, "message": str(e)}, status=500)
+
+
+@login_required
+@permission_required("manager.view_ventas", raise_exception=True)
+def ventas_view(request):
+
+    fecha_hoy = date.today()
+
+    fecha_inicio = request.GET.get("fecha_inicio")
+    fecha_fin = request.GET.get("fecha_fin")
+    sucursal = request.GET.get("sucursal")
+
+    if not fecha_inicio:
+        fecha_inicio = fecha_hoy.strftime("%Y-%m-%d")
+
+    if not fecha_fin:
+        fecha_fin = fecha_hoy.strftime("%Y-%m-%d")
+
+    detalles = (
+        DetalleVenta.objects.select_related(
+            "producto",
+            "venta",
+            "venta__id_cliente",
+            "venta__sucursal",
+            "venta__id_factura_cai",
+        )
+        .filter(
+            venta__f_creacion__date__gte=fecha_inicio,
+            venta__f_creacion__date__lte=fecha_fin,
+        )
+        .order_by("-venta__id")
+    )
+
+    # ======================================
+    # FILTRO SUCURSAL
+    # ======================================
+
+    if sucursal:
+        detalles = detalles.filter(venta__sucursal_id=sucursal)
+
+    # ======================================
+    # TOTAL GENERAL
+    # ======================================
+
+    total_general = detalles.aggregate(total=Sum("utilidad_total"))["total"] or 0
+
+    total_vendido = detalles.aggregate(total=Sum("venta__total"))["total"] or 0
+
+    paginator = Paginator(detalles, 25)
+
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    usuarios = {
+        u.id: (f"{u.first_name} {u.last_name}".strip() or u.username)
+        for u in User.objects.all()
+    }
+
+    for detalle in page_obj:
+        detalle.cajero_nombre = usuarios.get(detalle.venta.u_creo_id, "No disponible")
+
+    context = {
+        "page_obj": page_obj,
+        "fecha_inicio": fecha_inicio,
+        "fecha_fin": fecha_fin,
+        "total_vendido": total_vendido,
+        "total_utilidad": total_general,
+        "sucursales": Ubicaciones.objects.filter(
+            es_tienda=True,
+            is_delete=False,
+        ),
+        "sucursal_seleccionada": sucursal,
+    }
+
+    return render(
+        request,
+        "inventario/ventas.html",
+        context,
+    )

@@ -28,10 +28,14 @@ def login_view(request):
 
         login(request, user)
 
-        if user.groups.filter(name="cajeros").exists():
-            groups=2
+        if user.is_superuser:
+            groups = 1
+        elif user.groups.filter(name="cajeros").exists():
+            groups = 2
+        elif user.groups.filter(name="Bodega").exists():
+            groups = 3
         else:
-            groups=1
+            groups = 1
 
         return JsonResponse({
             "message": "Login exitoso",

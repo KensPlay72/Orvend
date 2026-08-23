@@ -19,100 +19,165 @@
     <i class="bx bx-plus-circle"></i> Agregar
 </button>
 {% endif %}
+<div class="modal fade"
+     id="modalregis"
+     tabindex="-1"
+     aria-labelledby="exampleModalCenterTitle"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
 
-
-        <div class="modal fade"
-             id="modalregis"
-             tabindex="-1"
-             aria-labelledby="exampleModalCenterTitle"
-             aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="exampleModalLongTitle">Registrar Marcas</h5>
-                        <button type="button"
-                                class="btn-close"
-                                data-bs-dismiss="modal"
-                                aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="postregistro" enctype="multipart/form-data">
-                            {% csrf_token %}
-                            <div class="form-group">
-                                <label for="nmarca">Nombre de la marca</label>
-                                <input type="text"
-                                       name="nmarca"
-                                       id="nmarca"
-                                       class="form-control"
-                                       placeholder="Nombre" required>
-                            </div>
-                            <br>
-                            <div class="form-group">
-                            <label for="descmarca">Descripción de la marca</label>
-                            <textarea name="descmarca" id="descmarca" rows="2" maxlength="100" required class="form-control" placeholder="Descripción"></textarea>
-                            </div>
-                            <br>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                                <button type="submit" id="btnregis" class="btn btn classbotones">Guardar</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+            <!-- Header -->
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLongTitle">
+                    Registrar Marcas
+                </h5>
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"></button>
             </div>
-        </div>
 
-        <div class="modal fade"
-             id="modalput"
-             tabindex="-1"
-             aria-labelledby="exampleModalCenterTitle"
-             aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="exampleModalLongTitle">Editar Marca</h5>
-                        <button type="button"
-                                class="btn-close"
-                                data-bs-dismiss="modal"
-                                aria-label="Close"></button>
+            <!-- Body -->
+            <div class="modal-body">
+                <form id="postregistro" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="nmarca" class="form-label">
+                            Nombre de la marca
+                        </label>
+                        <input type="text"
+                               name="nmarca"
+                               id="nmarca"
+                               class="form-control"
+                               placeholder="Nombre"
+                               required>
                     </div>
-                    <div class="modal-body">
-                        <form id="putregistro" enctype="multipart/form-data">
-                            {% csrf_token %}
-                            <input type="text" id="idmarcaid" hidden>
-                            <div class="form-group">
-                                <label for="nmarcaedit">Nombre de la marca</label>
-                                <input type="text"
-                                       name="nmarcaedit"
-                                       id="nmarcaedit"
-                                       class="form-control"
-                                       placeholder="Nombre" required>
-                            </div>
-                            <br>
-                            <div class="form-group">
-                            <label for="descmarcaedit">Descripción de la marca</label>
-                            <textarea name="descmarcaedit" id="descmarcaedit" rows="2" required maxlength="100" class="form-control"></textarea>
-                            </div>
-                            <br>
-                            <div class="form-group">
-                                <label for="isActiveedit" class="d-block">
-                                    Estado
-                                </label>
-                                <label class="d-flex align-items-center" for="isActiveedit">
-                                    <input type="checkbox" id="isActiveedit" name="isActiveedit" checked class="me-2">
-                                    <span id="activeTextedit" class="fw-bold text-success">Activo</span>
-                                </label>
-                            </div>
-                            <br>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                                <button type="submit" id="btnput" class="btn btn classbotones">Guardar</button>
-                            </div>
-                        </form>
+                    <br>
+                    <div class="mb-3">
+                        <label for="descmarca" class="form-label">
+                            Descripción de la marca
+                        </label>
+                        <textarea name="descmarca"
+                                  id="descmarca"
+                                  rows="2"
+                                  maxlength="100"
+                                  class="form-control"
+                                  placeholder="Descripción"
+                                  required></textarea>
                     </div>
-                </div>
+                </form>
             </div>
+
+            <!-- Footer -->
+            <div class="modal-footer">
+                <button type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Cerrar
+                </button>
+
+                <button type="submit"
+                        form="postregistro"
+                        id="btnregis"
+                        class="btn classbotones">
+                    Guardar
+                </button>
+            </div>
+
         </div>
+    </div>
+</div>
+
+<div class="modal fade"
+     id="modalput"
+     tabindex="-1"
+     aria-labelledby="exampleModalCenterTitle"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLongTitle">
+                    Editar Marca
+                </h5>
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <form id="putregistro" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <input type="hidden" id="idmarcaid">
+
+                    <div class="mb-3">
+                        <label for="nmarcaedit" class="form-label">
+                            Nombre de la marca
+                        </label>
+                        <input type="text"
+                               name="nmarcaedit"
+                               id="nmarcaedit"
+                               class="form-control"
+                               placeholder="Nombre"
+                               required>
+                    </div>
+                    <br>
+                    <div class="mb-3">
+                        <label for="descmarcaedit" class="form-label">
+                            Descripción de la marca
+                        </label>
+                        <textarea name="descmarcaedit"
+                                  id="descmarcaedit"
+                                  rows="2"
+                                  maxlength="100"
+                                  class="form-control"
+                                  required></textarea>
+                    </div>
+                    <br>
+                    <div class="mb-3">
+                        <label for="isActiveedit" class="d-block">
+                            Estado
+                        </label>
+
+                        <label class="d-flex align-items-center"
+                               for="isActiveedit">
+                            <input type="checkbox"
+                                   id="isActiveedit"
+                                   name="isActiveedit"
+                                   checked
+                                   class="me-2">
+
+                            <span id="activeTextedit"
+                                  class="fw-bold text-success">
+                                Activo
+                            </span>
+                        </label>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Cerrar
+                </button>
+
+                <button type="submit"
+                        form="putregistro"
+                        id="btnput"
+                        class="btn classbotones">
+                    Guardar
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
 
 <div class="tabla-container">
     <table class="tablas-todo" id="tablacont">

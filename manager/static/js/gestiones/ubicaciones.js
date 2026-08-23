@@ -421,67 +421,78 @@ document.addEventListener("DOMContentLoaded", () => {
 //----------------
 // FETCH UBICACIONES
 //----------------
+
 async function fetchUbicaciones(term, optionsContainer) {
-  try {
-    const res = await fetch(
-      `/manager/ubicaciones/search/?search=${encodeURIComponent(term)}`,
-    );
+    try {
+        const res = await fetch(
+            `/manager/ubicaciones/search/?search=${encodeURIComponent(term)}`
+        );
 
-    const data = await res.json();
+        const data = await res.json();
 
-    optionsContainer.innerHTML = "";
+        optionsContainer.innerHTML = "";
 
-    if (!data.length) {
-      optionsContainer.innerHTML = `
-        <div class="list-group-item text-muted">Sin resultados</div>
-      `;
-      return;
+        // ==========================================
+        // FILTRAR SOLAMENTE BODEGAS
+        // ==========================================
+        const bodegas = data.filter((u) => u.es_bodega);
+
+        if (!bodegas.length) {
+            optionsContainer.innerHTML = `
+                <div class="list-group-item text-muted">
+                    Sin resultados
+                </div>
+            `;
+            return;
+        }
+
+        optionsContainer.innerHTML += `
+            <div class="list-group-item active bg-light text-dark fw-bold">
+                ${term ? "Bodegas encontradas" : "Bodegas recientes"}
+            </div>
+        `;
+
+        bodegas.forEach((u) => {
+
+            // =========================
+            // TIPO LABEL
+            // =========================
+            let tipoLabel = "";
+
+            if (u.es_bodega) {
+                tipoLabel = "Bodega";
+            } else if (u.es_tienda) {
+                tipoLabel = "Tienda";
+            } else {
+                tipoLabel = "Sin tipo";
+            }
+
+            // =========================
+            // TEXTO FINAL
+            // =========================
+            const texto = `${u.nombre}${u.codigo ? " | " + u.codigo : ""} | ${tipoLabel}`;
+
+            optionsContainer.innerHTML += `
+                <button type="button"
+                        class="list-group-item list-group-item-action"
+                        data-value="${u.id}"
+                        data-label="${texto}">
+                    ${texto}
+                </button>
+            `;
+        });
+
+    } catch (error) {
+
+        optionsContainer.innerHTML = `
+            <div class="list-group-item text-danger">
+                Error al cargar ubicaciones
+            </div>
+        `;
+
+        console.error(error);
     }
-
-    optionsContainer.innerHTML += `
-      <div class="list-group-item active bg-light text-dark fw-bold">
-        ${term ? "Resultados encontrados" : "Sugerencias recientes"}
-      </div>
-    `;
-
-    data.forEach((u) => {
-      // =========================
-      // TIPO LABEL
-      // =========================
-      let tipoLabel = "";
-
-      if (u.es_bodega) {
-        tipoLabel = "Bodega";
-      } else if (u.es_tienda) {
-        tipoLabel = "Tienda";
-      } else {
-        tipoLabel = "Sin tipo";
-      }
-
-      // =========================
-      // TEXTO FINAL
-      // =========================
-      const texto = `${u.nombre}${u.codigo ? " | " + u.codigo : ""} | ${tipoLabel}`;
-
-      optionsContainer.innerHTML += `
-        <button type="button"
-                class="list-group-item list-group-item-action"
-                data-value="${u.id}"
-                data-label="${texto}">
-          ${texto}
-        </button>
-      `;
-    });
-  } catch (error) {
-    optionsContainer.innerHTML = `
-      <div class="list-group-item text-danger">
-        Error al cargar ubicaciones
-      </div>
-    `;
-    console.error(error);
-  }
 }
-
 initDropdown("bodegaid", fetchUbicaciones);
 initDropdown("bodegaidedit", fetchUbicaciones);
 

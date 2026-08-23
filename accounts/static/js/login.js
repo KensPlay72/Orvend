@@ -82,12 +82,14 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             // ✔ ÉXITO → redirect por rol
-
-            if(data.groups===1){
+            if (data.groups === 1) {
                 window.location.href = "/manager/dashboard/";
-            }
-            else{
-                window.location.href="/manager/caja/"
+            } else if (data.groups === 2) { 
+                window.location.href = "/manager/caja/";
+            } else if (data.groups === 3) {
+                window.location.href = "/manager/bodega/recepcion_inventario/";
+            } else {
+                window.location.href = "/manager/dashboard/";
             }
             
 

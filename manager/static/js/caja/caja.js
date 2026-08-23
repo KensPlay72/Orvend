@@ -1,754 +1,3952 @@
-//contiene los productos que se van a agregar a caja
+// ==========================================================
+// CAJA - SECCIÓN 1
+// PRODUCTOS, BÚSQUEDA, MODAL Y TABLA
+// ==========================================================
+
+// ----------------------------------------------------------
+// VARIABLES GLOBALES
+// ----------------------------------------------------------
+
 let datos = [];
-//contiene los datos del filtro de busqueda
+
 let productos_dato = [];
 
-let pagos= []
+let pagos = [];
 
 let tarjetas = [];
 
-let fila_descuento;
+let fila_descuento = null;
 
 let total_m = 0;
 
-//evento de busqueda por codigo
-document.getElementById('codigo_busqueda').addEventListener('keydown', function (event) {
-    if (event.key == "Enter") {
-        event.preventDefault();
-        let codigo = document.getElementById('codigo_busqueda').value;
+let clienteBusquedaControlador = null;
 
-        if(codigo.trim()==="" || isNaN(codigo)){
-            mensaje('Ingrese un codigo Valido','error','');
-            return;
-        }
+let clienteSeleccionado = null;
 
-        productos(codigo);
-    }
-});
-
-
-//determinar si existe el codigo o no.
-function productos(codigo) {
-    if (codigo === "" || !Number.isInteger(Number(codigo))) {
-        return console.log('Codigo no valido');
-    }
-
-    let producto = datos.findIndex(p => p.codigo === codigo);
-
-    if (producto === -1) {
-        sin_codigo(codigo);
-    }
-    else {
-        con_codigo(producto);
-        tabla_detalle_total();
-    }
-}
-
-//agregar producto si existe el codigo en la tabla
-function con_codigo(i) {
-    datos[i].cantidad += 1;
-
-    if (datos[i].estado === 1) {
-        descuento_cantidad(i);
-    }
-
-    datos[i].subtotal = datos[i].cantidad * datos[i].precio_venta;
-    datos[i].isv15_acumulable += datos[i].isv_15;
-    datos[i].isv18_acumulable += datos[i].isv_18;
-
-    let tabla = document.getElementById('tablaProductos');
-    let cantidad = tabla.rows[i + 1].cells[2].querySelector('.pre');
-    let subtotal = tabla.rows[i + 1].cells[5];
-    let descuento = tabla.rows[i + 1].cells[4];
-
-    cantidad.textContent = datos[i].cantidad;
-    subtotal.textContent = 'L. ' + datos[i].subtotal.toFixed(2);
-    descuento.textContent = 'L. ' + datos[i].descuento.toFixed(2);
-
-
-}
-
-//fecth de busqueda sin el codigo no esta en la tabla
-async function sin_codigo(codigo) {
-    await fetch(`/manager/busquedacodigo/${codigo}/`, {
-        method: 'GET',
-        headers: {
-
-        },
-    })
-        .then(async response => {
-            if (!response.ok) {
-                const dato = await response.json();
-                throw new Error(
-                dato.error || dato.mensaje || "Error desconocido"
-                );
-            }
-
-            return response.json();
-        })
-        .then(data => {
-
-            let imp15 = 0;
-            let imp18 = 0;
-            if (parseFloat(data.tipos_isv) === 15) {
-                imp15 = parseFloat(data.isv);
-            }
-            else if (parseFloat(data.tipos_isv) === 18) {
-                imp18 = parseFloat(data.isv);
-            }
-
-            let producto = {
-                id: data.id,
-                codigo: data.codigo_sku,
-                nombre: data.nombre,
-                precio_venta: parseFloat(data.precio_venta),
-                cantidad: 1,
-                descuento: parseFloat(data.descuentos),
-                subtotal: parseFloat(data.precio_venta),
-                valor_descuento: parseFloat(data.descuentos),
-                acumulable: data.acumulable,
-                estado: 1,
-                isv_15: imp15,
-                isv_18: imp18,
-                isv15_acumulable: imp15,
-                isv18_acumulable: imp18,
-                lleva: parseInt(data.lleva),
-                paga: parseInt(data.paga),
-                restarlleva: 0
-            }
-
-            datos.push(producto)
-
-            tabla_codigo(data.codigo_sku, data.nombre, 1, parseFloat(data.precio_venta).toFixed(2), parseFloat(data.descuentos).toFixed(2), parseFloat(data.precio_venta).toFixed(2));
-        })
-        .catch(error => {
-            mensaje(error.message,"error",'');
-        })
-}
-
-//busqueda por nombre
-let busqueda = document.getElementById('busqueda');
-let resultados = document.getElementById('resultadoBusquda');
-
-//evitar el evento de submit.
-busqueda.addEventListener('keydown', function (event) {
-    if (event.key == "Enter") {
-        event.preventDefault();
-    }
-});
-
-//controlador para que cuando se escribe rapido cancele el fetch hasta que termine la escritura.
 let controlador = null;
 
-//evento de input para buscar los productos de la base de datos y agregarlo a la lista.
-busqueda.addEventListener('input', function () {
-
-    resultados.innerHTML = "";
-    resultados.style.display = "none";
-
-    const texto = busqueda.value.trim();
-
-    if (texto.length < 2) return;
-
-    if (controlador) {
-        controlador.abort();
-    }
-
-    controlador = new AbortController();
-
-    fetch(`/manager/busquedanombre/${texto}`, {
-        method: 'GET',
-        signal: controlador.signal
-    })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error("Error en la petición");
-            }
-            return response.json();
-        })
-        .then(data => {
-
-            productos_dato = [];
-            resultados.innerHTML = "";
-
-            if (data.length > 0) {
-
-                resultados.style.display = 'block';
-
-                data.forEach((p, index) => {
-
-                    productos_dato.push(p);
-
-                    const div = document.createElement('div');
-                    div.className = 'item-resultado';
-                    div.textContent = p.nombre;
-
-                    div.addEventListener('click', () => {
-                        seleccionarProducto(index);
-                    });
-
-                    resultados.appendChild(div);
-                });
-
-            } else {
-                resultados.style.display = 'block';
-                resultados.innerHTML = `
-                <div class="item-resultado">
-                    Sin resultados
-                </div>
-            `;
-            }
-        })
-        .catch(error => {
-            if (error.name !== "AbortError") {
-                console.log(error);
-            }
-        });
-});
-
-//numero de indicie de producto seleccionado.
 let codex = 0;
 
-//funcion para agregar los datos seleccionados de busqueda por nombre al modal.
-function seleccionarProducto(index) {
-    codex = index;
 
-    let codigo = document.getElementById('nCodigo');
-    let nombre = document.getElementById('nNombre');
-    let precio = document.getElementById('nPrecio');
+// ==========================================================
+// BUSQUEDA POR CODIGO
+// ==========================================================
 
-    codigo.value = productos_dato[index].codigo_sku;
-    nombre.value = productos_dato[index].nombre;
-    precio.value = 'L. ' + productos_dato[index].precio_venta;
+const codigoBusqueda = document.getElementById("codigo_busqueda");
 
+if (codigoBusqueda) {
 
-    const modal = new bootstrap.Modal(document.getElementById('modalagregar'));
-    modal.show();
+    codigoBusqueda.addEventListener("keydown", function (event) {
+
+        if (event.key === "Enter") {
+
+            event.preventDefault();
+
+            const codigo = codigoBusqueda.value.trim();
+
+            if (codigo === "" || isNaN(codigo)) {
+
+                mensaje(
+                    "Ingrese un codigo válido",
+                    "error",
+                    ""
+                );
+
+                return;
+            }
+
+            productos(codigo);
+        }
+    });
 }
 
-//evento de boton del modal agregar los datos seleccionados a la tabla y al arreglo de datos.
-document.getElementById('btnregis').addEventListener('click', function (e) {
-    e.preventDefault();
 
-    let codigo = document.getElementById('nCodigo').value;
+// ==========================================================
+// DETERMINAR SI EXISTE EL CODIGO
+// ==========================================================
 
-    let cantidad = document.getElementById('nCanitdad').value;
+function productos(codigo) {
 
-    if (cantidad.trim() === "" || cantidad<=0||isNaN(cantidad)) {
-        mensaje('La cantidad debe ser mayor que 0','error','')
+    if (
+        codigo === "" ||
+        !Number.isInteger(Number(codigo))
+    ) {
+
+        console.log("Codigo no valido");
+
         return;
     }
 
-    let producto = datos.findIndex(p => p.codigo === codigo);
+    const producto = datos.findIndex(
+        p => p.codigo === codigo
+    );
 
     if (producto === -1) {
 
-        let imp15 = 0;
-        let imp18 = 0;
-        if (parseFloat(productos_dato[codex].tipos_isv) === 15) {
-            imp15 = parseFloat(productos_dato[codex].isv);
-        }
-        else if (parseFloat(productos_dato[codex].tipos_isv) === 18) {
-            imp18 = parseFloat(productos_dato[codex].isv);
-        }
+        sin_codigo(codigo);
 
-        let producto_b = {
-            id: productos_dato[codex].id,
-            codigo: productos_dato[codex].codigo_sku,
-            nombre: productos_dato[codex].nombre,
-            precio_venta: productos_dato[codex].precio_venta,
-            cantidad: parseInt(cantidad),
-            descuento: parseFloat(productos_dato[codex].descuento * cantidad),
-            subtotal: (productos_dato[codex].precio_venta * cantidad),
-            valor_descuento: parseFloat(productos_dato[codex].descuento),
-            acumulable: productos_dato[codex].es_acumulable,
-            estado: 1,
-            lleva: parseInt(productos_dato[codex].lleva),
-            paga: parseInt(productos_dato[codex].paga),
-            restarlleva: 0,
-            isv_15: imp15,
-            isv_18: imp18,
-            isv15_acumulable: imp15 * cantidad,
-            isv18_acumulable: imp18 * cantidad
-        }
-        if (producto_b.lleva > 0) {
-            if (cantidad >= producto_b.lleva) {
-                                
-                let grupos = Math.floor(cantidad / producto_b.lleva);
-                producto_b.descuento += (producto_b.precio_venta * (producto_b.lleva - producto_b.paga)) * grupos;
-                
-                if(cantidad % producto_b.lleva === 0){
-                producto_b.restarlleva = 1;
-                }
+    } else {
 
-            }
-        }
-
-
-        datos.push(producto_b)
-
-
-        tabla_codigo(productos_dato[codex].codigo_sku, productos_dato[codex].nombre, parseInt(cantidad),
-            productos_dato[codex].precio_venta, parseFloat(producto_b.descuento).toFixed(2), parseFloat(productos_dato[codex].precio_venta * parseInt(cantidad)).toFixed(2));
-
-        const modalEl = document.getElementById('modalagregar');
-        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-
-        modal.hide();
-
-        document.getElementById('nCanitdad').value = 0;
-
-        tabla_detalle_total();
-
-    }
-    else {
+        con_codigo(producto);
 
         tabla_detalle_total();
     }
+}
 
-});
 
-// cerrar selector
-busqueda.addEventListener('blur', function () {
-    setTimeout(() => {
-        resultados.style.display = 'none';
-        resultados.innerHTML = '';
-    }, 300);
-});
+// ==========================================================
+// AGREGAR PRODUCTO QUE YA EXISTE EN LA TABLA
+// ==========================================================
 
-//abrir el selector de productos por nombre
-busqueda.addEventListener('focus', function () {
-    if (busqueda.value.length < 2) {
-        resultados.innerHTML = '';
-        resultados.style.display = 'block';
-        resultados.innerHTML += `
-                            <div class="item-resultado">
-                                _______________________
-                                      Sin Resultados
-                            </div>`;
+function con_codigo(i) {
+
+    if (!datos[i]) {
+        return;
     }
-    setTimeout(() => {
-        resultados.style.display = 'block';
-    }, 200);
-});
 
-//agregar producto tabla
-function tabla_codigo(codigo, nombre, canti, sub, des, total) {
-    let tabla = document.querySelector(`#tablaProductos tbody`);
+    // ------------------------------------------------------
+    // STOCK REAL
+    // ------------------------------------------------------
 
-    let fila = tabla.insertRow();
+    const stockReal =
+        parseFloat(datos[i].stock) || 0;
 
-    fila.insertCell(0).textContent = codigo;
-    fila.insertCell(1).textContent = nombre;
-    let cantidad = fila.insertCell(2);
-    fila.insertCell(3).textContent = 'L. ' + sub;
-    fila.insertCell(4).textContent = 'L. ' + des;
-    fila.insertCell(5).textContent = 'L. ' + total;
 
-    let boton = fila.insertCell(6);
+    // ------------------------------------------------------
+    // STOCK VENDIBLE
+    //
+    // Ejemplo:
+    // 6.83 -> 6
+    // 7.50 -> 7
+    // 10.00 -> 10
+    // ------------------------------------------------------
 
-    let div_row = document.createElement('div');
-    div_row.className = 'div_row';
+    const stockVendible =
+        Math.floor(stockReal);
 
-    let div_pre = document.createElement('div');
 
-    let p = document.createElement('p');
-    p.className = 'pre';
-    p.textContent = canti;
+    // ------------------------------------------------------
+    // VALIDAR STOCK
+    // ------------------------------------------------------
 
-    div_pre.appendChild(p)
+    if (
+        datos[i].cantidad + 1 >
+        stockVendible
+    ) {
 
-    let div_button_action = document.createElement('div');
-    div_button_action.className = 'button_action';
+        mensaje(
+            `No puede vender más de ${stockVendible} unidades. Existencia real: ${stockReal}`,
+            "error",
+            ""
+        );
 
-    let button_mas = document.createElement('button');
-    button_mas.classList.add = 'btn_add';
-    button_mas.className = 'btn_add';
-    button_mas.textContent = '+';
+        return;
+    }
 
-    let button_men = document.createElement('button');
-    button_men.classList.add = 'btn_remove';
-    button_men.className = 'btn_remove';
-    button_men.textContent = '-';
 
-    div_button_action.appendChild(button_mas);
-    div_button_action.appendChild(button_men);
+    // ------------------------------------------------------
+    // AUMENTAR CANTIDAD
+    // ------------------------------------------------------
 
-    div_row.appendChild(div_pre);
-    div_row.appendChild(div_button_action);
+    datos[i].cantidad += 1;
 
-    cantidad.appendChild(div_row);
 
-    let div_descueto = document.createElement('div');
-    div_descueto.className = 'button_action';
+    // ------------------------------------------------------
+    // DESCUENTO
+    // ------------------------------------------------------
 
-    let buton_descueto = document.createElement('button');
-    buton_descueto.classList.add = 'btn_add';
-    buton_descueto.className = 'btn_discunt';
-    buton_descueto.textContent = 'cupon';
+    if (
+        datos[i].estado === 1
+    ) {
 
-    div_descueto.appendChild(buton_descueto);
+        descuento_cantidad(i);
+    }
 
-    boton.appendChild(div_descueto);
+
+    // ------------------------------------------------------
+    // SUBTOTAL
+    // ------------------------------------------------------
+
+    datos[i].subtotal =
+        datos[i].cantidad *
+        datos[i].precio_venta;
+
+
+    // ------------------------------------------------------
+    // ISV
+    // ------------------------------------------------------
+
+    datos[i].isv15_acumulable +=
+        datos[i].isv_15;
+
+
+    datos[i].isv18_acumulable +=
+        datos[i].isv_18;
+
+
+    // ------------------------------------------------------
+    // ACTUALIZAR TABLA
+    // ------------------------------------------------------
+
+    const tabla =
+        document.getElementById(
+            "tablaProductos"
+        );
+
+
+    if (!tabla) {
+        return;
+    }
+
+
+    const fila =
+        tabla.rows[i + 1];
+
+
+    if (!fila) {
+        return;
+    }
+
+
+    const cantidad =
+        fila.cells[2]?.querySelector(
+            ".pre"
+        );
+
+
+    const subtotal =
+        fila.cells[5];
+
+
+    const descuento =
+        fila.cells[4];
+
+
+    // ------------------------------------------------------
+    // CANTIDAD
+    // ------------------------------------------------------
+
+    if (cantidad) {
+
+        cantidad.textContent =
+            `${datos[i].cantidad} / ${datos[i].stock}`;
+    }
+
+
+    // ------------------------------------------------------
+    // SUBTOTAL
+    // ------------------------------------------------------
+
+    if (subtotal) {
+
+        subtotal.textContent =
+            "L. " +
+            datos[i].subtotal.toFixed(2);
+    }
+
+
+    // ------------------------------------------------------
+    // DESCUENTO
+    // ------------------------------------------------------
+
+    if (descuento) {
+
+        descuento.textContent =
+            "L. " +
+            datos[i].descuento.toFixed(2);
+    }
+
+
+    // ------------------------------------------------------
+    // ACTUALIZAR TOTALES
+    // ------------------------------------------------------
+
     tabla_detalle_total();
 }
 
-const tbody = document.querySelector("#tablaProductos tbody");
 
-tbody.addEventListener("click", (e) => {
+// ==========================================================
+// BUSQUEDA POR CODIGO EN SERVIDOR
+// ==========================================================
 
-    const fila = e.target.closest("tr");
+async function sin_codigo(codigo) {
 
-    if (e.target.classList.contains("btn_add")) {
+    try {
 
-        const fila = e.target.closest("tr");
+        const response = await fetch(
+            `/manager/busquedacodigo/${codigo}/`,
+            {
+                method: "GET",
+                headers: {}
+            }
+        );
 
-        let indice = fila.sectionRowIndex;
 
-        datos[indice].cantidad++;
-        if (datos[indice].estado === 1) {
-            descuento_cantidad(indice);
+        if (!response.ok) {
+
+            const dato = await response.json();
+
+            throw new Error(
+                dato.error ||
+                dato.mensaje ||
+                "Error desconocido"
+            );
         }
 
-        datos[indice].subtotal = datos[indice].cantidad * datos[indice].precio_venta;
-        datos[indice].isv15_acumulable += datos[indice].isv_15;
-        datos[indice].isv18_acumulable += datos[indice].isv_18;
 
-        let c = fila.querySelector('.pre');
-        let s = fila.cells[5];
-        let d = fila.cells[4];
+        const data = await response.json();
 
-        s.textContent = 'L. ' + datos[indice].subtotal.toFixed(2);
-        d.textContent = 'L. ' + datos[indice].descuento.toFixed(2);
 
-        c.textContent = datos[indice].cantidad;
+        let imp15 = 0;
+        let imp18 = 0;
+
+
+        if (parseFloat(data.tipos_isv) === 15) {
+
+            imp15 = parseFloat(data.isv) || 0;
+
+        } else if (parseFloat(data.tipos_isv) === 18) {
+
+            imp18 = parseFloat(data.isv) || 0;
+        }
+
+
+        const producto = {
+
+            id: data.id,
+
+            codigo: data.codigo_sku,
+
+            nombre: data.nombre,
+
+            precio_venta:
+                parseFloat(data.precio_venta) || 0,
+
+            stock:
+                parseFloat(data.stock) || 0,
+
+            cantidad: 1,
+
+            descuento:
+                parseFloat(data.descuentos) || 0,
+
+            subtotal:
+                parseFloat(data.precio_venta) || 0,
+
+            valor_descuento:
+                parseFloat(data.descuentos) || 0,
+
+            acumulable:
+                data.acumulable,
+
+            estado: 1,
+
+            isv_15: imp15,
+
+            isv_18: imp18,
+
+            isv15_acumulable: imp15,
+
+            isv18_acumulable: imp18,
+
+            lleva:
+                parseInt(data.lleva) || 0,
+
+            paga:
+                parseInt(data.paga) || 0,
+
+            restarlleva: 0
+        };
+
+
+        datos.push(producto);
+
+
+        tabla_codigo(
+
+            data.codigo_sku,
+
+            data.nombre,
+
+            1,
+
+            parseFloat(data.precio_venta).toFixed(2),
+
+            parseFloat(data.descuentos).toFixed(2),
+
+            parseFloat(data.precio_venta).toFixed(2)
+        );
+
 
         tabla_detalle_total();
-    }
-
-    if (e.target.classList.contains('btn_remove')) {
-        const fila = e.target.closest('tr');
-        let indice = fila.sectionRowIndex;
-
-        datos[indice].cantidad--;
-        if (datos[indice].estado === 1) {
-            if (datos[indice].lleva > 0) {
-                if (datos[indice].cantidad % (datos[indice].lleva) !== 0 && datos[indice].restarlleva === 1) {
-                    datos[indice].descuento -= (datos[indice].precio_venta * (datos[indice].lleva - datos[indice].paga));
-                    datos[indice].restarlleva = 0;
-                }
-                else if (datos[indice].cantidad % (datos[indice].lleva) === 0 && datos[indice].restarlleva === 0) {
-                    datos[indice].restarlleva = 1;
-                }
-            }
-            else {
-                datos[indice].descuento -= datos[indice].valor_descuento;
-            }
-        }
-
-        datos[indice].subtotal = datos[indice].cantidad * datos[indice].precio_venta;
-        datos[indice].isv15_acumulable -= datos[indice].isv_15;
-        datos[indice].isv18_acumulable -= datos[indice].isv_18;
-
-        if (datos[indice].cantidad === 0) {
-            datos.splice(indice, 1);
-            fila.remove();
-            tabla_detalle_total();
-            return;
-        }
-
-        let c = fila.querySelector('.pre');
-        let s = fila.cells[5];
-        let d = fila.cells[4];
-
-        s.textContent = 'L. ' + datos[indice].subtotal.toFixed(2);
-
-        c.textContent = datos[indice].cantidad;
-
-        d.textContent = 'L. ' + datos[indice].descuento.toFixed(2);
-
-        tabla_detalle_total();
-    }
-
-    if (e.target.classList.contains('btn_discunt')) {
-        const fila = e.target.closest('tr');
-        add_descuento(fila);
-    }
-
-});
 
 
-function descuento_cantidad(indice) {
-    if (datos[indice].lleva > 0) {
-        if (datos[indice].cantidad % (datos[indice].lleva) === 0) {
-            datos[indice].descuento += (datos[indice].precio_venta * (datos[indice].lleva - datos[indice].paga));
-            datos[indice].restarlleva = 1;
-        }
-        else if(datos[indice].cantidad % (datos[indice].lleva) !== 0 && datos[indice].restarlleva === 1){
-            datos[indice].restarlleva = 0;
-        }
-    }
-    else {
-        datos[indice].descuento += datos[indice].valor_descuento;
+    } catch (error) {
+
+        mensaje(
+            error.message,
+            "error",
+            ""
+        );
     }
 }
 
-function add_descuento(fila) {
-    fila_descuento = fila;
-    let modal = new bootstrap.Modal(document.getElementById('modalDescuento'));
+
+// ==========================================================
+// BUSQUEDA POR NOMBRE
+// ==========================================================
+
+const busqueda =
+    document.getElementById("busqueda");
+
+const resultados =
+    document.getElementById("resultadoBusquda");
+
+
+if (busqueda && resultados) {
+
+
+    // ------------------------------------------------------
+    // EVITAR SUBMIT CON ENTER
+    // ------------------------------------------------------
+
+    busqueda.addEventListener(
+        "keydown",
+        function (event) {
+
+            if (event.key === "Enter") {
+
+                event.preventDefault();
+            }
+        }
+    );
+
+
+    // ------------------------------------------------------
+    // EVENTO BUSQUEDA
+    // ------------------------------------------------------
+
+    busqueda.addEventListener(
+        "input",
+        function () {
+
+            resultados.innerHTML = "";
+
+            resultados.style.display = "none";
+
+
+            const texto =
+                busqueda.value.trim();
+
+
+            if (texto.length < 2) {
+
+                return;
+            }
+
+
+            if (controlador) {
+
+                controlador.abort();
+            }
+
+
+            controlador =
+                new AbortController();
+
+
+            fetch(
+                `/manager/busquedanombre/${texto}/`,
+                {
+                    method: "GET",
+                    signal: controlador.signal
+                }
+            )
+                .then(async response => {
+
+                    if (!response.ok) {
+
+                        const dato =
+                            await response.json();
+
+                        throw new Error(
+                            dato.error ||
+                            "Error al buscar productos"
+                        );
+                    }
+
+                    return response.json();
+                })
+
+                .then(data => {
+
+                    productos_dato = [];
+
+                    resultados.innerHTML = "";
+
+
+                    if (data.length > 0) {
+
+                        resultados.style.display =
+                            "block";
+
+
+                        data.forEach(
+                            (p, index) => {
+
+                                productos_dato.push(p);
+
+
+                                const div =
+                                    document.createElement("div");
+
+
+                                div.className =
+                                    "item-resultado";
+
+
+                                div.textContent =
+                                    `${p.nombre} | Existencia: ${p.stock}`;
+
+
+                                div.addEventListener(
+                                    "click",
+                                    () => {
+
+                                        seleccionarProducto(index);
+                                    }
+                                );
+
+
+                                resultados.appendChild(div);
+                            }
+                        );
+
+
+                    } else {
+
+                        resultados.style.display =
+                            "block";
+
+
+                        resultados.innerHTML = `
+                            <div class="item-resultado">
+                                Sin existencia en esta sucursal
+                            </div>
+                        `;
+                    }
+                })
+
+                .catch(error => {
+
+                    if (
+                        error.name !==
+                        "AbortError"
+                    ) {
+
+                        mensaje(
+                            error.message,
+                            "error",
+                            ""
+                        );
+                    }
+                });
+        }
+    );
+}
+
+
+// ==========================================================
+// PRODUCTO SELECCIONADO
+// ==========================================================
+
+function seleccionarProducto(index) {
+
+    codex = index;
+
+    const producto = productos_dato[index];
+
+    if (!producto) {
+
+        mensaje(
+            "No se encontró el producto seleccionado",
+            "error",
+            ""
+        );
+
+        return;
+    }
+
+
+    const codigo =
+        document.getElementById("nCodigo");
+
+    const nombre =
+        document.getElementById("nNombre");
+
+    const precio =
+        document.getElementById("nPrecio");
+
+    const cantidad =
+        document.getElementById("nCanitdad");
+
+    const existencia =
+        document.getElementById("existenciaProducto");
+
+
+    // ======================================================
+    // OBTENER EXISTENCIA REAL
+    // ======================================================
+
+    const stock =
+        parseFloat(producto.stock);
+
+
+    if (isNaN(stock)) {
+
+        console.error(
+            "Stock inválido:",
+            producto.stock,
+            producto
+        );
+
+        mensaje(
+            "La existencia del producto no es válida",
+            "error",
+            ""
+        );
+
+        return;
+    }
+
+
+    // ======================================================
+    // SOLO SE PUEDEN VENDER UNIDADES ENTERAS
+    //
+    // Ejemplo:
+    //
+    // Stock = 6.83
+    // Se pueden vender solamente 6
+    //
+    // Stock = 10.00
+    // Se pueden vender 10
+    // ======================================================
+
+    const stockVendible =
+        Math.floor(stock);
+
+
+    // ======================================================
+    // VERIFICAR SI EXISTE AL MENOS UNA UNIDAD
+    // ======================================================
+
+    if (stockVendible < 1) {
+
+        mensaje(
+            `No hay unidades completas disponibles. Existencia: ${stock}`,
+            "error",
+            ""
+        );
+
+        return;
+    }
+
+
+    // ======================================================
+    // LLENAR MODAL
+    // ======================================================
+
+    if (codigo) {
+
+        codigo.value =
+            producto.codigo_sku;
+    }
+
+
+    if (nombre) {
+
+        nombre.value =
+            producto.nombre;
+    }
+
+
+    if (precio) {
+
+        precio.value =
+            "L. " +
+            parseFloat(
+                producto.precio_venta
+            ).toFixed(2);
+    }
+
+
+    if (cantidad) {
+
+        cantidad.value = 1;
+
+        cantidad.min = 1;
+
+        cantidad.max =
+            stockVendible;
+    }
+
+
+    // ======================================================
+    // MOSTRAR EXISTENCIA
+    //
+    // IMPORTANTE:
+    // existenciaProducto es un INPUT.
+    // Por eso usamos .value
+    // y NO .textContent
+    // ======================================================
+
+    if (existencia) {
+
+        existencia.value =
+            `1 / ${stock}`;
+    }
+
+
+    // ======================================================
+    // ABRIR MODAL
+    // ======================================================
+
+    const modalElement =
+        document.getElementById(
+            "modalagregar"
+        );
+
+
+    if (!modalElement) {
+        return;
+    }
+
+
+    const modal =
+        bootstrap.Modal.getOrCreateInstance(
+            modalElement
+        );
+
+
     modal.show();
 }
+// ==========================================================
+// CONTROL DE CANTIDAD DEL MODAL
+// ==========================================================
 
-document.getElementById('btndescuento').addEventListener('click', function (e) {
-    e.preventDefault();
-    let descuento = document.getElementById('Ddescuento');
-    let indice = fila_descuento.sectionRowIndex;
-    let d = fila_descuento.cells[4]
+const inputCantidad =
+    document.getElementById(
+        "nCanitdad"
+    );
 
-    fetch(`/manager/cupon_descuento/${descuento.value}/${datos[indice].id}/`, {
-        method: 'GET',
-        headers: {
 
-        },
-    })
-        .then(async response => {
-            if (!response.ok) {
-                const dato = await response.json();
-                throw new Error(
-                dato.error || dato.mensaje || "Error desconocido"
+if (inputCantidad) {
+
+    inputCantidad.addEventListener(
+        "input",
+        function () {
+
+            const producto =
+                productos_dato[codex];
+
+
+            if (!producto) {
+                return;
+            }
+
+
+            // ==================================================
+            // STOCK REAL
+            // ==================================================
+
+            const stock =
+                parseFloat(
+                    producto.stock
                 );
 
+
+            if (isNaN(stock)) {
+                return;
             }
 
-            return response.json();
-        })
-        .then(data => {
 
-            if (datos[indice].acumulable) {
-                datos[indice].descuento += parseFloat(data.descuento);
+            // ==================================================
+            // STOCK VENDIBLE
+            //
+            // 6.83 -> 6
+            // 9.99 -> 9
+            // 10.00 -> 10
+            // ==================================================
 
+            const stockVendible =
+                Math.floor(stock);
+
+
+            // ==================================================
+            // CANTIDAD INGRESADA
+            // ==================================================
+
+            let cantidad =
+                parseInt(
+                    this.value,
+                    10
+                );
+
+
+            if (isNaN(cantidad)) {
+
+                cantidad = 1;
             }
-            else {
-                if (datos[indice].estado === 1) {
-                    datos[indice].descuento = parseFloat(data.descuento);
-                    datos[indice].estado = 0;
-                }
-                else {
-                    datos[indice].descuento += parseFloat(data.descuento);
-                }
+
+
+            // ==================================================
+            // NO PERMITIR MENOS DE 1
+            // ==================================================
+
+            if (cantidad < 1) {
+
+                cantidad = 1;
             }
 
-            d.textContent = 'L. ' + datos[indice].descuento.toFixed(2);
-            fila_descuento = null;
-            tabla_detalle_total();
 
-            let modal = document.getElementById('modalDescuento');
-            let modalE = bootstrap.Modal.getOrCreateInstance(modal);
+            // ==================================================
+            // NO SUPERAR UNIDADES ENTERAS DISPONIBLES
+            //
+            // Ejemplo:
+            // stock = 6.83
+            // máximo = 6
+            // ==================================================
 
-            modalE.hide();
+            if (
+                cantidad >
+                stockVendible
+            ) {
 
-        })
-        .catch(error => {
-            mensaje(error.message,"error",'');
-        });
-
-})
-
-function tabla_detalle_total() {
-    pagos=[];
-    let subtotal = 0;
-    let descuento = 0;
-    let isv15 = 0;
-    let isv18 = 0;
-
-    datos.forEach((item, index) => {
-        subtotal += item.subtotal;
-        descuento += item.descuento;
-        isv15 += item.isv15_acumulable;
-        isv18 += item.isv18_acumulable;
-    })
+                cantidad =
+                    stockVendible;
 
 
-    let total = (subtotal + isv15 + isv18) - descuento;
+                mensaje(
+                    `La cantidad máxima que puede vender es ${stockVendible}. Existencia real: ${stock}`,
+                    "error",
+                    ""
+                );
+            }
 
-    let tabla = document.getElementById('detalle-total');
-    let celda_subtotal = tabla.rows[0].cells[1];
-    let celda_descuento = tabla.rows[1].cells[1];
-    let celda_isv15 = tabla.rows[2].cells[1];
-    let celda_isv18 = tabla.rows[3].cells[1];
-    let celda_total = tabla.rows[4].cells[1];
 
-    total_m = total;
+            // ==================================================
+            // ACTUALIZAR INPUT
+            // ==================================================
 
-    pagos.push({
-        rtn:'',
-        subtotal:subtotal,
-        descuento:descuento,
-        isv15:isv15,
-        isv18:isv18,
-        total:total,
-        tipo_pago:''
-    })
+            this.value =
+                cantidad;
 
-    celda_subtotal.textContent = 'L. ' + subtotal.toFixed(2);
-    celda_descuento.textContent = 'L. ' + descuento.toFixed(2);
-    celda_isv15.textContent = 'L. ' + isv15.toFixed(2);
-    celda_isv18.textContent = 'L. ' + isv18.toFixed(2);
-    celda_total.textContent = 'L. ' + total.toFixed(2);
 
-    
+            // ==================================================
+            // ACTUALIZAR EXISTENCIA
+            //
+            // IMPORTANTE:
+            // Es un INPUT -> .value
+            // ==================================================
+
+            const existencia =
+                document.getElementById(
+                    "existenciaProducto"
+                );
+
+
+            if (existencia) {
+
+                existencia.value =
+                    `${cantidad} / ${stock}`;
+            }
+        }
+    );
 }
 
 
-//pagos
 
-document.getElementById('postpagar').addEventListener('submit', function (e) {
-    e.preventDefault();
+// ==========================================================
+// AGREGAR PRODUCTO DESDE MODAL
+// ==========================================================
 
-        if(datos.length ===0){
-            mensaje('Agregue productos a la venta','error','');
-            return;
+const btnRegis =
+    document.getElementById("btnregis");
+
+
+if (btnRegis) {
+
+    btnRegis.addEventListener(
+        "click",
+        function (e) {
+
+            e.preventDefault();
+
+
+            // ------------------------------------------------
+            // OBTENER INPUTS
+            // ------------------------------------------------
+
+            const codigoInput =
+                document.getElementById(
+                    "nCodigo"
+                );
+
+
+            const cantidadInput =
+                document.getElementById(
+                    "nCanitdad"
+                );
+
+
+            if (
+                !codigoInput ||
+                !cantidadInput
+            ) {
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // CODIGO
+            // ------------------------------------------------
+
+            const codigo =
+                codigoInput.value.trim();
+
+
+            // ------------------------------------------------
+            // CANTIDAD
+            // ------------------------------------------------
+
+            const cantidad =
+                parseInt(
+                    cantidadInput.value,
+                    10
+                );
+
+
+            // ------------------------------------------------
+            // VALIDAR CANTIDAD
+            // ------------------------------------------------
+
+            if (
+                isNaN(cantidad) ||
+                cantidad <= 0
+            ) {
+
+                mensaje(
+                    "La cantidad debe ser mayor que 0",
+                    "error",
+                    ""
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // PRODUCTO SELECCIONADO
+            // ------------------------------------------------
+
+            const productoSeleccionado =
+                productos_dato[codex];
+
+
+            if (!productoSeleccionado) {
+
+                mensaje(
+                    "No se encontró el producto seleccionado",
+                    "error",
+                    ""
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // STOCK REAL
+            // ------------------------------------------------
+
+            const stockReal =
+                parseFloat(
+                    productoSeleccionado.stock
+                ) || 0;
+
+
+            // ------------------------------------------------
+            // STOCK VENDIBLE
+            //
+            // 6.83 -> 6
+            // 7.50 -> 7
+            // 10.00 -> 10
+            // ------------------------------------------------
+
+            const stockVendible =
+                Math.floor(stockReal);
+
+
+            // ------------------------------------------------
+            // VALIDAR STOCK DEL PRODUCTO
+            // ------------------------------------------------
+
+            if (
+                cantidad >
+                stockVendible
+            ) {
+
+                mensaje(
+                    `La cantidad máxima que puede vender es ${stockVendible}. Existencia real: ${stockReal}`,
+                    "error",
+                    ""
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // BUSCAR SI YA ESTÁ EN LA TABLA
+            // ------------------------------------------------
+
+            const producto =
+                datos.findIndex(
+                    p =>
+                        p.codigo ===
+                        codigo
+                );
+
+
+            // =================================================
+            // PRODUCTO NO EXISTE EN LA TABLA
+            // =================================================
+
+            if (
+                producto === -1
+            ) {
+
+                let imp15 = 0;
+
+                let imp18 = 0;
+
+
+                // ------------------------------------------------
+                // ISV 15
+                // ------------------------------------------------
+
+                if (
+                    parseFloat(
+                        productoSeleccionado.tipos_isv
+                    ) === 15
+                ) {
+
+                    imp15 =
+                        parseFloat(
+                            productoSeleccionado.isv
+                        ) || 0;
+                }
+
+
+                // ------------------------------------------------
+                // ISV 18
+                // ------------------------------------------------
+
+                else if (
+                    parseFloat(
+                        productoSeleccionado.tipos_isv
+                    ) === 18
+                ) {
+
+                    imp18 =
+                        parseFloat(
+                            productoSeleccionado.isv
+                        ) || 0;
+                }
+
+
+                // ------------------------------------------------
+                // PRECIO
+                // ------------------------------------------------
+
+                const precio =
+                    parseFloat(
+                        productoSeleccionado.precio_venta
+                    ) || 0;
+
+
+                // ------------------------------------------------
+                // DESCUENTO
+                // ------------------------------------------------
+
+                const descuentoBase =
+                    parseFloat(
+                        productoSeleccionado.descuento
+                    ) || 0;
+
+
+                // ------------------------------------------------
+                // CREAR PRODUCTO
+                // ------------------------------------------------
+
+                let producto_b = {
+
+                    id:
+                        productoSeleccionado.id,
+
+                    codigo:
+                        productoSeleccionado.codigo_sku,
+
+                    nombre:
+                        productoSeleccionado.nombre,
+
+                    precio_venta:
+                        precio,
+
+                    stock:
+                        stockReal,
+
+                    cantidad:
+                        cantidad,
+
+                    descuento:
+                        descuentoBase *
+                        cantidad,
+
+                    subtotal:
+                        precio *
+                        cantidad,
+
+                    valor_descuento:
+                        descuentoBase,
+
+                    acumulable:
+                        productoSeleccionado.es_acumulable,
+
+                    estado:
+                        1,
+
+                    lleva:
+                        parseInt(
+                            productoSeleccionado.lleva
+                        ) || 0,
+
+                    paga:
+                        parseInt(
+                            productoSeleccionado.paga
+                        ) || 0,
+
+                    restarlleva:
+                        0,
+
+                    isv_15:
+                        imp15,
+
+                    isv_18:
+                        imp18,
+
+                    isv15_acumulable:
+                        imp15 *
+                        cantidad,
+
+                    isv18_acumulable:
+                        imp18 *
+                        cantidad
+                };
+
+
+                // ------------------------------------------------
+                // PROMOCION LLEVA / PAGA
+                // ------------------------------------------------
+
+                if (
+                    producto_b.lleva > 0
+                ) {
+
+                    if (
+                        cantidad >=
+                        producto_b.lleva
+                    ) {
+
+                        const grupos =
+                            Math.floor(
+                                cantidad /
+                                producto_b.lleva
+                            );
+
+
+                        producto_b.descuento +=
+                            producto_b.precio_venta *
+                            (
+                                producto_b.lleva -
+                                producto_b.paga
+                            ) *
+                            grupos;
+
+
+                        if (
+                            cantidad %
+                            producto_b.lleva ===
+                            0
+                        ) {
+
+                            producto_b.restarlleva =
+                                1;
+                        }
+                    }
+                }
+
+
+                // ------------------------------------------------
+                // AGREGAR A DATOS
+                // ------------------------------------------------
+
+                datos.push(
+                    producto_b
+                );
+
+
+                // ------------------------------------------------
+                // AGREGAR A TABLA
+                // ------------------------------------------------
+
+                tabla_codigo(
+
+                    productoSeleccionado.codigo_sku,
+
+                    productoSeleccionado.nombre,
+
+                    cantidad,
+
+                    precio.toFixed(2),
+
+                    producto_b.descuento.toFixed(2),
+
+                    (
+                        precio *
+                        cantidad
+                    ).toFixed(2)
+                );
+
+
+                // ------------------------------------------------
+                // CERRAR MODAL
+                // ------------------------------------------------
+
+                cerrarModalProducto();
+
+
+                // ------------------------------------------------
+                // ACTUALIZAR TOTALES
+                // ------------------------------------------------
+
+                tabla_detalle_total();
+
+
+                return;
+            }
+
+
+            // =================================================
+            // PRODUCTO YA EXISTE EN LA TABLA
+            // =================================================
+
+            const cantidadActual =
+                parseInt(
+                    datos[producto].cantidad,
+                    10
+                ) || 0;
+
+
+            // ------------------------------------------------
+            // NUEVA CANTIDAD
+            // ------------------------------------------------
+
+            const nuevaCantidad =
+                cantidadActual +
+                cantidad;
+
+
+            // ------------------------------------------------
+            // VALIDAR CONTRA STOCK ENTERO
+            //
+            // IMPORTANTE:
+            //
+            // stock = 6.83
+            // stockVendible = 6
+            //
+            // actual = 6
+            // agregar = 1
+            // nueva = 7
+            //
+            // 7 > 6 -> BLOQUEADO
+            // ------------------------------------------------
+
+            if (
+                nuevaCantidad >
+                stockVendible
+            ) {
+
+                mensaje(
+                    `No puede vender más de ${stockVendible} unidades. Existencia real: ${stockReal}. Actualmente tiene ${cantidadActual} unidades en la venta.`,
+                    "error",
+                    ""
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // ACTUALIZAR CANTIDAD
+            // ------------------------------------------------
+
+            datos[producto].cantidad =
+                nuevaCantidad;
+
+
+            // ------------------------------------------------
+            // DESCUENTO
+            // ------------------------------------------------
+
+            if (
+                datos[producto].estado === 1
+            ) {
+
+                descuento_cantidad(
+                    producto
+                );
+            }
+
+
+            // ------------------------------------------------
+            // SUBTOTAL
+            // ------------------------------------------------
+
+            datos[producto].subtotal =
+                datos[producto].cantidad *
+                datos[producto].precio_venta;
+
+
+            // ------------------------------------------------
+            // ISV
+            // ------------------------------------------------
+
+            datos[producto].isv15_acumulable +=
+                datos[producto].isv_15 *
+                cantidad;
+
+
+            datos[producto].isv18_acumulable +=
+                datos[producto].isv_18 *
+                cantidad;
+
+
+            // ------------------------------------------------
+            // OBTENER TABLA
+            // ------------------------------------------------
+
+            const tabla =
+                document.getElementById(
+                    "tablaProductos"
+                );
+
+
+            if (!tabla) {
+                return;
+            }
+
+
+            const fila =
+                tabla.rows[
+                    producto + 1
+                ];
+
+
+            if (fila) {
+
+                const c =
+                    fila.querySelector(
+                        ".pre"
+                    );
+
+
+                const s =
+                    fila.cells[5];
+
+
+                const d =
+                    fila.cells[4];
+
+
+                // --------------------------------------------
+                // CANTIDAD
+                // --------------------------------------------
+
+                if (c) {
+
+                    c.textContent =
+                        `${datos[producto].cantidad} / ${datos[producto].stock}`;
+                }
+
+
+                // --------------------------------------------
+                // SUBTOTAL
+                // --------------------------------------------
+
+                if (s) {
+
+                    s.textContent =
+                        "L. " +
+                        datos[producto]
+                            .subtotal
+                            .toFixed(2);
+                }
+
+
+                // --------------------------------------------
+                // DESCUENTO
+                // --------------------------------------------
+
+                if (d) {
+
+                    d.textContent =
+                        "L. " +
+                        datos[producto]
+                            .descuento
+                            .toFixed(2);
+                }
+            }
+
+
+            // ------------------------------------------------
+            // CERRAR MODAL
+            // ------------------------------------------------
+
+            cerrarModalProducto();
+
+
+            // ------------------------------------------------
+            // ACTUALIZAR TOTALES
+            // ------------------------------------------------
+
+            tabla_detalle_total();
         }
+    );
+}
 
-        let tipo_pago = document.getElementById('tipo_pago').value;
+// ==========================================================
+// CERRAR MODAL PRODUCTO
+// ==========================================================
 
-        let tarjeta = []
+function cerrarModalProducto() {
 
-        let canitdad =document.getElementById('Pdinero').value;
-        let digitos =document.getElementById('Pdigitos').value;
-        let autoriza=document.getElementById('Pautorizacion').value;
-
-        let rtn = document.getElementById('PRTN').value;
-
-
-        pagos[0].rtn = rtn;
+    const modalElement =
+        document.getElementById(
+            "modalagregar"
+        );
 
 
-        if(tipo_pago ==="pago_contado"){
-            
-                if(canitdad.trim() === "" || isNaN(canitdad) || parseFloat(canitdad) < pagos[0].total){
-                    mensaje('Ingrese una cantidad valida','error','');
+    if (modalElement) {
+
+        const modal =
+            bootstrap.Modal.getOrCreateInstance(
+                modalElement
+            );
+
+        modal.hide();
+    }
+
+
+    const cantidad =
+        document.getElementById(
+            "nCanitdad"
+        );
+
+
+    if (cantidad) {
+
+        cantidad.value = 1;
+    }
+}
+
+
+// ==========================================================
+// CERRAR RESULTADOS DE BUSQUEDA
+// ==========================================================
+
+if (busqueda && resultados) {
+
+    busqueda.addEventListener(
+        "blur",
+        function () {
+
+            setTimeout(() => {
+
+                resultados.style.display =
+                    "none";
+
+                resultados.innerHTML = "";
+
+            }, 300);
+        }
+    );
+
+
+    busqueda.addEventListener(
+        "focus",
+        function () {
+
+            if (
+                busqueda.value.length < 2
+            ) {
+
+                resultados.innerHTML = `
+                    <div class="item-resultado">
+                        ______________________
+                        <br>
+                        Sin Resultados
+                    </div>
+                `;
+
+                resultados.style.display =
+                    "block";
+            }
+
+
+            setTimeout(() => {
+
+                resultados.style.display =
+                    "block";
+
+            }, 200);
+        }
+    );
+}
+
+
+// ==========================================================
+// CREAR FILA EN TABLA
+// ==========================================================
+
+function tabla_codigo(
+    codigo,
+    nombre,
+    canti,
+    sub,
+    des,
+    total
+) {
+
+    const tabla =
+        document.querySelector(
+            "#tablaProductos tbody"
+        );
+
+
+    if (!tabla) {
+
+        console.error(
+            "No existe #tablaProductos tbody"
+        );
+
+        return;
+    }
+
+
+    const fila =
+        tabla.insertRow();
+
+
+    fila.insertCell(0)
+        .textContent = codigo;
+
+
+    fila.insertCell(1)
+        .textContent = nombre;
+
+
+    const cantidad =
+        fila.insertCell(2);
+
+
+    fila.insertCell(3)
+        .textContent =
+        "L. " + sub;
+
+
+    fila.insertCell(4)
+        .textContent =
+        "L. " + des;
+
+
+    fila.insertCell(5)
+        .textContent =
+        "L. " + total;
+
+
+    const boton =
+        fila.insertCell(6);
+
+
+    // ------------------------------------------------------
+    // CONTENEDOR CANTIDAD
+    // ------------------------------------------------------
+
+    const div_row =
+        document.createElement("div");
+
+    div_row.className =
+        "div_row";
+
+
+    const div_pre =
+        document.createElement("div");
+
+
+    const p =
+        document.createElement("p");
+
+    p.className =
+        "pre";
+
+    p.textContent =
+        canti;
+
+
+    div_pre.appendChild(p);
+
+
+    // ------------------------------------------------------
+    // BOTONES + -
+    // ------------------------------------------------------
+
+    const div_button_action =
+        document.createElement("div");
+
+    div_button_action.className =
+        "button_action";
+
+
+    const button_mas =
+        document.createElement("button");
+
+    button_mas.type =
+        "button";
+
+    button_mas.className =
+        "btn_add";
+
+    button_mas.textContent =
+        "+";
+
+
+    const button_men =
+        document.createElement("button");
+
+    button_men.type =
+        "button";
+
+    button_men.className =
+        "btn_remove";
+
+    button_men.textContent =
+        "-";
+
+
+    div_button_action.appendChild(
+        button_mas
+    );
+
+    div_button_action.appendChild(
+        button_men
+    );
+
+
+    div_row.appendChild(
+        div_pre
+    );
+
+    div_row.appendChild(
+        div_button_action
+    );
+
+
+    cantidad.appendChild(
+        div_row
+    );
+
+
+    // ------------------------------------------------------
+    // BOTON CUPON
+    // ------------------------------------------------------
+
+    const div_descuento =
+        document.createElement("div");
+
+    div_descuento.className =
+        "button_action";
+
+
+    const boton_descuento =
+        document.createElement("button");
+
+    boton_descuento.type =
+        "button";
+
+    boton_descuento.className =
+        "btn_discunt";
+
+    boton_descuento.textContent =
+        "cupon";
+
+
+    div_descuento.appendChild(
+        boton_descuento
+    );
+
+
+    boton.appendChild(
+        div_descuento
+    );
+
+
+    tabla_detalle_total();
+}
+
+
+// ==========================================================
+// EVENTOS DE LA TABLA
+// ==========================================================
+
+const tbody =
+    document.querySelector(
+        "#tablaProductos tbody"
+    );
+
+
+if (tbody) {
+
+    tbody.addEventListener(
+        "click",
+        function (e) {
+
+            const fila =
+                e.target.closest("tr");
+
+
+            if (!fila) {
+                return;
+            }
+
+
+            const indice =
+                fila.sectionRowIndex;
+
+
+            if (!datos[indice]) {
+                return;
+            }
+
+
+            // ==================================================
+            // BOTON +
+            // ==================================================
+
+            if (
+                e.target.classList.contains(
+                    "btn_add"
+                )
+            ) {
+
+                const producto =
+                    datos[indice];
+
+
+                // ----------------------------------------------
+                // STOCK REAL
+                // ----------------------------------------------
+
+                const stockReal =
+                    parseFloat(
+                        producto.stock
+                    ) || 0;
+
+
+                // ----------------------------------------------
+                // STOCK VENDIBLE
+                //
+                // 6.83 -> 6
+                // 7.99 -> 7
+                // 10.00 -> 10
+                // ----------------------------------------------
+
+                const stockVendible =
+                    Math.floor(
+                        stockReal
+                    );
+
+
+                // ----------------------------------------------
+                // VALIDAR
+                // ----------------------------------------------
+
+                if (
+                    producto.cantidad + 1 >
+                    stockVendible
+                ) {
+
+                    mensaje(
+                        `No puede vender más de ${stockVendible} unidades. Existencia real: ${stockReal}`,
+                        "error",
+                        ""
+                    );
+
                     return;
                 }
 
-            pagos[0].tipo_pago ="contado"
-            
-            tarjeta.push({
-                digitos:'',
-                numero_autorizacion:'',
-            })
+
+                // ----------------------------------------------
+                // AUMENTAR
+                // ----------------------------------------------
+
+                producto.cantidad++;
 
 
-        }
-        else if(tipo_pago === "pago_tarjeta"){
-            pagos[0].tipo_pago ="tarjeta"
+                // ----------------------------------------------
+                // DESCUENTO
+                // ----------------------------------------------
 
-            if(autoriza.trim() === ""){
-                mensaje("escriba el nuemro de autorización",'error','')
+                if (
+                    producto.estado === 1
+                ) {
+
+                    descuento_cantidad(
+                        indice
+                    );
+                }
+
+
+                // ----------------------------------------------
+                // SUBTOTAL
+                // ----------------------------------------------
+
+                producto.subtotal =
+                    producto.cantidad *
+                    producto.precio_venta;
+
+
+                // ----------------------------------------------
+                // ISV
+                // ----------------------------------------------
+
+                producto.isv15_acumulable +=
+                    producto.isv_15;
+
+
+                producto.isv18_acumulable +=
+                    producto.isv_18;
+
+
+                // ----------------------------------------------
+                // ACTUALIZAR TABLA
+                // ----------------------------------------------
+
+                const c =
+                    fila.querySelector(
+                        ".pre"
+                    );
+
+
+                const s =
+                    fila.cells[5];
+
+
+                const d =
+                    fila.cells[4];
+
+
+                if (c) {
+
+                    c.textContent =
+                        `${producto.cantidad} / ${producto.stock}`;
+                }
+
+
+                if (s) {
+
+                    s.textContent =
+                        "L. " +
+                        producto.subtotal
+                            .toFixed(2);
+                }
+
+
+                if (d) {
+
+                    d.textContent =
+                        "L. " +
+                        producto.descuento
+                            .toFixed(2);
+                }
+
+
+                tabla_detalle_total();
+
                 return;
             }
 
-            if(digitos.trim() === ""){
-                mensaje("Escriba los ultimos cuatro digitos",'error','')
+
+            // ==================================================
+            // BOTON -
+            // ==================================================
+
+            if (
+                e.target.classList.contains(
+                    "btn_remove"
+                )
+            ) {
+
+                const producto =
+                    datos[indice];
+
+
+                // ----------------------------------------------
+                // DISMINUIR
+                // ----------------------------------------------
+
+                producto.cantidad--;
+
+
+                // ----------------------------------------------
+                // DESCUENTO
+                // ----------------------------------------------
+
+                if (
+                    producto.estado === 1
+                ) {
+
+                    if (
+                        producto.lleva > 0
+                    ) {
+
+                        if (
+                            producto.cantidad %
+                                producto.lleva !== 0 &&
+                            producto.restarlleva === 1
+                        ) {
+
+                            producto.descuento -=
+                                producto.precio_venta *
+                                (
+                                    producto.lleva -
+                                    producto.paga
+                                );
+
+
+                            producto.restarlleva =
+                                0;
+
+
+                        } else if (
+                            producto.cantidad %
+                                producto.lleva === 0 &&
+                            producto.restarlleva === 0
+                        ) {
+
+                            producto.restarlleva =
+                                1;
+                        }
+
+
+                    } else {
+
+                        producto.descuento -=
+                            producto.valor_descuento;
+                    }
+                }
+
+
+                // ----------------------------------------------
+                // SUBTOTAL
+                // ----------------------------------------------
+
+                producto.subtotal =
+                    producto.cantidad *
+                    producto.precio_venta;
+
+
+                // ----------------------------------------------
+                // ISV
+                // ----------------------------------------------
+
+                producto.isv15_acumulable -=
+                    producto.isv_15;
+
+
+                producto.isv18_acumulable -=
+                    producto.isv_18;
+
+
+                // ----------------------------------------------
+                // ELIMINAR SI LLEGA A CERO
+                // ----------------------------------------------
+
+                if (
+                    producto.cantidad <= 0
+                ) {
+
+                    datos.splice(
+                        indice,
+                        1
+                    );
+
+
+                    fila.remove();
+
+
+                    tabla_detalle_total();
+
+                    return;
+                }
+
+
+                // ----------------------------------------------
+                // ACTUALIZAR TABLA
+                // ----------------------------------------------
+
+                const c =
+                    fila.querySelector(
+                        ".pre"
+                    );
+
+
+                const s =
+                    fila.cells[5];
+
+
+                const d =
+                    fila.cells[4];
+
+
+                if (c) {
+
+                    c.textContent =
+                        `${producto.cantidad} / ${producto.stock}`;
+                }
+
+
+                if (s) {
+
+                    s.textContent =
+                        "L. " +
+                        producto.subtotal
+                            .toFixed(2);
+                }
+
+
+                if (d) {
+
+                    d.textContent =
+                        "L. " +
+                        producto.descuento
+                            .toFixed(2);
+                }
+
+
+                tabla_detalle_total();
+
                 return;
             }
 
-            tarjeta.push({
-                digitos: digitos,
-                numero_autorizacion: autoriza,
-            })
-        }
-        else{
-            mensaje('Seleccione un tipo de pago',"error",'');
-            return;
-        }
-        
-        let data = {
-            productos:datos,
-            pagos:pagos,
-            tarjeta:tarjeta
-        }
 
-        fetch('/manager/realizar_venta/',{
-            method:'POST',
-            headers:{
-               
-            },
-            body: JSON.stringify(data)
-        })
-        .then(async response=>{
-            if(!response.ok){
-                const dato = await response.json();
-                console.log(dato)
-                throw new Error(
-                dato.error || dato.message || "Error desconocido"
+            // ==================================================
+            // CUPON
+            // ==================================================
+
+            if (
+                e.target.classList.contains(
+                    "btn_discunt"
+                )
+            ) {
+
+                add_descuento(
+                    fila
                 );
             }
-            return response.json();
-        })
-        .then(data=>{
-          
-            if(tipo_pago === "pago_contado"){
-                let recargar = ()=>location.reload();
-                mensaje(`Cambio: L. ${(parseFloat(parseFloat(canitdad)-pagos[0].total)).toFixed(2)}`,"success",recargar)
+        }
+    );
+}
+
+// ==========================================================
+// DESCUENTO POR CANTIDAD
+// ==========================================================
+
+function descuento_cantidad(indice) {
+
+    if (!datos[indice]) {
+        return;
+    }
+
+
+    if (
+        datos[indice].lleva > 0
+    ) {
+
+        if (
+            datos[indice].cantidad %
+            datos[indice].lleva === 0
+        ) {
+
+            datos[indice].descuento +=
+                datos[indice].precio_venta *
+                (
+                    datos[indice].lleva -
+                    datos[indice].paga
+                );
+
+
+            datos[indice].restarlleva =
+                1;
+
+
+        } else if (
+            datos[indice].cantidad %
+            datos[indice].lleva !== 0 &&
+            datos[indice].restarlleva === 1
+        ) {
+
+            datos[indice].restarlleva =
+                0;
+        }
+
+
+    } else {
+
+        datos[indice].descuento +=
+            datos[indice].valor_descuento;
+    }
+}
+
+
+// ==========================================================
+// ABRIR MODAL DESCUENTO
+// ==========================================================
+
+function add_descuento(fila) {
+
+    if (!fila) {
+        return;
+    }
+
+
+    fila_descuento = fila;
+
+
+    const modalElement =
+        document.getElementById(
+            "modalDescuento"
+        );
+
+
+    if (!modalElement) {
+        return;
+    }
+
+
+    const modal =
+        bootstrap.Modal.getOrCreateInstance(
+            modalElement
+        );
+
+
+    modal.show();
+}
+
+
+// ==========================================================
+// APLICAR CUPON
+// ==========================================================
+//
+// IMPORTANTE:
+// En tu HTML el botón del descuento tiene:
+//
+// id="btndescuento"
+//
+// Este ID debería cambiarse en HTML a:
+//
+// id="btnAplicarDescuento"
+//
+// El JS soporta ambos para que no se rompa.
+// ==========================================================
+
+const btnAplicarDescuento =
+    document.getElementById(
+        "btnAplicarDescuento"
+    ) ||
+    document.getElementById(
+        "btndescuento"
+    );
+
+
+if (btnAplicarDescuento) {
+
+    btnAplicarDescuento.addEventListener(
+        "click",
+        function (e) {
+
+            e.preventDefault();
+
+
+            if (!fila_descuento) {
+
+                mensaje(
+                    "Seleccione un producto",
+                    "warning",
+                    ""
+                );
+
+                return;
             }
 
-            window.open(`/manager/recibo_pdf/${data.id_facutura}/`,'_blank')
 
-            
+            const descuento =
+                document.getElementById(
+                    "Ddescuento"
+                );
+
+
+            if (!descuento) {
+                return;
+            }
+
+
+            const indice =
+                fila_descuento.sectionRowIndex;
+
+
+            if (!datos[indice]) {
+                return;
+            }
+
+
+            const d =
+                fila_descuento.cells[4];
+
+
+            fetch(
+                `/manager/cupon_descuento/${descuento.value}/${datos[indice].id}/`,
+                {
+                    method: "GET",
+                    headers: {}
+                }
+            )
+                .then(async response => {
+
+                    if (!response.ok) {
+
+                        const dato =
+                            await response.json();
+
+                        throw new Error(
+                            dato.error ||
+                            dato.mensaje ||
+                            "Error desconocido"
+                        );
+                    }
+
+
+                    return response.json();
+                })
+
+                .then(data => {
+
+                    const valor =
+                        parseFloat(
+                            data.descuento
+                        ) || 0;
+
+
+                    if (
+                        datos[indice].acumulable
+                    ) {
+
+                        datos[indice].descuento +=
+                            valor;
+
+
+                    } else {
+
+                        if (
+                            datos[indice].estado === 1
+                        ) {
+
+                            datos[indice].descuento =
+                                valor;
+
+                            datos[indice].estado =
+                                0;
+
+
+                        } else {
+
+                            datos[indice].descuento +=
+                                valor;
+                        }
+                    }
+
+
+                    if (d) {
+
+                        d.textContent =
+                            "L. " +
+                            datos[indice]
+                                .descuento
+                                .toFixed(2);
+                    }
+
+
+                    fila_descuento =
+                        null;
+
+
+                    tabla_detalle_total();
+
+
+                    const modalElement =
+                        document.getElementById(
+                            "modalDescuento"
+                        );
+
+
+                    if (modalElement) {
+
+                        const modal =
+                            bootstrap.Modal.getOrCreateInstance(
+                                modalElement
+                            );
+
+                        modal.hide();
+                    }
+                })
+
+                .catch(error => {
+
+                    mensaje(
+                        error.message,
+                        "error",
+                        ""
+                    );
+                });
+        }
+    );
+}
+
+
+// ==========================================================
+// CALCULAR TOTALES
+// ==========================================================
+
+function tabla_detalle_total() {
+
+    pagos = [];
+
+
+    let subtotal = 0;
+
+    let descuento = 0;
+
+    let isv15 = 0;
+
+    let isv18 = 0;
+
+
+    datos.forEach(item => {
+
+        subtotal +=
+            parseFloat(
+                item.subtotal
+            ) || 0;
+
+
+        descuento +=
+            parseFloat(
+                item.descuento
+            ) || 0;
+
+
+        isv15 +=
+            parseFloat(
+                item.isv15_acumulable
+            ) || 0;
+
+
+        isv18 +=
+            parseFloat(
+                item.isv18_acumulable
+            ) || 0;
+    });
+
+
+    const total =
+        subtotal +
+        isv15 +
+        isv18 -
+        descuento;
+
+
+    const tabla =
+        document.getElementById(
+            "detalle-total"
+        );
+
+
+    if (!tabla) {
+        return;
+    }
+
+
+    const celda_subtotal =
+        tabla.rows[0]?.cells[1];
+
+    const celda_descuento =
+        tabla.rows[1]?.cells[1];
+
+    const celda_isv15 =
+        tabla.rows[2]?.cells[1];
+
+    const celda_isv18 =
+        tabla.rows[3]?.cells[1];
+
+    const celda_total =
+        tabla.rows[4]?.cells[1];
+
+
+    total_m =
+        total;
+
+
+    pagos.push({
+
+        rtn: "",
+
+        subtotal: subtotal,
+
+        descuento: descuento,
+
+        isv15: isv15,
+
+        isv18: isv18,
+
+        total: total,
+
+        tipo_pago: "",
+
+        cliente_id:
+            clienteSeleccionado
+                ? clienteSeleccionado.id
+                : "",
+
+        cliente_nombre:
+            clienteSeleccionado
+                ? clienteSeleccionado.nombre
+                : ""
+    });
+
+
+    if (celda_subtotal) {
+
+        celda_subtotal.textContent =
+            "L. " +
+            subtotal.toFixed(2);
+    }
+
+
+    if (celda_descuento) {
+
+        celda_descuento.textContent =
+            "L. " +
+            descuento.toFixed(2);
+    }
+
+
+    if (celda_isv15) {
+
+        celda_isv15.textContent =
+            "L. " +
+            isv15.toFixed(2);
+    }
+
+
+    if (celda_isv18) {
+
+        celda_isv18.textContent =
+            "L. " +
+            isv18.toFixed(2);
+    }
+
+
+    if (celda_total) {
+
+        celda_total.textContent =
+            "L. " +
+            total.toFixed(2);
+    }
+}
+
+// ==========================================================
+// CAJA - SECCIÓN 2
+// CLIENTES, PAGOS, APERTURA Y CIERRE
+// ==========================================================
+
+
+// ==========================================================
+// SELECCIONAR CLIENTE
+// ==========================================================
+
+const btnSeleccionarCliente =
+    document.getElementById(
+        "btnSeleccionarCliente"
+    );
+
+
+if (btnSeleccionarCliente) {
+
+    btnSeleccionarCliente.addEventListener(
+        "click",
+        function () {
+
+            const buscar =
+                document.getElementById(
+                    "buscarClienteInput"
+                );
+
+            const resultados =
+                document.getElementById(
+                    "tablaClientesResultados"
+                );
+
+
+            if (buscar) {
+
+                buscar.value = "";
+            }
+
+
+            if (resultados) {
+
+                resultados.innerHTML = "";
+            }
+
+
+            const modalElement =
+                document.getElementById(
+                    "modalSeleccionarCliente"
+                );
+
+
+            if (!modalElement) {
+                return;
+            }
+
+
+            const modal =
+                bootstrap.Modal.getOrCreateInstance(
+                    modalElement
+                );
+
+
+            modal.show();
+        }
+    );
+}
+
+
+// ==========================================================
+// BUSCAR CLIENTE
+// ==========================================================
+
+const buscarClienteInput =
+    document.getElementById(
+        "buscarClienteInput"
+    );
+
+
+if (buscarClienteInput) {
+
+    buscarClienteInput.addEventListener(
+        "input",
+        function () {
+
+            const texto =
+                this.value.trim();
+
+
+            const resultados =
+                document.getElementById(
+                    "tablaClientesResultados"
+                );
+
+
+            if (!resultados) {
+                return;
+            }
+
+
+            resultados.innerHTML = "";
+
+
+            if (texto.length < 2) {
+
+                return;
+            }
+
+
+            if (
+                clienteBusquedaControlador
+            ) {
+
+                clienteBusquedaControlador.abort();
+            }
+
+
+            clienteBusquedaControlador =
+                new AbortController();
+
+
+            fetch(
+                `/manager/clientes/search/?search=${encodeURIComponent(texto)}`,
+                {
+                    method: "GET",
+                    signal:
+                        clienteBusquedaControlador.signal
+                }
+            )
+                .then(async response => {
+
+                    if (!response.ok) {
+
+                        const dato =
+                            await response.json();
+
+                        throw new Error(
+                            dato.error ||
+                            "Error al buscar clientes"
+                        );
+                    }
+
+
+                    return response.json();
+                })
+
+                .then(data => {
+
+                    if (data.length === 0) {
+
+                        resultados.innerHTML = `
+                            <tr>
+                                <td
+                                    colspan="5"
+                                    class="text-center text-muted"
+                                >
+                                    No se encontraron clientes
+                                </td>
+                            </tr>
+                        `;
+
+                        return;
+                    }
+
+
+                    data.forEach(cliente => {
+
+                        const fila =
+                            document.createElement(
+                                "tr"
+                            );
+
+
+                        fila.style.cursor =
+                            "pointer";
+
+
+                        const celdas = [
+
+                            cliente.id,
+
+                            cliente.nombre_completo ||
+                                "Sin nombre",
+
+                            cliente.dni ||
+                                "-",
+
+                            cliente.empresa ||
+                                "-",
+
+                            cliente.telefono ||
+                                "-"
+                        ];
+
+
+                        celdas.forEach(valor => {
+
+                            const celda =
+                                document.createElement(
+                                    "td"
+                                );
+
+
+                            celda.textContent =
+                                valor;
+
+
+                            fila.appendChild(
+                                celda
+                            );
+                        });
+
+
+                        fila.addEventListener(
+                            "click",
+                            () => {
+
+                                seleccionarCliente(
+                                    cliente
+                                );
+                            }
+                        );
+
+
+                        resultados.appendChild(
+                            fila
+                        );
+                    });
+                })
+
+                .catch(error => {
+
+                    if (
+                        error.name !==
+                        "AbortError"
+                    ) {
+
+                        mensaje(
+                            error.message,
+                            "error",
+                            ""
+                        );
+                    }
+                });
+        }
+    );
+}
+
+
+// ==========================================================
+// GUARDAR CLIENTE SELECCIONADO
+// ==========================================================
+
+function seleccionarCliente(cliente) {
+
+    if (!cliente) {
+        return;
+    }
+
+
+    clienteSeleccionado = {
+
+        id: cliente.id,
+
+        nombre:
+            cliente.nombre_completo ||
+            cliente.dni ||
+            "Cliente"
+    };
+
+
+    const clienteId =
+        document.getElementById(
+            "cliente_id"
+        );
+
+
+    const clienteNombre =
+        document.getElementById(
+            "cliente_nombre"
+        );
+
+
+    const clienteSeleccionadoInput =
+        document.getElementById(
+            "clienteSeleccionado"
+        );
+
+
+    const detalle =
+        document.getElementById(
+            "detalleClienteSeleccionado"
+        );
+
+
+    if (clienteId) {
+
+        clienteId.value =
+            cliente.id;
+    }
+
+
+    if (clienteNombre) {
+
+        clienteNombre.value =
+            clienteSeleccionado.nombre;
+    }
+
+
+    if (clienteSeleccionadoInput) {
+
+        clienteSeleccionadoInput.value =
+            clienteSeleccionado.nombre;
+    }
+
+
+    if (detalle) {
+
+        detalle.textContent =
+            `DNI: ${cliente.dni || "-"} • Teléfono: ${cliente.telefono || "-"}`;
+    }
+
+
+    // ------------------------------------------------------
+    // CERRAR MODAL
+    // ------------------------------------------------------
+
+    const modalElement =
+        document.getElementById(
+            "modalSeleccionarCliente"
+        );
+
+
+    if (modalElement) {
+
+        const modal =
+            bootstrap.Modal.getInstance(
+                modalElement
+            );
+
+
+        if (modal) {
+
+            modal.hide();
+        }
+    }
+
+
+    // ------------------------------------------------------
+    // ACTUALIZAR PAGO
+    // ------------------------------------------------------
+
+    if (pagos.length > 0) {
+
+        pagos[0].cliente_id =
+            cliente.id;
+
+
+        pagos[0].cliente_nombre =
+            clienteSeleccionado.nombre;
+    }
+}
+
+
+// ==========================================================
+// PAGOS
+// ==========================================================
+
+const postPagar =
+    document.getElementById(
+        "postpagar"
+    );
+
+
+if (postPagar) {
+
+    postPagar.addEventListener(
+        "submit",
+        function (e) {
+
+            e.preventDefault();
+
+
+            // ------------------------------------------------
+            // VALIDAR PRODUCTOS
+            // ------------------------------------------------
+
+            if (datos.length === 0) {
+
+                mensaje(
+                    "Agregue productos a la venta",
+                    "error",
+                    ""
+                );
+
+                return;
+            }
+
+
+            const tipoPago =
+                document.getElementById(
+                    "tipo_pago"
+                )?.value;
+
+
+            const tarjeta = [];
+
+
+            const cantidadDinero =
+                document.getElementById(
+                    "Pdinero"
+                )?.value || "";
+
+
+            const digitos =
+                document.getElementById(
+                    "Pdigitos"
+                )?.value.trim() || "";
+
+
+            const autorizacion =
+                document.getElementById(
+                    "Pautorizacion"
+                )?.value.trim() || "";
+
+
+            const clienteId =
+                document.getElementById(
+                    "cliente_id"
+                )?.value || "";
+
+
+            const clienteNombre =
+                document.getElementById(
+                    "cliente_nombre"
+                )?.value || "";
+
+
+            // ------------------------------------------------
+            // CLIENTE OBLIGATORIO
+            // ------------------------------------------------
+
+            if (!clienteId) {
+
+                mensaje(
+                    "Seleccione un cliente antes de realizar la venta",
+                    "error",
+                    ""
+                );
+
+                return;
+            }
+
+
+            // =================================================
+            // PAGO CONTADO
+            // =================================================
+
+            if (
+                tipoPago ===
+                "pago_contado"
+            ) {
+
+                if (
+                    cantidadDinero.trim() === "" ||
+                    isNaN(cantidadDinero) ||
+                    parseFloat(cantidadDinero) <
+                    pagos[0].total
+                ) {
+
+                    mensaje(
+                        "Ingrese una cantidad válida",
+                        "error",
+                        ""
+                    );
+
+                    return;
+                }
+
+
+                pagos[0].tipo_pago =
+                    "contado";
+
+
+                tarjeta.push({
+
+                    digitos: "",
+
+                    numero_autorizacion: ""
+                });
+
+
+            // =================================================
+            // PAGO TARJETA
+            // =================================================
+
+            } else if (
+                tipoPago ===
+                "pago_tarjeta"
+            ) {
+
+                pagos[0].tipo_pago =
+                    "tarjeta";
+
+
+                if (
+                    autorizacion === ""
+                ) {
+
+                    mensaje(
+                        "Escriba el número de autorización",
+                        "error",
+                        ""
+                    );
+
+                    return;
+                }
+
+
+                if (
+                    !/^\d{4}$/.test(
+                        digitos
+                    )
+                ) {
+
+                    mensaje(
+                        "Ingrese únicamente los últimos 4 dígitos de la tarjeta",
+                        "error",
+                        ""
+                    );
+
+                    return;
+                }
+
+
+                tarjeta.push({
+
+                    digitos:
+                        digitos,
+
+                    numero_autorizacion:
+                        autorizacion
+                });
+
+
+            } else {
+
+                mensaje(
+                    "Seleccione un tipo de pago",
+                    "error",
+                    ""
+                );
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // PREPARAR DATA
+            // ------------------------------------------------
+
+            const data = {
+
+                productos:
+                    datos,
+
+                pagos:
+                    pagos,
+
+                tarjeta:
+                    tarjeta,
+
+                cliente: {
+
+                    id:
+                        clienteId,
+
+                    nombre:
+                        clienteNombre
+                }
+            };
+
+
+            // ------------------------------------------------
+            // CONFIRMAR TARJETA
+            // ------------------------------------------------
+
+            if (
+                tipoPago ===
+                "pago_tarjeta"
+            ) {
+
+                Swal.fire({
+
+                    title:
+                        "Confirmar pago con tarjeta",
+
+                    html: `
+                        <div style="text-align:left">
+
+                            <b>Total:</b>
+                            L. ${pagos[0].total.toFixed(2)}
+                            <br>
+
+                            <b>Autorización:</b>
+                            ${autorizacion}
+                            <br>
+
+                            <b>Tarjeta:</b>
+                            ****${digitos}
+
+                        </div>
+                    `,
+
+                    icon:
+                        "question",
+
+                    showCancelButton:
+                        true,
+
+                    confirmButtonText:
+                        "Procesar venta",
+
+                    cancelButtonText:
+                        "Cancelar",
+
+                    customClass: {
+
+                        confirmButton:
+                            "classbotones"
+                    }
+
+                }).then(result => {
+
+                    if (
+                        result.isConfirmed
+                    ) {
+
+                        enviarVenta(
+                            data,
+                            tipoPago,
+                            cantidadDinero
+                        );
+                    }
+                });
+
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // CONTADO
+            // ------------------------------------------------
+
+            enviarVenta(
+                data,
+                tipoPago,
+                cantidadDinero
+            );
+        }
+    );
+}
+
+
+// ==========================================================
+// ENVIAR VENTA
+// ==========================================================
+
+function enviarVenta(
+    data,
+    tipoPago,
+    cantidadDinero
+) {
+
+    const csrf =
+        document.querySelector(
+            "[name=csrfmiddlewaretoken]"
+        );
+
+
+    if (!csrf) {
+
+        mensaje(
+            "No se encontró el token CSRF",
+            "error",
+            ""
+        );
+
+        return;
+    }
+
+
+    fetch(
+        "/manager/realizar_venta/",
+        {
+
+            method: "POST",
+
+            headers: {
+
+                "Content-Type":
+                    "application/json",
+
+                "X-CSRFToken":
+                    csrf.value
+            },
+
+            body:
+                JSON.stringify(data)
+        }
+    )
+
+        .then(async response => {
+
+            const respuesta =
+                await response.json();
+
+
+            if (!response.ok) {
+
+                throw new Error(
+
+                    respuesta.error ||
+                    respuesta.message ||
+                    "Ocurrió un error al realizar la venta"
+                );
+            }
+
+
+            return respuesta;
         })
-        .catch(error=>{
-            mensaje(error.message,"error",'');
+
+
+        .then(data => {
+
+            // ================================================
+            // CONTADO
+            // ================================================
+
+            if (
+                tipoPago ===
+                "pago_contado"
+            ) {
+
+                const cambio =
+                    (
+                        parseFloat(
+                            cantidadDinero
+                        ) -
+                        parseFloat(
+                            pagos[0].total
+                        )
+                    ).toFixed(2);
+
+
+                Swal.fire({
+
+                    title:
+                        "Venta realizada",
+
+                    html:
+                        `<b>Cambio:</b> L. ${cambio}`,
+
+                    icon:
+                        "success",
+
+                    confirmButtonText:
+                        "Aceptar",
+
+                    customClass: {
+
+                        confirmButton:
+                            "classbotones"
+                    }
+
+                }).then(() => {
+
+                    window.open(
+                        `/manager/recibo_pdf/${data.id_factura}/`,
+                        "_blank"
+                    );
+
+
+                    location.reload();
+                });
+
+
+            // ================================================
+            // TARJETA
+            // ================================================
+
+            } else {
+
+                Swal.fire({
+
+                    title:
+                        "Venta realizada",
+
+                    html: `
+                        <b>Factura:</b>
+                        ${data.numero_factura}
+                        <br>
+                        <b>Pago con tarjeta registrado correctamente</b>
+                    `,
+
+                    icon:
+                        "success",
+
+                    confirmButtonText:
+                        "Aceptar",
+
+                    customClass: {
+
+                        confirmButton:
+                            "classbotones"
+                    }
+
+                }).then(() => {
+
+                    window.open(
+                        `/manager/recibo_pdf/${data.id_factura}/`,
+                        "_blank"
+                    );
+
+
+                    location.reload();
+                });
+            }
         })
-        
-});
 
-document.getElementById('Pagar').addEventListener('click', function (e) {
-    let modal = new bootstrap.Modal(document.getElementById('modalPago'));
-    modal.show();
-});
 
-document.getElementById('tipo_pago').addEventListener('change', function (e) {
+        .catch(error => {
 
-    let opcion = e.target.value;
-    let dinero = document.getElementById('div_dinero');
-    let numero = document.getElementById('div_nuemro');
-    let digito = document.getElementById('div_digito');
-    let banco = document.getElementById('div_banco');
-    let red = document.getElementById('div_red');
+            mensaje(
+                error.message,
+                "error",
+                ""
+            );
+        });
+}
 
-    if (opcion === "pago_contado") {
-        dinero.style.display = 'block';
-        numero.style.display = 'none';
-        digito.style.display = 'none';
-        banco.style.display = 'none';
-        red.style.display = 'none';
-    }
-    else if (opcion === "pago_tarjeta") {
-        dinero.style.display = 'none';
-        numero.style.display = 'block';
-        digito.style.display = 'block';
-        banco.style.display = 'block';
-        red.style.display = 'block';
-    }
-    else {
-        dinero.style.display = 'none';
-        numero.style.display = 'none';
-        digito.style.display = 'none';
-        banco.style.display = 'none';
-        red.style.display = 'none';
-    }
-});
 
-function mensaje(mensaje,tipo,funcion){
+// ==========================================================
+// BOTON PAGAR
+// ==========================================================
+
+const btnPagar =
+    document.getElementById(
+        "Pagar"
+    );
+
+
+if (btnPagar) {
+
+    btnPagar.addEventListener(
+        "click",
+        function (e) {
+
+            if (this.disabled) {
+
+                e.preventDefault();
+
+                return;
+            }
+
+
+            const modalElement =
+                document.getElementById(
+                    "modalPago"
+                );
+
+
+            if (!modalElement) {
+                return;
+            }
+
+
+            const modal =
+                bootstrap.Modal.getOrCreateInstance(
+                    modalElement
+                );
+
+
+            modal.show();
+        }
+    );
+}
+
+
+// ==========================================================
+// CAMBIO DE TIPO DE PAGO
+// ==========================================================
+
+const tipoPagoSelect =
+    document.getElementById(
+        "tipo_pago"
+    );
+
+
+if (tipoPagoSelect) {
+
+    tipoPagoSelect.addEventListener(
+        "change",
+        function (e) {
+
+            const opcion =
+                e.target.value;
+
+
+            const dinero =
+                document.getElementById(
+                    "div_dinero"
+                );
+
+
+            const numero =
+                document.getElementById(
+                    "div_nuemro"
+                );
+
+
+            const digito =
+                document.getElementById(
+                    "div_digito"
+                );
+
+
+            // ------------------------------------------------
+            // PAGO CONTADO
+            // ------------------------------------------------
+
+            if (
+                opcion ===
+                "pago_contado"
+            ) {
+
+                if (dinero)
+                    dinero.style.display =
+                        "block";
+
+                if (numero)
+                    numero.style.display =
+                        "none";
+
+                if (digito)
+                    digito.style.display =
+                        "none";
+
+
+            // ------------------------------------------------
+            // PAGO TARJETA
+            // ------------------------------------------------
+
+            } else if (
+                opcion ===
+                "pago_tarjeta"
+            ) {
+
+                if (dinero)
+                    dinero.style.display =
+                        "none";
+
+                if (numero)
+                    numero.style.display =
+                        "block";
+
+                if (digito)
+                    digito.style.display =
+                        "block";
+
+
+            // ------------------------------------------------
+            // SIN SELECCION
+            // ------------------------------------------------
+
+            } else {
+
+                if (dinero)
+                    dinero.style.display =
+                        "none";
+
+                if (numero)
+                    numero.style.display =
+                        "none";
+
+                if (digito)
+                    digito.style.display =
+                        "none";
+            }
+        }
+    );
+}
+
+
+// ==========================================================
+// MENSAJES
+// ==========================================================
+
+function mensaje(
+    texto,
+    tipo,
+    funcion
+) {
+
     Swal.fire({
-        title:mensaje,
-        icon:tipo,
-        confirmButtonText:"Aceptar",
-        customClass: { confirmButton: "classbotones" }
-    }).then(()=>{
-        if(typeof funcion==="function"){
+
+        title:
+            texto,
+
+        icon:
+            tipo,
+
+        confirmButtonText:
+            "Aceptar",
+
+        customClass: {
+
+            confirmButton:
+                "classbotones"
+        }
+
+    }).then(() => {
+
+        if (
+            typeof funcion ===
+            "function"
+        ) {
+
             funcion();
         }
-    })
+    });
+}
+
+
+// ==========================================================
+// APERTURA DE CAJA
+// ==========================================================
+
+const btnAbrirCaja =
+    document.getElementById(
+        "btnAbrirCaja"
+    );
+
+
+if (btnAbrirCaja) {
+
+    btnAbrirCaja.addEventListener(
+        "click",
+        function () {
+
+            const montoInput =
+                document.getElementById(
+                    "monto_apertura"
+                );
+
+
+            if (!montoInput) {
+                return;
+            }
+
+
+            const monto =
+                montoInput.value.trim();
+
+
+            const url =
+                btnAbrirCaja.dataset.url;
+
+
+            if (
+                !monto ||
+                parseFloat(monto) < 0
+            ) {
+
+                Swal.fire({
+
+                    icon:
+                        "warning",
+
+                    title:
+                        "Monto inválido",
+
+                    text:
+                        "Ingrese un monto válido para abrir la caja.",
+
+                    confirmButtonText:
+                        "Aceptar",
+
+                    customClass: {
+
+                        confirmButton:
+                            "classbotones"
+                    }
+                });
+
+
+                return;
+            }
+
+
+            const csrf =
+                document.querySelector(
+                    '[name=csrfmiddlewaretoken]'
+                );
+
+
+            if (!csrf) {
+
+                mensaje(
+                    "No se encontró el token CSRF",
+                    "error",
+                    ""
+                );
+
+                return;
+            }
+
+
+            const formData =
+                new FormData();
+
+
+            formData.append(
+                "monto_apertura",
+                monto
+            );
+
+
+            btnAbrirCaja.disabled =
+                true;
+
+
+            fetch(
+                url,
+                {
+
+                    method:
+                        "POST",
+
+                    headers: {
+
+                        "X-CSRFToken":
+                            csrf.value
+                    },
+
+                    body:
+                        formData
+                }
+            )
+
+                .then(
+                    response =>
+                        response.json()
+                )
+
+                .then(data => {
+
+                    if (data.ok) {
+
+                        Swal.fire({
+
+                            icon:
+                                "success",
+
+                            title:
+                                "Caja abierta",
+
+                            text:
+                                data.mensaje,
+
+                            confirmButtonText:
+                                "Continuar",
+
+                            customClass: {
+
+                                confirmButton:
+                                    "classbotones"
+                            }
+
+                        }).then(() => {
+
+                            const modalElement =
+                                document.getElementById(
+                                    "modalAperturaCaja"
+                                );
+
+
+                            if (modalElement) {
+
+                                const modal =
+                                    bootstrap.Modal.getInstance(
+                                        modalElement
+                                    );
+
+
+                                if (modal) {
+
+                                    modal.hide();
+                                }
+                            }
+
+
+                            montoInput.value =
+                                "";
+
+
+                            location.reload();
+                        });
+
+
+                    } else {
+
+                        Swal.fire({
+
+                            icon:
+                                "warning",
+
+                            title:
+                                "No se pudo abrir la caja",
+
+                            text:
+                                data.mensaje,
+
+                            confirmButtonText:
+                                "Aceptar",
+
+                            customClass: {
+
+                                confirmButton:
+                                    "classbotones"
+                            }
+                        });
+                    }
+                })
+
+                .catch(error => {
+
+                    console.error(
+                        "Error:",
+                        error
+                    );
+
+
+                    Swal.fire({
+
+                        icon:
+                            "error",
+
+                        title:
+                            "Error",
+
+                        text:
+                            "Ocurrió un error al abrir la caja.",
+
+                        confirmButtonText:
+                            "Aceptar",
+
+                        customClass: {
+
+                            confirmButton:
+                                "classbotones"
+                        }
+                    });
+                })
+
+                .finally(() => {
+
+                    btnAbrirCaja.disabled =
+                        false;
+                });
+        }
+    );
+}
+
+
+// ==========================================================
+// CIERRE DE CAJA
+// ==========================================================
+
+const btnCierreCaja =
+    document.getElementById(
+        "btnCierreCaja"
+    );
+
+
+if (btnCierreCaja) {
+
+    btnCierreCaja.addEventListener(
+        "click",
+        function (e) {
+
+            if (this.disabled) {
+
+                e.preventDefault();
+
+                return;
+            }
+
+
+            Swal.fire({
+
+                icon:
+                    "warning",
+
+                title:
+                    "¿Iniciar cierre de caja?",
+
+                text:
+                    "La caja pasará al proceso de cuadre.",
+
+                showCancelButton:
+                    true,
+
+                confirmButtonText:
+                    "Sí, continuar",
+
+                cancelButtonText:
+                    "Cancelar",
+
+                customClass: {
+
+                    confirmButton:
+                        "classbotones"
+                }
+
+            }).then(result => {
+
+                if (
+                    !result.isConfirmed
+                ) {
+
+                    return;
+                }
+
+
+                const csrf =
+                    document.querySelector(
+                        '[name=csrfmiddlewaretoken]'
+                    );
+
+
+                if (!csrf) {
+
+                    mensaje(
+                        "No se encontró el token CSRF",
+                        "error",
+                        ""
+                    );
+
+                    return;
+                }
+
+
+                fetch(
+                    btnCierreCaja.dataset.url,
+                    {
+
+                        method:
+                            "POST",
+
+                        headers: {
+
+                            "X-CSRFToken":
+                                csrf.value
+                        }
+                    }
+                )
+
+                    .then(
+                        response =>
+                            response.json()
+                    )
+
+                    .then(data => {
+
+                        if (data.ok) {
+
+                            Swal.fire({
+
+                                icon:
+                                    "success",
+
+                                title:
+                                    "Cuadre iniciado",
+
+                                text:
+                                    "Serás dirigido al cuadre de caja.",
+
+                                confirmButtonText:
+                                    "Continuar",
+
+                                customClass: {
+
+                                    confirmButton:
+                                        "classbotones"
+                                }
+
+                            }).then(() => {
+
+                                window.location.href =
+                                    data.redirect_url;
+                            });
+
+
+                        } else {
+
+                            Swal.fire({
+
+                                icon:
+                                    "error",
+
+                                title:
+                                    "Error",
+
+                                text:
+                                    data.mensaje,
+
+                                customClass: {
+
+                                    confirmButton:
+                                        "classbotones"
+                                }
+                            });
+                        }
+                    })
+
+                    .catch(error => {
+
+                        console.error(
+                            error
+                        );
+
+
+                        Swal.fire({
+
+                            icon:
+                                "error",
+
+                            title:
+                                "Error",
+
+                            text:
+                                "Ocurrió un problema al iniciar el cuadre.",
+
+                            customClass: {
+
+                                confirmButton:
+                                    "classbotones"
+                            }
+                        });
+                    });
+            });
+        }
+    );
 }

@@ -5,7 +5,7 @@ from OrvendMart import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('orvend-panel-2026/', admin.site.urls),
 
     # login/logout
     path('accounts/', include('accounts.urls')),

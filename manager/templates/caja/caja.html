@@ -1,249 +1,1083 @@
 {% extends "menu.html" %}
+
 {% load static %}
+
 {% block title %}
     Caja
 {% endblock title %}
+
+
 {% block extra_css %}
+
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
     <link rel="stylesheet" href="{% static 'css/caja.css' %}" />
+
 {% endblock extra_css %}
+
+
 {% block titulo_content %}
+
     <div class="tituloscont">
-        <img class="logop"
-             src="{% static 'img/LH.png' %}"
-             alt="logo"
-             width="0"
-             height="0" />
+
+        <img
+            class="logop"
+            src="{% static 'img/LH.png' %}"
+            alt="logo"
+            width="0"
+            height="0"
+        />
+
         <p class="header__logo">| Caja</p>
+
     </div>
+
 {% endblock titulo_content %}
+
+
 {% block main_content %}
-    <div class="tabla">
-        <div class="tabla-container">
-            <table class="tablas-todo" id="tablaProductos">
-                <thead>
+
+
+<!-- ========================================================= -->
+<!-- TABLA PRINCIPAL DE PRODUCTOS -->
+<!-- ========================================================= -->
+
+<div class="tabla">
+
+    <div class="tabla-container">
+
+        <table class="tablas-todo" id="tablaProductos">
+
+            <thead>
+
+                <tr>
+                    <th>Codigo</th>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Precio</th>
+                    <th>Descuento</th>
+                    <th>Subtotal</th>
+                    <th>Acciones</th>
+                </tr>
+
+            </thead>
+
+            <tbody id="body">
+            </tbody>
+
+        </table>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- DETALLE TOTAL -->
+    <!-- ===================================================== -->
+
+    <div class="contenido">
+
+        <div class="detalle">
+
+            <table id="detalle-total">
+
+                <tbody>
+
                     <tr>
-                        <th>Codigo</th>
-                        <th>Producto</th>
-                        <th>Cantidad</th>
-                        <th>Precio</th>
-                        <th>Descuento</th>
-                        <th>Subtotal</th>
-                        <th>Acciones</th>
+                        <td>Subtotal</td>
+                        <td>L. 0.00</td>
                     </tr>
-                </thead>
-                <tbody id="body">
+
+                    <tr>
+                        <td>Descuento</td>
+                        <td>L. 0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>isv 15%</td>
+                        <td>L. 0.00</td>
+                    </tr>
+
+                    <tr>
+                        <td>isv 18%</td>
+                        <td>L. 0.00</td>
+                    </tr>
+
+                    <tr class="total_pagar">
+
+                        <td class="a">
+                            Total
+                        </td>
+
+                        <td class="b">
+                            L. 0.00
+                        </td>
+
+                    </tr>
+
                 </tbody>
+
             </table>
+
         </div>
-        <div class="contenido">
-            <div class="detalle">
-                <table id="detalle-total">
-                    <tbody>
-                        <tr>
-                            <td>Subtotal</td>
-                            <td>L. 0.00</td>
-                        </tr>
-                        <tr>
-                            <td>Descuento</td>
-                            <td>L. 0.00</td>
-                        </tr>
-                        <tr>
-                            <td>isv 15%</td>
-                            <td>L. 0.00</td>
-                        </tr>
-                        <tr>
-                            <td>isv 18%</td>
-                            <td>L. 0.00</td>
-                        </tr>
-                        <tr class="total_pagar">
-                            <td class="a">Total</td>
-                            <td class="b">L. 0.00</td>
-                        </tr>
-                    </tbody>
-                </table>
+
+
+        <!-- ================================================= -->
+        <!-- BOTON PAGAR -->
+        <!-- ================================================= -->
+
+        <div class="container_abajo">
+
+            <div class="button">
+
+                <button
+                    type="button"
+                    id="Pagar"
+
+                    {% if not caja_abierta %}
+                        disabled
+                        title="La caja debe estar abierta para realizar pagos"
+                    {% endif %}
+
+                    {% if caja_cerrada_hoy %}
+                        disabled
+                        title="La caja ya está cerrada"
+                    {% endif %}
+                >
+
+                    Pagar
+
+                </button>
+
             </div>
-            <div class="container_abajo">
-                <div class="button">
-                    <button id="Pagar">Pagar</button>
-                </div>
-            </div>
+
         </div>
+
     </div>
-    <div class="modal fade"
-         id="modalagregar"
-         tabindex="-1"
-         aria-labelledby="exampleModalCenterTitle"
-         aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLongTitle">Agregar producto</h5>
-                    <button type="button"
-                            class="btn-close"
+
+</div>
+
+
+
+<!-- ========================================================= -->
+<!-- MODAL AGREGAR PRODUCTO -->
+<!-- ========================================================= -->
+
+<div
+    class="modal fade"
+    id="modalagregar"
+    tabindex="-1"
+    aria-labelledby="modalAgregarProductoLabel"
+    aria-hidden="true"
+>
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content">
+
+
+            <!-- HEADER -->
+
+            <div class="modal-header">
+
+                <h5
+                    class="modal-title"
+                    id="modalAgregarProductoLabel"
+                >
+                    Agregar producto
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+
+            <!-- BODY -->
+
+            <div class="modal-body">
+
+                <form
+                    id="postregistro"
+                    enctype="multipart/form-data"
+                >
+
+
+                    <!-- CODIGO -->
+
+                    <div class="form-group">
+
+                        <label for="nCodigo">
+                            Código
+                        </label>
+
+                        <input
+                            type="text"
+                            name="codigo"
+                            id="nCodigo"
+                            class="form-control"
+                            placeholder="Código"
+                            required
+                            readonly
+                        >
+
+                    </div>
+
+
+                    <br>
+
+
+                    <!-- NOMBRE -->
+
+                    <div class="form-group">
+
+                        <label for="nNombre">
+                            Nombre
+                        </label>
+
+                        <input
+                            type="text"
+                            name="nombre"
+                            id="nNombre"
+                            class="form-control"
+                            placeholder="Nombre"
+                            required
+                            readonly
+                        >
+
+                    </div>
+
+
+                    <br>
+
+
+                    <!-- PRECIO -->
+
+                    <div class="form-group">
+
+                        <label for="nPrecio">
+                            Precio
+                        </label>
+
+                        <input
+                            type="text"
+                            name="precio"
+                            id="nPrecio"
+                            class="form-control"
+                            placeholder="Precio"
+                            required
+                            readonly
+                        >
+
+                    </div>
+
+
+                    <br>
+
+
+                    <!-- CANTIDAD -->
+
+                    <div class="form-group">
+
+                        <label for="nCanitdad">
+                            Cantidad
+                        </label>
+
+                        <input
+                            type="number"
+                            name="cantidad"
+                            id="nCanitdad"
+                            class="form-control"
+                            placeholder="Cantidad"
+                            min="1"
+                            step="1"
+                            value="1"
+                            required
+                        >
+
+                    </div>
+
+
+                    <br>
+
+
+                    <!-- ================================================= -->
+                    <!-- EXISTENCIA -->
+                    <!-- ================================================= -->
+
+                    <div class="form-group">
+
+                        <label for="existenciaProducto">
+                            Existencia disponible
+                        </label>
+
+                        <input
+                            type="text"
+                            id="existenciaProducto"
+                            class="form-control"
+                            value="0 / 0"
+                            readonly
+                        >
+
+                    </div>
+
+
+                    <br>
+
+
+                    <!-- FOOTER -->
+
+
+
+                </form>
+
+            </div>
+                    <div class="modal-footer">
+
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
                             data-bs-dismiss="modal"
-                            aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="postregistro" enctype="">
-                        <div class="form-group">
-                            <label for="nmarca">codigo</label>
-                            <input type="text"
-                                   name="nmarca"
-                                   id="nCodigo"
-                                   class="form-control"
-                                   placeholder="Codigo"
-                                   required
-                                   disabled>
-                        </div>
-                        <br>
-                        <div class="form-group">
-                            <label for="nmarca">Nombre</label>
-                            <input type="text"
-                                   name="nmarca"
-                                   id="nNombre"
-                                   class="form-control"
-                                   placeholder="Nombre"
-                                   required
-                                   disabled>
-                        </div>
-                        <br>
-                        <div class="form-group">
-                            <label for="nmarca">Precio</label>
-                            <input type="text"
-                                   name="nmarca"
-                                   id="nPrecio"
-                                   class="form-control"
-                                   placeholder="Precio"
-                                   required
-                                   disabled>
-                        </div>
-                        <br>
-                        <div class="form-group">
-                            <label for="nmarca">Cantidad</label>
-                            <input type="text"
-                                   name="nmarca"
-                                   id="nCanitdad"
-                                   class="form-control"
-                                   placeholder="Canitad"
-                                   required>
-                        </div>
-                        <br>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                            <button type="submit" id="btnregis" class="btn btn classbotones">Agregar</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+                        >
+                            Cerrar
+                        </button>
+
+                        <button
+                            type="submit"
+                            id="btnregis"
+                            class="btn classbotones"
+                            form="postregistro"
+                        >
+                            Agregar
+                        </button>
+
+                    </div>
+
         </div>
+
     </div>
-    <div class="modal fade"
-         id="modalDescuento"
-         tabindex="-1"
-         aria-labelledby="exampleModalCenterTitle"
-         aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLongTitle">Agregar cupon de descuento</h5>
-                    <button type="button"
-                            class="btn-close"
+
+</div>
+
+
+
+<!-- ========================================================= -->
+<!-- MODAL DESCUENTO -->
+<!-- ========================================================= -->
+
+<div
+    class="modal fade"
+    id="modalDescuento"
+    tabindex="-1"
+    aria-labelledby="modalDescuentoLabel"
+    aria-hidden="true"
+>
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content">
+
+
+            <!-- HEADER -->
+
+            <div class="modal-header">
+
+                <h5
+                    class="modal-title"
+                    id="modalDescuentoLabel"
+                >
+                    Agregar cupón de descuento
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+
+            <!-- BODY -->
+
+            <div class="modal-body">
+
+                <form
+                    id="formDescuento"
+                >
+
+                    <div class="form-group">
+
+                        <label for="Ddescuento">
+                            Cupón de descuento
+                        </label>
+
+                        <input
+                            type="text"
+                            name="Ddescuento"
+                            id="Ddescuento"
+                            class="form-control"
+                            placeholder="Cupón de descuento"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div class="modal-footer">
+
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
                             data-bs-dismiss="modal"
-                            aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="postregistro" enctype="">
-                        <div class="form-group">
-                            <label for="nmarca">Cupon de descuento</label>
-                            <input type="text"
-                                   name="Ddescuento"
-                                   id="Ddescuento"
-                                   class="form-control"
-                                   placeholder="Cupon de descuento"
-                                   required>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                            <button type="submit" id="btndescuento" class="btn btn classbotones">Descuento</button>
-                        </div>
-                    </form>
-                </div>
+                        >
+                            Cerrar
+                        </button>
+
+                        <button
+                            type="submit"
+                            id="btndescuento"
+                            class="btn classbotones"
+                        >
+                            Descuento
+                        </button>
+
+                    </div>
+
+                </form>
+
             </div>
+
         </div>
+
     </div>
-    <div class="modal fade"
-         id="modalPago"
-         tabindex="-1"
-         aria-labelledby="exampleModalCenterTitle"
-         aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLongTitle">Pago</h5>
-                    <button type="button"
-                            class="btn-close"
-                            data-bs-dismiss="modal"
-                            aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="postpagar" enctype="">
-                        <div class="form-group" id="div_rtn">
-                            <label for="nmarca">RTN</label>
-                            <input type="text"
-                                   name="DRRTN"
-                                   id="PRTN"
-                                   class="form-control"
-                                   value=""
-                                   placeholder="RTN">
-                            <br>
+
+</div>
+
+
+
+<!-- ========================================================= -->
+<!-- MODAL PAGO -->
+<!-- ========================================================= -->
+
+<div
+    class="modal fade"
+    id="modalPago"
+    tabindex="-1"
+    aria-labelledby="modalPagoLabel"
+    aria-hidden="true"
+>
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content">
+
+
+            <!-- HEADER -->
+
+            <div class="modal-header">
+
+                <h5
+                    class="modal-title"
+                    id="modalPagoLabel"
+                >
+                    Pago
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+
+            <!-- BODY -->
+
+            <div class="modal-body">
+
+                <form
+                    id="postpagar"
+                >
+
+                    {% csrf_token %}
+
+
+                    <!-- ================================================= -->
+                    <!-- CLIENTE -->
+                    <!-- ================================================= -->
+
+                    <div class="form-group">
+
+                        <label for="clienteSeleccionado">
+                            Cliente
+                        </label>
+
+
+                        <div class="d-flex gap-2">
+
+                            <input
+                                type="text"
+                                id="clienteSeleccionado"
+                                class="form-control"
+                                placeholder="Sin cliente seleccionado"
+                                readonly
+                            >
+
+
+                            <button
+                                type="button"
+                                id="btnSeleccionarCliente"
+                                class="btn btn-outline-secondary"
+                            >
+                                Buscar
+                            </button>
+
                         </div>
-                        <div class="form-group">
-                            <label for="nmarca">Tipo de pago</label>
-                            <br>
-                            <select name="tipo" id="tipo_pago" class="mi-select">
-                                <option value="0">Seleccionar metodo de pago</option>
-                                <option value="pago_contado">Pago al contado</option>
-                                <option value="pago_tarjeta">Pago con tarjeta</option>
-                            </select>
-                        </div>
+
+
+                        <input
+                            type="hidden"
+                            id="cliente_id"
+                            name="cliente_id"
+                            value=""
+                        >
+
+
+                        <input
+                            type="hidden"
+                            id="cliente_nombre"
+                            name="cliente_nombre"
+                            value=""
+                        >
+
+
+                        <small
+                            id="detalleClienteSeleccionado"
+                            class="text-muted d-block mt-2"
+                        ></small>
+
                         <br>
-                        <div class="form-group" style="display: none;" id="div_dinero">
-                            <label for="nmarca">Dinero recibido</label>
-                            <input type="text"
-                                   name="Ddinero"
-                                   id="Pdinero"
-                                   class="form-control"
-                                   value="0.00"
-                                   placeholder="dienro del cliente">
-                            <br>
-                        </div>
-                        <div class="form-group" style="display: none;" id="div_nuemro">
-                            <label for="nmarca">Numero de autorización</label>
-                            <input type="text"
-                                   name="Pautorizacion"
-                                   id="Pautorizacion"
-                                   class="form-control"
-                                   placeholder="Numero de autorización">
-                            <br>
-                        </div>
-                        <div class="form-group" style="display: none;" id="div_digito">
-                            <label for="nmarca">Ultimos 4 digitos</label>
-                            <input type="text"
-                                   name="Pdigitos"
-                                   id="Pdigitos"
-                                   class="form-control"
-                                   placeholder="Ultimos 4 digitos">
-                            <br>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                            <button type="submit" id="btndescuento" class="btn btn classbotones">Realizar compra</button>
-                        </div>
-                    </form>
-                </div>
+
+                    </div>
+
+
+
+                    <!-- ================================================= -->
+                    <!-- TIPO DE PAGO -->
+                    <!-- ================================================= -->
+
+                    <div class="form-group">
+
+                        <label for="tipo_pago">
+                            Tipo de pago
+                        </label>
+
+                        <br>
+
+                        <select
+                            name="tipo"
+                            id="tipo_pago"
+                            class="mi-select"
+                        >
+
+                            <option value="0">
+                                Seleccionar método de pago
+                            </option>
+
+                            <option value="pago_contado">
+                                Pago al contado
+                            </option>
+
+                            <option value="pago_tarjeta">
+                                Pago con tarjeta
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <br>
+
+
+
+                    <!-- ================================================= -->
+                    <!-- DINERO RECIBIDO -->
+                    <!-- ================================================= -->
+
+                    <div
+                        class="form-group"
+                        style="display: none;"
+                        id="div_dinero"
+                    >
+
+                        <label for="Pdinero">
+                            Dinero recibido
+                        </label>
+
+                        <input
+                            type="number"
+                            name="Ddinero"
+                            id="Pdinero"
+                            class="form-control"
+                            value="0.00"
+                            min="0"
+                            step="0.01"
+                            placeholder="Dinero del cliente"
+                        >
+
+                    </div>
+
+
+
+                    <!-- ================================================= -->
+                    <!-- AUTORIZACIÓN -->
+                    <!-- ================================================= -->
+
+                    <div
+                        class="form-group"
+                        style="display: none;"
+                        id="div_nuemro"
+                    >
+
+                        <label for="Pautorizacion">
+                            Número de autorización
+                        </label>
+
+                        <input
+                            type="text"
+                            name="Pautorizacion"
+                            id="Pautorizacion"
+                            class="form-control"
+                            placeholder="Número de autorización"
+                        >
+
+                        <br>
+
+                    </div>
+
+
+
+                    <!-- ================================================= -->
+                    <!-- ÚLTIMOS 4 DIGITOS -->
+                    <!-- ================================================= -->
+
+                    <div
+                        class="form-group"
+                        style="display: none;"
+                        id="div_digito"
+                    >
+
+                        <label for="Pdigitos">
+                            Últimos 4 dígitos
+                        </label>
+
+                        <input
+                            type="text"
+                            name="Pdigitos"
+                            id="Pdigitos"
+                            class="form-control"
+                            placeholder="Últimos 4 dígitos"
+                            maxlength="4"
+                        >
+
+                        <br>
+
+                    </div>
+
+
+
+                    <!-- ================================================= -->
+                    <!-- BANCO -->
+                    <!-- ================================================= -->
+
+                    <div
+                        class="form-group"
+                        style="display: none;"
+                        id="div_banco"
+                    >
+
+                        <label for="Pbanco">
+                            Banco
+                        </label>
+
+                        <input
+                            type="text"
+                            name="Pbanco"
+                            id="Pbanco"
+                            class="form-control"
+                            placeholder="Banco"
+                        >
+
+                        <br>
+
+                    </div>
+
+
+
+                    <!-- ================================================= -->
+                    <!-- RED -->
+                    <!-- ================================================= -->
+
+                    <div
+                        class="form-group"
+                        style="display: none;"
+                        id="div_red"
+                    >
+
+                        <label for="Pred">
+                            Red
+                        </label>
+
+                        <input
+                            type="text"
+                            name="Pred"
+                            id="Pred"
+                            class="form-control"
+                            placeholder="Red"
+                        >
+
+                        <br>
+
+                    </div>
+
+
+
+                    <!-- ================================================= -->
+                    <!-- FOOTER -->
+                    <!-- ================================================= -->
+
+
+                </form>
+
             </div>
+
+                                <div class="modal-footer">
+
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal"
+                        >
+                            Cerrar
+                        </button>
+
+                        <button
+                            type="submit"
+                            id="btnPagar"
+                            class="btn classbotones"
+                            form="postpagar"
+                        >
+                            Realizar compra
+                        </button>
+
+                    </div>
         </div>
+
     </div>
-    <script type="module" src="{% static 'js/caja/caja.js' %}"></script>
+
+</div>
+
+
+
+<!-- ========================================================= -->
+<!-- MODAL SELECCIONAR CLIENTE -->
+<!-- ========================================================= -->
+
+<div
+    class="modal fade"
+    id="modalSeleccionarCliente"
+    tabindex="-1"
+    aria-labelledby="modalSeleccionarClienteLabel"
+    aria-hidden="true"
+>
+
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+
+        <div class="modal-content">
+
+
+            <!-- HEADER -->
+
+            <div class="modal-header">
+
+                <h5
+                    class="modal-title"
+                    id="modalSeleccionarClienteLabel"
+                >
+                    Seleccionar cliente
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+
+            <!-- BODY -->
+
+            <div class="modal-body">
+
+
+                <!-- BUSQUEDA -->
+
+                <div class="form-group">
+
+                    <label for="buscarClienteInput">
+                        Buscar cliente
+                    </label>
+
+                    <input
+                        type="text"
+                        id="buscarClienteInput"
+                        class="form-control"
+                        placeholder="Buscar por nombre, DNI o empresa"
+                    >
+
+                </div>
+
+
+
+                <!-- TABLA -->
+
+                <div class="table-responsive mt-3">
+
+                    <table class="table-picker-cliente table-sm">
+
+                        <thead>
+
+                            <tr>
+
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>DNI</th>
+                                <th>Empresa</th>
+                                <th>Teléfono</th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="tablaClientesResultados">
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- ========================================================= -->
+<!-- BOTON CIERRE DE CAJA -->
+<!-- ========================================================= -->
+
+<div class="fixed-button-container">
+
+    <button
+        type="button"
+        id="btnCierreCaja"
+        class="btn cierre-caja-btn"
+        data-url="{% url 'iniciar_cuadre' %}"
+
+        {% if not caja_abierta %}
+            disabled
+            title="La caja debe estar abierta para cerrarla"
+        {% endif %}
+
+        {% if caja_cerrada_hoy %}
+            disabled
+            title="La caja ya está cerrada"
+        {% endif %}
+    >
+
+        Cierre de Caja
+
+    </button>
+
+</div>
+
+
+
+<!-- ========================================================= -->
+<!-- MODAL APERTURA DE CAJA -->
+<!-- ========================================================= -->
+
+<div
+    class="modal fade"
+    id="modalAperturaCaja"
+    tabindex="-1"
+    aria-hidden="true"
+>
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content">
+
+
+            <!-- HEADER -->
+
+            <div class="modal-header">
+
+                <h5 class="modal-title">
+                    Apertura de Caja
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Cerrar"
+                ></button>
+
+            </div>
+
+
+            <!-- BODY -->
+
+            <div class="modal-body">
+
+                <div class="form-group">
+
+                    <label for="monto_apertura">
+                        Monto inicial en caja
+                    </label>
+
+                    <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        id="monto_apertura"
+                        class="form-control"
+                        placeholder="0.00"
+                    >
+
+                </div>
+
+            </div>
+
+
+            <!-- FOOTER -->
+
+            <div class="modal-footer">
+
+                <button
+                    type="button"
+                    id="btnAbrirCaja"
+                    class="btn btn-primary"
+                    data-url="{% url 'abrir_caja' %}"
+                >
+                    Abrir Caja
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- ========================================================= -->
+<!-- MENSAJE CAJA CERRADA -->
+<!-- ========================================================= -->
+
+{% if caja_cerrada_hoy %}
+
+<div class="alert alert-warning m-3">
+
+    Esta caja ya fue cerrada el día de hoy.
+
+</div>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    Swal.fire({
+
+        icon: "warning",
+
+        title: "Caja cerrada",
+
+        text: "Esta caja ya fue cerrada el día de hoy.",
+
+        confirmButtonText: "Aceptar"
+
+    });
+
+});
+
+</script>
+
+{% endif %}
+
+
+
+<!-- ========================================================= -->
+<!-- JAVASCRIPT PRINCIPAL -->
+<!-- ========================================================= -->
+
+<script
+    type="module"
+    src="{% static 'js/caja/caja.js' %}"
+></script>
+
+
+
+<!-- ========================================================= -->
+<!-- MOSTRAR MODAL APERTURA -->
+<!-- ========================================================= -->
+
+{% if mostrar_modal_apertura %}
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const modalElement =
+        document.getElementById("modalAperturaCaja");
+
+    if (!modalElement) {
+        return;
+    }
+
+    const modal =
+        new bootstrap.Modal(
+            modalElement,
+            {
+                backdrop: "static",
+                keyboard: false
+            }
+        );
+
+    modal.show();
+
+});
+
+</script>
+
+{% endif %}
+
+
 {% endblock main_content %}

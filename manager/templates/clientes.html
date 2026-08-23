@@ -143,11 +143,6 @@
                             <div class="form-group">
                                 <label for="telefono">Número de Teléfono</label>
                                 <div class="d-flex">
-                                    <!-- Select para código de país -->
-                                    <select id="countryCodephone" class="form-control me-2" style="max-width: 120px;">
-                                    <option value="" selected disabled>+Cod</option>
-                                    </select>
-                                    
                                     <!-- Input para número -->
                                     <input type="text"
                                         name="telefono"
@@ -155,7 +150,7 @@
                                         class="form-control"
                                         placeholder="Número de teléfono"
                                         oninput="validateNumber(this)"
-                                        maxlength="10">
+                                        maxlength="12">
                                 </div>
                             </div>
                             <br>
@@ -163,14 +158,11 @@
                                 <label for="direccion">Dirección</label>
                                 <textarea name="direccion" id="direccion" rows="2" maxlength="100" class="form-control" placeholder="Dirección"></textarea>
                             </div>
-                            <br>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                                <button type="button" id="btnregis" class="btn classbotones">
-                                    Guardar
-                                </button>
-                            </div>
                         </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="button" form="postclientes" id="btnregis" class="btn classbotones">Guardar</button>
                     </div>
                 </div>
             </div>
@@ -265,11 +257,6 @@
                             <div class="form-group">
                                 <label for="telefonoedit">Número de Teléfono</label>
                                 <div class="d-flex">
-                                    <!-- Select para código de país -->
-                                    <select id="countryCodephoneedit" class="form-control me-2" style="max-width: 120px;">
-                                    <option value="" selected disabled>+Cod</option>
-                                    </select>
-                                    
                                     <!-- Input para número -->
                                     <input type="text"
                                         name="telefonoedit"
@@ -277,7 +264,7 @@
                                         class="form-control"
                                         placeholder="Número de teléfono"
                                         oninput="validateNumber(this)"
-                                        maxlength="10">
+                                        maxlength="12">
                                 </div>
                             </div>
                             <br>
@@ -295,12 +282,11 @@
                                     <span id="activeTextedit" class="fw-bold text-success">Activo</span>
                                 </label>
                             </div>
-                            <br>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                                <button type="button" id="btnput" class="btn classbotones">Guardar</button>
-                            </div>
                         </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="button" form="putclientes" id="btnput" class="btn classbotones">Guardar</button>
                     </div>
                 </div>
             </div>

@@ -475,6 +475,7 @@
         <tr>
           <th>#</th>
           <th>Nombre</th>
+          <th>SKU</th>
           <th>Tipo</th>
           <th>Código</th>
           <th>Valor</th>
@@ -493,6 +494,12 @@
               <div class="fw-bold">{{ descuento.nombre }}</div>
               {% if descuento.descripcion %}
                 <small class="text-muted">{{ descuento.descripcion|truncatechars:40 }}</small>
+              {% endif %}
+            </td>
+            <!-- SKU -->
+            <td>
+              {% if descuento.productos and descuento.productos.codigo_sku %}
+                <span class="text-muted">{{ descuento.productos.codigo_sku }}</span>
               {% endif %}
             </td>
             <!-- TIPO -->

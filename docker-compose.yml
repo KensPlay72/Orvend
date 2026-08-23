@@ -1,0 +1,19 @@
+services:
+  django:
+    build: .
+    container_name: orvendmart
+    restart: unless-stopped
+
+    ports:
+      - "8001:8000"
+
+    env_file:
+      - .env
+
+    networks:
+      - orvend_network
+
+
+networks:
+  orvend_network:
+    external: true

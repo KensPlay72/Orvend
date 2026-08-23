@@ -1,6 +1,7 @@
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 from django.contrib import admin
+from django.utils.html import format_html
 from .enums import EstadoCuenta
 from .models import (
     Categorias,
@@ -21,7 +22,10 @@ from .models import (
     TipoMovimientoInventario,
     Descuento,
     Ubicaciones,
-    PerfilUsuario
+    PerfilUsuario,
+    ProductosRel,
+    ProductosImagenes,
+    ReservaInventario,
 )
 from django.utils import timezone
 from django.utils.timezone import now
@@ -103,29 +107,58 @@ class ProveedoresContactosAdmin(admin.ModelAdmin):
 
     autocomplete_fields = ("proveedor",)
 
+class ProductosImagenesInline(admin.TabularInline):
+    model = ProductosImagenes
+    extra = 1
+
+    fields = (
+        "preview",
+        "imagen_nombre",
+        "imagen_url",
+    )
+
+    readonly_fields = ("preview",)
+
+    def preview(self, obj):
+        if obj and obj.imagen_url:
+            return format_html(
+                '<img src="{}" style="max-height:80px; max-width:80px;" />',
+                obj.imagen_url,
+            )
+        return "-"
+
+    preview.short_description = "Vista previa"
+
 
 @admin.register(Productos)
 class ProductosAdmin(admin.ModelAdmin):
+
+    inlines = [ProductosImagenesInline]
+
     list_display = (
         "id",
         "nombre",
-        "categoria",
-        "unidad_medida",
-        "marca",
         "codigo_sku",
+        "categoria",
+        "marca",
+        "unidad_medida",
         "precio_venta",
+        "impuesto",
+        "equival_unid",
+        "is_master",
+        "vencimiento",
         "is_active",
         "is_delete",
-        "vencimiento",
     )
 
     list_filter = (
-        "is_active",
-        "is_delete",
         "categoria",
         "marca",
         "unidad_medida",
+        "is_master",
         "vencimiento",
+        "is_active",
+        "is_delete",
     )
 
     search_fields = (
@@ -145,7 +178,7 @@ class ProductosAdmin(admin.ModelAdmin):
 
     fieldsets = (
         (
-            "Información general",
+            "Información General",
             {
                 "fields": (
                     "nombre",
@@ -165,20 +198,21 @@ class ProductosAdmin(admin.ModelAdmin):
             },
         ),
         (
-            "Precios y control",
+            "Precios",
             {
                 "fields": (
                     "precio_venta",
-                    "vencimiento",
+                    "impuesto",
                 )
             },
         ),
         (
-            "Imagen",
+            "Inventario y Equivalencias",
             {
                 "fields": (
-                    "imagen_nombre",
-                    "imagen_url",
+                    "is_master",
+                    "equival_unid",
+                    "vencimiento",
                 )
             },
         ),
@@ -194,6 +228,61 @@ class ProductosAdmin(admin.ModelAdmin):
         (
             "Auditoría",
             {
+                "classes": ("collapse",),
+                "fields": (
+                    "f_creacion",
+                    "f_modificacion",
+                    "u_creo_id",
+                    "u_modifico_id",
+                ),
+            },
+        ),
+    )
+
+    ordering = ("nombre",)
+
+@admin.register(ProductosRel)
+class ProductosRelAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "producto_master",
+        "producto_relacionado",
+        "equivalencia_master",
+        "equivalencia_relacionado",
+    )
+
+    search_fields = (
+        "producto_master__nombre",
+        "producto_master__codigo_sku",
+        "producto_relacionado__nombre",
+        "producto_relacionado__codigo_sku",
+    )
+
+    list_filter = (
+        "producto_master__is_active",
+        "producto_relacionado__is_active",
+    )
+
+    readonly_fields = (
+        "f_creacion",
+        "f_modificacion",
+        "u_creo_id",
+        "u_modifico_id",
+    )
+
+    fieldsets = (
+        (
+            "Relación de productos",
+            {
+                "fields": (
+                    "producto_master",
+                    "producto_relacionado",
+                )
+            },
+        ),
+        (
+            "Auditoría",
+            {
                 "fields": (
                     "f_creacion",
                     "f_modificacion",
@@ -203,6 +292,36 @@ class ProductosAdmin(admin.ModelAdmin):
             },
         ),
     )
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "producto_master":
+            kwargs["queryset"] = Productos.objects.filter(
+                is_master=True,
+                is_delete=False,
+                is_active=True,
+            )
+
+        elif db_field.name == "producto_relacionado":
+            kwargs["queryset"] = Productos.objects.filter(
+                is_master=False,
+                is_delete=False,
+                is_active=True,
+            )
+
+        return super().formfield_for_foreignkey(
+            db_field,
+            request,
+            **kwargs,
+        )
+
+    @admin.display(description="Equiv. Master")
+    def equivalencia_master(self, obj):
+        return obj.producto_master.equival_unid
+
+    @admin.display(description="Equiv. Relacionado")
+    def equivalencia_relacionado(self, obj):
+        return obj.producto_relacionado.equival_unid
+
 
 
 class DetalleCompraInline(admin.TabularInline):
@@ -730,6 +849,7 @@ class UbicacionesAdmin(admin.ModelAdmin):
                 "fields": (
                     "nombre",
                     "codigo",
+                    "ubicacion",
                 )
             },
         ),
@@ -762,14 +882,15 @@ class UbicacionesAdmin(admin.ModelAdmin):
             "Auditoría",
             {
                 "fields": (
-                    "u_creo",
-                    "u_modifico",
+                    "u_creo_id",
+                    "u_modifico_id",
                     "f_creacion",
                     "f_modificacion",
                 )
             },
         ),
     )
+    
 
     # =========================
     # VISUALIZACION TIPO
@@ -802,6 +923,7 @@ class UbicacionesAdmin(admin.ModelAdmin):
             request,
             **kwargs,
         )
+
 class PerfilUsuarioInline(admin.StackedInline):
     model = PerfilUsuario
     can_delete = False
@@ -811,3 +933,140 @@ class CustUserAdmin(UserAdmin):
 
 admin.site.unregister(User)
 admin.site.register(User,CustUserAdmin)
+
+
+# =========================
+# INVENTARIOS
+# =========================
+
+@admin.register(Inventarios)
+class InventariosAdmin(admin.ModelAdmin):
+
+    list_display = (
+        "producto",
+        "ubicacion",
+        "cantidad",
+        "stock_minimo",
+        "fvencimiento",
+        "compra",
+    )
+
+    list_display_links = (
+        "producto",
+    )
+
+    list_editable = (
+        "cantidad",
+        "stock_minimo",
+    )
+
+    list_filter = (
+        "ubicacion",
+        "producto",
+        "fvencimiento",
+    )
+
+    search_fields = (
+        "producto__nombre",
+        "producto__codigo_sku",
+    )
+
+    autocomplete_fields = (
+        "producto",
+        "ubicacion",
+        "compra",
+    )
+
+    ordering = (
+        "ubicacion",
+        "producto__nombre",
+    )
+
+    fieldsets = (
+        (
+            "Inventario",
+            {
+                "fields": (
+                    "producto",
+                    "ubicacion",
+                    "cantidad",
+                    "stock_minimo",
+                )
+            },
+        ),
+        (
+            "Compra",
+            {
+                "fields": (
+                    "compra",
+                )
+            },
+        ),
+        (
+            "Vencimiento",
+            {
+                "fields": (
+                    "fvencimiento",
+                )
+            },
+        ),
+    )
+
+
+@admin.register(ReservaInventario)
+class ReservaInventarioAdmin(admin.ModelAdmin):
+
+    list_display = (
+        "id",
+        "producto",
+        "ubicacion",
+        "cantidad",
+        "estado",
+        "traslado",
+        "venta",
+        "f_creacion",
+    )
+
+    list_filter = (
+        "estado",
+        "ubicacion",
+        "f_creacion",
+    )
+
+    search_fields = (
+        "producto__nombre",
+        "producto__codigo_sku",
+        "traslado__id",
+        "venta__id",
+    )
+
+    readonly_fields = (
+        "producto",
+        "ubicacion",
+        "cantidad",
+        "estado",
+        "traslado",
+        "venta",
+        "f_creacion",
+    )
+
+    # ==========================================
+    # NO PERMITIR CREAR
+    # ==========================================
+
+    def has_add_permission(self, request):
+        return False
+
+    # ==========================================
+    # NO PERMITIR EDITAR
+    # ==========================================
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    # ==========================================
+    # SÍ PERMITIR ELIMINAR
+    # ==========================================
+
+    def has_delete_permission(self, request, obj=None):
+        return True

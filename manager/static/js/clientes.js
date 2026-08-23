@@ -20,12 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (form.dataset.submitting === "true") return;
         form.dataset.submitting = "true";
 
-        const countryCode = document.getElementById("countryCodephone").value;
         const phoneNumber = document.getElementById("telefono").value;
-
-        const fullPhone = valueOrNull(
-            `${countryCode} ${phoneNumber}`.trim()
-        );
+        const fullPhone = valueOrNull(phoneNumber.trim());
 
         const payload = {
             dni: valueOrNull(document.getElementById('dni').value),
@@ -103,12 +99,8 @@ document.getElementById("btnput").addEventListener("click", async (e) => {
         return;
     }
 
-    const countryCode = document.getElementById("countryCodephoneedit").value;
     const phoneNumber = document.getElementById("telefonoedit").value;
-
-    const fullPhone = valueOrNull(
-        `${countryCode} ${phoneNumber}`.trim()
-    );
+    const fullPhone = valueOrNull(phoneNumber.trim());
 
     const payload = {
         dni: dni,
@@ -160,73 +152,7 @@ function validateNumber(input) {
   input.value = input.value.replace(/[^0-9.+]/g, '');
 }
 
-//----------------
-// CODIGO EN TELEFONO
-//----------------
-document.addEventListener('DOMContentLoaded', () => {
-  loadCountryCodes();
-
-  const select = document.getElementById('countryCodephone');
-  const select2 = document.getElementById('countryCodephoneedit');
-
-  function setupSelectBehavior(sel) {
-    // Mostrar solo el código al seleccionar
-    sel.addEventListener('change', () => {
-      const selected = sel.selectedOptions[0];
-      if (selected) selected.textContent = selected.value;
-    });
-
-    // Mostrar nombre + código cuando abro
-    sel.addEventListener('mousedown', () => {
-      Array.from(sel.options).forEach(opt => {
-        if (opt.dataset.label) {
-          opt.textContent = opt.dataset.label;
-        }
-      });
-    });
-
-    // Al cerrar (perder foco), restaurar solo el código
-    sel.addEventListener('blur', () => {
-      const selected = sel.selectedOptions[0];
-      if (selected) selected.textContent = selected.value;
-    });
-  }
-
-  setupSelectBehavior(select);
-  setupSelectBehavior(select2);
-});
-
-async function loadCountryCodes() {
-  try {
-    const res = await fetch('https://restcountries.com/v3.1/all?fields=name,idd');
-    const data = await res.json();
-
-    const countries = Array.isArray(data) ? data : [];
-    const select = document.getElementById('countryCodephone');
-    const select2 = document.getElementById('countryCodephoneedit');
-
-    countries.sort((a, b) => (a.name?.common || '').localeCompare(b.name?.common || ''));
-
-    countries.forEach(country => {
-      if (country.idd?.root) {
-        const code = country.idd.root + (country.idd.suffixes ? country.idd.suffixes[0] : '');
-
-        const option = document.createElement('option');
-        option.value = code;
-        option.dataset.label = `${country.name.common} (${code})`;
-        option.textContent = code; 
-
-        const option2 = option.cloneNode(true);
-        option2.dataset.label = option.dataset.label;
-
-        select.appendChild(option);
-        select2.appendChild(option2);
-      }
-    });
-  } catch (error) {
-    console.error("Error cargando códigos de país:", error);
-  }
-}
+// (El código de manejo de selects de código de país fue eliminado)
 
 
 //----------------
@@ -261,9 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('idedit').value = cliente.id || '';
 
       if (cliente.telefono) {
-        const [codigo = "", numero = ""] = cliente.telefono.split(" ");
-        document.getElementById('countryCodephoneedit').value = codigo;
-        document.getElementById('telefonoedit').value = numero;
+        document.getElementById('telefonoedit').value = cliente.telefono;
       }
 
       const activeCheckbox = document.getElementById("isActiveedit");

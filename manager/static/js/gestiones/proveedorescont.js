@@ -1,4 +1,10 @@
 //----------------
+// VALIDAR NUMERO EN INPUT
+//----------------
+function validateNumber(input) {
+  input.value = input.value.replace(/[^0-9.+]/g, '');
+}
+//----------------
 // REGISTRAR 
 //----------------
 document.addEventListener('DOMContentLoaded', function() {
@@ -8,9 +14,8 @@ document.addEventListener('DOMContentLoaded', function() {
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
 
-  const countryCode = document.getElementById("countryCode").value;
-  const phoneNumber = document.getElementById("telefono").value;
-  const fullPhone = countryCode ? `${countryCode} ${phoneNumber}` : phoneNumber;
+    const phoneNumber = document.getElementById("telefono").value;
+    const fullPhone = phoneNumber.trim();
 
 
   const payload = {
@@ -100,9 +105,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // Teléfono
             // ------------------------
             if (proveedorcont.telefono) {
-                const partes = proveedorcont.telefono.split(" ");
-                document.getElementById("countryCodeedit").value = partes[0] || "";
-                document.getElementById("telefonoedit").value = partes[1] || "";
+                document.getElementById("telefonoedit").value = proveedorcont.telefono;
             }
 
             // ------------------------
@@ -181,7 +184,7 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
       puesto: document.getElementById("puestoedit").value,
       email: document.getElementById("emailedit").value,
       observaciones: document.getElementById("observacionedit").value,
-      telefono: document.getElementById("countryCodeedit").value + " " + document.getElementById("telefonoedit").value,
+    telefono: document.getElementById("telefonoedit").value,
       is_active: document.getElementById("isActiveedit").checked,
       proveedor: document.getElementById("proveedoresidedit").value,
     }
@@ -386,70 +389,4 @@ initDropdown("proveedoresidedit", fetchProveedores);
 
 
 
-//----------------
-// CODIGO EN TELEFONO
-//----------------
-document.addEventListener('DOMContentLoaded', () => {
-  loadCountryCodes();
-
-  const select = document.getElementById('countryCode');
-  const select2 = document.getElementById('countryCodeedit');
-
-  function setupSelectBehavior(sel) {
-    // Mostrar solo el código al seleccionar
-    sel.addEventListener('change', () => {
-      const selected = sel.selectedOptions[0];
-      if (selected) selected.textContent = selected.value;
-    });
-
-    // Mostrar nombre + código cuando abro
-    sel.addEventListener('mousedown', () => {
-      Array.from(sel.options).forEach(opt => {
-        if (opt.dataset.label) {
-          opt.textContent = opt.dataset.label;
-        }
-      });
-    });
-
-    // Al cerrar (perder foco), restaurar solo el código
-    sel.addEventListener('blur', () => {
-      const selected = sel.selectedOptions[0];
-      if (selected) selected.textContent = selected.value;
-    });
-  }
-
-  setupSelectBehavior(select);
-  setupSelectBehavior(select2);
-});
-
-async function loadCountryCodes() {
-  try {
-    const res = await fetch('https://restcountries.com/v3.1/all?fields=name,idd');
-    const data = await res.json();
-
-    const countries = Array.isArray(data) ? data : [];
-    const select = document.getElementById('countryCode');
-    const select2 = document.getElementById('countryCodeedit');
-
-    countries.sort((a, b) => (a.name?.common || '').localeCompare(b.name?.common || ''));
-
-    countries.forEach(country => {
-      if (country.idd?.root) {
-        const code = country.idd.root + (country.idd.suffixes ? country.idd.suffixes[0] : '');
-
-        const option = document.createElement('option');
-        option.value = code;
-        option.dataset.label = `${country.name.common} (${code})`;
-        option.textContent = code; 
-
-        const option2 = option.cloneNode(true);
-        option2.dataset.label = option.dataset.label;
-
-        select.appendChild(option);
-        select2.appendChild(option2);
-      }
-    });
-  } catch (error) {
-    console.error("Error cargando códigos de país:", error);
-  }
-}
+// Código de país eliminado: ahora se usa únicamente el input de teléfono

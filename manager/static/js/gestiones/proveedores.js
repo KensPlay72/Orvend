@@ -1,5 +1,12 @@
 //----------------
-// REGISTRAR 
+// VALIDAR NUMERO EN INPUT
+//----------------
+function validateNumber(input) {
+  input.value = input.value.replace(/[^0-9.+]/g, '');
+}
+
+//----------------
+// REGISTRAR
 //----------------
 document.getElementById("postregistro").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -12,7 +19,6 @@ document.getElementById("postregistro").addEventListener("submit", async (e) => 
         { id: 'ncomercial', name: 'Nombre Comercial' },
         { id: 'rtn', name: 'RTN' },
         { id: 'dcreditos', name: 'Días de Crédito' },
-        { id: 'countryCode', name: 'Código de País' },
         { id: 'telefono', name: 'Teléfono' },
         { id: 'email', name: 'Email' }
     ];
@@ -40,20 +46,17 @@ document.getElementById("postregistro").addEventListener("submit", async (e) => 
             text: 'Por favor completa los siguientes campos: ' + missingFields.join(', '),
             icon: 'warning',
             confirmButtonText: 'Aceptar',
-            customClass: {
-                confirmButton: 'classbotones'
-            }
+            customClass: { confirmButton: 'classbotones' }
         });
         return;
     }
-    const fullPhone = `${document.getElementById("countryCode").value} ${document.getElementById("telefono").value}`;
 
     const payload = {
         nombre_legal: document.getElementById("nlegal").value.trim(),
         nombre_comercial: document.getElementById("ncomercial").value.trim(),
         rtn: document.getElementById("rtn").value.trim(),
         dias_credito: document.getElementById("dcreditos").value.trim(),
-        telefono: fullPhone.trim(),
+        telefono: document.getElementById("telefono").value.trim(),
         email: document.getElementById("email").value.trim()
     };
 
@@ -89,6 +92,7 @@ document.getElementById("postregistro").addEventListener("submit", async (e) => 
             });
         }
     } catch (error) {
+        console.error(error);
         Swal.fire({
             title: "Error",
             text: "Error de conexión o inesperado. Ver consola para más detalles.",
@@ -114,20 +118,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 // Llenar campos básicos
                 document.getElementById("idproveedor").value = proveedor.id;
-                document.getElementById("nlegaledit").value = proveedor.nombre_legal;
-                document.getElementById("ncomercialedit").value = proveedor.nombre_comercial;
-                document.getElementById("rtnedit").value = proveedor.rtn;
-                document.getElementById("dcreditosedit").value = proveedor.dias_credito;
-                document.getElementById("emailedit").value = proveedor.email;
+                document.getElementById("nlegaledit").value = proveedor.nombre_legal || '';
+                document.getElementById("ncomercialedit").value = proveedor.nombre_comercial || '';
+                document.getElementById("rtnedit").value = proveedor.rtn || '';
+                document.getElementById("dcreditosedit").value = proveedor.dias_credito || '';
+                document.getElementById("emailedit").value = proveedor.email || '';
 
-                // Dividir teléfono en código y número
+                // Teléfono completo
                 if (proveedor.telefono) {
-                    const partes = proveedor.telefono.split(" ");
-                    const codigo = partes[0] || "";
-                    const numero = partes[1] || "";
-
-                    document.getElementById("countryCodeedit").value = codigo;
-                    document.getElementById("telefonoedit").value = numero;
+                    document.getElementById("telefonoedit").value = proveedor.telefono;
+                } else {
+                    document.getElementById("telefonoedit").value = '';
                 }
 
                 // Estado
@@ -164,7 +165,6 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
         { id: 'ncomercialedit', name: 'Nombre Comercial' },
         { id: 'rtnedit', name: 'RTN' },
         { id: 'dcreditosedit', name: 'Días de Crédito' },
-        { id: 'countryCodeedit', name: 'Código de País' },
         { id: 'telefonoedit', name: 'Teléfono' },
         { id: 'emailedit', name: 'Email' }
     ];
@@ -186,16 +186,13 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
         }
     });
 
-
     if (missingFields.length > 0) {
         Swal.fire({
             title: 'Campos incompletos',
             text: 'Por favor completa los siguientes campos: ' + missingFields.join(', '),
             icon: 'warning',
             confirmButtonText: 'Aceptar',
-            customClass: {
-                confirmButton: 'classbotones'
-            }
+            customClass: { confirmButton: 'classbotones' }
         });
         return;
     }
@@ -206,7 +203,7 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
         nombre_comercial: document.getElementById("ncomercialedit").value.trim(),
         rtn: document.getElementById("rtnedit").value.trim(),
         dias_credito: document.getElementById("dcreditosedit").value.trim(),
-        telefono: document.getElementById("countryCodeedit").value.trim() + " " + document.getElementById("telefonoedit").value.trim(),
+        telefono: document.getElementById("telefonoedit").value.trim(),
         email: document.getElementById("emailedit").value.trim(),
         IsActive: document.getElementById("isActiveedit").checked
     };
@@ -230,9 +227,7 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
                 icon: "success",
                 confirmButtonText: "Aceptar",
                 customClass: { confirmButton: "classbotones" }
-            }).then(() => {
-                window.location.reload(true);
-            });
+            }).then(() => window.location.reload(true));
         } else {
             Swal.fire({
                 title: "Error",
@@ -243,6 +238,7 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
             });
         }
     } catch (error) {
+        console.error(error);
         Swal.fire({
             title: "Error",
             text: "Error de conexión o inesperado. Ver consola para más detalles.",
@@ -252,6 +248,7 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
         });
     }
 });
+
 
 //----------------
 // ELIMINACION
@@ -288,16 +285,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     const data = await response.json();
 
                     if (data.success) {
-                        // Eliminar fila de la tabla sin recargar
                         Swal.fire({
                             title: "Eliminado",
                             text: data.message,
                             icon: "success",
                             confirmButtonText: "Aceptar",
                             customClass: { confirmButton: "classbotones" }
-                        }).then(() => {
-                            window.location.reload(true);
-                        });
+                        }).then(() => window.location.reload(true));
                     } else {
                         Swal.fire({
                             title: "Error",
@@ -308,6 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     }
                 } catch (error) {
+                    console.error(error);
                     Swal.fire({
                         title: "Error",
                         text: "Error de conexión o inesperado. Ver consola para más detalles.",
@@ -321,70 +316,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-//----------------
-// CODIGO EN TELEFONO
-//----------------
-document.addEventListener('DOMContentLoaded', () => {
-  loadCountryCodes();
-
-  const select = document.getElementById('countryCode');
-  const select2 = document.getElementById('countryCodeedit');
-
-  function setupSelectBehavior(sel) {
-    // Mostrar solo el código al seleccionar
-    sel.addEventListener('change', () => {
-      const selected = sel.selectedOptions[0];
-      if (selected) selected.textContent = selected.value;
-    });
-
-    // Mostrar nombre + código cuando abro
-    sel.addEventListener('mousedown', () => {
-      Array.from(sel.options).forEach(opt => {
-        if (opt.dataset.label) {
-          opt.textContent = opt.dataset.label;
-        }
-      });
-    });
-
-    // Al cerrar (perder foco), restaurar solo el código
-    sel.addEventListener('blur', () => {
-      const selected = sel.selectedOptions[0];
-      if (selected) selected.textContent = selected.value;
-    });
-  }
-
-  setupSelectBehavior(select);
-  setupSelectBehavior(select2);
-});
-
-async function loadCountryCodes() {
-  try {
-    const res = await fetch('https://restcountries.com/v3.1/all?fields=name,idd');
-    const data = await res.json();
-
-    const countries = Array.isArray(data) ? data : [];
-    const select = document.getElementById('countryCode');
-    const select2 = document.getElementById('countryCodeedit');
-
-    countries.sort((a, b) => (a.name?.common || '').localeCompare(b.name?.common || ''));
-
-    countries.forEach(country => {
-      if (country.idd?.root) {
-        const code = country.idd.root + (country.idd.suffixes ? country.idd.suffixes[0] : '');
-
-        const option = document.createElement('option');
-        option.value = code;
-        option.dataset.label = `${country.name.common} (${code})`;
-        option.textContent = code; 
-
-        const option2 = option.cloneNode(true);
-        option2.dataset.label = option.dataset.label;
-
-        select.appendChild(option);
-        select2.appendChild(option2);
-      }
-    });
-  } catch (error) {
-    console.error("Error cargando códigos de país:", error);
-  }
-}
+// Código de país eliminado: ahora se usa únicamente el input de teléfono

@@ -124,7 +124,7 @@
                         <select name="tcompra" id="tcompra" class="form-control">
                             <option value="" disabled selected>Seleccione un Estado</option>
                             <option value="1">Contado</option>
-                            <option value="2">Credito</option>
+                            {% if perms.manager.view_cuentasporpagar %}<option value="2">Credito</option>{% endif %}
                         </select>
                     </div>
                     <br>
@@ -177,7 +177,7 @@
                         <th>Nombre</th>
                         <th>Presentación</th>
                         <th>SKU</th>
-                        <th>Precio</th>
+                        <th>Precio Compra</th>
                         <th>Cantidad</th>
                         <th>Acciones</th>
                     </tr>

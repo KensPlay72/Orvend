@@ -1,0 +1,502 @@
+
+{% extends "menu.html" %}
+
+{% load static %}
+
+{% block title %}
+Cajas Manager
+{% endblock %}
+
+
+{% block extra_css %}
+
+<link
+    rel="stylesheet"
+    href="{% static 'css/manager.css' %}"
+/>
+
+{% endblock %}
+
+
+{% block titulo_content %}
+
+<div class="tituloscont">
+
+    <img
+        class="logop"
+        src="{% static 'img/LH.png' %}"
+        alt=""
+    >
+
+    <p class="header__logo">
+        | Cajas Manager
+    </p>
+
+</div>
+
+{% endblock %}
+
+
+{% block main_content %}
+
+
+
+<!-- ========================= -->
+<!-- FILTROS -->
+<!-- ========================= -->
+
+<form
+    method="GET"
+    class="mb-4 filters-card"
+>
+
+    <div class="row g-3 align-items-end">
+
+
+        <!-- FECHA -->
+
+        <div class="col-md-4">
+
+            <label
+                for="fecha"
+                class="form-label filter-label"
+            >
+                <i class="bx bx-calendar"></i>
+                Fecha
+            </label>
+
+            <div class="filter-input-wrap">
+                <input
+                    type="date"
+                    id="fecha"
+                    name="fecha"
+                    class="form-control filter-input"
+                    value="{{ fecha|date:'Y-m-d' }}"
+                >
+            </div>
+
+        </div>
+
+
+        <!-- USUARIO -->
+
+        <div class="col-md-5">
+
+            <label
+                for="search"
+                class="form-label filter-label"
+            >
+                <i class="bx bx-user"></i>
+                Usuario
+            </label>
+
+            <div class="filter-input-wrap">
+                <input
+                    type="text"
+                    id="search"
+                    name="search"
+                    class="form-control filter-input"
+                    placeholder="Buscar por usuario..."
+                    value="{{ search }}"
+                >
+            </div>
+
+        </div>
+
+
+        <!-- BOTONES -->
+
+        <div class="col-md-3 d-flex align-items-end gap-2">
+
+            <button
+                type="submit"
+                class="btn classbotones filter-btn"
+            >
+
+                <i class="bx bx-filter-alt"></i>
+
+                Filtrar
+
+            </button>
+
+
+            <a
+                href="{% url 'cajas_manager' %}"
+                class="btn btn-secondary filter-btn filter-btn--secondary"
+            >
+
+                <i class="bx bx-refresh"></i>
+
+                Hoy
+
+            </a>
+
+        </div>
+
+    </div>
+
+</form>
+
+
+<!-- ========================= -->
+<!-- TABLA -->
+<!-- ========================= -->
+
+<div class="tabla-container">
+
+    <table
+        class="tablas-todo"
+        id="tablacont"
+    >
+
+        <thead>
+
+            <tr>
+
+                <th>
+                    #
+                </th>
+
+                <th>
+                    Usuario activo
+                </th>
+
+                <th>
+                    Monto apertura
+                </th>
+
+                <th>
+                    Total cierre
+                </th>
+
+                <th>
+                    Cierre
+                </th>
+
+                <th>
+                    Diferencia
+                </th>
+
+                <th>
+                    Estado
+                </th>
+
+            </tr>
+
+        </thead>
+
+
+        <tbody>
+
+            {% for caja in page_obj %}
+
+            <tr>
+
+                <!-- ID -->
+
+                <td>
+                    {{ caja.id }}
+                </td>
+
+
+                <!-- USUARIO -->
+
+                <td>
+
+                    <strong>
+                        {{ caja.usuario_nombre }}
+                    </strong>
+
+                </td>
+
+
+                <!-- MONTO APERTURA -->
+
+                <td>
+
+                    L.
+                    {{ caja.monto_apertura|floatformat:2 }}
+
+                </td>
+
+
+                <!-- TOTAL CIERRE -->
+
+                <td>
+
+                    {% if caja.estado == "cerrada" %}
+
+                        L.
+                        {{ caja.total_cierre|floatformat:2 }}
+
+                    {% else %}
+
+                        <span class="text-muted">
+                            —
+                        </span>
+
+                    {% endif %}
+
+                </td>
+
+
+                <!-- MONTO CIERRE -->
+
+                <td>
+
+                    {% if caja.estado == "cerrada" %}
+
+                        L.
+                        {{ caja.monto_cierre|floatformat:2 }}
+
+                    {% else %}
+
+                        <span class="text-muted">
+                            —
+                        </span>
+
+                    {% endif %}
+
+                </td>
+
+
+                <!-- DIFERENCIA -->
+
+                <td>
+
+                    {% if caja.estado == "cerrada" %}
+
+                        {% if caja.diferencia > 0 %}
+
+                            <span class="text-success fw-bold">
+
+                                + L.
+                                {{ caja.diferencia|floatformat:2 }}
+
+                            </span>
+
+                        {% elif caja.diferencia < 0 %}
+
+                            <span class="text-danger fw-bold">
+
+                                - L.
+                                {{ caja.diferencia|stringformat:"s"|slice:"1:" }}
+
+                            </span>
+
+                        {% else %}
+
+                            <span class="text-success fw-bold">
+
+                                L. 0.00
+
+                            </span>
+
+                        {% endif %}
+
+                    {% else %}
+
+                        <span class="text-muted">
+                            —
+                        </span>
+
+                    {% endif %}
+
+                </td>
+
+
+                <!-- ESTADO -->
+
+                <td>
+
+                    {% if caja.estado == "abierta" %}
+
+                        <span
+                            class="estado-circulo estado-activo"
+                            title="Abierta"
+                        ></span>
+
+                    {% elif caja.estado == "cuadre" %}
+
+                        <span
+                            class="estado-circulo estado-cuadre"
+                            title="En cuadre"
+                        ></span>
+
+                    {% elif caja.estado == "cerrada" %}
+
+                        <span
+                            class="estado-circulo estado-inactivo"
+                            title="Cerrada"
+                        ></span>
+
+                    {% endif %}
+
+                </td>
+
+            </tr>
+
+
+            {% empty %}
+
+            <tr>
+
+                <td
+                    colspan="7"
+                    class="text-center py-4"
+                >
+
+                    <i class="bx bx-info-circle"></i>
+
+                    No hay cajas registradas.
+
+                </td>
+
+            </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+
+<!-- ========================= -->
+<!-- LEYENDA -->
+<!-- ========================= -->
+
+<div class="d-flex justify-content-center gap-4 mt-4 flex-wrap">
+
+
+    <span class="d-flex align-items-center gap-2">
+
+        <span
+            class="estado-circulo estado-activo"
+        ></span>
+
+        Abierta
+
+    </span>
+
+
+    <span class="d-flex align-items-center gap-2">
+
+        <span
+            class="estado-circulo estado-cuadre"
+        ></span>
+
+        En cuadre
+
+    </span>
+
+
+    <span class="d-flex align-items-center gap-2">
+
+        <span
+            class="estado-circulo estado-inactivo"
+        ></span>
+
+        Cerrada
+
+    </span>
+
+</div>
+
+
+<!-- ========================= -->
+<!-- PAGINACIÓN -->
+<!-- ========================= -->
+
+<nav class="d-flex justify-content-center mt-4">
+
+    <ul class="pagination">
+
+
+        <!-- ANTERIOR -->
+
+        <li
+            class="page-item
+            {% if not page_obj.has_previous %}
+                disabled
+            {% endif %}"
+        >
+
+            {% if page_obj.has_previous %}
+
+                <a
+                    class="page-link"
+                    href="?page={{ page_obj.previous_page_number }}&search={{ search }}"
+                >
+                    «
+                </a>
+
+            {% else %}
+
+                <span class="page-link">
+                    «
+                </span>
+
+            {% endif %}
+
+        </li>
+
+
+        <!-- PÁGINAS -->
+
+        {% for p in page_obj.paginator.page_range %}
+
+            <li
+                class="page-item
+                {% if p == page_obj.number %}
+                    active
+                {% endif %}"
+            >
+
+                <a
+                    class="page-link"
+                    href="?page={{ p }}&search={{ search }}"
+                >
+                    {{ p }}
+                </a>
+
+            </li>
+
+        {% endfor %}
+
+
+        <!-- SIGUIENTE -->
+
+        <li
+            class="page-item
+            {% if not page_obj.has_next %}
+                disabled
+            {% endif %}"
+        >
+
+            {% if page_obj.has_next %}
+
+                <a
+                    class="page-link"
+                    href="?page={{ page_obj.next_page_number }}&search={{ search }}"
+                >
+                    »
+                </a>
+
+            {% else %}
+
+                <span class="page-link">
+                    »
+                </span>
+
+            {% endif %}
+
+        </li>
+
+    </ul>
+
+</nav>
+
+
+{% endblock main_content %}

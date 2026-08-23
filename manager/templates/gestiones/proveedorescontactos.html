@@ -88,11 +88,6 @@
                             <div class="form-group">
                                 <label for="telefono">Número de Teléfono</label>
                                 <div class="d-flex">
-                                    <!-- Select para código de país -->
-                                    <select id="countryCode" class="form-control me-2" style="max-width: 120px;">
-                                    <option value="">+Cod</option>
-                                    </select>
-                                    
                                     <!-- Input para número -->
                                     <input type="text"
                                         name="telefono"
@@ -100,7 +95,7 @@
                                         class="form-control"
                                         placeholder="Número de teléfono"
                                         oninput="validateNumber(this)"
-                                        maxlength="10">
+                                        maxlength="12">
                                 </div>
                             </div>
                             <br>
@@ -117,12 +112,11 @@
                             <label for="observacion">Observación</label>
                             <textarea name="observacion" id="observacion" rows="2" maxlength="100" class="form-control" placeholder="observacion"></textarea>
                             </div>
-                            <br>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                                <button type="submit" id="btnregis" class="btn btn classbotones">Guardar</button>
-                            </div>
                         </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" form="postregistro" id="btnregis" class="btn btn classbotones">Guardar</button>
                     </div>
                 </div>
             </div>
@@ -192,11 +186,6 @@
                             <div class="form-group">
                                 <label for="telefono">Número de Teléfono</label>
                                 <div class="d-flex">
-                                    <!-- Select para código de país -->
-                                    <select id="countryCodeedit" class="form-control me-2" style="max-width: 120px;">
-                                    <option value="">+Cod</option>
-                                    </select>
-                                    
                                     <!-- Input para número -->
                                     <input type="text"
                                         name="telefonoedit"
@@ -204,7 +193,7 @@
                                         class="form-control"
                                         placeholder="Número de teléfono"
                                         oninput="validateNumber(this)"
-                                        maxlength="10">
+                                        maxlength="12">
                                 </div>
                             </div>
                             <br>
@@ -231,12 +220,11 @@
                                     <span id="activeTextedit" class="fw-bold text-success">Activo</span>
                                 </label>
                             </div>
-                            <br>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                                <button type="submit" id="btnput" class="btn btn classbotones">Guardar</button>
-                            </div>
                         </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" form="putregistro" id="btnput" class="btn btn classbotones">Guardar</button>
                     </div>
                 </div>
             </div>
@@ -274,9 +262,9 @@
 
                 <td>
                     {% if contacto.is_active %}
-                        <span style="color: green; font-weight: bold;">Activo</span>
+                        <span class="estado-circulo estado-activo"></span>
                     {% else %}
-                        <span style="color: red; font-weight: bold;">Inactivo</span>
+                        <span class="estado-circulo estado-inactivo"></span>
                     {% endif %}
                 </td>
 

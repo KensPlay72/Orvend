@@ -1,0 +1,299 @@
+{% extends "menu.html" %}
+{% load static %}
+{% block title %}
+    Datos Sat
+{% endblock title %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+{% endblock extra_css %}
+{% block titulo_content %}
+    <div class="tituloscont">
+        <img class="logop"
+             src="{% static 'img/LH.png' %}"
+             alt="logo"
+             width="0"
+             height="0" />
+        <p class="header__logo">| Datos Sat</p>
+    </div>
+{% endblock titulo_content %}
+{% block main_content %}
+    {% if perms.manager.add_datos_sat %}
+        <button id="toggleDropdownPanel"
+                class="btn-dropdown"
+                data-bs-toggle="modal"
+                data-bs-target="#modalregis">
+            <i class="bx bx-plus-circle"></i> Agregar
+        </button>
+    {% endif %}
+    <div class="modal fade"
+         id="modalregis"
+         tabindex="-1"
+         aria-labelledby="exampleModalCenterTitle"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLongTitle">Registrar Datos Sat</h5>
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="postregistro" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="nombre_cai">Nombre del CAI</label>
+                                    <input type="text"
+                                           name="nombre_cai"
+                                           id="nombre_cai"
+                                           class="form-control"
+                                           placeholder="Nombre del CAI"
+                                           required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="numero_cai">Número CAI</label>
+                                    <input type="text"
+                                           name="numero_cai"
+                                           id="numero_cai"
+                                           class="form-control"
+                                           placeholder="Número CAI"
+                                           oninput="validateNumber(this)"
+                                           required>
+                                </div>
+                            </div>
+                        </div>
+                        <br>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="rango_inicial">Rango inicial</label>
+                                    <input type="text"
+                                           name="rango_inicial"
+                                           id="rango_inicial"
+                                           class="form-control"
+                                           oninput="validateNumber(this)"
+                                           required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="rango_final">Rango final</label>
+                                    <input type="text"
+                                           name="rango_final"
+                                           id="rango_final"
+                                           class="form-control"
+                                           oninput="validateNumber(this)"
+                                           required>
+                                </div>
+                            </div>
+                        </div>
+                        <br>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="fecha_de_emision">Fecha de emisión</label>
+                                    <input type="date"
+                                           name="fecha_de_emision"
+                                           id="fecha_de_emision"
+                                           class="form-control"
+                                           required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="fecha_de_vencimiento">Fecha de vencimiento</label>
+                                    <input type="date"
+                                           name="fecha_de_vencimiento"
+                                           id="fecha_de_vencimiento"
+                                           class="form-control"
+                                           required>
+                                </div>
+                            </div>
+                        </div>
+                        <br>
+                        <div class="form-group">
+                            <label for="id_sucursal">Sucursal</label>
+                            <select name="id_sucursal" id="id_sucursal" class="form-control" required>
+                                <option value="">Seleccione una sucursal</option>
+                                {% for sucursal in sucursales %}<option value="{{ sucursal.id }}">{{ sucursal.nombre }}</option>{% endfor %}
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" form="postregistro" id="btnregis" class="btn classbotones">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="modalput" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Datos SAT</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="putregistro">
+                        {% csrf_token %}
+                        <input type="hidden" id="id_satedit">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label>Nombre CAI</label>
+                                <input type="text" id="nombre_caiedit" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label>Número CAI</label>
+                                <input type="text" id="numero_caiedit" class="form-control" required>
+                            </div>
+                        </div>
+                        <br>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label>Rango Inicial</label>
+                                <input type="text"
+                                       id="rango_inicialedit"
+                                       class="form-control"
+                                       oninput="validateNumber(this)"
+                                       required>
+                            </div>
+                            <div class="col-md-6">
+                                <label>Rango Final</label>
+                                <input type="text"
+                                       id="rango_finaledit"
+                                       class="form-control"
+                                       oninput="validateNumber(this)"
+                                       required>
+                            </div>
+                        </div>
+                        <br>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label>Fecha Emisión</label>
+                                <input type="date" id="fecha_emisionedit" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label>Fecha Vencimiento</label>
+                                <input type="date" id="fecha_vencimientoedit" class="form-control" required>
+                            </div>
+                        </div>
+                        <br>
+                        <label>Sucursal</label>
+                        <select id="sucursaledit" class="form-control" required>
+                            {% for sucursal in sucursales %}<option value="{{ sucursal.id }}">{{ sucursal.nombre }}</option>{% endfor %}
+                        </select>
+                        <br>
+                        <div class="form-group">
+                            <label>Estado</label>
+                            <label class="d-flex align-items-center">
+                                <input type="checkbox" id="isActiveedit" checked class="me-2">
+                                <span id="activeTextedit" class="fw-bold text-success">Activo</span>
+                            </label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" form="putregistro" class="btn classbotones">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="tabla-container">
+        <table class="tablas-todo" id="tablacont">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Sucursal</th>
+                    <th>Nombre CAI</th>
+                    <th>Número CAI</th>
+                    <th>Rango Inicial</th>
+                    <th>Rango Final</th>
+                    <th>Fecha Emisión</th>
+                    <th>Fecha Vencimiento</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sat in page_obj %}
+                    <tr data-id="{{ sat.id }}">
+                        <td>{{ sat.id }}</td>
+                        <td>{{ sat.id_sucursal.nombre }}</td>
+                        <td>{{ sat.nombre_cai }}</td>
+                        <td>{{ sat.numero_cai }}</td>
+                        <td>{{ sat.rango_inicial }}</td>
+                        <td>{{ sat.rango_final }}</td>
+                        <td>{{ sat.fecha_de_emision|date:"d/m/Y" }}</td>
+                        <td>{{ sat.fecha_de_vencimiento|date:"d/m/Y" }}</td>
+                        <td>
+                            {% if sat.is_active %}
+                                <span class="estado-circulo estado-activo"></span>
+                            {% else %}
+                                <span class="estado-circulo estado-inactivo"></span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if not sat.is_delete %}
+                                {% if perms.manager.change_datos_sat %}
+                                    <button type="button"
+                                            class="btn btn-sm btn-primary btn-edit"
+                                            data-id="{{ sat.id }}"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modalput">
+                                        <i class="bx bx-edit"></i>
+                                    </button>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="10" class="text-center">No existen registros de Datos SAT</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <nav class="d-flex justify-content-center mt-4">
+        <ul class="pagination">
+            <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+                {% if page_obj.has_previous %}
+                    <a class="page-link"
+                       href="?page={{ page_obj.previous_page_number }}&search={{ search }}">«</a>
+                {% else %}
+                    <span class="page-link">«</span>
+                {% endif %}
+            </li>
+            {% for p in page_obj.paginator.page_range %}
+                <li class="page-item {% if p == page_obj.number %}active{% endif %}">
+                    <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
+                </li>
+            {% endfor %}
+            <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+                {% if page_obj.has_next %}
+                    <a class="page-link"
+                       href="?page={{ page_obj.next_page_number }}&search={{ search }}">»</a>
+                {% else %}
+                    <span class="page-link">»</span>
+                {% endif %}
+            </li>
+        </ul>
+    </nav>
+    <script>
+        //----------------
+        // VALIDAR NUMERO EN INPUT
+        //----------------
+        function validateNumber(input) {
+            input.value = input.value.replace(/[^-0-9.+]/g, "");
+        }
+    </script>
+    <script src="{% static 'js/datos_sat/datos_sat.js' %}"></script>
+    <script type="module" src="{% static 'js/chektext.js' %}"></script>
+{% endblock main_content %}

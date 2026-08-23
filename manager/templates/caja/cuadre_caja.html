@@ -1,0 +1,249 @@
+    {% extends "menu.html" %}
+
+    {% load static %}
+
+    {% block title %}
+    Cuadre de Caja
+    {% endblock title %}
+
+    {% block extra_css %} <link rel="stylesheet" href="{% static 'css/cuadre_caja.css' %}" /> <link rel="stylesheet" href="{% static 'css/caja.css' %}" />
+    {% endblock extra_css %}
+
+    {% block titulo_content %} <div class="tituloscont"> <img
+            class="logop"
+            src="{% static 'img/LH.png' %}"
+            alt="logo"
+            width="0"
+            height="0"
+        />
+
+        <p class="header__logo">| Cuadre de Caja</p>
+    </div>
+
+    {% endblock titulo_content %}
+
+    {% block main_content %}
+
+    <div class="container-fluid mt-4 cuadre-caja-shell">
+
+        <div class="cuadre-caja-header">
+            <div>
+                <span class="cuadre-caja-kicker">Gestión de caja</span>
+                <h2 class="cuadre-caja-title">Cuadre de caja</h2>
+                <p class="cuadre-caja-subtitle">
+                    Compara el efectivo contado con el total esperado y finaliza el cierre del día.
+                </p>
+            </div>
+
+            <div class="cuadre-caja-status">
+                <span class="status-pill">En proceso</span>
+                <span class="status-text">Revisa cada denominación antes de cerrar</span>
+            </div>
+        </div>
+
+        <!-- ========================= -->
+        <!-- RESUMEN DE CAJA -->
+        <!-- ========================= -->
+
+        <div class="row g-3 mb-4">
+
+            <div class="col-lg-4 col-md-6">
+                <div class="card summary-card summary-card--sales">
+                    <div class="summary-card__icon">
+                        <i class='bx bx-dollar-circle'></i>
+                    </div>
+                    <div>
+                        <p class="summary-card__label">Ventas del día</p>
+                        <h3 id="totalVentas">L. {{ ventas_hoy|floatformat:2 }}</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 col-md-6">
+                <div class="card summary-card summary-card--opening">
+                    <div class="summary-card__icon">
+                        <i class='bx bx-wallet-alt'></i>
+                    </div>
+                    <div>
+                        <p class="summary-card__label">Apertura</p>
+                        <h3 id="montoApertura">L. {{ caja.monto_apertura|floatformat:2 }}</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 col-md-12">
+                <div class="card summary-card summary-card--expected">
+                    <div class="summary-card__icon">
+                        <i class='bx bx-briefcase-alt-2'></i>
+                    </div>
+                    <div>
+                        <p class="summary-card__label">Total esperado</p>
+                        <h3 id="totalEsperado" data-total="{{ total_esperado }}">
+                            L. {{ total_esperado|floatformat:2 }}
+                        </h3>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ========================= -->
+        <!-- DIFERENCIA -->
+        <!-- ========================= -->
+
+        <div class="difference-card mb-4">
+            <div class="difference-card__content">
+                <div>
+                    <p class="difference-card__label">Diferencia</p>
+                    <h2 id="diferencia">L. 0.00</h2>
+                </div>
+                <span class="difference-card__caption">Dinero contado - Total esperado</span>
+            </div>
+        </div>
+
+        <!-- ========================= -->
+        <!-- TABLA DE DENOMINACIONES -->
+        <!-- ========================= -->
+
+        <div class="card count-card">
+
+            <div class="count-card__header">
+                <div>
+                    <h5 class="mb-0">Conteo de efectivo</h5>
+                    <p>Ingresa la cantidad de billetes por denominación</p>
+                </div>
+                <span class="count-card__hint">Se actualiza en tiempo real</span>
+            </div>
+
+            <div class="card-body">
+
+                <div class="table-responsive">
+
+                    <table class="table table-bordered align-middle text-center cuadre-table">
+
+                        <thead>
+                            <tr>
+                                <th>Denominación</th>
+                                <th>Cantidad</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            <tr>
+                                <td>L. 1.00</td>
+                                <td>
+                                    <input type="text" class="form-control cantidad-billete" oninput="validateNumber(this)">
+                                </td>
+                                <td class="subtotal">L. 0.00</td>
+                            </tr>
+
+                            <tr>
+                                <td>L. 2.00</td>
+                                <td>
+                                    <input type="text" class="form-control cantidad-billete" oninput="validateNumber(this)">
+                                </td>
+                                <td class="subtotal">L. 0.00</td>
+                            </tr>
+
+                            <tr>
+                                <td>L. 5.00</td>
+                                <td>
+                                    <input type="text" class="form-control cantidad-billete" oninput="validateNumber(this)">
+                                </td>
+                                <td class="subtotal">L. 0.00</td>
+                            </tr>
+
+                            <tr>
+                                <td>L. 10.00</td>
+                                <td>
+                                    <input type="text" class="form-control cantidad-billete" oninput="validateNumber(this)">
+                                </td>
+                                <td class="subtotal">L. 0.00</td>
+                            </tr>
+
+                            <tr>
+                                <td>L. 20.00</td>
+                                <td>
+                                    <input type="text" class="form-control cantidad-billete" oninput="validateNumber(this)">
+                                </td>
+                                <td class="subtotal">L. 0.00</td>
+                            </tr>
+
+                            <tr>
+                                <td>L. 50.00</td>
+                                <td>
+                                    <input type="text" class="form-control cantidad-billete" oninput="validateNumber(this)">
+                                </td>
+                                <td class="subtotal">L. 0.00</td>
+                            </tr>
+
+                            <tr>
+                                <td>L. 100.00</td>
+                                <td>
+                                    <input type="text" class="form-control cantidad-billete" oninput="validateNumber(this)">
+                                </td>
+                                <td class="subtotal">L. 0.00</td>
+                            </tr>
+
+                            <tr>
+                                <td>L. 200.00</td>
+                                <td>
+                                    <input type="text" class="form-control cantidad-billete" oninput="validateNumber(this)">
+                                </td>
+                                <td class="subtotal">L. 0.00</td>
+                            </tr>
+
+                            <tr>
+                                <td>L. 500.00</td>
+                                <td>
+                                    <input type="text" class="form-control cantidad-billete" oninput="validateNumber(this)">
+                                </td>
+                                <td class="subtotal">L. 0.00</td>
+                            </tr>
+
+                        </tbody>
+
+                        <tfoot>
+                            <tr>
+                                <th colspan="2" class="text-end">Total contado:</th>
+                                <th id="totalContado">L. 0.00</th>
+                            </tr>
+                        </tfoot>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ========================= -->
+        <!-- BOTÓN FINALIZAR -->
+        <!-- ========================= -->
+
+        <div class="footer-actions mt-4 mb-5">
+            <button type="button" id="btnCerrarCuadre" class="btn btn-success btn-lg">
+                Cerrar Cuadre
+            </button>
+        </div>
+
+    </div>
+
+    <!-- CSRF -->
+
+    <form style="display:none;">
+        {% csrf_token %}
+    </form>
+    {% comment %} <script>
+        function validateNumber(input) {
+    input.value = input.value.replace(/[^0-9.+]/g, '');
+    }
+    </script> {% endcomment %}
+
+
+    <script src="{% static 'js/caja/cuadre.js' %}"></script>
+
+    {% endblock main_content %}

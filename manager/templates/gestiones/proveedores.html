@@ -87,11 +87,6 @@
                             <div class="form-group">
                             <label for="telefono">Número de Teléfono</label>
                                 <div class="d-flex">
-                                    <!-- Select para código de país -->
-                                    <select id="countryCode" class="form-control me-2" style="max-width: 120px;">
-                                    <option value="">+Cod</option>
-                                    </select>
-                                    
                                     <!-- Input para número -->
                                     <input type="text"
                                         name="telefono"
@@ -99,7 +94,7 @@
                                         class="form-control"
                                         placeholder="Número de teléfono"
                                         oninput="validateNumber(this)"
-                                        maxlength="10">
+                                        maxlength="12">
                                 </div>
                             </div>
                             <br>
@@ -111,12 +106,11 @@
                                        class="form-control"
                                        placeholder="Email">
                             </div>
-                            <br>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                                <button type="submit" id="btnregis" class="btn btn classbotones">Guardar</button>
-                            </div>
                         </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" id="btnregis" form="postregistro" class="btn btn classbotones">Guardar</button>
                     </div>
                 </div>
             </div>
@@ -183,11 +177,6 @@
                             <div class="form-group">
                             <label for="telefonoedit">Número de Teléfono</label>
                                 <div class="d-flex">
-                                    <!-- Select para código de país -->
-                                    <select id="countryCodeedit" class="form-control me-2" style="max-width: 120px;">
-                                    <option value="">+Cod</option>
-                                    </select>
-                                    
                                     <!-- Input para número -->
                                     <input type="text"
                                         name="telefonoedit"
@@ -195,7 +184,7 @@
                                         class="form-control"
                                         placeholder="Número de teléfono"
                                         oninput="validateNumber(this)"
-                                        maxlength="10">
+                                        maxlength="12">
                                 </div>
                             </div>
                             <br>
@@ -218,11 +207,11 @@
                                 </label>
                             </div>
                             <br>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                                <button type="submit" id="btnput" class="btn btn classbotones">Guardar</button>
-                            </div>
                         </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" form="putregistro" id="btnput" class="btn btn classbotones">Guardar</button>
                     </div>
                 </div>
             </div>

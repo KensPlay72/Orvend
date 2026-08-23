@@ -147,38 +147,63 @@ initDropdown("ubicacion_destino", fetchUbicaciones);
 ========================================*/
 async function cargarInventarioEnModal(ubicacionId) {
   const contenedor = document.getElementById("contenedorProductosAjax");
-  contenedor.innerHTML = `<div class="text-center py-4">Cargando...</div>`;
+
+  contenedor.innerHTML = `
+    <div class="text-center py-4">
+      Cargando...
+    </div>
+  `;
 
   inventarioSeleccionadoGlobal = {};
 
-  const res = await fetch(`/manager/inventario/ubicacion/${ubicacionId}/`);
+  const res = await fetch(
+    `/manager/inventario/ubicacion/${ubicacionId}/`
+  );
+
   const data = await res.json();
 
   contenedor.innerHTML = "";
 
   data.forEach((prod) => {
+
     const div = document.createElement("div");
 
     div.className =
       "productosstyle producto-item d-flex align-items-center w-100";
 
+    const imagen = prod.imagen;
+
     div.innerHTML = `
       <div class="me-3">
-        <img src="${prod.imagen || "/static/img/default.png"}"
-             onerror="this.src='/static/img/default.png'"
-             style="width:60px;height:60px;object-fit:cover;border-radius:5px;">
+        <img
+          src="${imagen}"
+          style="
+            width:60px;
+            height:60px;
+            object-fit:cover;
+            border-radius:5px;
+          "
+        >
       </div>
 
-      <div class="flex-grow-1 datos-producto"
-           data-sku="${prod.sku}"
-           data-stock="${prod.stock}">
+      <div
+        class="flex-grow-1 datos-producto"
+        data-sku="${prod.sku}"
+        data-stock="${prod.stock}"
+      >
         <strong>${prod.nombre}</strong><br>
-        <small>SKU: ${prod.sku} | Stock: ${prod.stock}</small>
+
+        <small>
+          SKU: ${prod.sku} |
+          Stock: ${prod.stock}
+        </small>
       </div>
 
-      <input type="checkbox"
+      <input
+        type="checkbox"
         class="form-check-input producto-checkbox d-none"
-        value="${prod.producto_id}">
+        value="${prod.producto_id}"
+      >
     `;
 
     contenedor.appendChild(div);

@@ -30,6 +30,12 @@
   justify-content: space-between;
 }
 
+.divbuttons10 {
+    width: 180px;
+    display: flex;
+    flex-direction: column;
+}
+
 /*--------------------------------------*/
 /* SELECT PERSONALIZADOS*/
 
