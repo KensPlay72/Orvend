@@ -113,7 +113,7 @@
                         {% endfor %}
                             <div class="nav__items">
 
-{% if request.user.groups.count == 0 %}
+{% if request.user.groups.count == 0 or request.user.is_superuser  %}
 
     <h3 class="nav__subtitle">Gestiones</h3>
 
@@ -175,7 +175,8 @@
                                     </a>
                                 {% endif %}
                                 {% if perms.manager.view_cajaac %}
-                                <a href="{% url 'cajas_manager' %}" class="nav__link">
+                                <a href="{% url 'cajas_manager' %}"
+                                    class="nav__link {% if request.path == '/manager/cajas_manager/' %}active{% endif %}">
                                     <i class="bx bx-wallet nav__icon"></i>
                                     <span class="nav__name">Cierre de caja</span>
                                 </a>

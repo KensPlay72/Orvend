@@ -230,7 +230,11 @@ document.addEventListener("DOMContentLoaded", function () {
             showCancelButton: true,
             confirmButtonText: "Sí, cerrar caja",
             cancelButtonText: "Cancelar",
-            reverseButtons: true
+            reverseButtons: true,
+            customClass: {
+            confirmButton:
+                "classbotones"
+            }
         }).then(function (result) {
 
             if (!result.isConfirmed) {
@@ -352,7 +356,11 @@ document.addEventListener("DOMContentLoaded", function () {
                     </p>
                 `,
                 icon: "success",
-                confirmButtonText: "Aceptar"
+                confirmButtonText: "Aceptar",
+                customClass: {
+                    confirmButton:
+                        "classbotones"
+                }
             }).then(function () {
 
                 window.location.href = "/manager/caja/";

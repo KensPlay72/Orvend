@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q, Sum, OuterRef, Subquery
+from django.db.models import Q, Sum, OuterRef, Subquery, F, Min, Max
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.utils import timezone
@@ -64,8 +64,244 @@ from .models import (
 
 @login_required
 def dashboard_view(request):
-    return render(request, "dashboard.html")
 
+    # ==========================================================
+    # FECHAS
+    # ==========================================================
+
+    hoy = timezone.localtime()
+
+    inicio_hoy = hoy.replace(
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0
+    )
+
+    fin_hoy = inicio_hoy + timedelta(days=1)
+
+    inicio_mes = hoy.replace(
+        day=1,
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0
+    )
+
+    # ==========================================================
+    # TOTAL DE PRODUCTOS
+    # ==========================================================
+
+    total_productos = (
+        Productos.objects
+        .filter(
+            is_active=True,
+            is_delete=False
+        )
+        .count()
+    )
+
+    # ==========================================================
+    # VENTAS DE HOY
+    # ==========================================================
+
+    ventas_hoy = (
+        Ventas.objects
+        .filter(
+            f_creacion__gte=inicio_hoy,
+            f_creacion__lt=fin_hoy,
+            is_active=True,
+            is_delete=False
+        )
+        .aggregate(
+            total=Sum("total")
+        )["total"] or 0
+    )
+
+    # ==========================================================
+    # VENTAS DEL MES
+    # ==========================================================
+
+    ventas_mes = (
+        Ventas.objects
+        .filter(
+            f_creacion__gte=inicio_mes,
+            f_creacion__lt=fin_hoy,
+            is_active=True,
+            is_delete=False
+        )
+        .aggregate(
+            total=Sum("total")
+        )["total"] or 0
+    )
+
+    # ==========================================================
+    # UTILIDAD DEL MES
+    # ==========================================================
+
+    utilidad_mes = (
+        Ventas.objects
+        .filter(
+            f_creacion__gte=inicio_mes,
+            f_creacion__lt=fin_hoy,
+            is_active=True,
+            is_delete=False
+        )
+        .aggregate(
+            total=Sum("utilidad_total")
+        )["total"] or 0
+    )
+
+    # ==========================================================
+    # COMPRAS DEL MES
+    # ==========================================================
+
+    compras_mes = (
+        Compras.objects
+        .filter(
+            fecha_compra__gte=inicio_mes,
+            fecha_compra__lt=fin_hoy,
+            is_active=True,
+            is_delete=False
+        )
+        .aggregate(
+            total=Sum("total")
+        )["total"] or 0
+    )
+
+    # ==========================================================
+    # STOCK BAJO
+    # ==========================================================
+
+    stock_por_producto = (
+        Inventarios.objects
+        .filter(
+            is_active=True,
+            is_delete=False,
+            producto__is_active=True,
+            producto__is_delete=False,
+        )
+        .values(
+            "producto",
+            "producto__nombre",
+            "ubicacion",
+            "ubicacion__nombre",
+        )
+        .annotate(
+            stock_total=Sum("cantidad"),
+            stock_minimo=Min("stock_minimo"),
+        )
+        .filter(
+            stock_total__lte=F("stock_minimo")
+        )
+        .order_by(
+            "stock_total"
+        )
+    )
+
+    productos_bajo_stock = stock_por_producto.count()
+
+    alertas_stock = stock_por_producto[:10]
+
+    # ==========================================================
+    # PRODUCTOS PRÓXIMOS A VENCER
+    # ==========================================================
+
+    fecha_limite = hoy + timedelta(days=30)
+
+    alertas_vencimiento = (
+        Inventarios.objects
+        .filter(
+            is_active=True,
+            is_delete=False,
+            producto__is_active=True,
+            producto__is_delete=False,
+            cantidad__gt=0,
+            fvencimiento__isnull=False,
+            fvencimiento__gte=hoy,
+            fvencimiento__lte=fecha_limite,
+        )
+        .select_related(
+            "producto",
+            "ubicacion",
+            "compra",
+        )
+        .order_by(
+            "fvencimiento"
+        )[:10]
+    )
+
+    # ==========================================================
+    # CUENTAS POR PAGAR
+    # ==========================================================
+
+    cuentas_pendientes = (
+        CuentasPorPagar.objects
+        .filter(
+            is_active=True,
+            is_delete=False,
+            monto_pendiente__gt=0
+        )
+        .count()
+    )
+
+    # ==========================================================
+    # TRASLADOS
+    # ==========================================================
+
+    total_traslados = (
+        Traslados.objects
+        .filter(
+            is_active=True,
+            is_delete=False
+        )
+        .count()
+    )
+
+    # ==========================================================
+    # CAJAS ABIERTAS
+    # ==========================================================
+
+    cajas_abiertas = (
+        CajaAC.objects
+        .filter(
+            is_active=True,
+            is_delete=False,
+            estado="abierta"
+        )
+        .count()
+    )
+
+    # ==========================================================
+    # CONTEXT
+    # ==========================================================
+
+    context = {
+        "total_productos": total_productos,
+
+        "ventas_hoy": ventas_hoy,
+        "ventas_mes": ventas_mes,
+        "utilidad_mes": utilidad_mes,
+        "compras_mes": compras_mes,
+
+        "productos_bajo_stock": productos_bajo_stock,
+        "cuentas_pendientes": cuentas_pendientes,
+        "total_traslados": total_traslados,
+        "cajas_abiertas": cajas_abiertas,
+
+        "alertas_stock": alertas_stock,
+        "alertas_vencimiento": alertas_vencimiento,
+    }
+
+    # ==========================================================
+    # RENDER
+    # ==========================================================
+
+    return render(
+        request,
+        "dashboard.html",
+        context
+    )
 
 # ───────────────────────────────────────────────────────────────
 # UNIDADES DE MEDIDA

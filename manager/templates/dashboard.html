@@ -1,66 +1,598 @@
 {% extends "menu.html" %}
 {% load static %}
+
 {% block title %}Dashboard{% endblock %}
+
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
 {% endblock %}
+
 {% block titulo_content %}
-    <div class="tituloscont">
-        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
-        <p class="header__logo">| Dashboard</p>
-    </div>
-{% endblock %}
-{% block main_content %}
-<div class="full">
-    <div class="ventanas">
-        <div class="ventanasi">
-            <p class="ventana-titulo">Total de Productos</p>
-            <p class="ventana-numero">{{total_productos}}</p>
-        </div>
-        <div class="ventanasd">
-            <div class="capsula">
-                <i class='bx bx-package'></i>
-            </div>
-        </div>
-    </div>
 
-
-    <div class="ventanas">
-        <div class="ventanasi">
-            <p class="ventana-titulo">Total de Productos</p>
-            <p class="ventana-numero">12,300</p>
-        </div>
-        <div class="ventanasd">
-            <div class="capsula">
-                <i class='bx bx-package'></i>
-            </div>
-        </div>
-    </div>
-
-
-    <div class="ventanas">
-        <div class="ventanasi">
-            <p class="ventana-titulo">Total de Productos</p>
-            <p class="ventana-numero">12,300</p>
-        </div>
-        <div class="ventanasd">
-            <div class="capsula">
-                <i class='bx bx-package'></i>
-            </div>
-        </div>
-    </div>
-
-
-    <div class="ventanas">
-        <div class="ventanasi">
-            <p class="ventana-titulo">Total de Productos</p>
-            <p class="ventana-numero">12,300</p>
-        </div>
-        <div class="ventanasd">
-            <div class="capsula">
-                <i class='bx bx-package'></i>
-            </div>
-        </div>
-    </div>
+<div class="tituloscont">
+    <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+    <p class="header__logo">| Dashboard</p>
 </div>
+
+{% endblock %}
+
+
+{% block main_content %}
+
+<div class="dashboard">
+    <!-- =====================================================
+         TARJETAS PRINCIPALES
+    ====================================================== -->
+
+    <div class="cards-grid">
+
+        <!-- VENTAS HOY -->
+
+        <div class="card card-primary">
+
+            <div class="card-info">
+
+                <span class="card-title">
+                    Ventas Hoy
+                </span>
+
+                <h3>
+                    L {{ ventas_hoy|floatformat:2 }}
+                </h3>
+
+                <span class="card-description">
+                    Ventas realizadas hoy
+                </span>
+
+            </div>
+
+            <div class="card-icon">
+                <i class='bx bx-cart'></i>
+            </div>
+
+        </div>
+
+
+        <!-- UTILIDAD -->
+
+        <div class="card card-success">
+
+            <div class="card-info">
+
+                <span class="card-title">
+                    Utilidad del Mes
+                </span>
+
+                <h3>
+                    L {{ utilidad_mes|floatformat:2 }}
+                </h3>
+
+                <span class="card-description">
+                    Utilidad acumulada
+                </span>
+
+            </div>
+
+            <div class="card-icon">
+                <i class='bx bx-dollar-circle'></i>
+            </div>
+
+        </div>
+
+
+        <!-- COMPRAS -->
+
+        <div class="card card-warning">
+
+            <div class="card-info">
+
+                <span class="card-title">
+                    Compras del Mes
+                </span>
+
+                <h3>
+                    L {{ compras_mes|floatformat:2 }}
+                </h3>
+
+                <span class="card-description">
+                    Compras acumuladas
+                </span>
+
+            </div>
+
+            <div class="card-icon">
+                <i class='bx bx-cart-download'></i>
+            </div>
+
+        </div>
+
+
+        <!-- STOCK -->
+
+        <div class="card card-danger">
+
+            <div class="card-info">
+
+                <span class="card-title">
+                    Bajo Stock
+                </span>
+
+                <h3>
+                    {{ productos_bajo_stock }}
+                </h3>
+
+                <span class="card-description">
+                    Productos que necesitan atención
+                </span>
+
+            </div>
+
+            <div class="card-icon">
+                <i class='bx bx-error-circle'></i>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         SEGUNDA FILA
+    ====================================================== -->
+
+    <div class="cards-grid second-row">
+
+
+        <!-- TOTAL PRODUCTOS -->
+
+        <div class="card-small">
+
+            <div class="small-card-icon">
+                <i class='bx bx-package'></i>
+            </div>
+
+            <div class="small-card-info">
+
+                <span>
+                    Total Productos
+                </span>
+
+                <h3>
+                    {{ total_productos }}
+                </h3>
+
+            </div>
+
+        </div>
+
+
+        <!-- CUENTAS POR PAGAR -->
+
+        <div class="card-small">
+
+            <div class="small-card-icon">
+                <i class='bx bx-wallet'></i>
+            </div>
+
+            <div class="small-card-info">
+
+                <span>
+                    Cuentas por Pagar
+                </span>
+
+                <h3>
+                    {{ cuentas_pendientes }}
+                </h3>
+
+            </div>
+
+        </div>
+
+
+        <!-- TRASLADOS -->
+
+        <div class="card-small">
+
+            <div class="small-card-icon">
+                <i class='bx bx-transfer'></i>
+            </div>
+
+            <div class="small-card-info">
+
+                <span>
+                    Traslados
+                </span>
+
+                <h3>
+                    {{ total_traslados }}
+                </h3>
+
+            </div>
+
+        </div>
+
+
+        <!-- CAJAS -->
+
+        <div class="card-small">
+
+            <div class="small-card-icon">
+                <i class='bx bx-store'></i>
+            </div>
+
+            <div class="small-card-info">
+
+                <span>
+                    Cajas Abiertas
+                </span>
+
+                <h3>
+                    {{ cajas_abiertas }}
+                </h3>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         CONTENIDO PRINCIPAL
+    ====================================================== -->
+
+    <div class="panel-grid">
+
+
+        <!-- =================================================
+             GRÁFICO
+        ================================================== -->
+
+        <div class="panel chart-panel">
+
+            <div class="panel-header">
+
+                <div>
+                    <h3>Ventas últimos 30 días</h3>
+
+                    <span>
+                        Comportamiento de las ventas
+                    </span>
+                </div>
+
+                <button class="panel-button">
+                    <i class='bx bx-dots-horizontal-rounded'></i>
+                </button>
+
+            </div>
+
+
+            <div class="chart-container">
+
+                <canvas id="ventasChart"></canvas>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             ALERTAS
+        ================================================== -->
+
+        <div class="panel alerts-panel">
+
+            <div class="panel-header">
+
+                <div>
+
+                    <h3>Alertas</h3>
+
+                    <span>
+                        Requieren atención
+                    </span>
+
+                </div>
+
+                <i class='bx bx-bell alert-header-icon'></i>
+
+            </div>
+
+
+            <div class="panel-body">
+
+
+                <!-- =========================================
+                     STOCK BAJO
+                ========================================== -->
+
+                <div class="alert-section">
+
+                    <div class="alert-section-header">
+
+                        <div class="alert-section-title">
+
+                            <div class="alert-icon stock-icon">
+                                <i class='bx bx-error-circle'></i>
+                            </div>
+
+                            <div>
+
+                                <strong>
+                                    Stock bajo
+                                </strong>
+
+                                <span>
+                                    {{ productos_bajo_stock }} productos
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="alert-list">
+
+                        {% for item in alertas_stock %}
+
+                        <div class="alert-item">
+
+                            <div class="alert-item-icon stock-item-icon">
+
+                                <i class='bx bx-package'></i>
+
+                            </div>
+
+
+                            <div class="alert-content">
+
+                                <strong>
+                                    {{ item.producto__nombre }}
+                                </strong>
+
+                                <span>
+
+                                    Stock actual:
+
+                                    <b>
+                                        {{ item.stock_total|floatformat:2 }}
+                                    </b>
+
+                                    &nbsp;|&nbsp;
+
+                                    Mínimo:
+
+                                    <b>
+                                        {{ item.stock_minimo|floatformat:2 }}
+                                    </b>
+
+                                </span>
+
+
+                                <span class="alert-location">
+
+                                    <i class='bx bx-map'></i>
+
+                                    {{ item.ubicacion__nombre }}
+
+                                </span>
+
+                            </div>
+
+
+                            <div class="alert-status stock-status">
+
+                                Crítico
+
+                            </div>
+
+                        </div>
+
+                        {% empty %}
+
+                        <div class="alert-empty">
+
+                            <i class='bx bx-check-circle'></i>
+
+                            <span>
+                                No hay productos con stock bajo
+                            </span>
+
+                        </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                </div>
+
+
+                <!-- SEPARADOR -->
+
+                <div class="alert-separator"></div>
+
+
+                <!-- =========================================
+                     PRODUCTOS POR VENCER
+                ========================================== -->
+
+                <div class="alert-section">
+
+                    <div class="alert-section-header">
+
+                        <div class="alert-section-title">
+
+                            <div class="alert-icon expiration-icon">
+                                <i class='bx bx-time-five'></i>
+                            </div>
+
+                            <div>
+
+                                <strong>
+                                    Próximos a vencer
+                                </strong>
+
+                                <span>
+                                    Próximos 30 días
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="alert-list">
+
+                        {% for item in alertas_vencimiento %}
+
+                        <div class="alert-item">
+
+                            <div class="alert-item-icon expiration-item-icon">
+                                <i class='bx bx-calendar-exclamation'></i>
+                            </div>
+
+                            <div class="alert-content">
+
+                                <strong>
+                                    {{ item.producto.nombre }}
+                                </strong>
+
+                                <span>
+                                    Vence:
+                                    <b>
+                                        {{ item.fvencimiento|date:"d/m/Y" }}
+                                    </b>
+                                </span>
+
+                            </div>
+
+                            <div class="alert-status expiration-status">
+                                Vence pronto
+                            </div>
+
+                        </div>
+
+                        {% empty %}
+
+                        <div class="alert-empty">
+
+                            <i class='bx bx-check-circle'></i>
+
+                            <span>
+                                No hay productos próximos a vencer
+                            </span>
+
+                        </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         RESUMEN INFERIOR
+    ====================================================== -->
+
+    <div class="bottom-grid">
+
+
+        <!-- VENTAS DEL MES -->
+
+        <div class="summary-card">
+
+            <div class="summary-header">
+
+                <div>
+                    <span>Ventas del Mes</span>
+                    <h3>
+                        L {{ ventas_mes|floatformat:2 }}
+                    </h3>
+                </div>
+
+                <div class="summary-icon sales-summary">
+                    <i class='bx bx-trending-up'></i>
+                </div>
+
+            </div>
+
+            <div class="summary-line"></div>
+
+            <span class="summary-description">
+                Total vendido durante el mes actual
+            </span>
+
+        </div>
+
+
+        <!-- INVENTARIO -->
+
+        <div class="summary-card">
+
+            <div class="summary-header">
+
+                <div>
+                    <span>Inventario</span>
+                    <h3>
+                        {{ total_productos }}
+                    </h3>
+                </div>
+
+                <div class="summary-icon inventory-summary">
+                    <i class='bx bx-box'></i>
+                </div>
+
+            </div>
+
+            <div class="summary-line"></div>
+
+            <span class="summary-description">
+                Productos activos registrados
+            </span>
+
+        </div>
+
+
+        <!-- CUENTAS -->
+
+        <div class="summary-card">
+
+            <div class="summary-header">
+
+                <div>
+                    <span>Cuentas Pendientes</span>
+                    <h3>
+                        {{ cuentas_pendientes }}
+                    </h3>
+                </div>
+
+                <div class="summary-icon accounts-summary">
+                    <i class='bx bx-credit-card'></i>
+                </div>
+
+            </div>
+
+            <div class="summary-line"></div>
+
+            <span class="summary-description">
+                Cuentas por pagar pendientes
+            </span>
+
+        </div>
+
+    </div>
+
+</div>
+
 {% endblock %}

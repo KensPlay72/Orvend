@@ -1,0 +1,883 @@
+/* ==========================================================
+   DASHBOARD
+========================================================== */
+
+.dashboard {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 5px 0 30px 0;
+    box-sizing: border-box;
+}
+
+
+/* ==========================================================
+   HEADER
+========================================================== */
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dashboard-header h2 {
+    margin: 0;
+    font-size: 27px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.dashboard-header p {
+    margin: 5px 0 0 0;
+    font-size: 14px;
+    color: #8a8f98;
+}
+
+.dashboard-user {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 15px;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #5f6672;
+    font-size: 14px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.dashboard-user i {
+    font-size: 22px;
+}
+
+
+/* ==========================================================
+   GRID TARJETAS
+========================================================== */
+
+.cards-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+}
+
+
+/* ==========================================================
+   TARJETAS PRINCIPALES
+========================================================== */
+
+.card {
+    min-height: 145px;
+    border-radius: 18px;
+    padding: 23px;
+    box-sizing: border-box;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    color: #ffffff;
+
+    position: relative;
+    overflow: hidden;
+
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+
+    box-shadow:
+        0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+
+/* ==========================================================
+   COLORES TARJETAS
+========================================================== */
+
+.card-primary {
+    background: linear-gradient(
+        135deg,
+        #4f46e5,
+        #6366f1
+    );
+}
+
+.card-success {
+    background: linear-gradient(
+        135deg,
+        #16a34a,
+        #22c55e
+    );
+}
+
+.card-warning {
+    background: linear-gradient(
+        135deg,
+        #d97706,
+        #f59e0b
+    );
+}
+
+.card-danger {
+    background: linear-gradient(
+        135deg,
+        #dc2626,
+        #ef4444
+    );
+}
+
+
+/* ==========================================================
+   INFORMACION TARJETA
+========================================================== */
+
+.card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+
+    position: relative;
+    z-index: 2;
+}
+
+.card-title {
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0.92;
+}
+
+.card h3 {
+    margin: 0;
+    font-size: 28px;
+    line-height: 1.2;
+    font-weight: 700;
+}
+
+.card-description {
+    font-size: 11px;
+    opacity: 0.75;
+}
+
+
+/* ==========================================================
+   ICONO TARJETA
+========================================================== */
+
+.card-icon {
+    width: 58px;
+    height: 58px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 17px;
+
+    background: rgba(255, 255, 255, 0.15);
+
+    position: relative;
+    z-index: 2;
+}
+
+.card-icon i {
+    font-size: 32px;
+}
+
+
+/* ==========================================================
+   DECORACION TARJETAS
+========================================================== */
+
+.card::after {
+    content: "";
+
+    width: 150px;
+    height: 150px;
+
+    border-radius: 50%;
+
+    background: rgba(255, 255, 255, 0.07);
+
+    position: absolute;
+    right: -65px;
+    bottom: -75px;
+}
+
+
+/* ==========================================================
+   SEGUNDA FILA
+========================================================== */
+
+.second-row {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+
+/* ==========================================================
+   TARJETAS PEQUEÑAS
+========================================================== */
+
+.card-small {
+    min-height: 100px;
+
+    background: #ffffff;
+
+    border-radius: 16px;
+
+    padding: 18px 20px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 15px;
+
+    box-sizing: border-box;
+
+    box-shadow:
+        0 5px 20px rgba(0, 0, 0, 0.05);
+
+    transition: 0.2s ease;
+}
+
+.card-small:hover {
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 8px 25px rgba(0, 0, 0, 0.08);
+}
+
+
+.small-card-icon {
+    width: 48px;
+    height: 48px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 14px;
+
+    background: #f3f4f6;
+
+    color: #596273;
+}
+
+.small-card-icon i {
+    font-size: 25px;
+}
+
+
+.small-card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.small-card-info span {
+    color: #8a8f98;
+    font-size: 12px;
+}
+
+.small-card-info h3 {
+    margin: 0;
+
+    font-size: 25px;
+
+    color: #252a32;
+}
+
+
+/* ==========================================================
+   PANEL GRID
+========================================================== */
+
+.panel-grid {
+    width: 100%;
+
+    display: grid;
+
+    grid-template-columns: minmax(0, 2fr) minmax(350px, 1fr);
+
+    gap: 20px;
+
+    align-items: stretch;
+}
+
+
+/* ==========================================================
+   PANEL
+========================================================== */
+
+.panel {
+    background: #ffffff;
+
+    border-radius: 18px;
+
+    box-shadow:
+        0 5px 20px rgba(0, 0, 0, 0.05);
+
+    overflow: hidden;
+}
+
+
+/* ==========================================================
+   PANEL HEADER
+========================================================== */
+
+.panel-header {
+    min-height: 75px;
+
+    padding: 18px 22px;
+
+    box-sizing: border-box;
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    border-bottom: 1px solid #f0f1f3;
+}
+
+.panel-header h3 {
+    margin: 0;
+
+    font-size: 16px;
+
+    font-weight: 650;
+
+    color: #252a32;
+}
+
+.panel-header span {
+    display: block;
+
+    margin-top: 4px;
+
+    color: #9297a0;
+
+    font-size: 12px;
+}
+
+
+/* ==========================================================
+   BOTON PANEL
+========================================================== */
+
+.panel-button {
+    border: none;
+
+    background: #f5f6f8;
+
+    width: 34px;
+    height: 34px;
+
+    border-radius: 10px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    cursor: pointer;
+
+    color: #777f8c;
+}
+
+.panel-button i {
+    font-size: 20px;
+}
+
+
+/* ==========================================================
+   GRAFICO
+========================================================== */
+
+.chart-panel {
+    min-height: 420px;
+}
+
+.chart-container {
+    width: 100%;
+
+    height: 340px;
+
+    padding: 20px;
+
+    box-sizing: border-box;
+}
+
+
+/* ==========================================================
+   ALERTAS
+========================================================== */
+
+.alerts-panel {
+    min-height: 420px;
+}
+
+.alert-header-icon {
+    font-size: 22px;
+
+    color: #6b7280;
+}
+
+
+/* ==========================================================
+   PANEL BODY
+========================================================== */
+
+.panel-body {
+    padding: 20px;
+}
+
+
+/* ==========================================================
+   SECCION ALERTA
+========================================================== */
+
+.alert-section {
+    width: 100%;
+}
+
+.alert-section-header {
+    margin-bottom: 12px;
+}
+
+.alert-section-title {
+    display: flex;
+
+    align-items: center;
+
+    gap: 11px;
+}
+
+.alert-section-title > div:last-child {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 2px;
+}
+
+.alert-section-title strong {
+    font-size: 13px;
+
+    color: #303640;
+}
+
+.alert-section-title span {
+    font-size: 11px;
+
+    color: #9a9fa7;
+}
+
+
+/* ==========================================================
+   ICONOS ALERTA
+========================================================== */
+
+.alert-icon {
+    width: 38px;
+    height: 38px;
+
+    border-radius: 11px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+}
+
+.alert-icon i {
+    font-size: 20px;
+}
+
+.stock-icon {
+    background: #fff1f2;
+
+    color: #e11d48;
+}
+
+.expiration-icon {
+    background: #fff7ed;
+
+    color: #ea580c;
+}
+
+
+/* ==========================================================
+   LISTA ALERTAS
+========================================================== */
+
+.alert-list {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 8px;
+}
+
+
+/* ==========================================================
+   ITEM ALERTA
+========================================================== */
+
+.alert-item {
+    width: 100%;
+
+    min-height: 58px;
+
+    padding: 10px;
+
+    box-sizing: border-box;
+
+    border-radius: 11px;
+
+    background: #f8f9fb;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    transition: 0.15s ease;
+}
+
+.alert-item:hover {
+    background: #f2f4f7;
+}
+
+
+/* ==========================================================
+   ICONO ITEM
+========================================================== */
+
+.alert-item-icon {
+    width: 35px;
+    height: 35px;
+
+    min-width: 35px;
+
+    border-radius: 9px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+}
+
+.alert-item-icon i {
+    font-size: 18px;
+}
+
+.stock-item-icon {
+    background: #ffe4e6;
+
+    color: #e11d48;
+}
+
+.expiration-item-icon {
+    background: #ffedd5;
+
+    color: #ea580c;
+}
+
+
+/* ==========================================================
+   CONTENIDO ITEM
+========================================================== */
+
+.alert-content {
+    min-width: 0;
+
+    flex: 1;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 3px;
+}
+
+.alert-content strong {
+    font-size: 12px;
+
+    color: #303640;
+
+    white-space: nowrap;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+}
+
+.alert-content span {
+    font-size: 10px;
+
+    color: #8d939d;
+}
+
+.alert-content b {
+    color: #4b5563;
+}
+
+
+/* ==========================================================
+   ESTADO ALERTA
+========================================================== */
+
+.alert-status {
+    font-size: 9px;
+
+    font-weight: 600;
+
+    padding: 5px 7px;
+
+    border-radius: 7px;
+
+    white-space: nowrap;
+}
+
+.stock-status {
+    color: #be123c;
+
+    background: #ffe4e6;
+}
+
+.expiration-status {
+    color: #c2410c;
+
+    background: #ffedd5;
+}
+
+
+/* ==========================================================
+   ALERTA VACIA
+========================================================== */
+
+.alert-empty {
+    min-height: 60px;
+
+    border-radius: 10px;
+
+    background: #f8fafc;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 8px;
+
+    color: #8b929d;
+
+    font-size: 12px;
+}
+
+.alert-empty i {
+    color: #22c55e;
+
+    font-size: 18px;
+}
+
+
+/* ==========================================================
+   SEPARADOR
+========================================================== */
+
+.alert-separator {
+    height: 1px;
+
+    background: #eeeeef;
+
+    margin: 20px 0;
+}
+
+
+/* ==========================================================
+   BOTTOM GRID
+========================================================== */
+
+.bottom-grid {
+    width: 100%;
+
+    display: grid;
+
+    grid-template-columns: repeat(3, 1fr);
+
+    gap: 18px;
+}
+
+
+/* ==========================================================
+   SUMMARY CARD
+========================================================== */
+
+.summary-card {
+    background: #ffffff;
+
+    border-radius: 16px;
+
+    padding: 20px;
+
+    box-sizing: border-box;
+
+    box-shadow:
+        0 5px 20px rgba(0, 0, 0, 0.05);
+}
+
+.summary-header {
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+}
+
+.summary-header span {
+    font-size: 12px;
+
+    color: #8b919b;
+}
+
+.summary-header h3 {
+    margin: 6px 0 0 0;
+
+    font-size: 23px;
+
+    color: #252a32;
+}
+
+
+.summary-icon {
+    width: 45px;
+    height: 45px;
+
+    border-radius: 12px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+}
+
+.summary-icon i {
+    font-size: 23px;
+}
+
+.sales-summary {
+    background: #eef2ff;
+
+    color: #4f46e5;
+}
+
+.inventory-summary {
+    background: #ecfdf5;
+
+    color: #16a34a;
+}
+
+.accounts-summary {
+    background: #fff7ed;
+
+    color: #ea580c;
+}
+
+
+/* ==========================================================
+   SUMMARY LINE
+========================================================== */
+
+.summary-line {
+    width: 100%;
+
+    height: 1px;
+
+    background: #eeeeef;
+
+    margin: 16px 0 11px 0;
+}
+
+.summary-description {
+    font-size: 11px;
+
+    color: #969ba4;
+}
+
+
+/* ==========================================================
+   RESPONSIVE
+========================================================== */
+
+@media (max-width: 1200px) {
+
+    .cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .second-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .panel-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .alerts-panel {
+        min-height: auto;
+    }
+
+}
+
+
+@media (max-width: 700px) {
+
+    .dashboard {
+        gap: 16px;
+    }
+
+    .dashboard-header {
+        align-items: flex-start;
+
+        flex-direction: column;
+
+        gap: 12px;
+    }
+
+    .cards-grid,
+    .second-row {
+        grid-template-columns: 1fr;
+    }
+
+    .bottom-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .card {
+        min-height: 130px;
+    }
+
+    .card h3 {
+        font-size: 24px;
+    }
+
+    .panel-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .alert-status {
+        display: none;
+    }
+
+}

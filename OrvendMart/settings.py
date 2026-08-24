@@ -12,7 +12,7 @@ load_dotenv(BASE_DIR / ".env")
 # SECURITY
 SECRET_KEY = "django-insecure-test-key"
 
-DEBUG = False
+DEBUG = True
 
 
 ALLOWED_HOSTS = [
