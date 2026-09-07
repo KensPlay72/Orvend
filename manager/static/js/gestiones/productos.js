@@ -96,19 +96,6 @@ document.addEventListener("DOMContentLoaded", function () {
     // =====================
     // VALIDACIÓN IMÁGENES (USANDO ARRAY REAL)
     // =====================
-    if (!imagenes || imagenes.length === 0) {
-      Swal.fire({
-        title: "Imágenes requeridas",
-        text: "Debes agregar al menos una imagen",
-        icon: "warning",
-        confirmButtonText: "Aceptar",
-        customClass: {
-          confirmButton: "classbotones",
-        },
-      });
-      return;
-    }
-
     if (imagenes.length > 5) {
       Swal.fire({
         title: "Límite excedido",

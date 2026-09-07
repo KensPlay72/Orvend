@@ -118,6 +118,12 @@ urlpatterns = [
     path("compras/put/<int:id>/", views.editar_compra_put, name="editar_compra_put"),
     path("cppagar/", views.cuentas_por_pagar_view, name="cppagar"),
     path("cppagar/post/<int:id>/", views.registrar_abono, name="cppagar_abono"),
+    path("cxcobrar/", views.cuentas_por_cobrar_view, name="cxcobrar"),
+    path(
+        "cxcobrar/post/<int:id>/",
+        views.registrar_abono_cobrar,
+        name="cxcobrar_abono",
+    ),
     path("clientes/", views.clientes_view, name="clientes"),
     path("clientes/post/", views.post_clientes, name="post_cliente"),
     path("clientes/get/<int:id>/", views.get_cliente, name="get_cliente"),

@@ -72,92 +72,307 @@
                     </div>
                     <div class="modal-body">
                         <form id="postregis" enctype="multipart/form-data">
+
                             {% csrf_token %}
+
+                            <!-- ==========================================================
+                                NOMBRES
+                            =========================================================== -->
+
                             <div class="horizontales">
+
                                 <div class="form-group">
-                                    <label for="pnombre">Primero Nombre</label>
-                                    <input type="text"
+                                    <label for="pnombre">Primer Nombre</label>
+
+                                    <input
+                                        type="text"
                                         name="pnombre"
                                         id="pnombre"
                                         class="form-control"
-                                        placeholder="Nombre">
+                                        placeholder="Primer Nombre"
+                                        maxlength="100"
+                                    >
                                 </div>
+
                                 <div class="form-group">
                                     <label for="snombre">Segundo Nombre</label>
-                                    <input type="text"
+
+                                    <input
+                                        type="text"
                                         name="snombre"
                                         id="snombre"
                                         class="form-control"
-                                        placeholder="Apellido">
+                                        placeholder="Segundo Nombre"
+                                        maxlength="100"
+                                    >
                                 </div>
+
                             </div>
+
                             <br>
+
+                            <!-- ==========================================================
+                                APELLIDOS
+                            =========================================================== -->
+
                             <div class="horizontales">
+
                                 <div class="form-group">
-                                    <label for="papellido">Primero Apellido</label>
-                                    <input type="text"
+                                    <label for="papellido">Primer Apellido</label>
+
+                                    <input
+                                        type="text"
                                         name="papellido"
                                         id="papellido"
                                         class="form-control"
-                                        placeholder="Apellido">
+                                        placeholder="Primer Apellido"
+                                        maxlength="100"
+                                    >
                                 </div>
+
                                 <div class="form-group">
                                     <label for="sapellido">Segundo Apellido</label>
-                                    <input type="text"
+
+                                    <input
+                                        type="text"
                                         name="sapellido"
                                         id="sapellido"
                                         class="form-control"
-                                        placeholder="Apellido">
+                                        placeholder="Segundo Apellido"
+                                        maxlength="100"
+                                    >
                                 </div>
+
                             </div>
+
                             <br>
+
+                            <!-- ==========================================================
+                                EMPRESA
+                            =========================================================== -->
+
                             <div class="form-group">
-                                <label for="nempresa">Nombre de la Empresa</label>
-                                <input type="text"
+
+                                <label for="nempresa">
+                                    Nombre de la Empresa
+                                </label>
+
+                                <input
+                                    type="text"
                                     name="nempresa"
                                     id="nempresa"
                                     class="form-control"
-                                    placeholder="Nombre de la Empresa">
+                                    placeholder="Nombre de la Empresa"
+                                    maxlength="100"
+                                >
+
                             </div>
+
                             <br>
+
+                            <!-- ==========================================================
+                                DNI
+                            =========================================================== -->
+
                             <div class="form-group">
-                                <label>DNI/RTN</label>
-                                <input type="text"
-                                       name="dni"
-                                       id="dni"
-                                       class="form-control"
-                                       placeholder="DNI/RTN"
-                                       oninput="validateNumber(this)"
-                                       maxlength="14">
+
+                                <label for="dni">
+                                    DNI/RTN
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="dni"
+                                    id="dni"
+                                    class="form-control"
+                                    placeholder="DNI/RTN"
+                                    oninput="validateNumber(this)"
+                                    maxlength="14"
+                                >
+
                             </div>
+
                             <br>
+
+                            <!-- ==========================================================
+                                EMAIL
+                            =========================================================== -->
+
                             <div class="form-group">
-                                <label>Email</label>
-                                <input type="email"
-                                       name="email"
-                                       id="email"
-                                       class="form-control"
-                                       placeholder="Email">
+
+                                <label for="email">
+                                    Email
+                                </label>
+
+                                <input
+                                    type="email"
+                                    name="email"
+                                    id="email"
+                                    class="form-control"
+                                    placeholder="Email"
+                                    maxlength="100"
+                                >
+
                             </div>
+
                             <br>
+
+                            <!-- ==========================================================
+                                TELEFONO
+                            =========================================================== -->
+
                             <div class="form-group">
-                                <label for="telefono">Número de Teléfono</label>
-                                <div class="d-flex">
-                                    <!-- Input para número -->
-                                    <input type="text"
-                                        name="telefono"
-                                        id="telefono"
+
+                                <label for="telefono">
+                                    Número de Teléfono
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="telefono"
+                                    id="telefono"
+                                    class="form-control"
+                                    placeholder="Número de teléfono"
+                                    oninput="validateNumber(this)"
+                                    maxlength="12"
+                                >
+
+                            </div>
+
+                            <br>
+
+
+                            <!-- ==========================================================
+                                UBICACION
+                            =========================================================== -->
+
+                            <div class="horizontales">
+
+                                <div class="form-group">
+
+                                    <label for="pais">
+                                        País
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        name="pais"
+                                        id="pais"
                                         class="form-control"
-                                        placeholder="Número de teléfono"
-                                        oninput="validateNumber(this)"
-                                        maxlength="12">
+                                        placeholder="País"
+                                        maxlength="100"
+                                    >
+
                                 </div>
+
+                                <div class="form-group">
+
+                                    <label for="departamento">
+                                        Departamento
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        name="departamento"
+                                        id="departamento"
+                                        class="form-control"
+                                        placeholder="Departamento"
+                                        maxlength="100"
+                                    >
+
+                                </div>
+
                             </div>
+
                             <br>
+
                             <div class="form-group">
-                                <label for="direccion">Dirección</label>
-                                <textarea name="direccion" id="direccion" rows="2" maxlength="100" class="form-control" placeholder="Dirección"></textarea>
+
+                                <label for="municipio">
+                                    Municipio
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="municipio"
+                                    id="municipio"
+                                    class="form-control"
+                                    placeholder="Municipio"
+                                    maxlength="100"
+                                >
+
                             </div>
+
+                            <br>
+
+                            <!-- ==========================================================
+                                DIRECCION
+                            =========================================================== -->
+
+                            <div class="form-group">
+
+                                <label for="direccion">
+                                    Dirección
+                                </label>
+
+                                <textarea
+                                    name="direccion"
+                                    id="direccion"
+                                    rows="2"
+                                    maxlength="100"
+                                    class="form-control"
+                                    placeholder="Dirección"
+                                ></textarea>
+
+                            </div>
+
+
+
+                            <!-- ==========================================================
+                                CREDITO
+                            =========================================================== -->
+
+                            {% if perms.manager.view_cuentasporcobrar %}
+                            <br>
+                            <div class="horizontales">
+
+                                <div class="form-group">
+
+                                    <label for="d_credito">
+                                        Días de Crédito
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        name="d_credito"
+                                        id="d_credito"
+                                        class="form-control"
+                                        placeholder="Dias de Credito"
+                                        oninput="validateNumber(this)"
+                                    >
+
+                                </div>
+
+                                <div class="form-group">
+
+                                    <label for="max_credito">
+                                        Crédito Máximo
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        name="max_credito"
+                                        placeholder="Credito Maximo"
+                                        id="max_credito"
+                                        class="form-control"
+                                        oninput="validateNumber(this)"
+                                    >
+
+                                </div>
+
+                            </div>
+                            {% endif %}
+
                         </form>
                     </div>
                     <div class="modal-footer">
@@ -185,103 +400,379 @@
                     </div>
                     <div class="modal-body">
                         <form id="putclientes" enctype="multipart/form-data">
+
                             {% csrf_token %}
-                            <input type="text" id="idedit" hidden>
+
+                            <input type="hidden" id="idedit">
+
+
+                            <!-- ==========================================================
+                                NOMBRES
+                            =========================================================== -->
+
                             <div class="horizontales">
+
                                 <div class="form-group">
-                                    <label for="pnombreedit">Primero Nombre</label>
-                                    <input type="text"
+
+                                    <label for="pnombreedit">
+                                        Primer Nombre
+                                    </label>
+
+                                    <input
+                                        type="text"
                                         name="pnombreedit"
                                         id="pnombreedit"
                                         class="form-control"
-                                        placeholder="Nombre">
+                                        placeholder="Primer Nombre"
+                                        maxlength="100"
+                                    >
+
                                 </div>
+
+
                                 <div class="form-group">
-                                    <label for="snombreedit">Segundo Nombre</label>
-                                    <input type="text"
+
+                                    <label for="snombreedit">
+                                        Segundo Nombre
+                                    </label>
+
+                                    <input
+                                        type="text"
                                         name="snombreedit"
                                         id="snombreedit"
                                         class="form-control"
-                                        placeholder="Apellido">
+                                        placeholder="Segundo Nombre"
+                                        maxlength="100"
+                                    >
+
                                 </div>
+
                             </div>
+
                             <br>
+
+
+                            <!-- ==========================================================
+                                APELLIDOS
+                            =========================================================== -->
+
                             <div class="horizontales">
+
                                 <div class="form-group">
-                                    <label for="papellidoedit">Primero Apellido</label>
-                                    <input type="text"
+
+                                    <label for="papellidoedit">
+                                        Primer Apellido
+                                    </label>
+
+                                    <input
+                                        type="text"
                                         name="papellidoedit"
                                         id="papellidoedit"
                                         class="form-control"
-                                        placeholder="Apellido">
+                                        placeholder="Primer Apellido"
+                                        maxlength="100"
+                                    >
+
                                 </div>
+
+
                                 <div class="form-group">
-                                    <label for="sapellidoedit">Segundo Apellido</label>
-                                    <input type="text"
+
+                                    <label for="sapellidoedit">
+                                        Segundo Apellido
+                                    </label>
+
+                                    <input
+                                        type="text"
                                         name="sapellidoedit"
                                         id="sapellidoedit"
                                         class="form-control"
-                                        placeholder="Apellido">
+                                        placeholder="Segundo Apellido"
+                                        maxlength="100"
+                                    >
+
                                 </div>
+
                             </div>
+
                             <br>
+
+
+                            <!-- ==========================================================
+                                EMPRESA
+                            =========================================================== -->
+
                             <div class="form-group">
-                                <label for="nempresaedit">Nombre de la Empresa</label>
-                                <input type="text"
+
+                                <label for="nempresaedit">
+                                    Nombre de la Empresa
+                                </label>
+
+                                <input
+                                    type="text"
                                     name="nempresaedit"
                                     id="nempresaedit"
                                     class="form-control"
-                                    placeholder="Nombre de la Empresa">
+                                    placeholder="Nombre de la Empresa"
+                                    maxlength="100"
+                                >
+
                             </div>
+
                             <br>
+
+
+                            <!-- ==========================================================
+                                DNI
+                            =========================================================== -->
+
                             <div class="form-group">
-                                <label for="dniedit">DNI/RTN</label>
-                                <input type="text"
-                                       name="dniedit"
-                                       id="dniedit"
-                                       class="form-control"
-                                       placeholder="DNI/RTN"
-                                       oninput="validateNumber(this)"
-                                       maxlength="14">
+
+                                <label for="dniedit">
+                                    DNI/RTN
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="dniedit"
+                                    id="dniedit"
+                                    class="form-control"
+                                    placeholder="DNI/RTN"
+                                    oninput="validateNumber(this)"
+                                    maxlength="14"
+                                >
+
                             </div>
+
                             <br>
+
+
+                            <!-- ==========================================================
+                                EMAIL
+                            =========================================================== -->
+
                             <div class="form-group">
-                                <label for="emailedit">Email</label>
-                                <input type="email"
-                                       name="emailedit"
-                                       id="emailedit"
-                                       class="form-control"
-                                       placeholder="Email">
+
+                                <label for="emailedit">
+                                    Email
+                                </label>
+
+                                <input
+                                    type="email"
+                                    name="emailedit"
+                                    id="emailedit"
+                                    class="form-control"
+                                    placeholder="Email"
+                                    maxlength="100"
+                                >
+
                             </div>
+
                             <br>
+
+
+                            <!-- ==========================================================
+                                TELEFONO
+                            =========================================================== -->
+
                             <div class="form-group">
-                                <label for="telefonoedit">Número de Teléfono</label>
-                                <div class="d-flex">
-                                    <!-- Input para número -->
-                                    <input type="text"
-                                        name="telefonoedit"
-                                        id="telefonoedit"
+
+                                <label for="telefonoedit">
+                                    Número de Teléfono
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="telefonoedit"
+                                    id="telefonoedit"
+                                    class="form-control"
+                                    placeholder="Número de teléfono"
+                                    oninput="validateNumber(this)"
+                                    maxlength="12"
+                                >
+
+                            </div>
+
+                            <br>
+
+
+                            <!-- ==========================================================
+                                DIRECCION
+                            =========================================================== -->
+
+                            <div class="form-group">
+
+                                <label for="direccionedit">
+                                    Dirección
+                                </label>
+
+                                <textarea
+                                    name="direccionedit"
+                                    id="direccionedit"
+                                    rows="2"
+                                    maxlength="100"
+                                    class="form-control"
+                                    placeholder="Dirección"
+                                ></textarea>
+
+                            </div>
+
+                            <br>
+
+
+                            <!-- ==========================================================
+                                UBICACION
+                            =========================================================== -->
+
+                            <div class="horizontales">
+
+                                <div class="form-group">
+
+                                    <label for="paisedit">
+                                        País
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        name="paisedit"
+                                        id="paisedit"
                                         class="form-control"
-                                        placeholder="Número de teléfono"
-                                        oninput="validateNumber(this)"
-                                        maxlength="12">
+                                        placeholder="País"
+                                        maxlength="100"
+                                    >
+
                                 </div>
+
+
+                                <div class="form-group">
+
+                                    <label for="departamentoedit">
+                                        Departamento
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        name="departamentoedit"
+                                        id="departamentoedit"
+                                        class="form-control"
+                                        placeholder="Departamento"
+                                        maxlength="100"
+                                    >
+
+                                </div>
+
                             </div>
+
                             <br>
+
+
                             <div class="form-group">
-                                <label for="direccionedit">Dirección</label>
-                                <textarea name="direccionedit" id="direccionedit" rows="2" maxlength="100" class="form-control" required placeholder="Dirección"></textarea>
+
+                                <label for="municipioedit">
+                                    Municipio
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="municipioedit"
+                                    id="municipioedit"
+                                    class="form-control"
+                                    placeholder="Municipio"
+                                    maxlength="100"
+                                >
+
                             </div>
+
+                            
+
+
+                            <!-- ==========================================================
+                                CREDITO
+                            =========================================================== -->
+
+                            {% if perms.manager.view_cuentasporcobrar %}
                             <br>
+                            <div class="horizontales">
+
+                                <div class="form-group">
+
+                                    <label for="d_creditoedit">
+                                        Días de Crédito
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        name="d_creditoedit"
+                                        id="d_creditoedit"
+                                        class="form-control"
+                                        placeholder="Dias de Credito"
+                                        oninput="validateNumber(this)"
+                                    >
+
+                                </div>
+
+
+                                <div class="form-group">
+
+                                    <label for="max_creditoedit">
+                                        Crédito Máximo
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        name="max_creditoedit"
+                                        id="max_creditoedit"
+                                        class="form-control"
+                                        placeholder="Credito Maximo"
+                                        oninput="validateNumber(this)"
+                                    >
+
+                                </div>
+
+                            </div>
+
+                            {% endif %}
+
+                            <br>
+
+
+                            <!-- ==========================================================
+                                ESTADO
+                            =========================================================== -->
+
                             <div class="form-group">
-                                <label for="isActiveedit" class="d-block">
+
+                                <label
+                                    for="isActiveedit"
+                                    class="d-block"
+                                >
                                     Estado
                                 </label>
-                                <label class="d-flex align-items-center" for="isActiveedit">
-                                    <input type="checkbox" id="isActiveedit" name="isActiveedit" checked class="me-2">
-                                    <span id="activeTextedit" class="fw-bold text-success">Activo</span>
+
+                                <label
+                                    class="d-flex align-items-center"
+                                    for="isActiveedit"
+                                >
+
+                                    <input
+                                        type="checkbox"
+                                        id="isActiveedit"
+                                        name="isActiveedit"
+                                        checked
+                                        class="me-2"
+                                    >
+
+                                    <span
+                                        id="activeTextedit"
+                                        class="fw-bold text-success"
+                                    >
+                                        Activo
+                                    </span>
+
                                 </label>
+
                             </div>
+
                         </form>
                     </div>
                     <div class="modal-footer">
@@ -343,6 +834,6 @@
     </table>
 </div>
         <br>
-        <script src="{% static 'js/clientes.js' %}"></script>
+        <script src="{% static 'js/clientes.js' %}?v=credito-permisos-20260907"></script>
         <script src="{% static 'js/chektext.js' %}"></script>
     {% endblock %}

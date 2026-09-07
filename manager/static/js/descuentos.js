@@ -600,6 +600,7 @@ document.getElementById("es_cuponedit").addEventListener("change", function () {
 // REGISTRAR
 // =========================
 document.addEventListener("DOMContentLoaded", () => {
+
   const form = document.getElementById("postregistro");
 
   const modalElement = document.getElementById("modalregis");
@@ -607,9 +608,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const modal = new bootstrap.Modal(modalElement);
 
   form.addEventListener("submit", async (e) => {
+
     e.preventDefault();
 
     const payload = {
+
       // =========================
       // INFORMACION GENERAL
       // =========================
@@ -641,6 +644,7 @@ document.addEventListener("DOMContentLoaded", () => {
       es_cantidad: document.getElementById("es_cantidad").checked,
 
       cantidad_lleva: document.getElementById("cantidad_lleva").value,
+
       cantidad_paga: document.getElementById("cantidad_paga").value,
 
       // =========================
@@ -676,43 +680,98 @@ document.addEventListener("DOMContentLoaded", () => {
       acumulable: document.getElementById("acumulable").checked,
     };
 
+
+    // ==========================================================
+    // VALIDAR FECHAS
+    // ==========================================================
+
+    if (payload.fecha_inicio && payload.fecha_fin) {
+
+      const fechaInicio = new Date(payload.fecha_inicio);
+      const fechaFin = new Date(payload.fecha_fin);
+
+      // La fecha de inicio no puede ser mayor que la fecha final
+      if (fechaInicio > fechaFin) {
+
+        Swal.fire({
+          title: "Fechas inválidas",
+          text: "La fecha de inicio no puede ser mayor que la fecha de finalización.",
+          icon: "warning",
+          confirmButtonText: "Aceptar",
+          customClass: {
+            confirmButton: "classbotones",
+          },
+        });
+
+        return;
+      }
+    }
+
+
+    // ==========================================================
+    // ENVIAR
+    // ==========================================================
+
     try {
+
       const response = await fetch("/manager/descuentos/post/", {
+
         method: "POST",
 
         headers: {
+
           "Content-Type": "application/json",
 
-          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
-            .value,
+          "X-CSRFToken":
+            document.querySelector(
+              "[name=csrfmiddlewaretoken]"
+            ).value,
+
         },
 
         body: JSON.stringify(payload),
+
       });
+
 
       const data = await response.json();
 
+
       if (data.success) {
+
         modal.hide();
 
         form.reset();
 
+
         // Reset visual dropdowns
-        document.querySelectorAll(".select-container button").forEach((btn) => {
-          btn.textContent = "Escriba para buscar...";
-        });
+
+        document
+          .querySelectorAll(".select-container button")
+          .forEach((btn) => {
+
+            btn.textContent =
+              "Escriba para buscar...";
+
+          });
+
 
         // Ocultar campos
+
         $("#divcodigo").hide();
 
         $("#contenedor_productos").hide();
 
         $("#contenedor_categorias").hide();
 
+
         Swal.fire({
+
           title: "¡Éxito!",
 
-          text: data.message || "Descuento registrado correctamente",
+          text:
+            data.message ||
+            "Descuento registrado correctamente",
 
           icon: "success",
 
@@ -721,14 +780,22 @@ document.addEventListener("DOMContentLoaded", () => {
           customClass: {
             confirmButton: "classbotones",
           },
+
         }).then(() => {
+
           window.location.reload(true);
+
         });
+
       } else {
+
         Swal.fire({
+
           title: "Error",
 
-          text: data.message || "Ocurrió un error al registrar",
+          text:
+            data.message ||
+            "Ocurrió un error al registrar",
 
           icon: "error",
 
@@ -737,12 +804,17 @@ document.addEventListener("DOMContentLoaded", () => {
           customClass: {
             confirmButton: "classbotones",
           },
+
         });
+
       }
+
     } catch (error) {
+
       console.error(error);
 
       Swal.fire({
+
         title: "Error",
 
         text: "Error de conexión o inesperado",
@@ -754,11 +826,14 @@ document.addEventListener("DOMContentLoaded", () => {
         customClass: {
           confirmButton: "classbotones",
         },
+
       });
+
     }
+
   });
-});
-// =========================
+
+});// =========================
 // LLENAR FORMULARIO
 // =========================
 document.addEventListener("DOMContentLoaded", () => {
@@ -876,35 +951,42 @@ document.addEventListener("DOMContentLoaded", () => {
 // PUT DESCUENTO
 //=========================
 document.addEventListener("DOMContentLoaded", () => {
+
   const formPut = document.getElementById("putregistro");
 
   formPut.addEventListener("submit", async (e) => {
+
     e.preventDefault();
 
     const id = document.getElementById("idedit").value;
 
     const payload = {
+
       // =========================
       // GENERAL
       // =========================
+
       nombre: document.getElementById("nombreedit").value,
       descripcion: document.getElementById("descripcionedit").value,
 
       // =========================
       // CUPON
       // =========================
+
       es_cupon: document.getElementById("es_cuponedit").checked,
       codigo: document.getElementById("codigoedit").value,
 
       // =========================
       // TIPO DESCUENTO
       // =========================
+
       es_porcentaje: document.getElementById("es_porcentajeedit").checked,
       valor: document.getElementById("valoredit").value,
 
       // =========================
       // CANTIDAD
       // =========================
+
       es_cantidad: document.getElementById("es_cantidadedit").checked,
       cantidad_lleva: document.getElementById("cantidad_llevaedit").value,
       cantidad_paga: document.getElementById("cantidad_pagaedit").value,
@@ -912,50 +994,87 @@ document.addEventListener("DOMContentLoaded", () => {
       // =========================
       // APLICACION
       // =========================
-      aplicar_productos: document.getElementById("aplicar_productosedit")
-        .checked,
-      aplicar_categorias: document.getElementById("aplicar_categoriasedit")
-        .checked,
+
+      aplicar_productos: document.getElementById("aplicar_productosedit").checked,
+      aplicar_categorias: document.getElementById("aplicar_categoriasedit").checked,
       productoid: document.getElementById("productoidedit").value,
       categoriaid: document.getElementById("categoriaidedit").value,
 
       // =========================
       // LIMITES
       // =========================
+
       limite_uso: document.getElementById("limite_usoedit").value,
 
       // =========================
       // FECHAS
       // =========================
+
       fecha_inicio: document.getElementById("fecha_inicioedit").value,
       fecha_fin: document.getElementById("fecha_finedit").value,
 
       // =========================
       // CONFIG
       // =========================
+
       acumulable: document.getElementById("acumulableedit").checked,
       is_active: document.getElementById("is_activeedit").checked,
+
     };
 
+    // ==========================================================
+    // VALIDAR FECHAS
+    // ==========================================================
+
+    if (payload.fecha_inicio && payload.fecha_fin) {
+
+      const fechaInicio = new Date(payload.fecha_inicio);
+      const fechaFin = new Date(payload.fecha_fin);
+
+      if (fechaInicio > fechaFin) {
+
+        await Swal.fire({
+          title: "Fechas inválidas",
+          text: "La fecha de inicio no puede ser mayor que la fecha de finalización.",
+          icon: "warning",
+          confirmButtonText: "Aceptar",
+          customClass: {
+            confirmButton: "classbotones",
+          },
+        });
+
+        return;
+      }
+    }
+
     try {
+
       const response = await fetch(`/manager/descuentos/put/${id}/`, {
+
         method: "PUT",
+
         headers: {
           "Content-Type": "application/json",
-          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
-            .value,
+          "X-CSRFToken": document.querySelector(
+            "[name=csrfmiddlewaretoken]"
+          ).value,
         },
+
         body: JSON.stringify(payload),
+
       });
 
       const data = await response.json();
 
       if (data.success) {
+
         const modal = bootstrap.Modal.getInstance(
-          document.getElementById("modalput"),
+          document.getElementById("modalput")
         );
 
-        modal.hide();
+        if (modal) {
+          modal.hide();
+        }
 
         Swal.fire({
           title: "¡Éxito!",
@@ -966,9 +1085,13 @@ document.addEventListener("DOMContentLoaded", () => {
             confirmButton: "classbotones",
           },
         }).then(() => {
+
           window.location.reload(true);
+
         });
+
       } else {
+
         Swal.fire({
           title: "Error",
           text: data.message || "Error al actualizar",
@@ -978,8 +1101,11 @@ document.addEventListener("DOMContentLoaded", () => {
             confirmButton: "classbotones",
           },
         });
+
       }
+
     } catch (error) {
+
       console.error(error);
 
       Swal.fire({
@@ -991,6 +1117,33 @@ document.addEventListener("DOMContentLoaded", () => {
           confirmButton: "classbotones",
         },
       });
+
     }
+
   });
+
+  // ==========================================================
+  // IMPEDIR SELECCIONAR FECHA FIN MENOR QUE FECHA INICIO
+  // ==========================================================
+
+  const fechaInicioEdit = document.getElementById("fecha_inicioedit");
+  const fechaFinEdit = document.getElementById("fecha_finedit");
+
+  if (fechaInicioEdit && fechaFinEdit) {
+
+    fechaInicioEdit.addEventListener("change", function () {
+
+      fechaFinEdit.min = this.value;
+
+      if (
+        fechaFinEdit.value &&
+        new Date(fechaFinEdit.value) < new Date(this.value)
+      ) {
+        fechaFinEdit.value = "";
+      }
+
+    });
+
+  }
+
 });

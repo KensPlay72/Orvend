@@ -4,7 +4,8 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 import uuid
 from decimal import Decimal
-
+import random
+import string
 
 from .enums import (
     EstadoCompra,
@@ -45,28 +46,139 @@ class Categorias(Abstracto):
 # =========================
 # CLIENTES
 # =========================
+
 class Clientes(Abstracto):
-    dni = models.CharField(max_length=14)
 
-    nombre = models.CharField(max_length=100, null=True, blank=True)
-    nombre2 = models.CharField(max_length=100, null=True, blank=True)
+    dni = models.CharField(
+        max_length=14
+    )
 
-    apellido = models.CharField(max_length=100, null=True, blank=True)
-    apellido2 = models.CharField(max_length=100, null=True, blank=True)
+    nombre = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True
+    )
 
-    empresa = models.CharField(max_length=100, null=True, blank=True)
-    direccion = models.CharField(max_length=100, null=True, blank=True)
+    nombre2 = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True
+    )
 
-    telefono = models.CharField(max_length=20, null=True, blank=True)
-    email = models.EmailField(max_length=100, null=True, blank=True)
+    apellido = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True
+    )
+
+    apellido2 = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True
+    )
+
+    empresa = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True
+    )
+
+    direccion = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True
+    )
+
+    telefono = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True
+    )
+
+    email = models.EmailField(
+        max_length=100,
+        null=True,
+        blank=True
+    )
+
+    d_credito = models.IntegerField(
+        null=True,
+        blank=True
+    )
+
+    max_credito = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+
+    pais = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True
+    )
+
+    departamento = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True
+    )
+
+    municipio = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True
+    )
+
+    cod_cliente = models.CharField(
+        max_length=7,
+        unique=True,
+        null=True,
+        blank=True
+    )
+
+    def generar_codigo_cliente(self):
+
+        caracteres = string.ascii_uppercase + string.digits
+
+        while True:
+
+            codigo = "".join(
+                random.choices(caracteres, k=7)
+            )
+
+            if not Clientes.objects.filter(
+                cod_cliente=codigo
+            ).exists():
+
+                return codigo
+
+    def save(self, *args, **kwargs):
+
+        if not self.cod_cliente:
+            self.cod_cliente = self.generar_codigo_cliente()
+
+        self.f_modificacion = timezone.now()
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.nombre_completo
 
     @property
     def nombre_completo(self):
+
         return " ".join(
-            filter(None, [self.nombre, self.nombre2, self.apellido, self.apellido2])
+            filter(
+                None,
+                [
+                    self.nombre,
+                    self.nombre2,
+                    self.apellido,
+                    self.apellido2
+                ]
+            )
         ).strip()
 
 
@@ -779,6 +891,54 @@ class Ventas(Abstracto):
 
     def __str__(self):
         return f"Venta #{self.id}"
+
+
+# =========================
+# CUENTAS POR COBRAR
+# =========================
+class CuentasPorCobrar(Abstracto):
+    cliente = models.ForeignKey(
+        Clientes,
+        on_delete=models.PROTECT,
+        related_name="cliente_cuentas_por_cobrar",
+    )
+
+    venta = models.OneToOneField(
+        Ventas,
+        on_delete=models.PROTECT,
+        related_name="venta_cuenta_por_cobrar",
+    )
+
+    monto_total = models.DecimalField(max_digits=18, decimal_places=2)
+    monto_pendiente = models.DecimalField(max_digits=18, decimal_places=2)
+    fecha_vencimiento = models.DateTimeField()
+
+    estado = models.IntegerField(
+        choices=EstadoCuenta.choices,
+        default=EstadoCuenta.PENDIENTE,
+    )
+
+    def __str__(self):
+        return f"Cuenta por cobrar #{self.id} - {self.get_estado_display()}"
+
+    @property
+    def pagado(self):
+        return self.monto_pendiente <= 0
+
+
+class RegistroAbonosCobrar(Abstracto):
+    cuenta_por_cobrar = models.ForeignKey(
+        CuentasPorCobrar,
+        on_delete=models.CASCADE,
+        related_name="cuenta_abonos",
+    )
+
+    monto_abonado = models.DecimalField(max_digits=18, decimal_places=2)
+    monto_pendiente = models.DecimalField(max_digits=18, decimal_places=2)
+    liquidado = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Abono por cobrar #{self.id}"
 
 
 class DetalleVenta(Abstracto):

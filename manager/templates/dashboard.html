@@ -594,5 +594,175 @@
     </div>
 
 </div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+
+    const fechasGrafico = {{ fechas_grafico|safe }};
+    const valoresGrafico = {{ valores_grafico|safe }};
+
+    const ctx = document.getElementById("ventasChart");
+
+    const gradient = ctx
+        .getContext("2d")
+        .createLinearGradient(0, 0, 0, 320);
+
+    gradient.addColorStop(0, "rgba(59, 130, 246, 0.25)");
+    gradient.addColorStop(1, "rgba(59, 130, 246, 0)");
+
+    new Chart(ctx, {
+
+        type: "line",
+
+        data: {
+
+            labels: fechasGrafico,
+
+            datasets: [
+                {
+                    label: "Ventas",
+
+                    data: valoresGrafico,
+
+                    borderWidth: 3,
+
+                    borderColor: "#3b82f6",
+
+                    backgroundColor: gradient,
+
+                    fill: true,
+
+                    tension: 0.45,
+
+                    pointRadius: 0,
+
+                    pointHoverRadius: 6,
+
+                    pointHoverBorderWidth: 3,
+
+                    pointHoverBackgroundColor: "#ffffff",
+
+                    pointHoverBorderColor: "#3b82f6"
+                }
+            ]
+        },
+
+        options: {
+
+            responsive: true,
+
+            maintainAspectRatio: false,
+
+            interaction: {
+                intersect: false,
+                mode: "index"
+            },
+
+            plugins: {
+
+                legend: {
+                    display: false
+                },
+
+                tooltip: {
+
+                    backgroundColor: "#1f2937",
+
+                    titleColor: "#ffffff",
+
+                    bodyColor: "#ffffff",
+
+                    padding: 12,
+
+                    cornerRadius: 8,
+
+                    displayColors: false,
+
+                    callbacks: {
+
+                        title: function(context) {
+
+                            return context[0].label;
+
+                        },
+
+                        label: function(context) {
+
+                            return "L " +
+                                Number(context.raw).toLocaleString(
+                                    "es-HN",
+                                    {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                    }
+                                );
+                        }
+                    }
+                }
+            },
+
+            scales: {
+
+                x: {
+
+                    grid: {
+                        display: false
+                    },
+
+                    border: {
+                        display: false
+                    },
+
+                    ticks: {
+
+                        color: "#9ca3af",
+
+                        maxRotation: 0,
+
+                        autoSkip: true,
+
+                        maxTicksLimit: 10
+                    }
+                },
+
+                y: {
+
+                    beginAtZero: true,
+
+                    grid: {
+
+                        color: "rgba(156, 163, 175, 0.12)",
+
+                        drawBorder: false
+                    },
+
+                    border: {
+                        display: false
+                    },
+
+                    ticks: {
+
+                        color: "#9ca3af",
+
+                        padding: 10,
+
+                        callback: function(value) {
+
+                            return "L " +
+                                Number(value).toLocaleString(
+                                    "es-HN",
+                                    {
+                                        notation: "compact",
+                                        maximumFractionDigits: 1
+                                    }
+                                );
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+</script>
 
 {% endblock %}

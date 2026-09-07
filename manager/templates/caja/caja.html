@@ -598,12 +598,17 @@
                                 Pago con tarjeta
                             </option>
 
+                            {% if perms.manager.view_cuentasporcobrar %}
+                                <option value="pago_credito">
+                                    Pago a crédito
+                                </option>
+                            {% endif %}
+
                         </select>
 
                     </div>
 
 
-                    <br>
 
 
 
@@ -616,6 +621,7 @@
                         style="display: none;"
                         id="div_dinero"
                     >
+                    <br>
 
                         <label for="Pdinero">
                             Dinero recibido
@@ -645,7 +651,7 @@
                         style="display: none;"
                         id="div_nuemro"
                     >
-
+                        <br>
                         <label for="Pautorizacion">
                             Número de autorización
                         </label>
@@ -1040,7 +1046,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 <script
     type="module"
-    src="{% static 'js/caja/caja.js' %}"
+    src="{% static 'js/caja/caja.js' %}?v=credito-20260907"
 ></script>
 
 

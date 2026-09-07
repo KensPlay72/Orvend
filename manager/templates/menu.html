@@ -169,7 +169,8 @@
                                     </a>
                                 {% endif %}
                                 {% if perms.manager.view_descuento %}
-                                    <a href="{% url 'descuentos' %}" class="nav__link">
+                                    <a href="{% url 'descuentos' %}"
+                                    class="nav__link {% if request.path == '/manager/descuentos/' %}active{% endif %}">
                                         <i class="bx bx-purchase-tag nav__icon"></i>
                                         <span class="nav__name">Descuentos</span>
                                     </a>
@@ -235,6 +236,13 @@
                                    class="nav__link {% if request.path == '/manager/cppagar/' %}active{% endif %}">
                                     <i class="bx bx-money nav__icon"></i>
                                     <span class="nav__name">Cuentas x Pagar</span>
+                                </a>
+                            {% endif %}
+                            {% if perms.manager.view_cuentasporcobrar %}
+                                <a href="{% url 'cxcobrar' %}"
+                                   class="nav__link {% if request.path == '/manager/cxcobrar/' %}active{% endif %}">
+                                    <i class="bx bx-receipt nav__icon"></i>
+                                    <span class="nav__name">Cuentas x Cobrar</span>
                                 </a>
                             {% endif %}
                             {% if perms.manager.view_traslados %}
@@ -324,6 +332,12 @@
                                     <i class='bx bx-receipt nav__icon'></i>
                                     <span class="nav__name">Cuentas x pagar</span>
                                 </a>
+                                {% if perms.manager.view_cuentasporcobrar %}
+                                <a href="{% url 'cxcobrar' %}" class="nav__link {% if request.path == '/manager/cxcobrar/' %}active{% endif %}">
+                                    <i class='bx bx-receipt nav__icon'></i>
+                                    <span class="nav__name">Cuentas x cobrar</span>
+                                </a>
+                                {% endif %}
                                 <a href="{% url 'compras' %}" class="nav__link {% if request.path == '/manager/compras/' %}active{% endif %}">
                                     <i class='bx bx-cart-alt nav__icon'></i>
                                     <span class="nav__name">Compras</span>

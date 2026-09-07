@@ -25,12 +25,18 @@ from reportlab.lib.units import mm
 from .nextcloud import subir_archivo, obtener_archivo,eliminar_archivo
 import os
 import uuid
+from django.db.models.functions import TruncDate
+import random
+
+
 from .enums import EstadoCompra, EstadoCuenta, EstadoDevolucionCompra, Estados
 from .models import (
     Categorias,
     Clientes,
     Compras,
     CuentasPorPagar,
+    CuentasPorCobrar,
+    RegistroAbonosCobrar,
     DetalleCompra,
     DetalleTraslado,
     DevolucionCompra,
@@ -87,6 +93,8 @@ def dashboard_view(request):
         second=0,
         microsecond=0
     )
+
+    inicio_grafico = inicio_hoy - timedelta(days=29)
 
     # ==========================================================
     # TOTAL DE PRODUCTOS
@@ -168,6 +176,51 @@ def dashboard_view(request):
             total=Sum("total")
         )["total"] or 0
     )
+
+    # ==========================================================
+    # VENTAS ÚLTIMOS 30 DÍAS
+    # ==========================================================
+
+    ventas_30_dias_query = (
+        Ventas.objects
+        .filter(
+            f_creacion__gte=inicio_grafico,
+            f_creacion__lt=fin_hoy,
+            is_active=True,
+            is_delete=False
+        )
+        .annotate(
+            fecha=TruncDate("f_creacion")
+        )
+        .values("fecha")
+        .annotate(
+            total=Sum("total")
+        )
+        .order_by("fecha")
+    )
+
+    ventas_por_dia = {
+        item["fecha"]: item["total"]
+        for item in ventas_30_dias_query
+    }
+
+    fechas_grafico = []
+    valores_grafico = []
+
+    for i in range(30):
+
+        fecha = (
+            inicio_grafico.date()
+            + timedelta(days=i)
+        )
+
+        fechas_grafico.append(
+            fecha.strftime("%d/%m")
+        )
+
+        valores_grafico.append(
+            float(ventas_por_dia.get(fecha, 0))
+        )
 
     # ==========================================================
     # STOCK BAJO
@@ -277,6 +330,7 @@ def dashboard_view(request):
     # ==========================================================
 
     context = {
+
         "total_productos": total_productos,
 
         "ventas_hoy": ventas_hoy,
@@ -285,12 +339,16 @@ def dashboard_view(request):
         "compras_mes": compras_mes,
 
         "productos_bajo_stock": productos_bajo_stock,
+
         "cuentas_pendientes": cuentas_pendientes,
         "total_traslados": total_traslados,
         "cajas_abiertas": cajas_abiertas,
 
         "alertas_stock": alertas_stock,
         "alertas_vencimiento": alertas_vencimiento,
+
+        "fechas_grafico": fechas_grafico,
+        "valores_grafico": valores_grafico,
     }
 
     # ==========================================================
@@ -3706,6 +3764,149 @@ def cuentas_por_pagar_view(request):
     return render(request, "gestiones/cuentasxpagar.html", context)
 
 
+# ───────────────────────────────────────────────────────────────
+# CUENTAS POR COBRAR
+# ───────────────────────────────────────────────────────────────
+@login_required
+@permission_required("manager.view_cuentasporcobrar", raise_exception=True)
+def cuentas_por_cobrar_view(request):
+
+    search = request.GET.get("search", "").strip()
+
+    query = CuentasPorCobrar.objects.select_related(
+        "cliente",
+        "venta__id_factura_cai",
+    ).filter(is_delete=False)
+
+    if search:
+        query = query.filter(
+            Q(cliente__nombre__icontains=search)
+            | Q(cliente__nombre2__icontains=search)
+            | Q(cliente__apellido__icontains=search)
+            | Q(cliente__apellido2__icontains=search)
+            | Q(cliente__empresa__icontains=search)
+            | Q(cliente__dni__icontains=search)
+            | Q(venta__id_factura_cai__numero_factura__icontains=search)
+        )
+
+    total_pendientes = query.filter(estado=EstadoCuenta.PENDIENTE).count()
+    total_parciales = query.filter(estado=EstadoCuenta.PARCIAL).count()
+    total_pagadas = query.filter(estado=EstadoCuenta.PAGADO).count()
+    cuentas_totales = query.count()
+
+    paginator = Paginator(query.order_by("-id"), 10)
+    page_obj = paginator.get_page(request.GET.get("page", 1))
+
+    hoy = timezone.localdate()
+
+    for cuenta in page_obj:
+        cuenta.dias_restantes = (cuenta.fecha_vencimiento.date() - hoy).days
+        cuenta.dias_en_mora = max(-cuenta.dias_restantes, 0)
+
+        if cuenta.monto_pendiente <= Decimal("0"):
+            cuenta.estado_vencimiento = "cuenta-al-dia"
+        elif cuenta.dias_restantes < 0:
+            cuenta.estado_vencimiento = "cuenta-en-mora"
+        elif cuenta.dias_restantes <= 5:
+            cuenta.estado_vencimiento = "cuenta-por-vencer"
+        else:
+            cuenta.estado_vencimiento = "cuenta-al-dia"
+
+    return render(
+        request,
+        "gestiones/cuentasxcobrar.html",
+        {
+            "cuentas": page_obj,
+            "search": search,
+            "total_pendientes": total_pendientes,
+            "total_parciales": total_parciales,
+            "total_pagadas": total_pagadas,
+            "cuentas_totales": cuentas_totales,
+            "page": page_obj.number,
+            "total_pages": paginator.num_pages,
+            "page_range": paginator.page_range,
+            "mostrar_buscador": True,
+        },
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
+@transaction.atomic
+@permission_required("manager.add_registroabonoscobrar", raise_exception=True)
+def registrar_abono_cobrar(request, id):
+    try:
+        data = json.loads(request.body)
+        monto_abono = Decimal(str(data.get("montoAbono", 0)))
+
+        cuenta = CuentasPorCobrar.objects.select_for_update().filter(
+            id=id,
+            is_delete=False,
+        ).first()
+
+        if not cuenta:
+            return JsonResponse(
+                {"success": False, "message": "Cuenta por cobrar no encontrada"},
+                status=404,
+            )
+
+        if cuenta.estado == EstadoCuenta.PAGADO:
+            return JsonResponse(
+                {"success": False, "message": "La cuenta ya está pagada"},
+                status=400,
+            )
+
+        if monto_abono <= 0:
+            return JsonResponse(
+                {"success": False, "message": "El abono debe ser mayor a 0"},
+                status=400,
+            )
+
+        if monto_abono > cuenta.monto_pendiente:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "El abono no puede ser mayor al monto pendiente",
+                },
+                status=400,
+            )
+
+        nuevo_pendiente = cuenta.monto_pendiente - monto_abono
+
+        RegistroAbonosCobrar.objects.create(
+            cuenta_por_cobrar=cuenta,
+            monto_abonado=monto_abono,
+            monto_pendiente=nuevo_pendiente,
+            liquidado=(nuevo_pendiente <= 0),
+            u_creo_id=request.user.id,
+        )
+
+        cuenta.monto_pendiente = nuevo_pendiente
+
+        if nuevo_pendiente == 0:
+            cuenta.estado = EstadoCuenta.PAGADO
+        elif nuevo_pendiente < cuenta.monto_total:
+            cuenta.estado = EstadoCuenta.PARCIAL
+        else:
+            cuenta.estado = EstadoCuenta.PENDIENTE
+
+        cuenta.u_modifico_id = request.user.id
+        cuenta.f_modificacion = timezone.now()
+        cuenta.save()
+
+        return JsonResponse(
+            {"success": True, "message": "Abono registrado correctamente"}
+        )
+
+    except (InvalidOperation, TypeError, ValueError):
+        return JsonResponse(
+            {"success": False, "message": "El monto del abono no es válido"},
+            status=400,
+        )
+    except Exception as e:
+        return JsonResponse({"success": False, "message": str(e)}, status=500)
+
+
 @csrf_exempt
 @login_required
 @transaction.atomic
@@ -3850,153 +4051,508 @@ def clientes_view(request):
 
 @csrf_exempt
 @login_required
-@permission_required("manager.add_clientes", raise_exception=True)
+@permission_required(
+    "manager.add_clientes",
+    raise_exception=True
+)
 def post_clientes(request):
 
+    # ==========================================================
+    # VALIDAR METODO
+    # ==========================================================
+
     if request.method != "POST":
+
         return JsonResponse(
-            {"success": False, "message": "Método no permitido"}, status=405
+            {
+                "success": False,
+                "message": "Método no permitido"
+            },
+            status=405
         )
 
+
     try:
+
+        # ==========================================================
+        # LEER JSON
+        # ==========================================================
+
         data = json.loads(request.body)
+
+
+        # ==========================================================
+        # DATOS PRINCIPALES
+        # ==========================================================
 
         dni = (data.get("dni") or "").strip()
 
+
         if not dni:
+
             return JsonResponse(
-                {"success": False, "message": "El DNI es obligatorio"}, status=400
+                {
+                    "success": False,
+                    "message": "El DNI es obligatorio"
+                },
+                status=400
             )
 
-        # =====================
-        # VALIDAR DUPLICADO
-        # =====================
-        if Clientes.objects.filter(dni=dni, is_delete=False).exists():
-            return JsonResponse(
-                {"success": False, "message": "Ya existe un cliente con ese DNI"},
-                status=400,
-            )
 
-        # =====================
-        # CREAR CLIENTE
-        # =====================
-        cliente = Clientes.objects.create(
+        # ==========================================================
+        # VALIDAR DNI DUPLICADO
+        # ==========================================================
+
+        if Clientes.objects.filter(
             dni=dni,
+            is_delete=False
+        ).exists():
+
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Ya existe un cliente con ese DNI"
+                },
+                status=400
+            )
+
+
+        # ==========================================================
+        # GENERAR CODIGO DE CLIENTE
+        # ==========================================================
+
+        while True:
+
+            cod_cliente = str(
+                random.randint(
+                    1000000,
+                    9999999
+                )
+            )
+
+            if not Clientes.objects.filter(
+                cod_cliente=cod_cliente
+            ).exists():
+
+                break
+
+
+        # ==========================================================
+        # DATOS DE CREDITO
+        # ==========================================================
+
+        d_credito = data.get("d_credito")
+
+        if d_credito not in [None, ""]:
+
+            d_credito = int(d_credito)
+
+        else:
+
+            d_credito = None
+
+
+        max_credito = data.get("max_credito")
+
+        if max_credito not in [None, ""]:
+
+            max_credito = max_credito
+
+        else:
+
+            max_credito = None
+
+
+        # ==========================================================
+        # CREAR CLIENTE
+        # ==========================================================
+
+        cliente = Clientes.objects.create(
+
+            cod_cliente=cod_cliente,
+
+            dni=dni,
+
             nombre=data.get("nombre") or None,
+
             nombre2=data.get("nombre2") or None,
+
             apellido=data.get("apellido") or None,
+
             apellido2=data.get("apellido2") or None,
+
             empresa=data.get("empresa") or None,
+
             direccion=data.get("direccion") or None,
-            email=data.get("email") or None,
+
             telefono=data.get("telefono") or None,
+
+            email=data.get("email") or None,
+
+            pais=data.get("pais") or None,
+
+            departamento=data.get("departamento") or None,
+
+            municipio=data.get("municipio") or None,
+
+            d_credito=d_credito,
+
+            max_credito=max_credito,
+
             u_creo_id=request.user.id,
         )
+
+
+        # ==========================================================
+        # RESPUESTA
+        # ==========================================================
 
         return JsonResponse(
             {
                 "success": True,
                 "message": "Cliente registrado correctamente",
                 "id": cliente.id,
+                "cod_cliente": cliente.cod_cliente,
             }
         )
 
-    except Exception as e:
-        return JsonResponse({"success": False, "message": str(e)}, status=500)
 
+    except ValueError as e:
+
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f"Datos inválidos: {str(e)}"
+            },
+            status=400
+        )
+
+
+    except Exception as e:
+
+        return JsonResponse(
+            {
+                "success": False,
+                "message": str(e)
+            },
+            status=500
+        )
 
 @login_required
-@permission_required("manager.view_clientes", raise_exception=True)
+@permission_required(
+    "manager.view_clientes",
+    raise_exception=True
+)
 def get_cliente(request, id):
 
     try:
-        cliente = Clientes.objects.filter(id=id, is_delete=False).first()
+
+        # ==========================================================
+        # CLIENTE
+        # ==========================================================
+
+        cliente = Clientes.objects.filter(
+            id=id,
+            is_delete=False
+        ).first()
+
 
         if not cliente:
+
             return JsonResponse(
-                {"success": False, "message": "Cliente no encontrado"}, status=404
+                {
+                    "success": False,
+                    "message": "Cliente no encontrado"
+                },
+                status=404
             )
 
+
+        # ==========================================================
+        # DATOS
+        # ==========================================================
+
         data = {
+
             "id": cliente.id,
+
+            "cod_cliente": cliente.cod_cliente,
+
             "dni": cliente.dni,
+
             "nombre": cliente.nombre,
+
             "nombre2": cliente.nombre2,
+
             "apellido": cliente.apellido,
+
             "apellido2": cliente.apellido2,
+
             "empresa": cliente.empresa,
+
             "direccion": cliente.direccion,
-            "email": cliente.email,
+
             "telefono": cliente.telefono,
+
+            "email": cliente.email,
+
+            "pais": cliente.pais,
+
+            "departamento": cliente.departamento,
+
+            "municipio": cliente.municipio,
+
+            "d_credito": cliente.d_credito,
+
+            "max_credito": cliente.max_credito,
+
             "isActive": cliente.is_active,
         }
 
-        return JsonResponse({"success": True, "cliente": data})
 
-    except Exception as e:
-        return JsonResponse({"success": False, "message": str(e)}, status=500)
-
-
-@login_required
-@permission_required("manager.change_clientes", raise_exception=True)
-def put_cliente(request, id):
-
-    if request.method != "PUT":
         return JsonResponse(
-            {"success": False, "message": "Método no permitido"}, status=405
+            {
+                "success": True,
+                "cliente": data
+            }
         )
 
+
+    except Exception as e:
+
+        return JsonResponse(
+            {
+                "success": False,
+                "message": str(e)
+            },
+            status=500
+        )
+
+@login_required
+@permission_required(
+    "manager.change_clientes",
+    raise_exception=True
+)
+def put_cliente(request, id):
+
+    # ==========================================================
+    # METODO
+    # ==========================================================
+
+    if request.method != "PUT":
+
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Método no permitido"
+            },
+            status=405
+        )
+
+
     try:
+
+        # ==========================================================
+        # JSON
+        # ==========================================================
+
         data = json.loads(request.body)
+
+
+        # ==========================================================
+        # DNI
+        # ==========================================================
 
         dni = (data.get("dni") or "").strip()
 
+
         if not dni:
+
             return JsonResponse(
-                {"success": False, "message": "El DNI es obligatorio"}, status=400
+                {
+                    "success": False,
+                    "message": "El DNI es obligatorio"
+                },
+                status=400
             )
 
-        cliente = get_object_or_404(Clientes, id=id, is_delete=False)
 
-        # =====================
-        # VALIDAR DUPLICADO DNI
-        # =====================
-        if Clientes.objects.filter(dni=dni, is_delete=False).exclude(id=id).exists():
+        # ==========================================================
+        # CLIENTE
+        # ==========================================================
+
+        cliente = get_object_or_404(
+            Clientes,
+            id=id,
+            is_delete=False
+        )
+
+
+        # ==========================================================
+        # VALIDAR DNI DUPLICADO
+        # ==========================================================
+
+        if Clientes.objects.filter(
+            dni=dni,
+            is_delete=False
+        ).exclude(
+            id=id
+        ).exists():
+
             return JsonResponse(
-                {"success": False, "message": "Ya existe otro cliente con ese DNI"},
-                status=400,
+                {
+                    "success": False,
+                    "message": "Ya existe otro cliente con ese DNI"
+                },
+                status=400
             )
 
-        # =====================
-        # ACTUALIZAR CAMPOS
-        # =====================
+
+        # ==========================================================
+        # DATOS PERSONALES
+        # ==========================================================
+
         cliente.dni = dni
-        cliente.nombre = data.get("nombre") or None
-        cliente.nombre2 = data.get("nombre2") or None
-        cliente.apellido = data.get("apellido") or None
-        cliente.apellido2 = data.get("apellido2") or None
-        cliente.empresa = data.get("empresa") or None
-        cliente.direccion = data.get("direccion") or None
-        cliente.email = data.get("email") or None
-        cliente.telefono = data.get("telefono") or None
 
-        cliente.is_active = data.get("isActive", True)
+        cliente.nombre = (
+            data.get("nombre") or None
+        )
 
-        # =====================
-        # AUDITORÍA
-        # =====================
+        cliente.nombre2 = (
+            data.get("nombre2") or None
+        )
+
+        cliente.apellido = (
+            data.get("apellido") or None
+        )
+
+        cliente.apellido2 = (
+            data.get("apellido2") or None
+        )
+
+        cliente.empresa = (
+            data.get("empresa") or None
+        )
+
+
+        # ==========================================================
+        # CONTACTO
+        # ==========================================================
+
+        cliente.direccion = (
+            data.get("direccion") or None
+        )
+
+        cliente.email = (
+            data.get("email") or None
+        )
+
+        cliente.telefono = (
+            data.get("telefono") or None
+        )
+
+
+        # ==========================================================
+        # UBICACION
+        # ==========================================================
+
+        cliente.pais = (
+            data.get("pais") or None
+        )
+
+        cliente.departamento = (
+            data.get("departamento") or None
+        )
+
+        cliente.municipio = (
+            data.get("municipio") or None
+        )
+
+
+        # ==========================================================
+        # CREDITO
+        # ==========================================================
+
+        d_credito = data.get("d_credito")
+
+        if d_credito not in [None, ""]:
+
+            cliente.d_credito = int(d_credito)
+
+        else:
+
+            cliente.d_credito = None
+
+
+        max_credito = data.get("max_credito")
+
+        if max_credito not in [None, ""]:
+
+            cliente.max_credito = max_credito
+
+        else:
+
+            cliente.max_credito = None
+
+
+        # ==========================================================
+        # ESTADO
+        # ==========================================================
+
+        cliente.is_active = data.get(
+            "isActive",
+            True
+        )
+
+
+        # ==========================================================
+        # AUDITORIA
+        # ==========================================================
+
         cliente.u_modifico_id = request.user.id
+
         cliente.f_modificacion = timezone.now()
+
+
+        # ==========================================================
+        # GUARDAR
+        # ==========================================================
 
         cliente.save()
 
+
+        # ==========================================================
+        # RESPUESTA
+        # ==========================================================
+
         return JsonResponse(
-            {"success": True, "message": "Cliente actualizado correctamente"}
+            {
+                "success": True,
+                "message": "Cliente actualizado correctamente"
+            }
         )
 
-    except Exception as e:
-        return JsonResponse({"success": False, "message": str(e)}, status=500)
 
+    except ValueError as e:
+
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f"Datos inválidos: {str(e)}"
+            },
+            status=400
+        )
+
+
+    except Exception as e:
+
+        return JsonResponse(
+            {
+                "success": False,
+                "message": str(e)
+            },
+            status=500
+        )
 
 @login_required
 @permission_required("manager.view_clientes", raise_exception=True)
@@ -5362,7 +5918,7 @@ def inventario_view(request):
             "categoria",
         )
         .prefetch_related(
-            "imagenes_producto"  # 👈 importante para la tabla nueva
+            "imagenes_producto" 
         )
         .filter(is_delete=False)
     )
@@ -6707,19 +7263,32 @@ def cajas_manager_view(request):
         context
     )
 
+
+def obtener_ubicaciones_inventario(ubicacion_id):
+    try:
+        ubicacion = Ubicaciones.objects.get(
+            id=ubicacion_id,
+            is_delete=False
+        )
+    except Ubicaciones.DoesNotExist:
+        return [ubicacion_id]
+
+    ubicaciones = [ubicacion.id]
+
+    if ubicacion.bodega_id:
+        ubicaciones.append(ubicacion.bodega_id)
+
+    return ubicaciones
+
+
 @login_required
 def busqueda_codigo(request, codigo):
-
     if not request.user.groups.filter(name="cajeros").exists():
-        return JsonResponse(
-            {"error": "Usuario no valido"},
-            status=403
-        )
+        return JsonResponse({"error": "Usuario no valido"}, status=403)
 
     # ==========================================
     # VERIFICAR PERFIL Y UBICACIÓN
     # ==========================================
-
     try:
         perfil = PerfilUsuario.objects.get(
             usuarios=request.user
@@ -6739,9 +7308,15 @@ def busqueda_codigo(request, codigo):
     sucursal_id = perfil.ubicacion_id
 
     # ==========================================
+    # UBICACIONES QUE COMPARTEN INVENTARIO
+    # ==========================================
+    ubicaciones = obtener_ubicaciones_inventario(
+        sucursal_id
+    )
+
+    # ==========================================
     # BUSCAR PRODUCTO
     # ==========================================
-
     try:
         producto = Productos.objects.get(
             codigo_sku=codigo,
@@ -6751,12 +7326,12 @@ def busqueda_codigo(request, codigo):
 
         # ==========================================
         # EXISTENCIA FÍSICA
+        # TIENDA + BODEGA SI ESTÁN RELACIONADAS
         # ==========================================
-
         existencia = (
             Inventarios.objects.filter(
                 producto_id=producto.id,
-                ubicacion_id=sucursal_id,
+                ubicacion_id__in=ubicaciones,
                 is_delete=False,
                 cantidad__gt=0
             )
@@ -6770,14 +7345,14 @@ def busqueda_codigo(request, codigo):
 
         # ==========================================
         # RESERVAS ACTIVAS
+        # TIENDA + BODEGA
         # ==========================================
-
         reservado = (
             ReservaInventario.objects.filter(
                 producto_id=producto.id,
-                ubicacion_id=sucursal_id,
+                ubicacion_id__in=ubicaciones,
                 estado=ReservaInventario.Estado.RESERVADA,
-                is_delete=False,
+                is_delete=False
             )
             .aggregate(
                 total=Sum("cantidad")
@@ -6790,7 +7365,6 @@ def busqueda_codigo(request, codigo):
         # ==========================================
         # EXISTENCIA DISPONIBLE
         # ==========================================
-
         stock_disponible = existencia - reservado
 
         if stock_disponible < 0:
@@ -6801,13 +7375,12 @@ def busqueda_codigo(request, codigo):
                 {
                     "error": "El producto no tiene existencia disponible en esta sucursal"
                 },
-                status=400,
+                status=400
             )
 
         # ==========================================
         # CALCULAR ISV
         # ==========================================
-
         isv = producto.precio_venta * (
             Decimal(producto.impuesto) / Decimal(100)
         )
@@ -6826,28 +7399,18 @@ def busqueda_codigo(request, codigo):
         # ==========================================
         # DESCUENTO POR CANTIDAD
         # ==========================================
-
         cantidad_descuento = descuento_cantidad(data)
 
         if cantidad_descuento["lleva"] > 0:
-
             data["lleva"] = cantidad_descuento["lleva"]
             data["paga"] = cantidad_descuento["paga"]
             data["descuentos"] = 0
-            data["acumulable"] = (
-                cantidad_descuento["es_acumulable"]
-            )
-
+            data["acumulable"] = cantidad_descuento["es_acumulable"]
         else:
-
             descuento = valor_descuento(data)
-
             data["lleva"] = 0
             data["paga"] = 0
-            data["descuentos"] = descuento.get(
-                "valor",
-                0
-            )
+            data["descuentos"] = descuento.get("valor", 0)
             data["acumulable"] = descuento.get(
                 "es_acumulable",
                 False
@@ -6860,11 +7423,10 @@ def busqueda_codigo(request, codigo):
             {"error": "Producto no encontrado"},
             status=404
         )
-    
+
 
 @login_required
 def busqueda_nombre(request, producto):
-
     if not request.user.groups.filter(name="cajeros").exists():
         return JsonResponse(
             {"error": "Usuario no valido"},
@@ -6874,7 +7436,6 @@ def busqueda_nombre(request, producto):
     # ==========================================
     # VERIFICAR PERFIL Y UBICACIÓN
     # ==========================================
-
     try:
         perfil = PerfilUsuario.objects.get(
             usuarios=request.user
@@ -6894,16 +7455,21 @@ def busqueda_nombre(request, producto):
     sucursal_id = perfil.ubicacion_id
 
     # ==========================================
+    # UBICACIONES QUE COMPARTEN INVENTARIO
+    # ==========================================
+    ubicaciones = obtener_ubicaciones_inventario(
+        sucursal_id
+    )
+
+    # ==========================================
     # VALIDAR BÚSQUEDA
     # ==========================================
-
     if not producto or len(producto) < 2:
         return JsonResponse([], safe=False)
 
     # ==========================================
     # BUSCAR PRODUCTOS
     # ==========================================
-
     items = (
         Productos.objects.filter(
             is_delete=False,
@@ -6917,16 +7483,16 @@ def busqueda_nombre(request, producto):
     data = []
 
     for c in items:
-
         # ==========================================
         # EXISTENCIA FÍSICA
+        # TIENDA + BODEGA SI ESTÁN RELACIONADAS
         # ==========================================
-
         existencia = (
             Inventarios.objects.filter(
                 producto_id=c.id,
-                ubicacion_id=sucursal_id,
+                ubicacion_id__in=ubicaciones,
                 is_delete=False,
+                cantidad__gt=0
             )
             .aggregate(
                 total=Sum("cantidad")
@@ -6938,14 +7504,14 @@ def busqueda_nombre(request, producto):
 
         # ==========================================
         # RESERVAS ACTIVAS
+        # TIENDA + BODEGA
         # ==========================================
-
         reservado = (
             ReservaInventario.objects.filter(
                 producto_id=c.id,
-                ubicacion_id=sucursal_id,
+                ubicacion_id__in=ubicaciones,
                 estado=ReservaInventario.Estado.RESERVADA,
-                is_delete=False,
+                is_delete=False
             )
             .aggregate(
                 total=Sum("cantidad")
@@ -6958,7 +7524,6 @@ def busqueda_nombre(request, producto):
         # ==========================================
         # STOCK DISPONIBLE
         # ==========================================
-
         stock_disponible = existencia - reservado
 
         if stock_disponible < 0:
@@ -6968,14 +7533,12 @@ def busqueda_nombre(request, producto):
         # SI NO HAY STOCK DISPONIBLE
         # NO MOSTRAR PRODUCTO
         # ==========================================
-
         if stock_disponible <= 0:
             continue
 
         # ==========================================
         # VALORES INICIALES
         # ==========================================
-
         lleva = 0
         paga = 0
         descuento = 0
@@ -6984,7 +7547,6 @@ def busqueda_nombre(request, producto):
         # ==========================================
         # DESCUENTO POR CANTIDAD
         # ==========================================
-
         cantidad_descuento = descuento_cantidad(
             data={
                 "id": c.id
@@ -6992,18 +7554,10 @@ def busqueda_nombre(request, producto):
         )
 
         if cantidad_descuento["lleva"] > 0:
-
             lleva = cantidad_descuento["lleva"]
             paga = cantidad_descuento["paga"]
-
-            es_acumulable = (
-                cantidad_descuento[
-                    "es_acumulable"
-                ]
-            )
-
+            es_acumulable = cantidad_descuento["es_acumulable"]
         else:
-
             descuento_data = valor_descuento(
                 {
                     "id": c.id,
@@ -7013,37 +7567,24 @@ def busqueda_nombre(request, producto):
             )
 
             descuento = descuento_data["valor"]
-
-            es_acumulable = (
-                descuento_data[
-                    "es_acumulable"
-                ]
-            )
+            es_acumulable = descuento_data["es_acumulable"]
 
         # ==========================================
         # DATOS DEL PRODUCTO
         # ==========================================
-
         producto_data = {
             "id": c.id,
             "codigo_sku": c.codigo_sku,
             "nombre": c.nombre,
             "precio_venta": c.precio_venta,
-
             "lleva": lleva,
             "paga": paga,
-
             "descuento": descuento,
             "es_acumulable": es_acumulable,
-
             "isv": c.precio_venta * (
                 Decimal(c.impuesto) / Decimal(100)
             ),
-
             "tipos_isv": c.impuesto,
-
-            # IMPORTANTE:
-            # Enviar disponible, no físico
             "stock": stock_disponible,
         }
 
@@ -7055,7 +7596,6 @@ def busqueda_nombre(request, producto):
     )
 
 
-
 @login_required
 @require_http_methods(["POST"])
 def guardar_compra(request):
@@ -7063,7 +7603,7 @@ def guardar_compra(request):
         with transaction.atomic():
 
             # =====================================================
-            # PERFIL / SUCURSAL
+            # PERFIL / UBICACIONES COMPARTIDAS
             # =====================================================
 
             perfil = PerfilUsuario.objects.get(
@@ -7071,6 +7611,13 @@ def guardar_compra(request):
             )
 
             sucursal_id = perfil.ubicacion_id
+
+            ubicaciones_inventario = obtener_ubicaciones_inventario(
+                sucursal_id
+            )
+
+            if not ubicaciones_inventario:
+                ubicaciones_inventario = [sucursal_id]
 
             # =====================================================
             # DATOS RECIBIDOS
@@ -7089,8 +7636,100 @@ def guardar_compra(request):
             if not productos:
                 raise Exception("No se recibieron productos")
 
+            tipo_pago = pago[0].get("tipo_pago")
+
+            if tipo_pago == "credito":
+                if not request.user.has_perm("manager.view_cuentasporcobrar"):
+                    raise Exception(
+                        "No tiene permiso para registrar ventas a crédito"
+                    )
+
+                cliente_id = cliente.get("id")
+
+                if not cliente_id:
+                    raise Exception(
+                        "Debe seleccionar un cliente para realizar una venta a crédito"
+                    )
+
+                # Bloquea el cliente durante la validación para que dos ventas
+                # simultáneas no puedan exceder su límite de crédito.
+                cliente_credito = Clientes.objects.select_for_update().filter(
+                    id=cliente_id,
+                    is_active=True,
+                    is_delete=False,
+                ).first()
+
+                if not cliente_credito:
+                    raise Exception("El cliente seleccionado no existe o está inactivo")
+
+                if not cliente_credito.d_credito or cliente_credito.d_credito <= 0:
+                    raise Exception(
+                        "El cliente no tiene días de crédito configurados"
+                    )
+
+                if (
+                    cliente_credito.max_credito is None
+                    or cliente_credito.max_credito <= Decimal("0")
+                ):
+                    raise Exception(
+                        "El cliente no tiene un límite de crédito configurado"
+                    )
+
+                try:
+                    monto_nueva_venta = Decimal(str(pago[0].get("total")))
+                except (InvalidOperation, TypeError, ValueError):
+                    raise Exception("El total de la venta a crédito no es válido")
+
+                if monto_nueva_venta <= Decimal("0"):
+                    raise Exception("El total de la venta a crédito debe ser mayor a cero")
+
+                cuentas_pendientes = list(
+                    CuentasPorCobrar.objects.select_for_update().filter(
+                        cliente=cliente_credito,
+                        is_active=True,
+                        is_delete=False,
+                        monto_pendiente__gt=0,
+                        estado__in=[
+                            EstadoCuenta.PENDIENTE,
+                            EstadoCuenta.PARCIAL,
+                        ],
+                    )
+                )
+
+                monto_en_mora = sum(
+                    (
+                        cuenta.monto_pendiente
+                        for cuenta in cuentas_pendientes
+                        if cuenta.fecha_vencimiento < timezone.now()
+                    ),
+                    Decimal("0"),
+                )
+
+                if monto_en_mora > Decimal("0"):
+                    raise Exception(
+                        f"El cliente tiene una mora de L. {monto_en_mora:.2f}"
+                    )
+
+                credito_utilizado = sum(
+                    (cuenta.monto_pendiente for cuenta in cuentas_pendientes),
+                    Decimal("0"),
+                )
+
+                credito_resultante = credito_utilizado + monto_nueva_venta
+
+                if credito_resultante > cliente_credito.max_credito:
+                    credito_disponible = max(
+                        cliente_credito.max_credito - credito_utilizado,
+                        Decimal("0"),
+                    )
+                    raise Exception(
+                        "El cliente excede su límite de crédito. "
+                        f"Límite: L. {cliente_credito.max_credito:.2f}; "
+                        f"disponible: L. {credito_disponible:.2f}"
+                    )
+
             # =====================================================
-            # GENERAR NUMERO DE FACTURA
+            # NUMERO DE FACTURA
             # =====================================================
 
             sat = datos_sat.objects.filter(
@@ -7104,7 +7743,6 @@ def guardar_compra(request):
             es_sat = False
 
             if sat:
-
                 hoy = timezone.now().date()
 
                 if sat.fecha_de_vencimiento.date() < hoy:
@@ -7134,7 +7772,6 @@ def guardar_compra(request):
                 es_sat = True
 
             else:
-
                 ultimo_numero = (
                     facturas_cai.objects
                     .aggregate(
@@ -7157,7 +7794,7 @@ def guardar_compra(request):
             )
 
             # =====================================================
-            # TOTALES GENERALES
+            # TOTALES
             # =====================================================
 
             costo_total_venta = Decimal("0")
@@ -7176,7 +7813,7 @@ def guardar_compra(request):
                 impuesto_18=pago[0].get("isv18"),
                 descuento=pago[0].get("descuento"),
                 total=pago[0].get("total"),
-                tipo_pago=pago[0].get("tipo_pago"),
+                tipo_pago=tipo_pago,
                 costo_total=0,
                 utilidad_total=0,
                 u_creo_id=request.user.id,
@@ -7228,6 +7865,20 @@ def guardar_compra(request):
                     u_creo_id=request.user.id,
                 )
 
+            if venta.tipo_pago == "credito":
+                CuentasPorCobrar.objects.create(
+                    cliente=cliente_credito,
+                    venta=venta,
+                    monto_total=venta.total,
+                    monto_pendiente=venta.total,
+                    fecha_vencimiento=(
+                        timezone.now()
+                        + timedelta(days=cliente_credito.d_credito)
+                    ),
+                    estado=EstadoCuenta.PENDIENTE,
+                    u_creo_id=request.user.id,
+                )
+
             # =====================================================
             # DETALLE DE PRODUCTOS
             # =====================================================
@@ -7251,7 +7902,7 @@ def guardar_compra(request):
                     )
 
                 # =================================================
-                # OBTENER PRODUCTO VENDIDO
+                # PRODUCTO
                 # =================================================
 
                 producto = (
@@ -7270,26 +7921,7 @@ def guardar_compra(request):
                     )
 
                 # =================================================
-                # OBTENER TODOS LOS PRODUCTOS RELACIONADOS
-                #
-                # Ejemplo:
-                #
-                # Caja = equival_unid 12
-                # Lapiz = equival_unid 1
-                #
-                # Venta:
-                # Caja 1
-                #
-                # Resultado:
-                # Caja  = 1
-                # Lapiz = 12
-                #
-                # Venta:
-                # Lapiz 8
-                #
-                # Resultado:
-                # Lapiz = 8
-                # Caja  = 0.666666...
+                # PRODUCTOS RELACIONADOS
                 # =================================================
 
                 productos_inventario = (
@@ -7299,21 +7931,10 @@ def guardar_compra(request):
                     )
                 )
 
-                # =================================================
-                # COSTO TOTAL DE ESTA LÍNEA DE VENTA
-                #
-                # IMPORTANTE:
-                #
-                # Aquí NO usamos únicamente el producto vendido.
-                #
-                # Calculamos el costo de todos los productos que
-                # realmente se están rebajando del inventario.
-                # =================================================
-
                 costo_total_producto = Decimal("0")
 
                 # =================================================
-                # PROCESAR CADA PRODUCTO DEL GRUPO
+                # PROCESAR INVENTARIO
                 # =================================================
 
                 for item in productos_inventario:
@@ -7328,14 +7949,14 @@ def guardar_compra(request):
                         continue
 
                     # =================================================
-                    # STOCK DEL PRODUCTO RELACIONADO
+                    # STOCK COMPARTIDO
                     # =================================================
 
                     stock_total = (
                         Inventarios.objects
                         .filter(
                             producto=producto_inventario,
-                            ubicacion_id=sucursal_id,
+                            ubicacion_id__in=ubicaciones_inventario,
                             cantidad__gt=0,
                         )
                         .aggregate(
@@ -7344,24 +7965,7 @@ def guardar_compra(request):
                         or Decimal("0")
                     )
 
-                    # =================================================
-                    # VALIDAR STOCK
-                    #
-                    # Ejemplo:
-                    #
-                    # Caja = 10
-                    # Lapiz = 120
-                    #
-                    # Venta 8 lapices:
-                    #
-                    # Lapiz necesita 8
-                    # Caja necesita 0.666666
-                    #
-                    # Ambos deben tener stock.
-                    # =================================================
-
                     if stock_total < cantidad_a_rebajar:
-
                         raise Exception(
                             f"Stock insuficiente para "
                             f"{producto_inventario.nombre}. "
@@ -7370,22 +7974,20 @@ def guardar_compra(request):
                         )
 
                     # =================================================
-                    # LOTES FIFO
+                    # LOTES FIFO COMPARTIDOS
                     # =================================================
 
                     lotes = (
                         Inventarios.objects
                         .filter(
                             producto=producto_inventario,
-                            ubicacion_id=sucursal_id,
+                            ubicacion_id__in=ubicaciones_inventario,
                             cantidad__gt=0,
                         )
                         .order_by("f_creacion", "id")
                     )
 
-                    cantidad_necesaria = (
-                        cantidad_a_rebajar
-                    )
+                    cantidad_necesaria = cantidad_a_rebajar
 
                     # =================================================
                     # REBAJAR LOTES
@@ -7396,17 +7998,13 @@ def guardar_compra(request):
                         if cantidad_necesaria <= 0:
                             break
 
-                        # =================================================
-                        # CANTIDAD QUE SALE DE ESTE LOTE
-                        # =================================================
-
                         cantidad_consumida = min(
                             lote.cantidad,
                             cantidad_necesaria,
                         )
 
                         # =================================================
-                        # OBTENER COSTO DEL LOTE
+                        # COSTO DEL LOTE
                         # =================================================
 
                         detalle_compra = (
@@ -7418,19 +8016,6 @@ def guardar_compra(request):
                             .first()
                         )
 
-                        # =================================================
-                        # COSTO DIRECTO
-                        #
-                        # Si el producto fue comprado directamente:
-                        #
-                        # Compra:
-                        # Lapiz 100 unidades
-                        # Precio = 2.00
-                        #
-                        # Entonces:
-                        # costo = 2.00
-                        # =================================================
-
                         if detalle_compra:
 
                             costo_unitario_lote = (
@@ -7438,29 +8023,6 @@ def guardar_compra(request):
                             )
 
                         else:
-
-                            # =================================================
-                            # COSTO DERIVADO
-                            #
-                            # Esto sucede cuando:
-                            #
-                            # Compramos:
-                            # Caja Lapiz = L20
-                            #
-                            # Caja contiene:
-                            # 12 Lapices
-                            #
-                            # Inventario crea:
-                            #
-                            # Caja = 1
-                            # Lapiz = 12
-                            #
-                            # El lote de Lapiz no tiene DetalleCompra
-                            # porque realmente compramos una Caja.
-                            #
-                            # Entonces buscamos el costo del producto
-                            # padre/master.
-                            # =================================================
 
                             relaciones_hacia_padre = (
                                 ProductosRel.objects
@@ -7509,22 +8071,6 @@ def guardar_compra(request):
                                         else Decimal("1")
                                     )
 
-                                    # ==========================================
-                                    # COSTO POR UNIDAD DEL PRODUCTO HIJO
-                                    #
-                                    # Ejemplo:
-                                    #
-                                    # Caja = L20
-                                    # equival_unid Caja = 12
-                                    #
-                                    # Lapiz:
-                                    # equival_unid = 1
-                                    #
-                                    # costo:
-                                    #
-                                    # 20 * 1 / 12 = 1.666666
-                                    # ==========================================
-
                                     costo_unitario_lote = (
                                         Decimal(
                                             detalle_padre.precio_compra
@@ -7535,12 +8081,7 @@ def guardar_compra(request):
 
                                     break
 
-                            # =================================================
-                            # SI NO SE PUDO ENCONTRAR COSTO
-                            # =================================================
-
                             if costo_unitario_lote is None:
-
                                 raise Exception(
                                     f"No existe costo registrado para "
                                     f"{producto_inventario.nombre} "
@@ -7548,7 +8089,7 @@ def guardar_compra(request):
                                 )
 
                         # =================================================
-                        # ACUMULAR COSTO
+                        # COSTO
                         # =================================================
 
                         costo_total_producto += (
@@ -7568,23 +8109,21 @@ def guardar_compra(request):
 
                         lote.cantidad -= cantidad_consumida
 
-                        cantidad_necesaria -= (
-                            cantidad_consumida
-                        )
+                        cantidad_necesaria -= cantidad_consumida
 
                         lote.save(
                             update_fields=["cantidad"]
                         )
 
                         # =================================================
-                        # STOCK RESULTANTE DEL PRODUCTO
+                        # STOCK RESULTANTE
                         # =================================================
 
                         stock_resultante = (
                             Inventarios.objects
                             .filter(
                                 producto=producto_inventario,
-                                ubicacion_id=sucursal_id,
+                                ubicacion_id=lote.ubicacion_id,
                             )
                             .aggregate(
                                 total=Sum("cantidad")
@@ -7593,24 +8132,23 @@ def guardar_compra(request):
                         )
 
                         # =================================================
-                        # MOVIMIENTO DE INVENTARIO
+                        # MOVIMIENTO
                         # =================================================
 
                         MovimientoInventario.objects.create(
                             tipo_movimiento=TipoMovimientoInventario.SALIDA_VENTA,
                             producto=producto_inventario,
-                            ubicacion_origen_id=sucursal_id,
+                            ubicacion_origen_id=lote.ubicacion_id,
                             cantidad=cantidad_consumida,
                             stock_anterior=stock_anterior,
                             stock_resultante=stock_resultante,
                         )
 
                     # =================================================
-                    # SEGURIDAD
+                    # VALIDAR SALIDA
                     # =================================================
 
                     if cantidad_necesaria > 0:
-
                         raise Exception(
                             f"No fue posible completar la salida de "
                             f"{producto_inventario.nombre}. "
@@ -7618,35 +8156,22 @@ def guardar_compra(request):
                         )
 
                 # =================================================
-                # COSTO PROMEDIO DE LA LÍNEA
-                #
-                # OJO:
-                #
-                # Aquí dividimos entre la cantidad vendida del
-                # producto original.
-                #
-                # Si vendemos 1 Caja:
-                #
-                # costo_total = costo Caja + costo de sus 12 Lapices
-                #
-                # Pero para evitar duplicar el costo, realmente
-                # debemos considerar que los productos relacionados
-                # representan el MISMO inventario económico.
-                #
-                # Por eso usamos el costo del producto vendido.
+                # COSTO Y UTILIDAD
                 # =================================================
 
                 costo_promedio = (
-                    costo_total_producto / cantidad_vendida
+                    costo_total_producto /
+                    cantidad_vendida
                 )
 
                 utilidad_unitaria = (
-                    precio_venta - costo_promedio
+                    precio_venta -
+                    costo_promedio
                 )
 
                 utilidad_total = (
-                    utilidad_unitaria
-                    * cantidad_vendida
+                    utilidad_unitaria *
+                    cantidad_vendida
                 )
 
                 costo_total_venta += (
@@ -7658,7 +8183,7 @@ def guardar_compra(request):
                 )
 
                 # =================================================
-                # CREAR DETALLE DE VENTA
+                # DETALLE DE VENTA
                 # =================================================
 
                 DetalleVenta.objects.create(
@@ -7669,7 +8194,6 @@ def guardar_compra(request):
                     costo_unitario=costo_promedio,
                     utilidad_unitaria=utilidad_unitaria,
                     utilidad_total=utilidad_total,
-
                     descuento=Decimal(
                         str(
                             p.get(
@@ -7678,7 +8202,6 @@ def guardar_compra(request):
                             )
                         )
                     ),
-
                     impuesto_15=Decimal(
                         str(
                             p.get(
@@ -7687,7 +8210,6 @@ def guardar_compra(request):
                             )
                         )
                     ),
-
                     impuesto_18=Decimal(
                         str(
                             p.get(
@@ -7696,12 +8218,11 @@ def guardar_compra(request):
                             )
                         )
                     ),
-
                     u_creo_id=request.user.id,
                 )
 
             # =====================================================
-            # ACTUALIZAR TOTALES DE LA VENTA
+            # ACTUALIZAR VENTA
             # =====================================================
 
             venta.costo_total = costo_total_venta
@@ -7737,6 +8258,7 @@ def guardar_compra(request):
             status=500,
         )
 
+        
 @login_required
 def imprimir_factura(request, id_factura):
 
@@ -8294,92 +8816,261 @@ def descuento_cupon(request, cupon, id):
     return JsonResponse(descuento, safe=False)
 
 
-# función para el valor del desciuento
+
 def valor_descuento(data):
+
+    ahora = timezone.now()
+
+    # ==========================================================
+    # DESCUENTO DIRECTO AL PRODUCTO
+    # ==========================================================
+
     descuento_producto = (
         Descuento.objects.filter(
-            productos__id=data["id"], is_active=True, es_cupon=False, es_cantidad=False
+            productos__id=data["id"],
+            is_active=True,
+            is_delete=False,
+            es_cupon=False,
+            es_cantidad=False,
+            fecha_inicio__lte=ahora,
+        )
+        .filter(
+            Q(fecha_fin__isnull=True) |
+            Q(fecha_fin__gte=ahora)
         )
         .values()
         .first()
     )
+
+    # ==========================================================
+    # DESCUENTO POR CATEGORÍA
+    # ==========================================================
 
     descuento_categoria = (
         Descuento.objects.filter(
-            categorias__id=data["id_categoria"], is_active=True, es_cupon=False
+            categorias__id=data["id_categoria"],
+            is_active=True,
+            is_delete=False,
+            es_cupon=False,
+            es_cantidad=False,
+            fecha_inicio__lte=ahora,
+        )
+        .filter(
+            Q(fecha_fin__isnull=True) |
+            Q(fecha_fin__gte=ahora)
         )
         .values()
         .first()
     )
 
-    if not descuento_categoria:
-        descuento_categoria = {
-            "es_porcentaje": False,
-            "valor": 0,
+    # ==========================================================
+    # SI NO EXISTE NINGÚN DESCUENTO
+    # ==========================================================
+
+    if not descuento_producto and not descuento_categoria:
+        return {
+            "valor": Decimal("0.00"),
+            "es_acumulable": False,
         }
 
-    if not descuento_categoria and not descuento_producto:
-        return {"valor": 0.00, "es_acumulable": False}
+    precio_venta = Decimal(
+        str(data.get("precio_venta", 0))
+    )
 
-    valor_descuento_producto = 0
-    valor_descuento_categoria = 0
-    total_descuento = 0
+    # ==========================================================
+    # VALORES INICIALES
+    # ==========================================================
+
+    valor_descuento_producto = Decimal("0.00")
+    valor_descuento_categoria = Decimal("0.00")
+
+    total_descuento = Decimal("0.00")
+
     acumulable = False
 
+    # ==========================================================
+    # DESCUENTO POR PRODUCTO
+    # ==========================================================
+
     if descuento_producto:
-        # descuento por producto
-        if descuento_producto["es_porcentaje"] == True:
-            valor_descuento_producto = data["precio_venta"] * (
-                descuento_producto["valor"] / 100
-            )
-        else:
-            valor_descuento_producto = descuento_producto["valor"]
 
-        ##descuento por categoria
-        if descuento_categoria["es_porcentaje"] == True:
-            valor_descuento_categoria = data["precio_venta"] * (
-                descuento_categoria["valor"] / 100
+        valor = Decimal(
+            str(
+                descuento_producto.get("valor", 0)
             )
-        else:
-            valor_descuento_categoria = descuento_categoria["valor"]
+        )
 
-        if descuento_producto["acumulable"] == True:
-            total_descuento = valor_descuento_producto + valor_descuento_categoria
+        if descuento_producto["es_porcentaje"]:
+
+            valor_descuento_producto = (
+                precio_venta * valor
+            ) / Decimal("100")
+
+        else:
+
+            valor_descuento_producto = valor
+
+        # ------------------------------------------------------
+        # EVITAR DESCUENTO MAYOR AL PRECIO
+        # ------------------------------------------------------
+
+        if valor_descuento_producto > precio_venta:
+
+            valor_descuento_producto = precio_venta
+
+        # ======================================================
+        # ¿ES ACUMULABLE?
+        # ======================================================
+
+        if descuento_producto["acumulable"]:
+
             acumulable = True
-        else:
-            total_descuento = valor_descuento_producto
-    else:
-        if descuento_categoria["es_porcentaje"] == True:
-            valor_descuento_categoria = data["precio_venta"] * (
-                descuento_categoria["valor"] / 100
+
+            # --------------------------------------------------
+            # DESCUENTO DE CATEGORÍA
+            # --------------------------------------------------
+
+            if descuento_categoria:
+
+                valor = Decimal(
+                    str(
+                        descuento_categoria.get(
+                            "valor",
+                            0
+                        )
+                    )
+                )
+
+                if descuento_categoria["es_porcentaje"]:
+
+                    valor_descuento_categoria = (
+                        precio_venta * valor
+                    ) / Decimal("100")
+
+                else:
+
+                    valor_descuento_categoria = valor
+
+                # ----------------------------------------------
+                # EVITAR DESCUENTO MAYOR AL PRECIO
+                # ----------------------------------------------
+
+                if valor_descuento_categoria > precio_venta:
+
+                    valor_descuento_categoria = precio_venta
+
+            # --------------------------------------------------
+            # SUMAR DESCUENTOS
+            # --------------------------------------------------
+
+            total_descuento = (
+                valor_descuento_producto
+                + valor_descuento_categoria
             )
+
         else:
-            valor_descuento_categoria = descuento_categoria["valor"]
 
-        total_descuento = valor_descuento_categoria
+            # --------------------------------------------------
+            # SOLO DESCUENTO DEL PRODUCTO
+            # --------------------------------------------------
 
-    return {"valor": total_descuento, "es_acumulable": acumulable}
+            total_descuento = (
+                valor_descuento_producto
+            )
 
+    # ==========================================================
+    # SOLO DESCUENTO DE CATEGORÍA
+    # ==========================================================
 
+    else:
+
+        if descuento_categoria:
+
+            valor = Decimal(
+                str(
+                    descuento_categoria.get(
+                        "valor",
+                        0
+                    )
+                )
+            )
+
+            if descuento_categoria["es_porcentaje"]:
+
+                valor_descuento_categoria = (
+                    precio_venta * valor
+                ) / Decimal("100")
+
+            else:
+
+                valor_descuento_categoria = valor
+
+            # ----------------------------------------------
+            # EVITAR DESCUENTO MAYOR AL PRECIO
+            # ----------------------------------------------
+
+            if valor_descuento_categoria > precio_venta:
+
+                valor_descuento_categoria = precio_venta
+
+            total_descuento = (
+                valor_descuento_categoria
+            )
+
+    # ==========================================================
+    # SEGURIDAD
+    # ==========================================================
+
+    if total_descuento > precio_venta:
+
+        total_descuento = precio_venta
+
+    if total_descuento < 0:
+
+        total_descuento = Decimal("0.00")
+
+    # ==========================================================
+    # RESPUESTA
+    # ==========================================================
+
+    return {
+        "valor": total_descuento,
+        "es_acumulable": acumulable,
+    }
 
 def descuento_cantidad(data):
+
+    ahora = timezone.now()
+
     descuento = (
         Descuento.objects.filter(
-            productos__id=data["id"], is_active=True, es_cantidad=True
+            productos__id=data["id"],
+            is_active=True,
+            is_delete=False,
+            es_cantidad=True,
+            es_cupon=False,
+            fecha_inicio__lte=ahora,
+        )
+        .filter(
+            Q(fecha_fin__isnull=True) |
+            Q(fecha_fin__gte=ahora)
         )
         .values()
         .first()
     )
 
     if not descuento:
-        return {"lleva": 0, "paga": 0, "es_acumulable": False}
-    else:
         return {
-            "lleva": descuento["cantidad_lleva"],
-            "paga": descuento["cantidad_paga"],
-            "es_acumulable": descuento["acumulable"],
+            "lleva": 0,
+            "paga": 0,
+            "es_acumulable": False,
         }
 
+    return {
+        "lleva": descuento["cantidad_lleva"],
+        "paga": descuento["cantidad_paga"],
+        "es_acumulable": descuento["acumulable"],
+    }
 
 @login_required
 @permission_required("manager.view_traslados", raise_exception=True)

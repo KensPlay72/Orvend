@@ -2862,300 +2862,205 @@ function seleccionarCliente(cliente) {
 // PAGOS
 // ==========================================================
 
-const postPagar =
-    document.getElementById(
-        "postpagar"
-    );
+let ventaEnProceso = false;
 
+const postPagar = document.getElementById("postpagar");
 
 if (postPagar) {
-
-    postPagar.addEventListener(
-        "submit",
-        function (e) {
-
-            e.preventDefault();
-
-
-            // ------------------------------------------------
-            // VALIDAR PRODUCTOS
-            // ------------------------------------------------
-
-            if (datos.length === 0) {
-
-                mensaje(
-                    "Agregue productos a la venta",
-                    "error",
-                    ""
-                );
-
-                return;
-            }
-
-
-            const tipoPago =
-                document.getElementById(
-                    "tipo_pago"
-                )?.value;
-
-
-            const tarjeta = [];
-
-
-            const cantidadDinero =
-                document.getElementById(
-                    "Pdinero"
-                )?.value || "";
-
-
-            const digitos =
-                document.getElementById(
-                    "Pdigitos"
-                )?.value.trim() || "";
-
-
-            const autorizacion =
-                document.getElementById(
-                    "Pautorizacion"
-                )?.value.trim() || "";
-
-
-            const clienteId =
-                document.getElementById(
-                    "cliente_id"
-                )?.value || "";
-
-
-            const clienteNombre =
-                document.getElementById(
-                    "cliente_nombre"
-                )?.value || "";
-
-
-            // ------------------------------------------------
-            // CLIENTE OBLIGATORIO
-            // ------------------------------------------------
-
-            if (!clienteId) {
-
-                mensaje(
-                    "Seleccione un cliente antes de realizar la venta",
-                    "error",
-                    ""
-                );
-
-                return;
-            }
-
-
-            // =================================================
-            // PAGO CONTADO
-            // =================================================
-
-            if (
-                tipoPago ===
-                "pago_contado"
-            ) {
-
-                if (
-                    cantidadDinero.trim() === "" ||
-                    isNaN(cantidadDinero) ||
-                    parseFloat(cantidadDinero) <
-                    pagos[0].total
-                ) {
-
-                    mensaje(
-                        "Ingrese una cantidad válida",
-                        "error",
-                        ""
-                    );
-
-                    return;
-                }
-
-
-                pagos[0].tipo_pago =
-                    "contado";
-
-
-                tarjeta.push({
-
-                    digitos: "",
-
-                    numero_autorizacion: ""
-                });
-
-
-            // =================================================
-            // PAGO TARJETA
-            // =================================================
-
-            } else if (
-                tipoPago ===
-                "pago_tarjeta"
-            ) {
-
-                pagos[0].tipo_pago =
-                    "tarjeta";
-
-
-                if (
-                    autorizacion === ""
-                ) {
-
-                    mensaje(
-                        "Escriba el número de autorización",
-                        "error",
-                        ""
-                    );
-
-                    return;
-                }
-
-
-                if (
-                    !/^\d{4}$/.test(
-                        digitos
-                    )
-                ) {
-
-                    mensaje(
-                        "Ingrese únicamente los últimos 4 dígitos de la tarjeta",
-                        "error",
-                        ""
-                    );
-
-                    return;
-                }
-
-
-                tarjeta.push({
-
-                    digitos:
-                        digitos,
-
-                    numero_autorizacion:
-                        autorizacion
-                });
-
-
-            } else {
-
-                mensaje(
-                    "Seleccione un tipo de pago",
-                    "error",
-                    ""
-                );
-
-                return;
-            }
-
-
-            // ------------------------------------------------
-            // PREPARAR DATA
-            // ------------------------------------------------
-
-            const data = {
-
-                productos:
-                    datos,
-
-                pagos:
-                    pagos,
-
-                tarjeta:
-                    tarjeta,
-
-                cliente: {
-
-                    id:
-                        clienteId,
-
-                    nombre:
-                        clienteNombre
-                }
-            };
-
-
-            // ------------------------------------------------
-            // CONFIRMAR TARJETA
-            // ------------------------------------------------
-
-            if (
-                tipoPago ===
-                "pago_tarjeta"
-            ) {
-
-                Swal.fire({
-
-                    title:
-                        "Confirmar pago con tarjeta",
-
-                    html: `
-                        <div style="text-align:left">
-
-                            <b>Total:</b>
-                            L. ${pagos[0].total.toFixed(2)}
-                            <br>
-
-                            <b>Autorización:</b>
-                            ${autorizacion}
-                            <br>
-
-                            <b>Tarjeta:</b>
-                            ****${digitos}
-
-                        </div>
-                    `,
-
-                    icon:
-                        "question",
-
-                    showCancelButton:
-                        true,
-
-                    confirmButtonText:
-                        "Procesar venta",
-
-                    cancelButtonText:
-                        "Cancelar",
-
-                    customClass: {
-
-                        confirmButton:
-                            "classbotones"
-                    }
-
-                }).then(result => {
-
-                    if (
-                        result.isConfirmed
-                    ) {
-
-                        enviarVenta(
-                            data,
-                            tipoPago,
-                            cantidadDinero
-                        );
-                    }
-                });
-
-
-                return;
-            }
-
-
-            // ------------------------------------------------
-            // CONTADO
-            // ------------------------------------------------
-
-            enviarVenta(
-                data,
-                tipoPago,
-                cantidadDinero
-            );
+    postPagar.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        // Evitar doble envío
+        if (ventaEnProceso) {
+            return;
         }
-    );
+
+        // ------------------------------------------------
+        // VALIDAR PRODUCTOS
+        // ------------------------------------------------
+
+        if (datos.length === 0) {
+            mensaje(
+                "Agregue productos a la venta",
+                "error",
+                ""
+            );
+            return;
+        }
+
+        const tipoPago =
+            document.getElementById("tipo_pago")?.value;
+
+        const tarjeta = [];
+
+        const cantidadDinero =
+            document.getElementById("Pdinero")?.value || "";
+
+        const digitos =
+            document.getElementById("Pdigitos")?.value.trim() || "";
+
+        const autorizacion =
+            document.getElementById("Pautorizacion")?.value.trim() || "";
+
+        const clienteId =
+            document.getElementById("cliente_id")?.value || "";
+
+        const clienteNombre =
+            document.getElementById("cliente_nombre")?.value || "";
+
+        // ------------------------------------------------
+        // CLIENTE
+        // ------------------------------------------------
+
+        if (!clienteId) {
+            mensaje(
+                "Seleccione un cliente antes de realizar la venta",
+                "error",
+                ""
+            );
+            return;
+        }
+
+        // =================================================
+        // PAGO CONTADO
+        // =================================================
+
+        if (tipoPago === "pago_contado") {
+
+            if (
+                cantidadDinero.trim() === "" ||
+                isNaN(cantidadDinero) ||
+                parseFloat(cantidadDinero) < pagos[0].total
+            ) {
+                mensaje(
+                    "Ingrese una cantidad válida",
+                    "error",
+                    ""
+                );
+                return;
+            }
+
+            pagos[0].tipo_pago = "contado";
+
+            tarjeta.push({
+                digitos: "",
+                numero_autorizacion: ""
+            });
+
+        // =================================================
+        // PAGO TARJETA
+        // =================================================
+
+        } else if (tipoPago === "pago_tarjeta") {
+
+            if (autorizacion === "") {
+                mensaje(
+                    "Escriba el número de autorización",
+                    "error",
+                    ""
+                );
+                return;
+            }
+
+            if (!/^\d{4}$/.test(digitos)) {
+                mensaje(
+                    "Ingrese únicamente los últimos 4 dígitos de la tarjeta",
+                    "error",
+                    ""
+                );
+                return;
+            }
+
+            pagos[0].tipo_pago = "tarjeta";
+
+            tarjeta.push({
+                digitos: digitos,
+                numero_autorizacion: autorizacion
+            });
+
+        // =================================================
+        // PAGO A CRÉDITO
+        // =================================================
+
+        } else if (tipoPago === "pago_credito") {
+
+            pagos[0].tipo_pago = "credito";
+
+        } else {
+            mensaje(
+                "Seleccione un tipo de pago",
+                "error",
+                ""
+            );
+            return;
+        }
+
+        // ------------------------------------------------
+        // PREPARAR DATA
+        // ------------------------------------------------
+
+        const data = {
+            productos: datos,
+            pagos: pagos,
+            tarjeta: tarjeta,
+            cliente: {
+                id: clienteId,
+                nombre: clienteNombre
+            }
+        };
+
+        // =================================================
+        // CONFIRMAR TARJETA
+        // =================================================
+
+        if (tipoPago === "pago_tarjeta") {
+
+            Swal.fire({
+                title: "Confirmar pago con tarjeta",
+                html: `
+                    <div style="text-align:left">
+                        <b>Total:</b>
+                        L. ${pagos[0].total.toFixed(2)}
+                        <br>
+                        <b>Autorización:</b>
+                        ${autorizacion}
+                        <br>
+                        <b>Tarjeta:</b>
+                        ****${digitos}
+                    </div>
+                `,
+                icon: "question",
+                showCancelButton: true,
+                confirmButtonText: "Procesar venta",
+                cancelButtonText: "Cancelar",
+                customClass: {
+                    confirmButton: "classbotones"
+                }
+            }).then(result => {
+
+                if (result.isConfirmed) {
+
+                    enviarVenta(
+                        data,
+                        tipoPago,
+                        cantidadDinero
+                    );
+                }
+            });
+
+            return;
+        }
+
+        // =================================================
+        // CONTADO
+        // =================================================
+
+        enviarVenta(
+            data,
+            tipoPago,
+            cantidadDinero
+        );
+    });
 }
 
 
@@ -3169,13 +3074,56 @@ function enviarVenta(
     cantidadDinero
 ) {
 
+    // ======================================================
+    // BLOQUEAR DOBLE ENVÍO
+    // ======================================================
+
+    if (ventaEnProceso) {
+        return;
+    }
+
+    ventaEnProceso = true;
+
+    // ------------------------------------------------------
+    // BLOQUEAR BOTONES
+    // ------------------------------------------------------
+
+    const botonFormulario =
+        document.getElementById("btnPagar");
+
+    const botonCaja =
+        document.getElementById("Pagar");
+
+    if (botonFormulario) {
+        botonFormulario.disabled = true;
+        botonFormulario.innerText = "Procesando venta...";
+    }
+
+    if (botonCaja) {
+        botonCaja.disabled = true;
+    }
+
+    // ------------------------------------------------------
+    // CSRF
+    // ------------------------------------------------------
+
     const csrf =
         document.querySelector(
             "[name=csrfmiddlewaretoken]"
         );
 
-
     if (!csrf) {
+
+        ventaEnProceso = false;
+
+        if (botonFormulario) {
+            botonFormulario.disabled = false;
+            botonFormulario.innerText = "Realizar compra";
+        }
+
+        if (botonCaja) {
+            botonCaja.disabled = false;
+        }
 
         mensaje(
             "No se encontró el token CSRF",
@@ -3186,166 +3134,167 @@ function enviarVenta(
         return;
     }
 
+    // ======================================================
+    // ENVIAR
+    // ======================================================
 
     fetch(
         "/manager/realizar_venta/",
         {
-
             method: "POST",
-
             headers: {
-
-                "Content-Type":
-                    "application/json",
-
-                "X-CSRFToken":
-                    csrf.value
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrf.value
             },
-
-            body:
-                JSON.stringify(data)
+            body: JSON.stringify(data)
         }
     )
+    .then(async response => {
 
-        .then(async response => {
+        const respuesta =
+            await response.json();
 
-            const respuesta =
-                await response.json();
-
-
-            if (!response.ok) {
-
-                throw new Error(
-
-                    respuesta.error ||
-                    respuesta.message ||
-                    "Ocurrió un error al realizar la venta"
-                );
-            }
-
-
-            return respuesta;
-        })
-
-
-        .then(data => {
-
-            // ================================================
-            // CONTADO
-            // ================================================
-
-            if (
-                tipoPago ===
-                "pago_contado"
-            ) {
-
-                const cambio =
-                    (
-                        parseFloat(
-                            cantidadDinero
-                        ) -
-                        parseFloat(
-                            pagos[0].total
-                        )
-                    ).toFixed(2);
-
-
-                Swal.fire({
-
-                    title:
-                        "Venta realizada",
-
-                    html:
-                        `<b>Cambio:</b> L. ${cambio}`,
-
-                    icon:
-                        "success",
-
-                    confirmButtonText:
-                        "Aceptar",
-
-                    customClass: {
-
-                        confirmButton:
-                            "classbotones"
-                    }
-
-                }).then(() => {
-
-                    window.open(
-                        `/manager/recibo_pdf/${data.id_factura}/`,
-                        "_blank"
-                    );
-
-
-                    location.reload();
-                });
-
-
-            // ================================================
-            // TARJETA
-            // ================================================
-
-            } else {
-
-                Swal.fire({
-
-                    title:
-                        "Venta realizada",
-
-                    html: `
-                        <b>Factura:</b>
-                        ${data.numero_factura}
-                        <br>
-                        <b>Pago con tarjeta registrado correctamente</b>
-                    `,
-
-                    icon:
-                        "success",
-
-                    confirmButtonText:
-                        "Aceptar",
-
-                    customClass: {
-
-                        confirmButton:
-                            "classbotones"
-                    }
-
-                }).then(() => {
-
-                    window.open(
-                        `/manager/recibo_pdf/${data.id_factura}/`,
-                        "_blank"
-                    );
-
-
-                    location.reload();
-                });
-            }
-        })
-
-
-        .catch(error => {
-
-            mensaje(
-                error.message,
-                "error",
-                ""
+        if (!response.ok) {
+            throw new Error(
+                respuesta.error ||
+                respuesta.message ||
+                "Ocurrió un error al realizar la venta"
             );
-        });
+        }
+
+        return respuesta;
+    })
+    .then(data => {
+
+        // ==================================================
+        // CONTADO
+        // ==================================================
+
+        if (tipoPago === "pago_contado") {
+
+            const cambio =
+                (
+                    parseFloat(cantidadDinero) -
+                    parseFloat(pagos[0].total)
+                ).toFixed(2);
+
+            Swal.fire({
+                title: "Venta realizada",
+                html: `
+                    <b>Cambio:</b> L. ${cambio}
+                `,
+                icon: "success",
+                confirmButtonText: "Aceptar",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                customClass: {
+                    confirmButton: "classbotones"
+                }
+            }).then(() => {
+
+                window.open(
+                    `/manager/recibo_pdf/${data.id_factura}/`,
+                    "_blank"
+                );
+
+                location.reload();
+            });
+
+        // ==================================================
+        // TARJETA
+        // ==================================================
+
+        } else if (tipoPago === "pago_tarjeta") {
+
+            Swal.fire({
+                title: "Venta realizada",
+                html: `
+                    <b>Factura:</b>
+                    ${data.numero_factura}
+                    <br>
+                    <b>Pago con tarjeta registrado correctamente</b>
+                `,
+                icon: "success",
+                confirmButtonText: "Aceptar",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                customClass: {
+                    confirmButton: "classbotones"
+                }
+            }).then(() => {
+
+                window.open(
+                    `/manager/recibo_pdf/${data.id_factura}/`,
+                    "_blank"
+                );
+
+                location.reload();
+            });
+
+        // ==================================================
+        // CRÉDITO
+        // ==================================================
+
+        } else {
+
+            Swal.fire({
+                title: "Venta a crédito realizada",
+                html: `
+                    <b>Factura:</b>
+                    ${data.numero_factura}
+                    <br>
+                    <b>La cuenta por cobrar fue creada correctamente</b>
+                `,
+                icon: "success",
+                confirmButtonText: "Aceptar",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                customClass: {
+                    confirmButton: "classbotones"
+                }
+            }).then(() => {
+
+                window.open(
+                    `/manager/recibo_pdf/${data.id_factura}/`,
+                    "_blank"
+                );
+
+                location.reload();
+            });
+        }
+    })
+    .catch(error => {
+
+        // ==================================================
+        // ERROR: PERMITIR REINTENTAR
+        // ==================================================
+
+        ventaEnProceso = false;
+
+        if (botonFormulario) {
+            botonFormulario.disabled = false;
+            botonFormulario.innerText = "Realizar compra";
+        }
+
+        if (botonCaja) {
+            botonCaja.disabled = false;
+        }
+
+        mensaje(
+            error.message,
+            "error",
+            ""
+        );
+    });
 }
 
 
 // ==========================================================
-// BOTON PAGAR
+// BOTÓN PAGAR
 // ==========================================================
 
 const btnPagar =
-    document.getElementById(
-        "Pagar"
-    );
-
+    document.getElementById("Pagar");
 
 if (btnPagar) {
 
@@ -3353,36 +3302,27 @@ if (btnPagar) {
         "click",
         function (e) {
 
-            if (this.disabled) {
-
+            if (this.disabled || ventaEnProceso) {
                 e.preventDefault();
-
                 return;
             }
 
-
             const modalElement =
-                document.getElementById(
-                    "modalPago"
-                );
-
+                document.getElementById("modalPago");
 
             if (!modalElement) {
                 return;
             }
-
 
             const modal =
                 bootstrap.Modal.getOrCreateInstance(
                     modalElement
                 );
 
-
             modal.show();
         }
     );
 }
-
 
 // ==========================================================
 // CAMBIO DE TIPO DE PAGO
@@ -3464,6 +3404,28 @@ if (tipoPagoSelect) {
                 if (digito)
                     digito.style.display =
                         "block";
+
+
+            // ------------------------------------------------
+            // PAGO A CRÉDITO
+            // ------------------------------------------------
+
+            } else if (
+                opcion ===
+                "pago_credito"
+            ) {
+
+                if (dinero)
+                    dinero.style.display =
+                        "none";
+
+                if (numero)
+                    numero.style.display =
+                        "none";
+
+                if (digito)
+                    digito.style.display =
+                        "none";
 
 
             // ------------------------------------------------

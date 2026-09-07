@@ -125,11 +125,6 @@ STATIC_URL = "/static/"
 
 # Carpeta donde collectstatic junta todo
 STATIC_ROOT = BASE_DIR / "staticfiles"
-
-
-# Static global:
-# /static/img
-# /static/css global
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
