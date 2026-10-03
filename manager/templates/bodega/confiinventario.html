@@ -1,16 +1,17 @@
 {% extends "menu.html" %}
-{% load static %}
+{% load static pagination_tags %}
 {% block title %}
   Confirmar Inventario
 {% endblock title %}
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
   <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}?v=20260918-02" />
 {% endblock extra_css %}
 {% block titulo_content %}
   <div class="tituloscont">
     <img class="logop"
-         src="{% static 'img/LH.png' %}"
+         src="{% static 'img/LH.webp' %}"
          alt="logo"
          width="0"
          height="0" />
@@ -26,14 +27,15 @@
     </button>
     <div class="display-flex">
       {% if perms.manager.add_devolucioncompra and compra.tipo == "Compra" %}
-        <button id="devoluciones"
-                class="btn-dropdown"
-                data-bs-toggle="modal"
-                data-bs-target="#devo">
-          <i class="bx bx-transfer-alt"></i> Devoluciones
-        </button>
+<button type="button"
+        id="devoluciones"
+        class="btn-dropdown"
+        data-bs-toggle="modal"
+        data-bs-target="#devo">
+    <i class="bx bx-transfer-alt"></i> Devoluciones
+</button>
       {% endif %}
-      <button id="toggleDropdownPanel32" class="btn-dropdown">
+      <button type="button" id="toggleDropdownPanel32" class="btn-dropdown">
         <i class="bx bx-check-circle"></i> Confirmar Entrada
       </button>
     </div>
@@ -45,6 +47,10 @@
          id="tipo-entrada"
          value="{{ compra.tipo|default:'COMPRA' }}">
   <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+  {% if compra.tipo == "Compra" %}
+    {% include "bodega/_tracking_compra.html" with tracking=compra.tracking %}
+    <script src="{% static 'js/bodega/tracking_compra.js' %}?v=20260928-01"></script>
+  {% endif %}
   <!-- ===================================================== -->
   <!-- MODAL CONFIRMACION -->
   <!-- ===================================================== -->
@@ -64,7 +70,9 @@
         </div>
         <div class="modal-body">
           <div class="tabla-container">
-            <table class="tablas-todo" id="tablacomprar">
+            <table class="tablas-todo"
+                   id="tablacomprar"
+                   data-mostrar-vencimiento="{{ compra.mostrar_vencimiento|yesno:'true,false' }}">
               <thead>
                 <tr>
                   <th>#</th>
@@ -73,7 +81,7 @@
                   <th>Presentación</th>
                   <th>SKU</th>
                   <th>Solicitado / Recibido</th>
-                  <th>F. Vencimiento</th>
+                  {% if compra.mostrar_vencimiento %}<th>F. Vencimiento</th>{% endif %}
                 </tr>
               </thead>
               <tbody id="tablaDetallesModal">
@@ -91,76 +99,190 @@
   <!-- ===================================================== -->
   <!-- MODAL DEVOLUCION SOLO PARA COMPRAS -->
   <!-- ===================================================== -->
-  {% if compra.tipo == "COMPRA" %}
-    <div class="modal fade"
-         id="devo"
-         tabindex="-1"
-         aria-labelledby="devoLabel"
-         aria-hidden="true">
-      <div class="modal-dialog modal-lg modal-dialog-centered">
+  {% if compra.tipo == "Compra" %}
+<div class="modal fade"
+     id="devo"
+     tabindex="-1"
+     aria-labelledby="devoLabel"
+     aria-hidden="true">
+
+<div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="devoLabel">Solicitud de Devolución</h5>
-            <button type="button"
-                    class="btn-close"
-                    data-bs-dismiss="modal"
-                    aria-label="Cerrar"></button>
-          </div>
-          <div class="modal-body">
-            <div class="mb-3">
-              <label for="observaciones" class="form-label">Observaciones</label>
-              <textarea id="observaciones"
-                        class="form-control"
-                        rows="2"
-                        placeholder="Escribe aquí las observaciones..."></textarea>
+
+            <div class="modal-header">
+
+                <h5 class="modal-title" id="devoLabel">
+                    Solicitud de Devolución
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Cerrar">
+                </button>
+
             </div>
-            <br>
-            <table class="tablas-todo" id="tablaDevolucion">
-              <thead>
-                <tr>
-                  <th>Seleccionar</th>
-                  <th>Nombre</th>
-                  <th>SKU</th>
-                  <th>Cantidad</th>
-                  <th>Motivo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for detalle in compra.detalles %}
-                  {% if detalle.cantidad > 0 %}
-                    <tr>
-                      <td>
-                        <input type="checkbox" class="check-devolucion">
-                        <input type="hidden" class="producto-id" value="{{ detalle.productoId }}">
-                      </td>
-                      <td>{{ detalle.productoNombre }}</td>
-                      <td>{{ detalle.sku }}</td>
-                      <td>{{ detalle.cantidad }}</td>
-                      <td>
-                        <select class="form-select motivo-select">
-                          <option value="" selected disabled>Seleccione</option>
-                          <option value="0">Producto Dañado</option>
-                          <option value="1">Producto Vencido</option>
-                          <option value="2">Error de Pedido</option>
-                          <option value="3">Producto Incorrecto</option>
-                          <option value="4">Exceso de Inventario</option>
-                          <option value="5">Otro</option>
-                        </select>
-                      </td>
-                    </tr>
-                  {% endif %}
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-          <div class="modal-footer altura-footer2">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="button" class="btn classbotones" id="enviarDevolucionBtn">Registrar Devolución</button>
-          </div>
+
+            <div class="modal-body">
+
+                <div class="mb-3">
+                    <label for="observaciones" class="form-label">
+                        Observaciones
+                    </label>
+
+                    <textarea id="observaciones"
+                              class="form-control"
+                              rows="2"
+                              placeholder="Escribe aquí las observaciones..."></textarea>
+                </div>
+
+                <br>
+
+                <div class="table-responsive">
+
+                    <table class="tablas-todo"
+                           id="tablaDevolucion">
+
+                        <thead>
+                            <tr>
+                                <th>Seleccionar</th>
+                                <th>Nombre</th>
+                                <th>SKU</th>
+                                <th>Cantidad</th>
+                                {% if compra.mostrar_conversion %}<th>Conversión</th>{% endif %}
+                                <th>Motivo</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            {% for detalle in detalles %}
+
+                                {% if detalle.cantidad > 0 %}
+
+                                    <tr>
+
+                                        <td>
+                                            <input type="checkbox"
+                                                   class="check-devolucion">
+
+                                            <input type="hidden"
+                                                   class="producto-id"
+                                                   value="{{ detalle.productoId }}">
+                                        </td>
+
+                                        <td class="nombre-devolucion">
+                                            {{ detalle.productoNombre }}
+                                        </td>
+
+                                        <td class="sku-devolucion">
+                                            {{ detalle.sku }}
+                                        </td>
+
+                                        <td class="cantidad-devolucion">
+                                            {{ detalle.cantidad }}
+                                        </td>
+
+                                        {% if compra.mostrar_conversion %}
+                                            <td class="devolucion-conversion">
+                                                {% if detalle.hijos %}
+                                                    <button type="button" class="btn btn-outline-success btn-sm convertir-hijo-btn"><i class="bx bx-transfer-alt"></i> Convertir a unidad</button>
+                                                    <select class="hijo-select d-none">
+                                                        {% for hijo in detalle.hijos %}
+                                                            <option value="{{ hijo.id }}" data-equivalencia="{{ hijo.equivalencia }}" data-maximo="{{ hijo.maximo }}" data-sku="{{ hijo.sku }}">{{ hijo.nombre }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                    <div class="devolucion-hijo-campos d-none mt-2">
+                                                        <input type="text" class="form-control cantidad-hijo" inputmode="numeric" placeholder="Cantidad a devolver">
+                                                        <small class="equivalencia-hijo text-muted d-block mt-1"></small>
+                                                    </div>
+                                                {% else %}
+                                                    <small class="text-muted">No hay productos hijo relacionados.</small>
+                                                {% endif %}
+                                            </td>
+                                        {% endif %}
+
+                                        <td>
+
+                                            <select class="form-select motivo-select">
+
+                                                <option value=""
+                                                        selected
+                                                        disabled>
+                                                    Seleccione
+                                                </option>
+
+                                                <option value="1">
+                                                    Producto Dañado
+                                                </option>
+
+                                                <option value="2">
+                                                    Producto Vencido
+                                                </option>
+
+                                                <option value="3">
+                                                    Error de Pedido
+                                                </option>
+
+                                                <option value="4">
+                                                    Producto Incorrecto
+                                                </option>
+
+                                                <option value="5">
+                                                    Exceso de Inventario
+                                                </option>
+
+                                                <option value="6">
+                                                    Otro
+                                                </option>
+
+                                            </select>
+
+                                        </td>
+
+                                    </tr>
+
+                                {% endif %}
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+            <div class="modal-footer altura-footer2">
+
+                <button type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+
+                <button type="button"
+                        class="btn classbotones"
+                        id="enviarDevolucionBtn">
+                    Registrar Devolución
+                </button>
+
+            </div>
+
         </div>
-      </div>
+
     </div>
-  {% endif %}
+
+</div>
+
+<div class="modal fade" id="modalHijosDevolucion" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content hijos-devolucion-modal">
+    <div class="modal-header"><h5 class="modal-title">Convertir a producto hijo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body"><p class="hijos-devolucion-intro">Selecciona el producto hijo al que deseas convertir esta presentación.</p><div id="listaHijosDevolucion" class="hijos-devolucion-lista"></div></div>
+  </div></div>
+</div>
+{% endif %}
   <!-- ===================================================== -->
   <!-- TABLA PRINCIPAL -->
   <!-- ===================================================== -->
@@ -174,38 +296,63 @@
         <th>SKU</th>
         <th>Cantidad</th>
         <th>Cant Recepción</th>
-        <th>FVencimiento</th>
+        {% if compra.mostrar_vencimiento %}<th>FVencimiento</th>{% endif %}
       </tr>
     </thead>
     <tbody>
-      {% for detalle in compra.detalles %}
+      {% for detalle in detalles %}
         <tr>
-          <td>{{ forloop.counter }}</td>
+          <td>{{ detalles.start_index|add:forloop.counter0 }}</td>
           <td>{{ detalle.productoNombre }}</td>
           <td>{{ detalle.marcas }}</td>
           <td>{{ detalle.presentacion }}</td>
           <td>{{ detalle.sku }}</td>
           <td>{{ detalle.cantidad }}</td>
           <td>
-            <input type="number"
+            <input type="text"
                    class="cantidad-recepcion"
                    style="width:100px"
-                   min="0"
-                   max="{{ detalle.cantidad }}"
+                   inputmode="decimal"
+                   autocomplete="off"
+                   aria-label="Cantidad de recepción de {{ detalle.productoNombre }}"
                    {% if detalle.cantidad == 0 %}disabled{% endif %}>
           </td>
-          <td>
-            {% if detalle.requiereVencimiento %}
-              <input type="date"
-                     class="fecha-vencimiento"
-                     value="{{ detalle.fvencimiento }}">
-            {% endif %}
-          </td>
+          {% if compra.mostrar_vencimiento %}
+            <td>
+              {% if detalle.requiereVencimiento %}
+                <input type="date"
+                       class="fecha-vencimiento"
+                       value="{{ detalle.fvencimiento }}">
+              {% endif %}
+            </td>
+          {% endif %}
           <input type="hidden" class="producto-id" value="{{ detalle.productoId }}">
         </tr>
       {% endfor %}
     </tbody>
   </table>
+  {% if detalles.paginator.num_pages > 1 %}
+    <nav class="d-flex justify-content-center mt-4" aria-label="Páginas de productos">
+      <ul class="pagination">
+        <li class="page-item {% if not detalles.has_previous %}disabled{% endif %}">
+          {% if detalles.has_previous %}
+            <a class="page-link" href="?page={{ detalles.previous_page_number }}">«</a>
+          {% else %}<span class="page-link">«</span>{% endif %}
+        </li>
+        {% paginas_cercanas detalles.number detalles.paginator.num_pages as paginas_visibles %}
+        {% for p in paginas_visibles %}
+          <li class="page-item {% if p == detalles.number %}active{% endif %}">
+            <a class="page-link" href="?page={{ p }}">{{ p }}</a>
+          </li>
+        {% endfor %}
+        <li class="page-item {% if not detalles.has_next %}disabled{% endif %}">
+          {% if detalles.has_next %}
+            <a class="page-link" href="?page={{ detalles.next_page_number }}">»</a>
+          {% else %}<span class="page-link">»</span>{% endif %}
+        </li>
+      </ul>
+    </nav>
+  {% endif %}
   <br>
-  <script type="module" src="{% static 'js/bodega/entradainventario.js' %}"></script>
+  <script type="module" src="{% static 'js/bodega/entradainventario.js' %}?v=20260918-03"></script>
 {% endblock main_content %}

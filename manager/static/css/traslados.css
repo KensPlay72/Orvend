@@ -1,0 +1,42 @@
+/* Estilos específicos del formulario de traslados.
+   Las variables se definen por la configuración del ERP. */
+.ubicacionselect .select-container .options > .list-group-item.active.bg-light {
+  border-color: color-mix(in srgb, var(--system-primary) 24%, #fff) !important;
+  color: var(--system-primary) !important;
+  background: color-mix(in srgb, var(--system-primary) 9%, #fff) !important;
+}
+
+.ubicacionselect .select-container .options > .list-group-item {
+  border-color: color-mix(in srgb, var(--system-primary) 16%, #fff) !important;
+}
+
+.ubicacionselect .select-container .options > .list-group-item-action:hover,
+.ubicacionselect .select-container .options > .list-group-item-action:focus {
+  color: var(--system-primary) !important;
+  background: color-mix(in srgb, var(--system-primary) 9%, #fff) !important;
+}
+
+.traslado-detalle__observaciones {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 1rem 0 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid color-mix(in srgb, var(--system-secondary) 28%, #fff);
+  color: #4b5563;
+}
+
+.traslado-detalle__observaciones i {
+  color: var(--system-primary);
+  font-size: 1.2rem;
+}
+
+.traslado-resumen__datos {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 1032px) {
+  .traslado-resumen__datos {
+    grid-template-columns: 1fr;
+  }
+}

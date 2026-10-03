@@ -29,6 +29,28 @@
   justify-content: center;
 }
 
+.estado-imagen {
+  min-height: 160px;
+  padding: 1rem;
+  color: #6c757d;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+}
+
+.estado-imagen .spinner-border {
+  width: 2rem;
+  height: 2rem;
+}
+
+.estado-imagen .bx-image-alt {
+  font-size: 3.5rem;
+  line-height: 1;
+}
+
 #imgProducto {
   width: 100%;
   height: 100%;

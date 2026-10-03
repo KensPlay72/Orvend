@@ -3,44 +3,81 @@
 {% block title %}Detalle Compra{% endblock %}
 {% block extra_css %}
         <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
-        <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20260928-tracker" />
 {% endblock %}
 {% block titulo_content %}
     <div class="tituloscont">
-        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+        <img class="logop" src="{% static 'img/LH.webp' %}" alt="">
         <p class="header__logo">| Detalle Compra</p>
     </div>
 {% endblock %}
 {% block main_content %}
-<br>
-        <div class="divbuttonscompras">
-            <br>
-            <div class="proveedoreselect">
-                <p style="margin-right: 5px;">Recepcion:</p>
-                <p><b>{{compra.ubicacion}}</b></p>
+        <input type="hidden" id="csrfTokenDetalleCompra" value="{{ csrf_token }}">
+        <section class="compra-resumen" aria-label="Información de la compra">
+            <div class="compra-resumen__encabezado">
+                <span class="compra-resumen__titulo">
+                    <i class="bx bx-receipt" aria-hidden="true"></i>
+                    <span>Información de la compra</span>
+                </span>
+                <div class="compra-detalle__acciones">
+                    <label class="compra-detalle__buscador" for="buscarProductoCompra">
+                        <i class="bx bx-search" aria-hidden="true"></i>
+                        <input type="text" id="buscarProductoCompra" placeholder="Buscar producto, presentación o SKU..." autocomplete="off">
+                    </label>
+                    {% if compra.puede_marcar_llegada %}
+                    <button type="button"
+                            id="btnMarcarLlegadaDetalle"
+                            class="btn classbotones compra-detalle__llegada"
+                            data-url="{% url 'marcar_llegada_compra' compra.token %}">
+                        <i class="bx bx-package"></i> Marcar llegada
+                    </button>
+                    {% endif %}
+                </div>
             </div>
-            <div class="proveedoreselect">
-                <p style="margin-right: 5px;">Proveedor:</p>
-                <p><b>{{compra.proveedorNombre}}</b></p>
+            <div class="compra-resumen__datos">
+                <div class="compra-resumen__dato">
+                    <span class="compra-resumen__icono"><i class="bx bx-store" aria-hidden="true"></i></span>
+                    <div>
+                        <span class="compra-resumen__etiqueta">Recepción</span>
+                        <strong>{{ compra.ubicacion }}</strong>
+                    </div>
+                </div>
+                <div class="compra-resumen__dato">
+                    <span class="compra-resumen__icono"><i class="bx bx-building-house" aria-hidden="true"></i></span>
+                    <div>
+                        <span class="compra-resumen__etiqueta">Proveedor</span>
+                        <strong>{{ compra.proveedorNombre }}</strong>
+                    </div>
+                </div>
+                <div class="compra-resumen__dato">
+                    <span class="compra-resumen__icono"><i class="bx bx-credit-card" aria-hidden="true"></i></span>
+                    <div>
+                        <span class="compra-resumen__etiqueta">Tipo de compra</span>
+                        <strong>{{ compra.tipoCompra }}</strong>
+                    </div>
+                </div>
             </div>
-            <div class="proveedoreselect">
-                <p style="margin-right: 5px;">Tipo de Compra:</p>
-                <p><b>{{compra.tipoCompra}}</b></p>
-            </div>
-        </div>
-        <br>
-        <div class="divbuttons3">
-            <div>
+        </section>
+        <div class="divbuttons3 compra-detalle-layout">
+            <div class="tablaencompras">
                 <table class="tablas-todo" id="tabladecom">
                     <thead>
                         <tr>
                             <th>#</th>
                             <th>Nombre</th>
+                            {% if compra.mostrar_importes %}
                             <th>Presentación</th>
                             <th>SKU</th>
-                            <th>Precio</th>
+                            {% endif %}
                             <th>Cantidad</th>
+                            {% if compra.mostrar_importes %}
+                            <th>Precio</th>
+                            <th>Imp. %</th>
+                            <th>Imp. unit.</th>
+                            <th>Antes imp.</th>
                             <th>Total</th>
+                            {% if compra.saldoUtilizado %}<th>Saldo usado</th>{% endif %}
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -48,28 +85,103 @@
                         <tr>
                             <td>{{ forloop.counter }}</td>
                             <td>{{ detalle.productoNombre }}</td>
+                            {% if compra.mostrar_importes %}
                             <td>{{detalle.presentacion}}</td> 
                             <td>{{detalle.sku}}</td>
-                            <td>L. {{ detalle.precioCompra }}</td>
+                            {% endif %}
                             <td>{{ detalle.cantidad }}</td>
-                            <td>L. {{ detalle.total|floatformat:2 }}</td>
+                            {% if compra.mostrar_importes %}
+                            <td>{{ moneda_simbolo }} {{ detalle.precioCompra|floatformat:2 }}</td>
+                            <td>{{ detalle.impuesto|floatformat:2 }}%</td>
+                            <td>{{ moneda_simbolo }} {{ detalle.impuestoUnitario|floatformat:2 }}</td>
+                            <td>{{ moneda_simbolo }} {{ detalle.subtotal|floatformat:2 }}</td>
+                            <td>{{ moneda_simbolo }} {{ detalle.total|floatformat:2 }}</td>
+                            {% if compra.saldoUtilizado %}<td></td>{% endif %}
+                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
 
                 <nav id="paginadordecom" class="d-flex justify-content-center mt-4"></nav>
-                <br>
             </div>
-            <div class="total1">
-                <div class="totalcompleto" id="total-compra">Total: L. {{compra.total}}</div>
-                <br>
-                <div class="totalcompleto" id="cantidad-productos">Total de productos: {{compra.totalProductos}}</div>
-            </div>
+            <aside class="compra-detalle__totales" aria-label="Resumen de la compra">
+                <div class="compra-detalle__tarjeta">
+                    <span class="compra-detalle__tarjeta-icono"><i class="bx bx-package" aria-hidden="true"></i></span>
+                    <span>Total de productos</span>
+                    <strong>{{ compra.totalProductos|floatformat:0 }}</strong>
+                </div>
+                {% if compra.mostrar_importes %}
+                <div class="compra-detalle__tarjeta">
+                    <span class="compra-detalle__tarjeta-icono"><i class="bx bx-calculator" aria-hidden="true"></i></span>
+                    <span>Antes de impuesto</span>
+                    <strong>{{ moneda_simbolo }} {{ compra.totalAntesImpuesto|floatformat:2 }}</strong>
+                </div>
+                <div class="compra-detalle__tarjeta">
+                    <span class="compra-detalle__tarjeta-icono"><i class="bx bx-receipt" aria-hidden="true"></i></span>
+                    <span>Impuestos</span>
+                    <strong>{{ moneda_simbolo }} {{ compra.totalImpuesto|floatformat:2 }}</strong>
+                </div>
+                {% if compra.saldoUtilizado %}
+                <div class="compra-detalle__tarjeta">
+                    <span class="compra-detalle__tarjeta-icono"><i class="bx bx-wallet" aria-hidden="true"></i></span>
+                    <span>Saldo usado</span>
+                    <strong>{{ moneda_simbolo }} {{ compra.saldoUtilizado|floatformat:2 }}</strong>
+                </div>
+                {% endif %}
+                <div class="compra-detalle__tarjeta compra-detalle__tarjeta--total">
+                    <span class="compra-detalle__tarjeta-icono"><i class="bx bx-receipt" aria-hidden="true"></i></span>
+                    <span>Después de impuesto</span>
+                    <strong>{{ moneda_simbolo }} {{ compra.total|floatformat:2 }}</strong>
+                </div>
+                {% endif %}
+            </aside>
         </div>
 
         <script>
 document.addEventListener("DOMContentLoaded", () => {
+    const botonLlegada = document.getElementById("btnMarcarLlegadaDetalle");
+    if (botonLlegada) {
+        botonLlegada.addEventListener("click", async () => {
+            const confirmacion = await Swal.fire({
+                title: "¿Registrar llegada a bodega?",
+                text: "La compra quedará disponible para recepción, pero no ingresará inventario todavía.",
+                icon: "question",
+                showCancelButton: true,
+                confirmButtonText: "Sí, registrar llegada",
+                cancelButtonText: "Cancelar",
+                reverseButtons: true,
+                customClass: { confirmButton: "classbotones" },
+            });
+            if (!confirmacion.isConfirmed) return;
+            const token = document.getElementById("csrfTokenDetalleCompra")?.value || "";
+            try {
+                const response = await fetch(botonLlegada.dataset.url, {
+                    method: "POST",
+                    headers: { "X-CSRFToken": token },
+                });
+                const data = await response.json();
+                if (!response.ok || !data.ok) throw new Error(data.mensaje || "No se pudo registrar la llegada.");
+                await Swal.fire({
+                    title: "Llegada registrada",
+                    text: data.mensaje,
+                    icon: "success",
+                    confirmButtonText: "Aceptar",
+                    customClass: { confirmButton: "classbotones" },
+                });
+                window.location.href = "{% url 'recepcion_inventario' %}";
+            } catch (error) {
+                Swal.fire({
+                    title: "No se pudo registrar",
+                    text: error.message || "Inténtalo nuevamente.",
+                    icon: "error",
+                    confirmButtonText: "Aceptar",
+                    customClass: { confirmButton: "classbotones" },
+                });
+            }
+        });
+    }
+
     const filasPorPagina = 10;
     let paginaActual = parseInt(new URLSearchParams(window.location.search).get("page")) || 1;
 
@@ -77,8 +189,14 @@ document.addEventListener("DOMContentLoaded", () => {
         return Array.from(document.querySelectorAll("#tabladecom tbody tr"));
     }
 
+    function obtenerFilasFiltradas() {
+        const termino = document.getElementById("buscarProductoCompra").value.trim().toLowerCase();
+        return obtenerFilas().filter(fila => !termino || fila.textContent.toLowerCase().includes(termino));
+    }
+
     function mostrarPagina(pagina) {
-        const filas = obtenerFilas();
+        const todasLasFilas = obtenerFilas();
+        const filas = obtenerFilasFiltradas();
         const totalPaginas = Math.ceil(filas.length / filasPorPagina);
         if (pagina < 1) pagina = 1;
         if (pagina > totalPaginas) pagina = totalPaginas || 1;
@@ -86,7 +204,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const inicio = (pagina - 1) * filasPorPagina;
         const fin = inicio + filasPorPagina;
 
-        filas.forEach(fila => fila.style.display = "none");
+        todasLasFilas.forEach(fila => fila.style.display = "none");
         filas.slice(inicio, fin).forEach(fila => fila.style.display = "");
 
         paginaActual = pagina;
@@ -113,11 +231,6 @@ document.addEventListener("DOMContentLoaded", () => {
         // Rango dinámico
         let start = Math.max(1, pagina - 2);
         let end = Math.min(totalPaginas, pagina + 2);
-
-        if (end - start < 4) {
-            if (start === 1) end = Math.min(totalPaginas, start + 4);
-            else if (end === totalPaginas) start = Math.max(1, end - 4);
-        }
 
         for (let i = start; i <= end; i++) {
             const li = document.createElement("li");
@@ -154,9 +267,17 @@ document.addEventListener("DOMContentLoaded", () => {
     window.mostrarPaginaDecom = mostrarPagina;
     window.paginaActualDecom = paginaActual;
 
+    document.getElementById("buscarProductoCompra").addEventListener("input", () => {
+        paginaActual = 1;
+        mostrarPagina(paginaActual);
+    });
+
     // Inicializar
     mostrarPagina(paginaActual);
 });
 </script>
+
+{% include "bodega/_tracking_compra.html" with tracking=compra.tracking %}
+<script src="{% static 'js/bodega/tracking_compra.js' %}?v=20260928-01"></script>
 
 {% endblock %}

@@ -4,6 +4,39 @@ function validateNumber(input) {
 
 
 document.addEventListener("DOMContentLoaded", () => {
+    const modalHistorialElement = document.getElementById("modalHistorialPagar");
+    const historialBody = document.getElementById("historialPagarBody");
+    const historialCuenta = document.getElementById("historialPagarCuenta");
+
+    if (modalHistorialElement && historialBody && historialCuenta) {
+        const tablaCuentas = document.getElementById("tablaUsuarios");
+        const escaparHtml = (valor) => String(valor).replace(/[&<>"']/g, (caracter) => ({
+            "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;",
+        }[caracter]));
+        tablaCuentas?.addEventListener("click", async (event) => {
+            if (event.target.closest("button, a, input, select, label")) return;
+
+            const fila = event.target.closest(".fila-cuenta[data-abonos-url]");
+            if (!fila) return;
+
+            historialCuenta.textContent = `Cuenta por pagar #${fila.dataset.id}`;
+            historialBody.innerHTML = '<tr><td colspan="3" class="text-center">Cargando abonos...</td></tr>';
+            bootstrap.Modal.getOrCreateInstance(modalHistorialElement).show();
+
+            try {
+                const response = await fetch(fila.dataset.abonosUrl);
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.message || "No se pudo obtener el historial");
+
+                historialBody.innerHTML = data.abonos.length
+                    ? data.abonos.map((abono) => `<tr><td>${escaparHtml(abono.usuario)}</td><td>${escaparHtml(abono.fecha)}</td><td>L. ${escaparHtml(abono.monto)}</td></tr>`).join("")
+                    : '<tr><td colspan="3" class="text-center table-empty-state">No hay abonos registrados.</td></tr>';
+            } catch (error) {
+                historialBody.innerHTML = `<tr><td colspan="3" class="text-center text-danger">${escaparHtml(error.message)}</td></tr>`;
+            }
+        });
+    }
+
     const modalElement = document.getElementById("modalregis");
     const abonoInput = document.getElementById("abono");
     const mpagarInput = document.getElementById("mpagar");

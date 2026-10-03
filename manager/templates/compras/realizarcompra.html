@@ -10,7 +10,7 @@
 {% block titulo_content %}
     <div class="tituloscont">
         <img class="logop"
-             src="{% static 'img/LH.png' %}"
+             src="{% static 'img/LH.webp' %}"
              alt="logo"
              width="0"
              height="0" />
@@ -18,19 +18,21 @@
     </div>
 {% endblock titulo_content %}
 {% block main_content %}
-    <div class="divbuttons2">
-        <button id="toggleDropdownPanel"
-                class="btn-dropdown"
-                data-bs-toggle="modal"
-                data-bs-target="#modalregis">
-            <i class="bx bx-cart-add"></i> Agregar Producto
-        </button>
-        <div class="provselect">
+    <div class="divbuttons2 compra-toolbar">
+        <div class="compra-toolbar__action">
+            <button id="toggleDropdownPanel"
+                    class="btn-dropdown"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalregis">
+                <i class="bx bx-cart-add"></i> Agregar Producto
+            </button>
+        </div>
+        <div class="provselect compra-toolbar__field">
             <p>Recepcion:</p>
             <div class="form-group mb-3">
                 <input type="hidden" name="recepcionid" id="recepcionid" required>
                 <div class="dropdown select-container w-100">
-                    <button type="button" class="btn w-100 text-start form-control">Escriba para buscar...</button>
+                    <button type="button" class="btn w-100 text-start form-control">Buscar...</button>
                     <div class="dropdown-menu w-100 p-0">
                         <div class="search-box p-2">
                             <input type="text" class="form-control" placeholder="Buscar proveedor...">
@@ -42,12 +44,12 @@
                 </div>
             </div>
         </div>
-        <div class="provselect">
+        <div class="provselect compra-toolbar__field">
             <p>Proveedor:</p>
             <div class="form-group mb-3">
                 <input type="hidden" name="proveedoresid" id="proveedoresid" required>
                 <div class="dropdown select-container w-100">
-                    <button type="button" class="btn w-100 text-start form-control">Escriba para buscar...</button>
+                    <button type="button" class="btn w-100 text-start form-control">Buscar...</button>
                     <div class="dropdown-menu w-100 p-0">
                         <div class="search-box p-2">
                             <input type="text" class="form-control" placeholder="Buscar proveedor...">
@@ -59,9 +61,11 @@
                 </div>
             </div>
         </div>
-        <button id="toggleDropdownPanel32" class="btn-dropdown">
-            <i class="bx bx-check-circle"></i> Completar compra
-        </button>
+        <div class="compra-toolbar__action">
+            <button id="toggleDropdownPanel32" class="btn-dropdown">
+                <i class="bx bx-check-circle"></i> Completar compra
+            </button>
+        </div>
     </div>
     <!-- Modal Productos -->
     <div class="modal fade"
@@ -69,8 +73,8 @@
          tabindex="-1"
          aria-labelledby="exampleModalCenterTitle"
          aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal600">
-            <div class="modal-content">
+        <div class="modal-dialog modal-dialog-centered modal600 compras-product-modal">
+            <div class="modal-content compras-product-modal__content">
                 <div class="modal-header">
                     <h5 class="modal-title">Agregar Productos</h5>
                     <button type="button"
@@ -78,27 +82,32 @@
                             data-bs-dismiss="modal"
                             aria-label="Cerrar"></button>
                 </div>
-                <div class="modal-body">
-                    <!-- Buscador -->
-                    <input type="text"
-                           class="form-control mb-3"
-                           id="buscadorProductos"
-                           placeholder="Buscar por nombre o SKU...">
+                <div class="modal-body compras-product-modal__body">
+                    <form class="compras-product-search" id="formBuscarProductosCompra">
+                        <input type="text"
+                               id="buscadorProductos"
+                               placeholder="Buscar por nombre o SKU..."
+                               aria-label="Buscar productos">
+                        <button type="submit" class="dv-header-search__button" aria-label="Buscar productos">
+                            <i class="bx bx-search" aria-hidden="true"></i>
+                        </button>
+                    </form>
                     <!-- Lista dinámica de productos -->
-                    <div id="contenedorProductosAjax">
+                    <div id="contenedorProductosAjax" class="compras-product-list-wrap">
                         <div id="loadingProductos" class="text-center py-4">Cargando productos...</div>
                     </div>
                     <!-- Paginación dinámica -->
-                    <nav class="d-flex justify-content-center mt-3">
+                    <nav class="compras-product-pagination" aria-label="Páginas de productos">
                         <ul class="pagination" id="paginacionProductos">
                             <!-- Se rellena por JS -->
                         </ul>
                     </nav>
                 </div>
-                <div class="modal-footer altura-footer2">
+                <div class="modal-footer compras-product-modal__footer">
+                    <span><i class="bx bx-check-circle"></i> Selecciona los productos para agregarlos a la compra</span>
                     <button type="button"
-                            class="btn btn classbotones"
-                            id="guardarProductosSeleccionados">Agregar Selección</button>
+                            class="btn classbotones"
+                            id="guardarProductosSeleccionados"><i class="bx bx-plus"></i> Agregar selección</button>
                 </div>
             </div>
         </div>
@@ -108,7 +117,7 @@
          tabindex="-1"
          aria-labelledby="exampleModalCenterTitle"
          aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Completar Compra</h5>
@@ -138,7 +147,13 @@
                                   class="form-control"
                                   placeholder="Descripción"></textarea>
                     </div>
-                    <br>
+                    <div class="form-check mt-3 d-none" id="contenedorUsarSaldoProveedor">
+                        <input class="form-check-input" type="checkbox" id="usarSaldoProveedor">
+                        <label class="form-check-label" for="usarSaldoProveedor">
+                            Usar saldo: <strong id="saldoProveedorDisponible">L. 0.00</strong>
+                        </label>
+                    </div>
+                    <br>   
                     <div class="tabla-container">
                         <table class="tablas-todo" id="tablacomprar">
                             <thead>
@@ -149,12 +164,24 @@
                                     <th>SKU</th>
                                     <th>Cantidad</th>
                                     <th>Precio</th>
+                                    <th>Imp. %</th>
+                                    <th>Imp. unit.</th>
+                                    <th>Subtotal</th>
+                                    <th class="saldo-usado-col d-none">Saldo usado</th>
+                                    <th>Total</th>
                                 </tr>
                             </thead>
                             <tbody id="tablaDetallesModal">
                                 <!-- Filas dinámicas aquí -->
                             </tbody>
                         </table>
+                    </div>
+                    <div class="compras-modal-summary" aria-label="Resumen de importes">
+                        <div class="compras-modal-summary__item"><span>Antes imp.</span><strong id="subtotalModalCompra">L. 0.00</strong></div>
+                        <div class="compras-modal-summary__item"><span>Impuestos</span><strong id="impuestoModalCompra">L. 0.00</strong></div>
+                        <div class="compras-modal-summary__item compras-modal-summary__item--total"><span>Después imp.</span><strong id="totalModalCompra">L. 0.00</strong></div>
+                        <div class="compras-modal-summary__item saldo-usado-col d-none"><span>Saldo usado</span><strong id="saldoUsadoModalCompra">L. 0.00</strong></div>
+                        <div class="compras-modal-summary__item compras-modal-summary__item--total saldo-usado-col d-none"><span>Total a pagar</span><strong id="totalPagarModalCompra">L. 0.00</strong></div>
                     </div>
                     <nav id="paginadorcomprar" class="d-flex justify-content-center mt-4">
                     </nav>
@@ -178,6 +205,7 @@
                         <th>Presentación</th>
                         <th>SKU</th>
                         <th>Precio Compra</th>
+                        <th>Imp. %</th>
                         <th>Cantidad</th>
                         <th>Acciones</th>
                     </tr>
@@ -190,10 +218,12 @@
             <br>
         </div>
         <div class="total">
-            <div class="totalcompleto" id="total-compra">Total: L. 0.00</div>
+            <div class="totalcompleto" id="subtotal-compra">Antes imp.: L. 0.00</div>
+            <div class="totalcompleto" id="impuesto-compra">Impuestos: L. 0.00</div>
+            <div class="totalcompleto" id="total-compra">Después imp.: L. 0.00</div>
             <div class="totalcompleto" id="cantidad-productos">Total de productos: 0</div>
             <div class="totalcompleto" id="contador-productos">Productos: 0</div>
         </div>
     </div>
-    <script type="module" src="{% static 'js/compras/realcompra.js' %}"></script>
+    <script type="module" src="{% static 'js/compras/realcompra.js' %}?v=20260929-impuestos"></script>
 {% endblock main_content %}

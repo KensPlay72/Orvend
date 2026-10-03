@@ -64,9 +64,24 @@ function initDropdown(hiddenInputId, remoteSearchFn = null) {
     dropdown.classList.remove("show");
 
     if (hiddenInputId === "ubicacion_origen") {
+      const destinoInput = document.getElementById("ubicacion_destino");
+      if (destinoInput?.value === item.dataset.value) {
+        destinoInput.value = "";
+        destinoInput.nextElementSibling.querySelector("button").textContent =
+          "Escriba para buscar...";
+      }
       await cargarInventarioEnModal(item.dataset.value);
     }
   });
+
+  searchInput.addEventListener(
+    "input",
+    debounce(() => {
+      if (remoteSearchFn) {
+        remoteSearchFn(searchInput.value.trim(), optionsContainer);
+      }
+    }, 300),
+  );
 
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".select-container")) {
@@ -78,7 +93,7 @@ function initDropdown(hiddenInputId, remoteSearchFn = null) {
 /*========================================
 =          FETCH UBICACIONES             =
 ========================================*/
-async function fetchUbicaciones(term, optionsContainer) {
+async function fetchUbicaciones(term, optionsContainer, excluirOrigen = false) {
   try {
     const res = await fetch(
       `/manager/ubicaciones/search/?search=${encodeURIComponent(term)}`,
@@ -95,30 +110,27 @@ async function fetchUbicaciones(term, optionsContainer) {
       return;
     }
 
+    const origenSeleccionado = document.getElementById("ubicacion_origen")?.value;
+    const ubicaciones = excluirOrigen
+      ? data.filter((u) => String(u.id) !== String(origenSeleccionado || ""))
+      : data;
+
+    if (!ubicaciones.length) {
+      optionsContainer.innerHTML = `
+        <div class="list-group-item text-muted">No hay ubicaciones disponibles</div>
+      `;
+      return;
+    }
+
     optionsContainer.innerHTML += `
       <div class="list-group-item active bg-light text-dark fw-bold">
-        ${term ? "Resultados encontrados" : "Sugerencias recientes"}
+        ${term ? "Resultados encontrados" : "Más utilizadas"}
       </div>
     `;
 
-    data.forEach((u) => {
-      // =========================
-      // TIPO LABEL
-      // =========================
-      let tipoLabel = "";
-
-      if (u.es_bodega) {
-        tipoLabel = "Bodega";
-      } else if (u.es_tienda) {
-        tipoLabel = "Tienda";
-      } else {
-        tipoLabel = "Sin tipo";
-      }
-
-      // =========================
-      // TEXTO FINAL
-      // =========================
-      const texto = `${u.nombre}${u.codigo ? " | " + u.codigo : ""} | ${tipoLabel}`;
+    ubicaciones.forEach((u) => {
+      // El selector muestra únicamente el nombre de la ubicación.
+      const texto = u.nombre;
 
       optionsContainer.innerHTML += `
         <button type="button"
@@ -139,8 +151,12 @@ async function fetchUbicaciones(term, optionsContainer) {
   }
 }
 
-initDropdown("ubicacion_origen", fetchUbicaciones);
-initDropdown("ubicacion_destino", fetchUbicaciones);
+initDropdown("ubicacion_origen", (term, contenedor) =>
+  fetchUbicaciones(term, contenedor),
+);
+initDropdown("ubicacion_destino", (term, contenedor) =>
+  fetchUbicaciones(term, contenedor, true),
+);
 
 /*========================================
 =       CARGAR INVENTARIO EN MODAL       =
@@ -168,42 +184,18 @@ async function cargarInventarioEnModal(ubicacionId) {
 
     const div = document.createElement("div");
 
-    div.className =
-      "productosstyle producto-item d-flex align-items-center w-100";
+    div.className = "productosstyle producto-item compras-product-option";
 
     const imagen = prod.imagen;
 
     div.innerHTML = `
-      <div class="me-3">
-        <img
-          src="${imagen}"
-          style="
-            width:60px;
-            height:60px;
-            object-fit:cover;
-            border-radius:5px;
-          "
-        >
+      <img class="compras-product-option__image" src="${imagen || '/static/img/default.png'}" alt="" onerror="this.src='/static/img/default.png'">
+      <div class="compras-product-option__info datos-producto" data-sku="${prod.sku}" data-stock="${prod.stock}">
+        <strong>${prod.nombre}</strong>
+        <small>SKU: ${prod.sku} · Existencias: ${prod.stock}</small>
       </div>
-
-      <div
-        class="flex-grow-1 datos-producto"
-        data-sku="${prod.sku}"
-        data-stock="${prod.stock}"
-      >
-        <strong>${prod.nombre}</strong><br>
-
-        <small>
-          SKU: ${prod.sku} |
-          Stock: ${prod.stock}
-        </small>
-      </div>
-
-      <input
-        type="checkbox"
-        class="form-check-input producto-checkbox d-none"
-        value="${prod.producto_id}"
-      >
+      <span class="compras-product-option__action"><i class="bx bx-plus-circle"></i> Seleccionar</span>
+      <input type="checkbox" class="form-check-input producto-checkbox d-none" value="${prod.producto_id}">
     `;
 
     contenedor.appendChild(div);
@@ -219,10 +211,23 @@ function inicializarSeleccion() {
   document.querySelectorAll(".producto-item").forEach((item) => {
     const checkbox = item.querySelector(".producto-checkbox");
     const id = checkbox.value;
+    const actualizarEtiqueta = () => {
+      const etiqueta = item.querySelector(".compras-product-option__action");
+      etiqueta.innerHTML = checkbox.checked
+        ? '<i class="bx bx-check-circle"></i> Seleccionado'
+        : '<i class="bx bx-plus-circle"></i> Seleccionar';
+    };
+
+    if (inventarioSeleccionadoGlobal[id]) {
+      checkbox.checked = true;
+      item.classList.add("seleccionado");
+    }
+    actualizarEtiqueta();
 
     item.addEventListener("click", () => {
       checkbox.checked = !checkbox.checked;
       item.classList.toggle("seleccionado", checkbox.checked);
+      actualizarEtiqueta();
 
       if (checkbox.checked) {
         const datos = item.querySelector(".datos-producto");
@@ -400,7 +405,9 @@ function mostrarPaginaPreviewTraslado(pagina = 1) {
 
   if (totalPaginas <= 1) return;
 
-  for (let i = 1; i <= totalPaginas; i++) {
+  const inicioPagina = Math.max(1, pagina - 2);
+  const finPagina = Math.min(totalPaginas, pagina + 2);
+  for (let i = inicioPagina; i <= finPagina; i++) {
     paginador.innerHTML += `
       <button type="button"
               class="btn btn-sm ${i === pagina ? "classbotones" : "btn-light"} me-1"

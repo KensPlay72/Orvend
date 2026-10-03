@@ -90,7 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
         form.reset();
 
         // reset UI visual
-        document.getElementById("bodega_container").style.display = "none";
+        document.getElementById("bodega_container").hidden = true;
         document.getElementById("switch_relacion").style.display = "none";
 
         Swal.fire({
@@ -199,7 +199,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (ubicacion.bodegaid) {
             relacionBodega.checked = true;
 
-            bodegaContainer.style.display = "block";
+            bodegaContainer.hidden = false;
 
             document.getElementById("bodegaidedit").value = ubicacion.bodegaid;
 
@@ -212,7 +212,7 @@ document.addEventListener("DOMContentLoaded", () => {
           } else {
             relacionBodega.checked = false;
 
-            bodegaContainer.style.display = "none";
+            bodegaContainer.hidden = true;
 
             document.getElementById("bodegaidedit").value = "";
 
@@ -227,7 +227,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
           relacionBodega.checked = false;
 
-          bodegaContainer.style.display = "none";
+          bodegaContainer.hidden = true;
 
           document.getElementById("bodegaidedit").value = "";
 
@@ -425,17 +425,14 @@ document.addEventListener("DOMContentLoaded", () => {
 async function fetchUbicaciones(term, optionsContainer) {
     try {
         const res = await fetch(
-            `/manager/ubicaciones/search/?search=${encodeURIComponent(term)}`
+            `/manager/ubicaciones/bodega/search/?search=${encodeURIComponent(term)}`
         );
 
         const data = await res.json();
 
         optionsContainer.innerHTML = "";
 
-        // ==========================================
-        // FILTRAR SOLAMENTE BODEGAS
-        // ==========================================
-        const bodegas = data.filter((u) => u.es_bodega);
+        const bodegas = data;
 
         if (!bodegas.length) {
             optionsContainer.innerHTML = `
@@ -447,30 +444,14 @@ async function fetchUbicaciones(term, optionsContainer) {
         }
 
         optionsContainer.innerHTML += `
-            <div class="list-group-item active bg-light text-dark fw-bold">
-                ${term ? "Bodegas encontradas" : "Bodegas recientes"}
+            <div class="list-group-item select-suggestions-title fw-bold">
+                ${term ? "Resultados encontrados" : "Más utilizadas"}
             </div>
         `;
 
         bodegas.forEach((u) => {
 
-            // =========================
-            // TIPO LABEL
-            // =========================
-            let tipoLabel = "";
-
-            if (u.es_bodega) {
-                tipoLabel = "Bodega";
-            } else if (u.es_tienda) {
-                tipoLabel = "Tienda";
-            } else {
-                tipoLabel = "Sin tipo";
-            }
-
-            // =========================
-            // TEXTO FINAL
-            // =========================
-            const texto = `${u.nombre}${u.codigo ? " | " + u.codigo : ""} | ${tipoLabel}`;
+            const texto = `${u.nombre}${u.codigo ? " | " + u.codigo : ""}`;
 
             optionsContainer.innerHTML += `
                 <button type="button"
@@ -520,7 +501,7 @@ function initDropdown(hiddenInputId, remoteSearchFn = null) {
 
   // Seleccionar opción
   optionsContainer.addEventListener("click", (e) => {
-    const item = e.target.closest(".list-group-item");
+    const item = e.target.closest(".list-group-item-action");
     if (item) {
       hiddenInput.value = item.dataset.value;
       selectBtn.textContent = item.dataset.label;
@@ -532,14 +513,21 @@ function initDropdown(hiddenInputId, remoteSearchFn = null) {
   // Abrir dropdown y cargar sugerencias
   selectBtn.addEventListener("click", async (e) => {
     e.stopPropagation();
-    dropdown.classList.toggle("show");
-    searchInput.focus();
+    const estabaAbierto = dropdown.classList.contains("show");
+
+    document
+      .querySelectorAll(".ubicaciones-bodega-select .dropdown-menu.show")
+      .forEach((menu) => menu.classList.remove("show"));
+
+    dropdown.classList.toggle("show", !estabaAbierto);
 
     if (dropdown.classList.contains("show") && remoteSearchFn) {
       optionsContainer.innerHTML = `
+                <div class="list-group-item select-suggestions-title fw-bold">Más utilizadas</div>
                 <div class="list-group-item text-muted">Cargando sugerencias...</div>
             `;
       await remoteSearchFn("", optionsContainer);
+      searchInput.focus();
     }
   });
 
@@ -592,6 +580,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const btn = bodegaContainer.querySelector("button");
     if (btn) btn.textContent = "Escriba para buscar...";
+    bodegaContainer.querySelector(".dropdown-menu")?.classList.remove("show");
   }
 
   // RESET BODEGA (EDIT)
@@ -601,15 +590,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const btn = bodegaContainerEdit.querySelector("button");
     if (btn) btn.textContent = "Escriba para buscar...";
+    bodegaContainerEdit.querySelector(".dropdown-menu")?.classList.remove("show");
   }
 
   // ------------------------
   // ESTADO INICIAL
   // ------------------------
   relacionContainer.style.display = "none";
-  bodegaContainer.style.display = "none";
+  bodegaContainer.hidden = true;
   relacionContainerEdit.style.display = "none";
-  bodegaContainerEdit.style.display = "none";
+  bodegaContainerEdit.hidden = true;
 
   // =========================
   // SI ES BODEGA
@@ -621,7 +611,7 @@ document.addEventListener("DOMContentLoaded", () => {
       relacionContainer.style.display = "none";
       relacionSwitch.checked = false;
 
-      bodegaContainer.style.display = "none";
+      bodegaContainer.hidden = true;
       resetBodega();
     }
   });
@@ -633,7 +623,7 @@ document.addEventListener("DOMContentLoaded", () => {
       relacionContainerEdit.style.display = "none";
       relacionSwitchEdit.checked = false;
 
-      bodegaContainerEdit.style.display = "none";
+      bodegaContainerEdit.hidden = true;
       resetBodegaEdit();
     }
   });
@@ -650,7 +640,7 @@ document.addEventListener("DOMContentLoaded", () => {
       relacionContainer.style.display = "none";
       relacionSwitch.checked = false;
 
-      bodegaContainer.style.display = "none";
+      bodegaContainer.hidden = true;
       resetBodega();
     }
   });
@@ -664,7 +654,7 @@ document.addEventListener("DOMContentLoaded", () => {
       relacionContainerEdit.style.display = "none";
       relacionSwitchEdit.checked = false;
 
-      bodegaContainerEdit.style.display = "none";
+      bodegaContainerEdit.hidden = true;
       resetBodegaEdit();
     }
   });
@@ -674,18 +664,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================
   relacionSwitch.addEventListener("change", function () {
     if (this.checked) {
-      bodegaContainer.style.display = "block";
+      bodegaContainer.hidden = false;
     } else {
-      bodegaContainer.style.display = "none";
+      bodegaContainer.hidden = true;
       resetBodega();
     }
   });
 
   relacionSwitchEdit.addEventListener("change", function () {
     if (this.checked) {
-      bodegaContainerEdit.style.display = "block";
+      bodegaContainerEdit.hidden = false;
     } else {
-      bodegaContainerEdit.style.display = "none";
+      bodegaContainerEdit.hidden = true;
       resetBodegaEdit();
     }
   });

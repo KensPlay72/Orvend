@@ -1,15 +1,16 @@
 {% extends "menu.html" %}
-{% load static %}
+{% load static pagination_tags %}
 {% block title %}
     Traslados
 {% endblock title %}
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/traslados.css' %}" />
 {% endblock extra_css %}
 {% block titulo_content %}
     <div class="tituloscont">
         <img class="logop"
-             src="{% static 'img/LH.png' %}"
+             src="{% static 'img/LH.webp' %}"
              alt=""
              width="0"
              height="0">
@@ -37,7 +38,7 @@
             </thead>
             <tbody>
                 {% for traslado in page_obj %}
-                    <tr>
+                    <tr class="fila-traslado" data-token="{{ traslado.documento_token }}">
                         <td>{{ traslado.id }}</td>
                         <td>{{ traslado.ubicacion_origen.nombre }}</td>
                         <td>{{ traslado.ubicacion_destino.nombre }}</td>
@@ -71,7 +72,8 @@
                     <span class="page-link">«</span>
                 {% endif %}
             </li>
-            {% for p in page_obj.paginator.page_range %}
+            {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
+            {% for p in paginas_visibles %}
                 <li class="page-item {% if p == page_obj.number %}active{% endif %}">
                     <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
                 </li>
@@ -86,4 +88,5 @@
             </li>
         </ul>
     </nav>
+    <script type="module" src="{% static 'js/gestiones/traslados_list.js' %}"></script>
 {% endblock main_content %}

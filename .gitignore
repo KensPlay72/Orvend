@@ -1,0 +1,17 @@
+# Configuración local de cada servidor
+.env
+.env.*
+!.env.example
+Dockerfile
+docker-compose.yml
+docker-compose.yaml
+
+# Módulo aún no listo para distribuir
+tiendav/
+
+# Archivos generados por Python
+__pycache__/
+*.py[cod]
+
+# Archivos generados por Django
+staticfiles/

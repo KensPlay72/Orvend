@@ -28,6 +28,7 @@ function initDropdown(hiddenInputId, remoteSearchFn = null) {
     const item = e.target.closest(".list-group-item");
     if (item) {
       hiddenInput.value = item.dataset.value;
+      hiddenInput.dataset.saldo = item.dataset.saldo || "0";
       selectBtn.textContent = item.dataset.label;
       dropdown.classList.remove("show");
       searchInput.value = "";
@@ -93,7 +94,7 @@ async function fetchProveedores(term, optionsContainer) {
     // Encabezado visual
     optionsContainer.innerHTML += `
             <div class="list-group-item active bg-light text-dark fw-bold">
-                ${term ? "Resultados encontrados" : "Sugerencias recientes"}
+                ${term ? "Resultados encontrados" : "Más utilizados"}
             </div>
         `;
 
@@ -104,7 +105,8 @@ async function fetchProveedores(term, optionsContainer) {
                 <button type="button"
                         class="list-group-item list-group-item-action"
                         data-value="${p.id}"
-                        data-label="${texto}">
+                        data-label="${texto}"
+                        data-saldo="${p.saldo || 0}">
                      ${texto}
                 </button>
             `;
@@ -139,7 +141,7 @@ async function fetchUbicaciones(term, optionsContainer) {
 
     optionsContainer.innerHTML += `
       <div class="list-group-item active bg-light text-dark fw-bold">
-        ${term ? "Resultados encontrados" : "Sugerencias recientes"}
+        ${term ? "Resultados encontrados" : "Más utilizadas"}
       </div>
     `;
 
@@ -187,11 +189,45 @@ async function fetchUbicaciones(term, optionsContainer) {
 initDropdown("proveedoresid", fetchProveedores);
 initDropdown("recepcionid", fetchUbicaciones);
 
+function actualizarOpcionCredito(diasCredito) {
+  const tipoCompra = document.getElementById("tcompra");
+  const opcionCredito = tipoCompra?.querySelector('option[value="2"]');
+  if (!opcionCredito) return; // El permiso sigue controlando si la opción existe.
+
+  const creditoDisponible = Number(diasCredito) > 0;
+  opcionCredito.hidden = !creditoDisponible;
+  opcionCredito.disabled = !creditoDisponible;
+
+  if (!creditoDisponible && tipoCompra.value === "2") {
+    tipoCompra.value = "1";
+  }
+}
+
+function actualizarVisibilidadSaldoUsado(mostrar) {
+  document.querySelectorAll(".saldo-usado-col").forEach((celda) => {
+    celda.classList.toggle("d-none", !mostrar);
+  });
+}
+
+function importesCompra(precio, cantidad, impuesto) {
+  const subtotal = precio * cantidad;
+  const impuestoUnitario = Math.round((precio * (impuesto / 100) + Number.EPSILON) * 100) / 100;
+  const totalImpuesto = impuestoUnitario * cantidad;
+  return {
+    subtotal,
+    impuestoUnitario,
+    totalImpuesto,
+    total: subtotal + totalImpuesto,
+  };
+}
+
 /*---------------------------------------------------------------*/
 //--------------
 // llenar modal envio
 //--------------
-document.getElementById("toggleDropdownPanel32").addEventListener("click", function () {
+document
+  .getElementById("toggleDropdownPanel32")
+  .addEventListener("click", async function () {
     const proveedorId = document.getElementById("proveedoresid").value;
     const productosSeleccionados = document.querySelectorAll(
       "#tablacont tbody tr",
@@ -209,12 +245,15 @@ document.getElementById("toggleDropdownPanel32").addEventListener("click", funct
 
     productosSeleccionados.forEach((fila, index) => {
       const precio = fila.querySelector(".precio-input").value.trim();
+      const impuesto = fila.querySelector(".impuesto-input").value.trim();
       const cantidad = fila.querySelector(".cantidad-input").value.trim();
 
       if (!precio || isNaN(precio) || parseFloat(precio) <= 0)
         errores.push(`Precio inválido en el producto #${index + 1}`);
       if (!cantidad || isNaN(cantidad) || parseInt(cantidad) <= 0)
         errores.push(`Cantidad inválida en el producto #${index + 1}`);
+      if (impuesto === "" || isNaN(impuesto) || parseFloat(impuesto) < 0 || parseFloat(impuesto) > 100)
+        errores.push(`Impuesto inválido en el producto #${index + 1}`);
     });
 
     if (errores.length > 0) {
@@ -229,19 +268,79 @@ document.getElementById("toggleDropdownPanel32").addEventListener("click", funct
     }
 
     // Construir modalDetallesArray
-    modalDetallesArray = Array.from(productosSeleccionados).map((fila) => ({
-      nombre: fila.children[1].textContent,
-      presentacion: fila.children[2].textContent,
-      sku: fila.children[3].textContent,
-      precio: parseFloat(fila.querySelector(".precio-input").value),
-      cantidad: parseInt(fila.querySelector(".cantidad-input").value),
-      total:
-        parseFloat(fila.querySelector(".precio-input").value) *
-        parseInt(fila.querySelector(".cantidad-input").value),
-    }));
+    modalDetallesArray = Array.from(productosSeleccionados).map((fila) => {
+      const precio = parseFloat(fila.querySelector(".precio-input").value);
+      const cantidad = parseInt(fila.querySelector(".cantidad-input").value);
+      const impuesto = parseFloat(fila.querySelector(".impuesto-input").value) || 0;
+      return {
+        nombre: fila.children[1].textContent,
+        presentacion: fila.children[2].textContent,
+        sku: fila.children[3].textContent,
+        precio,
+        cantidad,
+        impuesto,
+        ...importesCompra(precio, cantidad, impuesto),
+      };
+    });
 
     // Llamar al paginador para llenar el modal
     mostrarPaginaComprar(1);
+
+    let saldoProveedor = Number(
+      document.getElementById("proveedoresid").dataset.saldo || 0,
+    );
+    let diasCreditoProveedor = 0;
+    try {
+      const respuestaProveedor = await fetch(
+        `/manager/proveedores/get/${proveedorId}/`,
+      );
+      const datosProveedor = await respuestaProveedor.json();
+      if (respuestaProveedor.ok) {
+        saldoProveedor = Number(datosProveedor.proveedor?.saldo || 0);
+        diasCreditoProveedor = Number(
+          datosProveedor.proveedor?.dias_credito || 0,
+        );
+      }
+    } catch (_) {
+      /* Se conserva el último saldo conocido para no bloquear la compra. */
+    }
+    actualizarOpcionCredito(diasCreditoProveedor);
+    const contenedorSaldo = document.getElementById(
+      "contenedorUsarSaldoProveedor",
+    );
+    const checkSaldo = document.getElementById("usarSaldoProveedor");
+    checkSaldo.checked = false;
+    contenedorSaldo.classList.toggle("d-none", saldoProveedor <= 0);
+    document.getElementById("saldoProveedorDisponible").textContent =
+      `L. ${saldoProveedor.toFixed(2)}`;
+    const subtotalModal = modalDetallesArray.reduce(
+      (acumulado, item) => acumulado + item.subtotal,
+      0,
+    );
+    const impuestoModal = modalDetallesArray.reduce(
+      (acumulado, item) => acumulado + item.totalImpuesto,
+      0,
+    );
+    const totalConImpuesto = subtotalModal + impuestoModal;
+    const actualizarResumenSaldo = () => {
+      const aplicado = checkSaldo.checked
+        ? Math.min(saldoProveedor, totalConImpuesto)
+        : 0;
+      const pendiente = totalConImpuesto - aplicado;
+      actualizarVisibilidadSaldoUsado(checkSaldo.checked);
+      document.getElementById("subtotalModalCompra").textContent =
+        `L. ${subtotalModal.toFixed(2)}`;
+      document.getElementById("impuestoModalCompra").textContent =
+        `L. ${impuestoModal.toFixed(2)}`;
+      document.getElementById("saldoUsadoModalCompra").textContent =
+        `L. ${aplicado.toFixed(2)}`;
+      document.getElementById("totalModalCompra").textContent =
+        `L. ${totalConImpuesto.toFixed(2)}`;
+      document.getElementById("totalPagarModalCompra").textContent =
+        `L. ${pendiente.toFixed(2)}`;
+    };
+    checkSaldo.onchange = actualizarResumenSaldo;
+    actualizarResumenSaldo();
 
     // Abrir modal
     const modalElement = document.getElementById("completarcompra");
@@ -260,6 +359,8 @@ function mostrarPaginaComprar(page = 1) {
   const start = (page - 1) * MODAL_PAGE_SIZE;
   const end = start + MODAL_PAGE_SIZE;
   const items = modalDetallesArray.slice(start, end);
+  const mostrarSaldoUsado =
+    document.getElementById("usarSaldoProveedor")?.checked || false;
 
   tablaModal.innerHTML = "";
   items.forEach((prod, idx) => {
@@ -271,6 +372,11 @@ function mostrarPaginaComprar(page = 1) {
             <td>${prod.sku}</td>
             <td>${prod.cantidad}</td>
             <td>L. ${prod.precio.toFixed(2)}</td>
+            <td>${prod.impuesto.toFixed(2)}%</td>
+            <td>L. ${prod.impuestoUnitario.toFixed(2)}</td>
+            <td>L. ${prod.subtotal.toFixed(2)}</td>
+            <td class="saldo-usado-col${mostrarSaldoUsado ? "" : " d-none"}"></td>
+            <td>L. ${prod.total.toFixed(2)}</td>
         `;
     tablaModal.appendChild(tr);
   });
@@ -295,7 +401,9 @@ function mostrarPaginaComprar(page = 1) {
   ul.appendChild(
     crearLi("«", page === 1, () => mostrarPaginaComprar(page - 1)),
   );
-  for (let p = 1; p <= totalPages; p++) {
+  const inicioPagina = Math.max(1, page - 2);
+  const finPagina = Math.min(totalPages, page + 2);
+  for (let p = inicioPagina; p <= finPagina; p++) {
     const li = document.createElement("li");
     li.className = "page-item" + (p === page ? " active" : "");
     li.innerHTML = `<a class="page-link" href="#">${p}</a>`;
@@ -315,7 +423,9 @@ function mostrarPaginaComprar(page = 1) {
 //--------------
 // ENVIAR
 //--------------
-document.getElementById("enviarCompraBtn").addEventListener("click", async function () {
+document
+  .getElementById("enviarCompraBtn")
+  .addEventListener("click", async function () {
     const proveedorInput = document.getElementById("proveedoresid");
     if (!proveedorInput) {
       Swal.fire({
@@ -343,6 +453,8 @@ document.getElementById("enviarCompraBtn").addEventListener("click", async funct
     const proveedorId = parseInt(proveedorInput.value);
     const tipoCompraValue = parseInt(document.getElementById("tcompra").value);
     const observaciones = document.getElementById("observaciones").value.trim();
+    const usarSaldo =
+      document.getElementById("usarSaldoProveedor")?.checked || false;
     if (!tipoCompraValue) {
       Swal.fire({
         title: "Error",
@@ -361,8 +473,9 @@ document.getElementById("enviarCompraBtn").addEventListener("click", async funct
       const precioCompra = parseFloat(
         fila.querySelector(".precio-input").value,
       );
+      const impuesto = parseFloat(fila.querySelector(".impuesto-input").value) || 0;
 
-      detalles.push({ productoId, cantidad, precioCompra });
+      detalles.push({ productoId, cantidad, precioCompra, impuesto });
     });
 
     const payload = {
@@ -370,6 +483,7 @@ document.getElementById("enviarCompraBtn").addEventListener("click", async funct
       recepcionId,
       tipoCompra: tipoCompraValue,
       observaciones,
+      usarSaldo,
       detalles,
     };
 
@@ -411,6 +525,8 @@ document.getElementById("enviarCompraBtn").addEventListener("click", async funct
 /*---------------------------------------------------------------------*/
 
 let productosSeleccionadosGlobal = {};
+const PRODUCTOS_POR_PAGINA = 10;
+let paginaTablaCompra = 1;
 
 document.addEventListener("DOMContentLoaded", () => {
   const buscador = document.getElementById("buscadorProductos");
@@ -423,6 +539,13 @@ document.addEventListener("DOMContentLoaded", () => {
       cargarProductos(1, buscador.value.trim());
     }
   });
+
+  document
+    .getElementById("formBuscarProductosCompra")
+    .addEventListener("submit", (event) => {
+      event.preventDefault();
+      cargarProductos(1, buscador.value.trim());
+    });
 
   document
     .getElementById("guardarProductosSeleccionados")
@@ -456,6 +579,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     reordenarTabla();
+    actualizarPaginacionTablaCompra();
     actualizarTotales();
   });
 });
@@ -503,21 +627,19 @@ async function cargarProductos(page = 1, search = "") {
 
     data.results.forEach((prod) => {
       const div = document.createElement("div");
-      div.className =
-        "productosstyle producto-item d-flex align-items-center w-100";
+      div.className = "productosstyle producto-item compras-product-option";
       div.dataset.id = prod.id;
       div.dataset.nombre = prod.nombre.toLowerCase();
       div.dataset.presentacion = prod.unidadMedida.nombre.toLowerCase();
       div.dataset.sku = prod.codigoSKU.toLowerCase();
 
       div.innerHTML = `
-                <div class="me-3">
-                    <img src="${prod.imagenUrl}" alt="${prod.nombre}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 5px;">
+                <img class="compras-product-option__image" src="${prod.imagenUrl}" alt="" onerror="this.src='/static/img/default.png'">
+                <div class="compras-product-option__info">
+                    <strong>${prod.nombre}</strong>
+                    <small>${prod.unidadMedida.nombre} · SKU: ${prod.codigoSKU}</small>
                 </div>
-                <div class="flex-grow-1">
-                    <strong>${prod.nombre}</strong><br>
-                    <small>${prod.unidadMedida.nombre} | SKU: ${prod.codigoSKU}</small>
-                </div>
+                <span class="compras-product-option__action"><i class="bx bx-plus-circle"></i> Seleccionar</span>
                 <input type="checkbox" class="form-check-input producto-checkbox d-none" value="${prod.id}">
             `;
 
@@ -537,16 +659,24 @@ function inicializarSeleccionProductos() {
   document.querySelectorAll(".producto-item").forEach((prod) => {
     const checkbox = prod.querySelector(".producto-checkbox");
     const id = checkbox.value;
+    const actualizarEtiqueta = () => {
+      const etiqueta = prod.querySelector(".compras-product-option__action");
+      etiqueta.innerHTML = checkbox.checked
+        ? '<i class="bx bx-check-circle"></i> Seleccionado'
+        : '<i class="bx bx-plus-circle"></i> Seleccionar';
+    };
 
     // Restaurar selección desde el global
     if (productosSeleccionadosGlobal[id]) {
       checkbox.checked = true;
       prod.classList.add("seleccionado");
     }
+    actualizarEtiqueta();
 
     prod.addEventListener("click", () => {
       checkbox.checked = !checkbox.checked;
       prod.classList.toggle("seleccionado", checkbox.checked);
+      actualizarEtiqueta();
 
       if (checkbox.checked) {
         productosSeleccionadosGlobal[id] = {
@@ -565,12 +695,8 @@ function renderPaginacion(currentPage, totalPages, search) {
   const paginacion = document.getElementById("paginacionProductos");
   paginacion.innerHTML = "";
 
-  let startPage = Math.max(currentPage - 2, 1);
-  let endPage = startPage + 4;
-  if (endPage > totalPages) {
-    endPage = totalPages;
-    startPage = Math.max(endPage - 4, 1);
-  }
+  const startPage = Math.max(currentPage - 2, 1);
+  const endPage = Math.min(totalPages, currentPage + 2);
 
   const liPrev = document.createElement("li");
   liPrev.classList.add("page-item");
@@ -607,6 +733,7 @@ function renderPaginacion(currentPage, totalPages, search) {
 
 function agregarProductosSeleccionados() {
   const tablaBody = document.querySelector("#tablacont tbody");
+  let agregados = 0;
 
   Object.entries(productosSeleccionadosGlobal).forEach(([id, data]) => {
     if (document.querySelector(`#producto-row-${id}`)) return;
@@ -619,10 +746,13 @@ function agregarProductosSeleccionados() {
             <td>${data.presentacion}</td>
             <td>${data.sku}</td>
             <td>
-                <input type="number" min="0" step="0.01" class="form-control precio-input" name="precio_${id}" required>
+                <input type="text" inputmode="decimal" class="form-control precio-input" name="precio_${id}" required>
             </td>
             <td>
-                <input type="number" min="1" step="1" class="form-control cantidad-input" name="cantidad_${id}" value="1" required>
+                <input type="text" inputmode="decimal" class="form-control precio-input impuesto-input" name="impuesto_${id}" value="0" required>
+            </td>
+            <td>
+                <input type="text" inputmode="numeric" class="form-control cantidad-input" name="cantidad_${id}" value="1" required>
             </td>
             <td>
                 <button type="button" class="btn btn-danger btn-sm eliminar-fila">
@@ -631,10 +761,13 @@ function agregarProductosSeleccionados() {
             </td>
         `;
     tablaBody.appendChild(fila);
+    agregados++;
     inicializarEventosInputsTotales();
   });
 
   reordenarTabla();
+  if (agregados) paginaTablaCompra = 1;
+  actualizarPaginacionTablaCompra();
   actualizarTotales();
 
   const modal = bootstrap.Modal.getInstance(
@@ -656,7 +789,8 @@ function reordenarTabla() {
 }
 
 function actualizarTotales() {
-  let total = 0;
+  let subtotal = 0;
+  let totalImpuesto = 0;
   let contador = 0;
   let cantidadTotal = 0;
 
@@ -665,18 +799,26 @@ function actualizarTotales() {
 
   tablaBody.querySelectorAll("tr").forEach((fila) => {
     const precioInput = fila.querySelector("input.precio-input");
+    const impuestoInput = fila.querySelector("input.impuesto-input");
     const cantidadInput = fila.querySelector("input.cantidad-input");
 
     const precio = parseFloat(precioInput?.value) || 0;
+    const impuesto = parseFloat(impuestoInput?.value) || 0;
     const cantidad = parseInt(cantidadInput?.value) || 0;
 
-    total += precio * cantidad;
+    const importes = importesCompra(precio, cantidad, impuesto);
+    subtotal += importes.subtotal;
+    totalImpuesto += importes.totalImpuesto;
     contador++;
     cantidadTotal += cantidad;
   });
 
+  document.getElementById("subtotal-compra").textContent =
+    `Antes imp.: L. ${subtotal.toFixed(2)}`;
+  document.getElementById("impuesto-compra").textContent =
+    `Impuestos: L. ${totalImpuesto.toFixed(2)}`;
   document.getElementById("total-compra").textContent =
-    `Total: L. ${total.toFixed(2)}`;
+    `Después imp.: L. ${(subtotal + totalImpuesto).toFixed(2)}`;
   document.getElementById("contador-productos").textContent =
     `Productos: ${contador}`;
   document.getElementById("cantidad-productos").textContent =
@@ -688,9 +830,70 @@ function inicializarEventosInputsTotales() {
   if (!tablaBody) return;
 
   tablaBody
-    .querySelectorAll("input.precio-input, input.cantidad-input")
+    .querySelectorAll("input.precio-input, input.impuesto-input, input.cantidad-input")
     .forEach((input) => {
+      if (!input.dataset.compraFiltroNumerico) {
+        input.addEventListener("input", () => {
+          const valor = input.value;
+          const limpio = input.classList.contains("cantidad-input")
+            ? valor.replace(/\D/g, "")
+            : valor.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
+
+          if (valor !== limpio) input.value = limpio;
+        });
+        input.dataset.compraFiltroNumerico = "true";
+      }
       input.removeEventListener("input", actualizarTotales);
       input.addEventListener("input", actualizarTotales);
     });
+}
+
+function actualizarPaginacionTablaCompra() {
+  const tablaBody = document.querySelector("#tablacont tbody");
+  const paginador = document.getElementById("paginadorProv");
+  if (!tablaBody || !paginador) return;
+
+  const filas = Array.from(tablaBody.querySelectorAll("tr"));
+  const totalPaginas = Math.ceil(filas.length / PRODUCTOS_POR_PAGINA);
+
+  if (!totalPaginas) {
+    paginador.innerHTML = "";
+    return;
+  }
+
+  paginaTablaCompra = Math.min(Math.max(1, paginaTablaCompra), totalPaginas);
+  filas.forEach((fila, indice) => {
+    fila.hidden =
+      Math.floor(indice / PRODUCTOS_POR_PAGINA) + 1 !== paginaTablaCompra;
+  });
+
+  const lista = document.createElement("ul");
+  lista.className = "pagination mb-0";
+  const crearBoton = (texto, pagina, deshabilitado, activo = false) => {
+    const item = document.createElement("li");
+    item.className = `page-item${deshabilitado ? " disabled" : ""}${activo ? " active" : ""}`;
+    const boton = document.createElement("button");
+    boton.type = "button";
+    boton.className = "page-link";
+    boton.textContent = texto;
+    boton.disabled = deshabilitado;
+    if (!deshabilitado && !activo) {
+      boton.addEventListener("click", () => {
+        paginaTablaCompra = pagina;
+        actualizarPaginacionTablaCompra();
+      });
+    }
+    item.appendChild(boton);
+    lista.appendChild(item);
+  };
+
+  crearBoton("«", paginaTablaCompra - 1, paginaTablaCompra === 1);
+  const inicioPagina = Math.max(1, paginaTablaCompra - 2);
+  const finPagina = Math.min(totalPaginas, paginaTablaCompra + 2);
+  for (let pagina = inicioPagina; pagina <= finPagina; pagina++) {
+    crearBoton(String(pagina), pagina, false, pagina === paginaTablaCompra);
+  }
+  crearBoton("»", paginaTablaCompra + 1, paginaTablaCompra === totalPaginas);
+
+  paginador.replaceChildren(lista);
 }

@@ -23,7 +23,7 @@
   /*========== z index ==========*/
   --z-fixed: 100;
 }
-@media screen and (min-width: 1024px) {
+@media screen and (min-width: 1033px) {
   :root {
     --normal-font-size: 1rem;
     --small-font-size: 0.875rem;
@@ -71,6 +71,221 @@ img {
   justify-content: center;
   cursor: pointer;
   text-transform: uppercase;
+}
+.header-notifications {
+  position: relative;
+  margin-left: auto;
+}
+.notifications-toggle {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--system-primary) 11%, #fff);
+  color: var(--system-primary);
+  font-size: 1.3rem;
+}
+.notifications-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: grid;
+  place-items: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 4px;
+  border: 2px solid #fff;
+  border-radius: 99px;
+  background: var(--system-button);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+.notifications-panel {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 48px;
+  width: 320px;
+  max-height: 380px;
+  overflow: auto;
+  border: 1px solid color-mix(in srgb, var(--system-primary) 18%, #fff);
+  border-radius: 0.85rem;
+  background: #fff;
+  box-shadow: 0 12px 28px
+    color-mix(in srgb, var(--system-secondary) 18%, transparent);
+  z-index: 10001;
+}
+.notifications-panel.show {
+  display: block;
+}
+.notifications-panel__header {
+  padding: 0.8rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--system-primary) 13%, #fff);
+  color: var(--system-primary);
+}
+.notifications-panel__header span {
+  display: block;
+  color: var(--text-color-light);
+  font-size: 0.72rem;
+}
+.notification-item {
+  display: flex;
+  gap: 0.65rem;
+  padding: 0.8rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--system-primary) 9%, #fff);
+}
+.notification-item > i {
+  color: var(--system-primary);
+  font-size: 1.25rem;
+}
+.notification-item strong {
+  color: var(--system-secondary);
+  font-size: 0.86rem;
+}
+.notification-item p {
+  margin: 0.15rem 0 0.45rem;
+  font-size: 0.78rem;
+}
+.notification-complete {
+  border: 0;
+  border-radius: 0.45rem;
+  background: var(--system-button);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.35rem 0.55rem;
+}
+.notifications-empty {
+  margin: 0;
+  padding: 1rem;
+  color: var(--text-color-light);
+  font-size: 0.82rem;
+}
+.header-notifications + .initials-circle {
+  margin-left: 0.65rem;
+}
+.notifications-toggle {
+  transition:
+    transform 0.18s ease,
+    background-color 0.18s ease;
+}
+.notifications-toggle:hover {
+  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--system-primary) 18%, #fff);
+}
+.notifications-panel {
+  width: 350px;
+  padding: 0 0.35rem 0.35rem;
+  /* Mantiene accesibles las notificaciones cuando se acumulan. */
+  overflow: hidden;
+}
+.notifications-panel__header {
+  width: calc(100% + 0.7rem);
+  margin: 0 -0.35rem;
+  display: flex;
+  align-items: center;
+  min-height: 45px;
+  padding: 0.75rem 0.8rem;
+  border: 0;
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--system-primary) 8%, #fff);
+  color: var(--system-primary);
+  font-size: 0.92rem;
+}
+.notifications-panel__list {
+  max-height: 330px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--system-primary) 45%, #fff) transparent;
+}
+.notification-item {
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin: 0.45rem 0.15rem;
+  padding: 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--system-primary) 14%, #fff);
+  border-radius: 0.65rem;
+  background: #fff;
+  box-shadow: 0 2px 6px
+    color-mix(in srgb, var(--system-secondary) 7%, transparent);
+  transition:
+    background 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.notification-item--action {
+  cursor: pointer;
+}
+.notification-item--read {
+  cursor: pointer;
+}
+.notification-item--read:hover,
+.notification-item--read:focus {
+  outline: 0;
+  background: color-mix(in srgb, var(--system-primary) 8%, #fff);
+  transform: translateX(2px);
+}
+.notification-item--leaving {
+  max-height: 0;
+  min-height: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
+  overflow: hidden;
+  transform: translateX(12px);
+  transition: max-height .46s ease, margin .46s ease, padding .46s ease, opacity .34s ease, transform .34s ease !important;
+}
+.notification-item--action:hover,
+.notification-item--action:focus {
+  outline: 0;
+  background: color-mix(in srgb, var(--system-primary) 8%, #fff);
+  box-shadow: 0 5px 12px
+    color-mix(in srgb, var(--system-secondary) 12%, transparent);
+  transform: translateX(2px);
+}
+.notification-item__icon {
+  display: grid;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--system-primary) 12%, #fff);
+  color: var(--system-primary);
+  font-size: 1.08rem;
+}
+.notification-item__content {
+  min-width: 0;
+  flex: 1;
+}
+.notification-item strong {
+  display: block;
+  color: var(--system-secondary);
+  font-size: 0.86rem;
+}
+.notification-item p {
+  margin: 0.18rem 0 0;
+  color: var(--text-color-light);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+.notification-item__state {
+  display: inline-block;
+  margin-top: 0.45rem;
+  color: var(--system-primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.notifications-empty {
+  padding: 1.15rem 0.8rem;
+  text-align: center;
 }
 /* ───────────────────────────────────────────────────────────────
 Modal Wrapper
@@ -221,6 +436,62 @@ Modal Inner Content
   max-width: 420px;
 }
 
+.header__export-btn {
+  display: inline-flex;
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #1d6f42;
+  border-radius: 10px;
+  color: #fff;
+  background: linear-gradient(135deg, #217346 0%, #185c37 100%);
+  box-shadow: 0 4px 10px rgba(33, 115, 70, 0.18);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.header__export-btn:hover {
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 13px rgba(33, 115, 70, 0.24);
+}
+
+.header__export-btn i {
+  font-size: 1.3rem;
+}
+
+.header__product-picker {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--system-primary) 28%, #fff);
+  border-radius: 10px;
+  color: var(--system-primary);
+  background: #fff;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--system-primary) 12%, transparent);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.header__product-picker i {
+  font-size: 1.15rem;
+}
+
+.header__product-picker:hover {
+  border-color: var(--system-primary);
+  color: var(--system-primary);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--system-primary) 22%, transparent);
+  transform: translateY(-1px);
+}
+
 .filtro-container {
   flex: 1 1 280px;
   max-width: 420px;
@@ -253,6 +524,70 @@ Modal Inner Content
 .header__icon,
 .header__toggle {
   font-size: 1.2rem;
+}
+
+/* Buscador unificado del navbar (escritorio). Conserva el diseño usado
+   originalmente en Cotizaciones para cualquier búsqueda del encabezado. */
+@media screen and (min-width: 1033px) {
+  .header__search-group .header__search,
+  .header__search-group .filtro-container .search-box.header__search {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 0;
+    padding: 0 !important;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .header__search-group .header__input {
+    min-width: 220px;
+    height: 42px;
+    min-height: 42px;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid #cfe1de;
+    border-radius: 10px;
+    outline: 0;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(25, 70, 63, 0.08);
+  }
+
+  .header__search-group .header__input:focus {
+    border-color: #32877f;
+    box-shadow: 0 0 0 3px rgba(50, 135, 127, 0.12);
+  }
+
+  .header__search-group .dv-header-search__button,
+  .header__search-group .header__search > .header__icon {
+    display: inline-flex;
+    width: 39px;
+    min-width: 39px;
+    height: 42px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    color: #fff;
+    background: #32877f;
+    font-size: 1.2rem;
+    box-shadow: 0 3px 8px rgba(50, 135, 127, 0.28);
+    cursor: pointer;
+    align-self: center;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  .header__search-group .dv-header-search__button:hover,
+  .header__search-group .header__search > .header__icon:hover {
+    background: #246f68;
+  }
+
+  .header__search-group .filtro-container {
+    max-width: 420px;
+  }
 }
 .header__toggle {
   color: var(--title-color);
@@ -383,7 +718,148 @@ Modal Inner Content
     width: 70%;
   }
 }
-@media screen and (min-width: 768px) {
+@media screen and (max-width: 1032px) {
+  body {
+    /* El encabezado es fijo: todas las vistas comienzan debajo de él. */
+    padding-top: 4.75rem;
+  }
+  .header {
+    height: 4rem;
+    padding: 0 0.85rem;
+  }
+  .header__container {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) 38px 38px;
+    grid-template-areas: "toggle title notifications profile";
+    align-items: center;
+    min-height: 4rem;
+    height: 4rem;
+    gap: 0.45rem;
+    padding: 0;
+    position: relative;
+  }
+  .header__container > .tituloscont {
+    display: flex;
+    position: absolute;
+    left: 50%;
+    grid-area: auto;
+    width: auto;
+    max-width: calc(100% - 5.25rem);
+    min-width: 0;
+    justify-content: center;
+    margin: 0;
+    overflow: hidden;
+    pointer-events: none;
+    transform: translateX(-50%);
+    z-index: 0;
+  }
+  .header__container > .tituloscont .logop {
+    display: block;
+    width: 90px;
+    margin: 0 0.5rem 0 0;
+    object-fit: contain;
+    flex: 0 0 auto;
+  }
+  .header__container > .tituloscont .header__logo {
+    display: block;
+    flex: 0 1 auto;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: var(--title-color);
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .header__toggle {
+    display: grid;
+    grid-area: toggle;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border-radius: 10px;
+    color: #28746c;
+    background: #edf7f5;
+    font-size: 1.55rem;
+  }
+  .header__search-group {
+    display: none;
+  }
+  .header__container > .header-notifications {
+    display: grid;
+    grid-area: notifications;
+    width: 38px;
+    height: 38px;
+    margin: 0;
+    place-items: center;
+    z-index: 1;
+  }
+  .header__container > .header-notifications .notifications-toggle {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    font-size: 1.25rem;
+  }
+  .header__container > .header-notifications .notifications-badge {
+    top: -4px;
+    right: -4px;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 3px;
+    font-size: 0.6rem;
+  }
+  .header__container > .header-notifications .notifications-panel {
+    position: fixed;
+    top: 4.55rem;
+    right: 0.75rem;
+    width: min(350px, calc(100vw - 1.5rem));
+    max-height: min(380px, calc(100vh - 5.5rem));
+  }
+  .header__container > .header-notifications .notifications-panel__list {
+    max-height: calc(100vh - 8.55rem);
+  }
+  .header__container > .initials-circle {
+    display: flex;
+    grid-area: profile;
+    width: 38px;
+    height: 38px;
+    margin-left: auto;
+    font-size: 0.78rem;
+    box-shadow: 0 3px 9px rgba(50, 135, 127, 0.2);
+    z-index: 1;
+  }
+}
+.nav__mobile-close {
+  display: none;
+}
+@media screen and (max-width: 1032px) {
+  .nav {
+    position: fixed;
+  }
+  .nav__container {
+    position: relative;
+    padding-top: 0;
+  }
+  .nav__mobile-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.25rem;
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    border: 0;
+    border-radius: 10px;
+    color: #28746c;
+    background: #edf7f5;
+    font-size: 1.55rem;
+    cursor: pointer;
+    z-index: 5;
+    pointer-events: auto;
+  }
+}
+@media screen and (min-width: 1033px) {
   body {
     padding: 3.5rem 0 0 68px;
   }

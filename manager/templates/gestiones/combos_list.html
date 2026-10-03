@@ -1,0 +1,135 @@
+{% extends "menu.html" %} 
+{% load static pagination_tags %} 
+{% block title %}Combos{% endblock %} 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+<link rel="stylesheet" href="{% static 'css/combos.css' %}?v=20260918-06" />
+{% endblock %} 
+{% block titulo_content %}
+<div class="tituloscont">
+  <img class="logop" src="{% static 'img/LH.webp' %}" alt="" />
+  <p class="header__logo">| Combos</p>
+</div>
+{% endblock %} 
+{% block main_content %}
+<div class="tabla-container">
+  <table class="tablas-todo" id="tablaCombos">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Imagen</th>
+        <th>Nombre</th>
+        <th>SKU</th>
+        <th>Precio venta</th>
+        <th>Estado</th>
+        {% if perms.manager.change_combos %}
+        <th>Acciones</th>
+        {% endif %}
+      </tr>
+    </thead>
+    <tbody id="listaCombosRegistrados">
+      {% for combo in combos %}
+      <tr class="combos-list-row" data-combo-id="{{ combo.id }}">
+        <td>{{ combo.id }}</td>
+        <td class="combos-list-image-cell">
+          <img
+            src="{% if combo.imagen and combo.imagen.imagen_archivo %}{% url 'combo_imagen' combo.imagen.id %}{% else %}{% static 'img/default.webp' %}{% endif %}"
+            onerror="this.onerror=null;this.src='{% static 'img/default.webp' %}';"
+            alt="{{ combo.nombre }}"
+          />
+        </td>
+        <td>{{ combo.nombre }}</td>
+        <td>{{ combo.codigo_sku }}</td>
+        <td>{{ moneda_simbolo }} {{ combo.precio_venta|floatformat:2 }}</td>
+        <td class="estado-centrado">
+          {% if combo.is_active %}
+          <span class="badge bg-success">Activo</span>
+          {% else %}
+          <span class="badge bg-danger">Inactivo</span>
+          {% endif %}
+        </td>
+        {% if perms.manager.change_combos %}
+        <td>
+          <button
+            type="button"
+            class="btn btn-sm {% if combo.is_active %}btn-success{% else %}btn-danger{% endif %} combos-state-button"
+            data-combo-id="{{ combo.id }}"
+            data-activo="{{ combo.is_active|yesno:'true,false' }}"
+            title="{% if combo.is_active %}Inactivar{% else %}Activar{% endif %}"
+          >
+            <i
+              class="bx {% if combo.is_active %}bx-check{% else %}bx-x{% endif %}"
+            ></i>
+          </button>
+        </td>
+        {% endif %}
+      </tr>
+      {% empty %}
+      <tr>
+        <td
+          colspan="{% if perms.manager.change_combos %}7{% else %}6{% endif %}"
+        >
+          No hay combos registrados.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<nav class="d-flex justify-content-center mt-4" aria-label="Páginas de combos">
+  <ul class="pagination">
+    <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+      {% if page_obj.has_previous %}<a class="page-link" href="?page={{ page_obj.previous_page_number }}&search={{ search }}">«</a>{% else %}<span class="page-link">«</span>{% endif %}
+    </li>
+    {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
+    {% for p in paginas_visibles %}
+    <li class="page-item {% if p == page_obj.number %}active{% endif %}"><a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a></li>
+    {% endfor %}
+    <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+      {% if page_obj.has_next %}<a class="page-link" href="?page={{ page_obj.next_page_number }}&search={{ search }}">»</a>{% else %}<span class="page-link">»</span>{% endif %}
+    </li>
+  </ul>
+</nav>
+
+<div
+  class="modal fade"
+  id="modalDetalleCombo"
+  tabindex="-1"
+  aria-labelledby="modalDetalleComboTitulo"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content combos-modal">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title" id="modalDetalleComboTitulo">
+            Productos del combo
+          </h5>
+          <small id="detalleComboSku"></small>
+        </div>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Cerrar"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="combos-product-list" id="detalleProductosCombo">
+          <p class="text-center text-muted py-4">Cargando productos…</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% csrf_token %}
+<script>
+  const COMBO_LIST_URLS = {
+    estado: "{% url 'cambiar_estado_combo' 0 %}",
+    detalle: "/manager/combos/0/detalle/",
+  };
+</script>
+<script src="{% static 'js/gestiones/combos-list.js' %}?v=20260918-03"></script>
+{% endblock %}

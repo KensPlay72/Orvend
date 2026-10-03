@@ -3,6 +3,7 @@ from django.db import models
 
 class EstadoCompra(models.TextChoices):
     PENDIENTE = "Pendiente", "Pendiente"
+    LLEGADA_BODEGA = "Llegada Bodega", "Llegó a bodega"
     EN_RECEPCION = "En Recepcion", "En Recepción"
     RECEPCION_PARCIAL = "Recepcion Parcial", "Recepción Parcial"
     COMPLETADO = "Completado", "Completado"
@@ -40,6 +41,7 @@ class MotivoDevolucion(models.IntegerChoices):
     PRODUCTO_INCORRECTO = 4, "Producto incorrecto"
     EXCESO_INVENTARIO = 5, "Exceso de inventario"
     OTRO = 6, "Otro"
+    CAMBIO = 7, "Cambio"
 
 
 class TipoMovimiento(models.IntegerChoices):

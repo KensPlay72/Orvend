@@ -31,9 +31,447 @@
 }
 
 .divbuttons10 {
-    width: 180px;
-    display: flex;
+  width: 180px;
+  display: flex;
+  flex-direction: column;
+}
+
+.productos-header {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(max-content, 1fr));
+  align-items: center;
+  justify-content: initial;
+  gap: 1rem;
+  height: auto;
+  min-height: 0;
+}
+
+.estado-llegada-bodega {
+  background: color-mix(in srgb, var(--system-primary) 16%, #fff);
+  color: var(--system-primary);
+  border: 1px solid color-mix(in srgb, var(--system-primary) 35%, #fff);
+}
+
+.llegada-bodega-registro {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--system-primary);
+  font-size: 0.83rem;
+  font-weight: 600;
+}
+
+.recepcion-row--detail {
+  cursor: pointer;
+}
+
+.recepcion-row--detail:hover > td {
+  background: color-mix(in srgb, var(--system-primary) 7%, #fff) !important;
+}
+
+/* Recorrido compacto de las compras; se superpone al pie sin mover la vista. */
+.purchase-tracker {
+  position: fixed;
+  z-index: 1040;
+  bottom: 1rem;
+  left: 50%;
+  width: min(780px, calc(100vw - 1.25rem));
+  padding: 0.45rem 2.25rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--system-primary) 20%, #fff);
+  border-radius: 16px;
+  background: color-mix(in srgb, #fff 94%, var(--system-secondary));
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--system-secondary) 16%, transparent);
+  transform: translateX(-50%);
+}
+
+.purchase-tracker__steps {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 0.95rem;
+}
+
+.purchase-tracker__line {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  left: 10px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--system-secondary) 14%, #fff);
+}
+
+.purchase-tracker__line span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--system-primary);
+  transition: width 900ms cubic-bezier(.22, 1, .36, 1);
+}
+
+.purchase-tracker__step {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  width: 21px;
+  color: color-mix(in srgb, var(--system-secondary) 54%, #fff);
+  transition: color 360ms ease;
+}
+
+.purchase-tracker__step.has-detail {
+  cursor: pointer;
+  outline: 0;
+}
+
+.purchase-tracker__node {
+  display: grid;
+  width: 21px;
+  height: 21px;
+  place-items: center;
+  border: 2px solid color-mix(in srgb, var(--system-secondary) 22%, #fff);
+  border-radius: 50%;
+  background: #fff;
+  font-size: 0.74rem;
+  transition: background 360ms ease, border-color 360ms ease, color 360ms ease, transform 360ms ease;
+}
+
+.purchase-tracker__label {
+  position: absolute;
+  top: 25px;
+  left: 50%;
+  margin-top: 0;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.purchase-tracker__tooltip {
+  position: absolute;
+  bottom: 38px;
+  left: 50%;
+  z-index: 3;
+  width: max-content;
+  max-width: min(260px, 70vw);
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  background: var(--system-secondary, #243531);
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--system-secondary, #243531) 24%, transparent);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.3;
+  opacity: 0;
+  pointer-events: none;
+  text-align: center;
+  transform: translate(-50%, 4px);
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.purchase-tracker__step.has-detail:hover .purchase-tracker__tooltip,
+.purchase-tracker__step.has-detail:focus .purchase-tracker__tooltip,
+.purchase-tracker__step.has-detail.is-detail-open .purchase-tracker__tooltip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.purchase-tracker__step.is-complete,
+.purchase-tracker__step.is-current {
+  color: var(--system-primary);
+}
+
+.purchase-tracker__step.is-complete .purchase-tracker__node,
+.purchase-tracker__step.is-current .purchase-tracker__node {
+  border-color: var(--system-primary);
+  background: var(--system-primary);
+  color: #fff;
+}
+
+.purchase-tracker__step.is-current .purchase-tracker__node {
+  transform: scale(1.13);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--system-primary) 16%, transparent);
+}
+
+/* El recorrido es fijo; el paginador del detalle debe seguir siendo pulsable. */
+#paginadordecom {
+  position: relative;
+  z-index: 1041;
+}
+
+@media (max-width: 1032px) {
+  .purchase-tracker {
+    bottom: 0.65rem;
+    padding-inline: 1.15rem;
+  }
+
+  .purchase-tracker__line {
+    right: 10px;
+    left: 10px;
+  }
+
+  .purchase-tracker__label {
+    font-size: 0.55rem;
+  }
+}
+
+.productos-header .ventanas {
+  width: auto;
+  min-width: max-content;
+  margin: 0;
+}
+
+.productos-header .ventana-numero {
+  white-space: nowrap;
+}
+
+.productos-header .divbuttons10 {
+  grid-column: 1 / 3;
+  width: auto;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.productos-header .btn-dropdown {
+  width: 164px;
+  min-height: 40px;
+  margin-top: 0;
+  padding: 0.55rem 0.9rem;
+  border-radius: 9px;
+  justify-content: center;
+}
+
+.productos-header__export {
+  grid-column: 3;
+  display: flex;
+  flex-direction: row;
+  gap: 0.45rem;
+  height: auto;
+  align-items: center;
+  justify-content: center;
+  padding-left: 1rem;
+  border-left: 1px solid color-mix(in srgb, var(--system-secondary) 22%, #e5e7eb);
+}
+
+.productos-header__file-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+/* Filtros de administración de cajas */
+.cajas-manager-filters .filter-input-wrap,
+.cajas-manager-filters .filter-input {
+  width: 100%;
+}
+
+.cajas-manager-filters__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.cajas-manager-filters__actions .filter-btn {
+  display: inline-flex;
+  width: 100%;
+  min-width: 0;
+  height: 43px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+/* Acción secundaria junto a la tabla de productos */
+.productos-export-btn {
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #1d6f42;
+  border-radius: 10px;
+  color: #fff;
+  background: linear-gradient(135deg, #217346 0%, #185c37 100%);
+  box-shadow: 0 5px 12px rgba(33, 115, 70, 0.2);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.productos-export-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(33, 115, 70, 0.28);
+}
+
+.productos-export-btn:disabled {
+  cursor: wait;
+  opacity: 0.75;
+}
+
+.productos-export-btn i {
+  font-size: 1.45rem;
+}
+
+.catalog-import-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 0.45rem;
+  width: max-content;
+  margin: 0.5rem 0;
+}
+
+.catalog-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 54px;
+  padding: 0.45rem 0;
+  margin: 0 0 1rem;
+}
+
+.catalog-toolbar__actions {
+  margin: 0;
+  justify-content: flex-end;
+}
+
+.catalog-import-btn,
+.catalog-template-btn,
+.catalog-export-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 43px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--system-button, #32877f);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 400;
+  text-decoration: none;
+}
+
+.productos-header__export .catalog-import-btn,
+.productos-header__export .catalog-template-btn {
+  width: 142px;
+  min-height: 43px;
+}
+
+@media (max-width: 1032px) {
+  .catalog-toolbar {
+    align-items: stretch;
     flex-direction: column;
+  }
+
+  .catalog-toolbar__actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .productos-header .divbuttons10,
+  .productos-header__export {
+    grid-column: 1 / -1;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .productos-header__export {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+.catalog-import-btn:hover,
+.catalog-template-btn:hover,
+.catalog-export-btn:hover {
+  color: #fff;
+  background: var(--system-secondary, #10463e);
+}
+
+.excel-import-modal .modal-title i { color: var(--system-primary); }
+.excel-import-modal .modal-body p { color: var(--text-color-light); font-size: 0.88rem; }
+
+.clientes-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.55rem;
+}
+
+.clientes-export-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 38px;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid #1d6f42;
+  border-radius: 8px;
+  color: #fff;
+  background: linear-gradient(135deg, #217346 0%, #185c37 100%);
+  box-shadow: 0 3px 8px rgba(33, 115, 70, 0.16);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.clientes-export-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 11px rgba(33, 115, 70, 0.22);
+}
+
+.clientes-export-btn:disabled {
+  cursor: wait;
+  opacity: 0.75;
+}
+
+.fila-cuenta[data-abonos-url] {
+  cursor: pointer;
+}
+
+@media (max-width: 1032px) {
+  .productos-header {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .productos-header .divbuttons10 {
+    grid-column: 1;
+    width: 100%;
+  }
+
+  .productos-header__export {
+    grid-column: 2;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 1032px) {
+  .cajas-manager-filters__actions {
+    margin-top: 0.25rem;
+  }
+
+  .productos-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .productos-header .divbuttons10,
+  .productos-header__export {
+    grid-column: 1;
+    justify-content: flex-start;
+  }
+
+  .productos-header__export {
+    padding-left: 0;
+    border-left: 0;
+  }
 }
 
 /*--------------------------------------*/
@@ -85,6 +523,209 @@
 
 .select-container .dropdown-menu.show {
   display: block;
+}
+
+/* Selectores de categoría, presentación y marca: mismo lenguaje visual que
+   Compras, conservando su tamaño natural dentro de los modales de Productos. */
+.gestion-producto-select > .btn {
+  position: relative;
+  min-height: 42px;
+  padding: 0.45rem 2rem 0.45rem 0.7rem;
+  border: 1px solid
+    color-mix(in srgb, var(--system-primary, #32877f) 22%, #dce7e5);
+  border-radius: 9px;
+  background: #fbfcfc;
+  color: #31443f;
+  box-shadow: none;
+}
+
+.gestion-producto-select {
+  z-index: 1;
+}
+
+.gestion-producto-select:has(.dropdown-menu.show) {
+  z-index: 1080;
+}
+
+/* ProductosREL usa el mismo selector de Productos. El z-index adicional
+   mantiene la lista abierta por encima del siguiente campo del modal. */
+.producto-rel-select {
+  width: 100%;
+}
+
+.producto-rel-select:has(.dropdown-menu.show) {
+  z-index: 1082;
+}
+
+/* Padre e hijo deben usar la misma columna en los dos modales de
+   ProductosREL; la separación se obtiene desde el contenedor, no con <br>. */
+.productosrel-select-field {
+  width: 100%;
+  margin: 0 0 1.15rem;
+}
+
+.productosrel-select-field > p {
+  margin: 0 0 0.45rem;
+  font-weight: 600;
+}
+
+.productosrel-select-field .form-group {
+  width: 100%;
+  margin: 0 !important;
+}
+
+.gestion-producto-select > .btn::after {
+  position: absolute;
+  top: 50%;
+  right: 0.85rem;
+  margin: 0;
+  transform: translateY(-50%);
+}
+
+.gestion-producto-select:focus-within > .btn,
+.gestion-producto-select > .btn:hover {
+  border-color: var(--system-primary, #32877f);
+  background: #fff;
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--system-primary, #32877f) 12%, transparent);
+}
+
+.gestion-producto-select .dropdown-menu {
+  margin-top: 0.2rem;
+  border: 1px solid
+    color-mix(in srgb, var(--system-primary, #32877f) 18%, #dce7e5);
+  border-radius: 10px;
+  box-shadow: 0 10px 24px
+    color-mix(in srgb, var(--system-secondary, #708984) 20%, transparent);
+  z-index: 1081;
+}
+
+.gestion-producto-select .search-box {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.45rem !important;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--system-primary, #32877f) 16%, #dce7e5);
+  background: #fff;
+}
+
+.gestion-producto-select .search-box .form-control {
+  min-height: 40px;
+  border-color: color-mix(in srgb, var(--system-primary, #32877f) 45%, #dce7e5);
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.gestion-producto-select .search-box .form-control:focus {
+  border-color: var(--system-primary, #32877f);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--system-primary, #32877f) 12%, transparent);
+}
+
+.gestion-producto-select .options > .list-group-item.active.bg-light {
+  border-color: color-mix(
+    in srgb,
+    var(--system-primary, #32877f) 24%,
+    #fff
+  ) !important;
+  color: var(--system-primary, #32877f) !important;
+  background: color-mix(
+    in srgb,
+    var(--system-primary, #32877f) 9%,
+    #fff
+  ) !important;
+  padding: 0.7rem 0.8rem;
+}
+
+/* Franja de sugerencias compartida por Productos y ProductosREL. La clase
+   propia evita que Bootstrap pueda dejarla sin el color del tema. */
+.gestion-producto-select .options > .select-suggestions-title {
+  border-color: color-mix(
+    in srgb,
+    var(--system-primary, #32877f) 24%,
+    #fff
+  ) !important;
+  color: var(--system-primary, #32877f) !important;
+  background: color-mix(
+    in srgb,
+    var(--system-primary, #32877f) 9%,
+    #fff
+  ) !important;
+  padding: 0.7rem 0.8rem;
+}
+
+.gestion-producto-select .options > .list-group-item {
+  border-color: color-mix(in srgb, var(--system-primary, #32877f) 16%, #fff);
+}
+
+.gestion-producto-select .options > .list-group-item-action:hover,
+.gestion-producto-select .options > .list-group-item-action:focus {
+  color: var(--system-primary, #32877f);
+  background: color-mix(in srgb, var(--system-primary, #32877f) 9%, #fff);
+}
+
+/* Productos recupera el espaciado original de Bootstrap: menu.css añade
+   padding al modal y al footer para otros apartados. */
+.productos-modal-dialog .modal-content {
+  padding: 0;
+}
+
+.modal-footer.productos-modal-footer {
+  padding: 0.75rem;
+}
+
+/* Modales de Ubicaciones: misma composición limpia de los formularios de
+   Productos, sin saltos de línea que desalineen los campos. */
+.ubicaciones-modal-dialog {
+  max-width: 620px;
+}
+
+.ubicaciones-modal-dialog .modal-content {
+  padding: 0;
+}
+
+.ubicaciones-modal-dialog .modal-header,
+.ubicaciones-modal-dialog .modal-body,
+.ubicaciones-modal-dialog .modal-footer {
+  padding-right: 1.35rem;
+  padding-left: 1.35rem;
+}
+
+.ubicaciones-modal-dialog .modal-footer {
+  padding-top: 0.75rem;
+}
+
+.ubicaciones-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.ubicaciones-form > br,
+.ubicaciones-form .form-check + br {
+  display: none;
+}
+
+.ubicaciones-form .form-group {
+  margin: 0;
+}
+
+.ubicaciones-form .form-check {
+  margin-bottom: 0.7rem;
+}
+
+.ubicaciones-bodega-field {
+  width: 100%;
+}
+
+.ubicaciones-bodega-field > label {
+  display: block;
+  margin-bottom: 0.45rem;
+  font-weight: 600;
+}
+
+.ubicaciones-bodega-field .form-group {
+  margin: 0 !important;
 }
 
 /*-------------------INPUT FILE-------------------*/
@@ -176,6 +817,29 @@
   display: flex;
   justify-content: space-around;
   align-items: center;
+}
+
+/* Acciones del encabezado de Compras: dos accesos en columna y el Excel
+   centrado verticalmente a su lado. */
+.compras-header__actions {
+  display: grid;
+  grid-template-columns: auto 44px;
+  grid-template-rows: repeat(2, minmax(40px, auto));
+  align-items: center;
+  gap: 0.55rem 0.8rem;
+  width: max-content;
+  margin: 1rem;
+}
+
+.compras-header__actions .btn-dropdown {
+  grid-column: 1;
+  margin: 0;
+}
+
+.compras-header__actions .productos-export-btn {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
 }
 
 .ventanas {
@@ -393,13 +1057,13 @@
   border-radius: 8px;
 }
 .fila-cuenta.cuenta-al-dia > td {
-    background-color: #e8f7ed !important;
+  background-color: #e8f7ed !important;
 }
 
 .fila-cuenta.cuenta-por-vencer > td {
-    background-color: #fff8d9 !important;
+  background-color: #fff8d9 !important;
 }
 
 .fila-cuenta.cuenta-en-mora > td {
-    background-color: #fde8e8 !important;
+  background-color: #fde8e8 !important;
 }

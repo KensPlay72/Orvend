@@ -5,6 +5,13 @@ function validateNumber(input) {
   input.value = input.value.replace(/[^0-9.+]/g, '');
 }
 
+const DEFAULT_PRODUCT_IMAGE = "/static/img/default.png";
+
+function setSubmitButtonState(button, isProcessing) {
+  button.disabled = isProcessing;
+  button.textContent = isProcessing ? "Procesando..." : "Guardar";
+}
+
 //----------------
 // REGISTRAR
 //----------------
@@ -12,6 +19,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const form = document.getElementById("postregistro");
   const modalElement = document.getElementById("modalregis");
   const modal = new bootstrap.Modal(modalElement);
+  const submitButton = document.getElementById("btnregis");
+  let enviandoRegistro = false;
 
   const imagenInput = document.getElementById("imagenproducto");
 
@@ -61,6 +70,25 @@ document.addEventListener("DOMContentLoaded", function () {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    if (enviandoRegistro) return;
+
+    const precioVenta = Number(document.getElementById("precioVenta").value);
+    const precioMinTexto = document.getElementById("precioVentaMin").value.trim();
+    const precioMaxTexto = document.getElementById("precioVentaMax").value.trim();
+    const precioMin = precioMinTexto === "" ? null : Number(precioMinTexto);
+    const precioMax = precioMaxTexto === "" ? null : Number(precioMaxTexto);
+
+    if (!Number.isFinite(precioVenta) || precioVenta < 0 || (precioMin !== null && (!Number.isFinite(precioMin) || precioMin < 0)) || (precioMax !== null && (!Number.isFinite(precioMax) || precioMax < 0)) || (precioMin !== null && precioMax !== null && precioMax < precioMin)) {
+      Swal.fire({
+        title: "Rango de precios inválido",
+        text: "El precio máximo debe ser mayor o igual al precio mínimo.",
+        icon: "warning",
+        confirmButtonText: "Aceptar",
+        customClass: { confirmButton: "classbotones" },
+      });
+      return;
+    }
+
     const formData = new FormData();
 
     // =====================
@@ -78,10 +106,9 @@ document.addEventListener("DOMContentLoaded", function () {
     );
     formData.append("marca", document.getElementById("MarcaId").value);
     formData.append("codigo_sku", document.getElementById("CodigoSKU").value);
-    formData.append(
-      "precio_venta",
-      document.getElementById("precioVenta").value,
-    );
+    formData.append("precio_venta", document.getElementById("precioVenta").value);
+    formData.append("precio_venta_min", document.getElementById("precioVentaMin").value);
+    formData.append("precio_venta_max", document.getElementById("precioVentaMax").value);
 
     formData.append("impuesto", document.getElementById("impuesto").value);
     const vencimientoCheckbox = document.getElementById("vencimiento");
@@ -109,6 +136,22 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
+    enviandoRegistro = true;
+    setSubmitButtonState(submitButton, true);
+    // La conversión de imágenes sucede antes del fetch; mostramos el loader
+    // desde el clic válido y no hasta que la petición HTTP inicia.
+    window.managerLoader?.mostrar();
+    let loaderRegistroActivo = Boolean(window.managerLoader);
+
+    const finalizarRegistro = () => {
+      enviandoRegistro = false;
+      setSubmitButtonState(submitButton, false);
+      if (loaderRegistroActivo) {
+        window.managerLoader?.ocultar();
+        loaderRegistroActivo = false;
+      }
+    };
+
     // =====================
     // CONVERTIR Y ENVIAR
     // =====================
@@ -116,6 +159,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const ext = file.name.split(".").pop().toLowerCase();
 
       if (!["jpg", "jpeg", "png", "webp"].includes(ext)) {
+        finalizarRegistro();
         Swal.fire({
           title: "Formato inválido",
           text: "Solo JPG, PNG o WEBP",
@@ -136,6 +180,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         formData.append("Imagenes", webpFile);
       } catch (error) {
+        finalizarRegistro();
         Swal.fire({
           title: "Error",
           text: "No se pudo procesar una imagen",
@@ -165,6 +210,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const data = await response.json();
 
       if (data.success) {
+        finalizarRegistro();
         modal.hide();
         form.reset();
 
@@ -183,6 +229,7 @@ document.addEventListener("DOMContentLoaded", function () {
           },
         }).then(() => location.reload());
       } else {
+        finalizarRegistro();
         Swal.fire({
           title: "Error",
           text: data.message,
@@ -194,6 +241,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
       }
     } catch (error) {
+      finalizarRegistro();
       console.error(error);
 
       Swal.fire({
@@ -231,6 +279,12 @@ function renderImagenEdit(url, id = null, nueva = false) {
       <i class="bx bx-trash"></i>
     </button>
   `;
+
+  const imagenVistaPrevia = box.querySelector("img");
+  imagenVistaPrevia.addEventListener("error", function () {
+    this.onerror = null;
+    this.src = DEFAULT_PRODUCT_IMAGE;
+  });
 
   // =========================
   // ELIMINAR
@@ -300,25 +354,34 @@ inputImagenEdit.addEventListener("change", function (e) {
 // LLENAR FORMULARIO
 // =========================
 document.addEventListener("DOMContentLoaded", () => {
-  document.querySelectorAll(".btn-edit").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const Id = button.getAttribute("data-id");
+  const modalEditar = document.getElementById("modalput");
 
-      const response = await fetch(`/manager/productos/get/${Id}/`);
+  modalEditar.addEventListener("show.bs.modal", async (event) => {
+      const button = event.relatedTarget;
+      const Id = button?.getAttribute("data-id");
 
-      const data = await response.json();
+      if (!Id) return;
 
-      if (!data.success) {
-        Swal.fire(
-          "Error",
-          data.message || "No se pudo obtener la información",
-          "error",
-        );
+      try {
+        const response = await fetch(`/manager/productos/get/${Id}/`);
 
-        return;
-      }
+        if (!response.ok) {
+          throw new Error("No se pudo obtener el producto");
+        }
 
-      const producto = data.producto;
+        const data = await response.json();
+
+        if (!data.success) {
+          Swal.fire(
+            "Error",
+            data.message || "No se pudo obtener la información",
+            "error",
+          );
+
+          return;
+        }
+
+        const producto = data.producto;
 
       // =========================
       // LIMPIAR
@@ -344,6 +407,8 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("CodigoSKUedit").value = producto.codigoSKU;
 
       document.getElementById("precioVentaedit").value = producto.precioVenta;
+      document.getElementById("precioVentaMinedit").value = producto.precioVentaMin ?? "";
+      document.getElementById("precioVentaMaxedit").value = producto.precioVentaMax ?? "";
 
       document.getElementById("impuestoedit").value = producto.impuesto;
 
@@ -425,7 +490,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // =========================
       // IMÁGENES EXISTENTES
       // =========================
-      if (producto.imagenes) {
+        if (producto.imagenes) {
         producto.imagenes.forEach((img) => {
           imagenesEdit.push({
             id: img.id,
@@ -436,7 +501,10 @@ document.addEventListener("DOMContentLoaded", () => {
           renderImagenEdit(img.url, img.id, false);
         });
       }
-    });
+      } catch (error) {
+        console.error(error);
+        Swal.fire("Error", "No se pudo cargar la información del producto", "error");
+      }
   });
 });
 
@@ -468,10 +536,30 @@ function setRemoteSelectEdit({ hiddenId, value, text, placeholder }) {
 //----------------------
 // EDICION
 //----------------------
+let enviandoEdicion = false;
+
 document.getElementById("putregistro").addEventListener("submit", async (e) => {
   e.preventDefault();
 
+  if (enviandoEdicion) return;
+
+  const submitButton = document.getElementById("btnput");
+
   const Id = document.getElementById("idedit").value;
+  const precioVenta = Number(document.getElementById("precioVentaedit").value);
+  const precioMinTexto = document.getElementById("precioVentaMinedit").value.trim();
+  const precioMaxTexto = document.getElementById("precioVentaMaxedit").value.trim();
+  const precioMin = precioMinTexto === "" ? null : Number(precioMinTexto);
+  const precioMax = precioMaxTexto === "" ? null : Number(precioMaxTexto);
+
+  if (!Number.isFinite(precioVenta) || precioVenta < 0 || (precioMin !== null && (!Number.isFinite(precioMin) || precioMin < 0)) || (precioMax !== null && (!Number.isFinite(precioMax) || precioMax < 0)) || (precioMin !== null && precioMax !== null && precioMax < precioMin)) {
+    Swal.fire({
+      title: "Rango de precios inválido",
+      text: "El precio máximo debe ser mayor o igual al precio mínimo.",
+      icon: "warning",
+    });
+    return;
+  }
 
   // =========================
   // VALIDACIONES
@@ -507,23 +595,20 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
     return;
   }
 
-  // =========================
-  // MÍNIMO 1 IMAGEN
-  // =========================
-  const imagenesRestantes = imagenesEdit.filter(
-    (img) => !imagenesEliminar.includes(img.id),
-  );
+  enviandoEdicion = true;
+  setSubmitButtonState(submitButton, true);
+  // Igual que al registrar, la preparación de fotos puede tardar antes de fetch.
+  window.managerLoader?.mostrar();
+  let loaderEdicionActivo = Boolean(window.managerLoader);
 
-  if (imagenesRestantes.length === 0) {
-    Swal.fire({
-      title: "Imágenes requeridas",
-      text: "Debes dejar al menos una imagen",
-      icon: "warning",
-      confirmButtonText: "Aceptar",
-      customClass: { confirmButton: "classbotones" },
-    });
-    return;
-  }
+  const finalizarEdicion = () => {
+    enviandoEdicion = false;
+    setSubmitButtonState(submitButton, false);
+    if (loaderEdicionActivo) {
+      window.managerLoader?.ocultar();
+      loaderEdicionActivo = false;
+    }
+  };
 
   // =========================
   // CONVERTIDOR WEBP
@@ -601,10 +686,9 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
 
   formData.append("CodigoSKU", document.getElementById("CodigoSKUedit").value);
 
-  formData.append(
-    "precioVenta",
-    document.getElementById("precioVentaedit").value,
-  );
+  formData.append("precioVenta", document.getElementById("precioVentaedit").value);
+  formData.append("precioVentaMin", document.getElementById("precioVentaMinedit").value);
+  formData.append("precioVentaMax", document.getElementById("precioVentaMaxedit").value);
   formData.append("impuesto", document.getElementById("impuestoedit").value);
   formData.append("IsActive", document.getElementById("isActiveedit").checked);
 
@@ -635,6 +719,7 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
     const ext = file.name.split(".").pop().toLowerCase();
 
     if (!["jpg", "jpeg", "png", "webp"].includes(ext)) {
+      finalizarEdicion();
       Swal.fire({
         title: "Formato inválido",
         text: "Solo JPG, PNG o WEBP",
@@ -651,6 +736,7 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
 
       formData.append("Imagenes", webpFile);
     } catch (error) {
+      finalizarEdicion();
       Swal.fire({
         title: "Error",
         text: "No se pudo procesar una imagen",
@@ -680,6 +766,7 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
     const data = await response.json();
 
     if (data.success) {
+      finalizarEdicion();
       Swal.fire({
         title: "¡Éxito!",
         text: data.message,
@@ -690,6 +777,7 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
         window.location.reload();
       });
     } else {
+      finalizarEdicion();
       Swal.fire({
         title: "Error",
         text: data.message,
@@ -699,6 +787,7 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
       });
     }
   } catch (error) {
+    finalizarEdicion();
     console.error(error);
 
     Swal.fire({
@@ -797,14 +886,6 @@ function debounce(fn, delay = 300) {
 /*--------------------------------------*/
 /* FETCH DE CATEGORÍAS */
 async function fetchCategorias(term, optionsContainer) {
-  if (term.length < 2) {
-    optionsContainer.innerHTML = `
-            <div class="list-group-item text-muted">
-                Escriba al menos 2 letras
-            </div>`;
-    return;
-  }
-
   try {
     const res = await fetch(
       `/manager/categorias/search/?search=${encodeURIComponent(term)}`,
@@ -818,6 +899,11 @@ async function fetchCategorias(term, optionsContainer) {
                 <div class="list-group-item text-muted">Sin resultados</div>`;
       return;
     }
+
+    optionsContainer.innerHTML = `
+        <div class="list-group-item active bg-light text-dark fw-bold">
+            ${term ? "Resultados encontrados" : "Más utilizadas"}
+        </div>`;
 
     data.forEach((c) => {
       optionsContainer.innerHTML += `
@@ -835,14 +921,6 @@ async function fetchCategorias(term, optionsContainer) {
 }
 /* FETCH DE UMedidas */
 async function fetchUMedidas(term, optionsContainer) {
-  if (term.length < 2) {
-    optionsContainer.innerHTML = `
-            <div class="list-group-item text-muted">
-                Escriba al menos 2 letras
-            </div>`;
-    return;
-  }
-
   const res = await fetch(
     `/manager/presentaciones/search/?search=${encodeURIComponent(term)}`,
   );
@@ -856,6 +934,11 @@ async function fetchUMedidas(term, optionsContainer) {
     return;
   }
 
+  optionsContainer.innerHTML = `
+        <div class="list-group-item active bg-light text-dark fw-bold">
+            ${term ? "Resultados encontrados" : "Más utilizadas"}
+        </div>`;
+
   data.forEach((u) => {
     optionsContainer.innerHTML += `
             <button type="button"
@@ -867,14 +950,6 @@ async function fetchUMedidas(term, optionsContainer) {
 }
 
 async function fetchMarcas(term, optionsContainer) {
-  if (term.length < 2) {
-    optionsContainer.innerHTML = `
-            <div class="list-group-item text-muted">
-                Escriba al menos 2 letras
-            </div>`;
-    return;
-  }
-
   const res = await fetch(
     `/manager/marcas/search/?search=${encodeURIComponent(term)}`,
   );
@@ -887,6 +962,11 @@ async function fetchMarcas(term, optionsContainer) {
             <div class="list-group-item text-muted">Sin resultados</div>`;
     return;
   }
+
+  optionsContainer.innerHTML = `
+        <div class="list-group-item active bg-light text-dark fw-bold">
+            ${term ? "Resultados encontrados" : "Más utilizadas"}
+        </div>`;
 
   data.forEach((m) => {
     optionsContainer.innerHTML += `
@@ -909,15 +989,6 @@ function initDropdown(hiddenInputId, remoteSearchFn = null) {
   const optionsContainer = container.querySelector(".options");
   const placeholderText = selectBtn.textContent.trim();
 
-  const renderInitialState = () => {
-    if (!remoteSearchFn) return;
-
-    optionsContainer.innerHTML = `
-      <div class="list-group-item text-muted">
-        Escriba al menos 2 letras
-      </div>`;
-  };
-
   // Selección de opción
   optionsContainer.addEventListener("click", (e) => {
     const option = e.target.closest(".list-group-item-action");
@@ -933,11 +1004,19 @@ function initDropdown(hiddenInputId, remoteSearchFn = null) {
   // Abrir/ocultar dropdown
   selectBtn.addEventListener("click", (e) => {
     e.stopPropagation();
-    dropdown.classList.toggle("show");
+    const estabaAbierto = dropdown.classList.contains("show");
+
+    // Los tres selectores están uno debajo del otro: al abrir uno se cierran
+    // los demás para evitar que sus listas se superpongan.
+    document
+      .querySelectorAll(".gestion-producto-select .dropdown-menu.show")
+      .forEach((menu) => menu.classList.remove("show"));
+
+    dropdown.classList.toggle("show", !estabaAbierto);
     searchInput.focus();
 
-    if (remoteSearchFn) {
-      renderInitialState();
+    if (remoteSearchFn && dropdown.classList.contains("show")) {
+      remoteSearchFn(searchInput.value.trim(), optionsContainer);
     }
   });
 
@@ -947,11 +1026,6 @@ function initDropdown(hiddenInputId, remoteSearchFn = null) {
     debounce(() => {
       if (remoteSearchFn) {
         const term = searchInput.value.trim();
-
-        if (term.length < 2) {
-          renderInitialState();
-          return;
-        }
 
         remoteSearchFn(term, optionsContainer);
       }
@@ -1183,5 +1257,45 @@ document.querySelectorAll(".img-hover-wrapper").forEach((el) => {
 
   el.addEventListener("mouseleave", () => {
     popup.classList.remove("show");
+  });
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  const boton = document.getElementById("exportarProductosExcel");
+  if (!boton) return;
+
+  const icono = boton.querySelector("i");
+  const iconoOriginal = "bx bx-spreadsheet";
+
+  boton.addEventListener("click", async () => {
+    const busqueda = document.getElementById("busqueda")?.value || "";
+    const parametros = new URLSearchParams({ search: busqueda });
+
+    boton.disabled = true;
+    icono.className = "bx bx-loader-alt bx-spin";
+    boton.setAttribute("aria-label", "Generando archivo de Excel");
+
+    try {
+      const respuesta = await fetch(
+        `${boton.dataset.exportUrl}?${parametros.toString()}`,
+      );
+
+      if (!respuesta.ok) throw new Error("No se pudo generar el archivo");
+
+      const archivo = await respuesta.blob();
+      const enlace = document.createElement("a");
+      enlace.href = URL.createObjectURL(archivo);
+      enlace.download = "productos.xlsx";
+      document.body.appendChild(enlace);
+      enlace.click();
+      enlace.remove();
+      URL.revokeObjectURL(enlace.href);
+    } catch (error) {
+      Swal.fire("Error", "No se pudo exportar el listado de productos", "error");
+    } finally {
+      boton.disabled = false;
+      icono.className = iconoOriginal;
+      boton.setAttribute("aria-label", "Exportar productos a Excel");
+    }
   });
 });

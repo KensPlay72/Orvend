@@ -4,13 +4,14 @@
   Realizar Traslados
 {% endblock title %}
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/compras.css' %}?v=20260918-02" />
+  <link rel="stylesheet" href="{% static 'css/traslados.css' %}?v=20260921-01" />
   <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 {% endblock extra_css %}
 {% block titulo_content %}
   <div class="tituloscont">
     <img class="logop"
-         src="{% static 'img/LH.png' %}"
+         src="{% static 'img/LH.webp' %}"
          alt="logo"
          width="0"
          height="0" />
@@ -18,12 +19,14 @@
   </div>
 {% endblock titulo_content %}
 {% block main_content %}
-  <div class="divbuttons2">
-    <button id="toggleDropdownPanel" class="btn-dropdown" type="button">
-      <i class="bx bx-cart-add"></i> Agregar Producto
-    </button>
-    <div class="ubicacionselect">
-      <p>Ubicación Origen:</p>
+  <div class="divbuttons2 compra-toolbar">
+    <div class="compra-toolbar__action">
+      <button id="toggleDropdownPanel" class="btn-dropdown" type="button">
+        <i class="bx bx-cart-add"></i> Agregar Producto
+      </button>
+    </div>
+    <div class="ubicacionselect compra-toolbar__field">
+      <p>Origen:</p>
       <div class="form-group mb-3">
         <input type="hidden" name="ubicacion_origen" id="ubicacion_origen" required />
         <div class="dropdown select-container w-100">
@@ -39,8 +42,8 @@
         </div>
       </div>
     </div>
-    <div class="ubicacionselect">
-      <p>Ubicación Destino:</p>
+    <div class="ubicacionselect compra-toolbar__field">
+      <p>Destino:</p>
       <div class="form-group mb-3">
         <input type="hidden"
                name="ubicacion_destino"
@@ -59,9 +62,11 @@
         </div>
       </div>
     </div>
-    <button id="btnPreviewTraslado" class="btn-dropdown">
-      <i class="bx bx-check-circle"></i> Completar compra
-    </button>
+    <div class="compra-toolbar__action">
+      <button id="btnPreviewTraslado" class="btn-dropdown">
+        <i class="bx bx-check-circle"></i> Completar traslado
+      </button>
+    </div>
   </div>
   <!-- Modal Productos -->
   <div class="modal fade"
@@ -69,8 +74,8 @@
        tabindex="-1"
        aria-labelledby="exampleModalCenterTitle"
        aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal600">
-      <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered modal600 compras-product-modal">
+      <div class="modal-content compras-product-modal__content">
         <div class="modal-header">
           <h5 class="modal-title">Agregar Productos</h5>
           <button type="button"
@@ -78,27 +83,30 @@
                   data-bs-dismiss="modal"
                   aria-label="Cerrar"></button>
         </div>
-        <div class="modal-body">
-          <!-- Buscador -->
-          <input type="text"
-                 class="form-control mb-3"
-                 id="buscadorProductos"
-                 placeholder="Buscar por nombre o SKU..." />
+        <div class="modal-body compras-product-modal__body">
+          <div class="compras-product-search">
+            <input type="text"
+                   id="buscadorProductos"
+                   placeholder="Buscar por nombre o SKU..."
+                   aria-label="Buscar productos" />
+            <button type="button" class="dv-header-search__button" aria-label="Buscar productos"><i class="bx bx-search" aria-hidden="true"></i></button>
+          </div>
           <!-- Lista dinámica de productos -->
-          <div id="contenedorProductosAjax" class="contenedorProductosAjax">
+          <div id="contenedorProductosAjax" class="contenedorProductosAjax compras-product-list-wrap">
             <div id="loadingProductos" class="text-center py-4">Cargando productos...</div>
           </div>
           <!-- Paginación dinámica -->
-          <nav class="d-flex justify-content-center mt-3">
+          <nav class="compras-product-pagination" aria-label="Páginas de productos">
             <ul class="pagination" id="paginacionProductos">
               <!-- Se rellena por JS -->
             </ul>
           </nav>
         </div>
-        <div class="modal-footer">
+        <div class="modal-footer compras-product-modal__footer">
+          <span><i class="bx bx-check-circle"></i> Selecciona los productos para agregarlos al traslado</span>
           <button type="button"
-                  class="btn btn classbotones"
-                  id="guardarProductosSeleccionados">Agregar Selección</button>
+                  class="btn classbotones"
+                  id="guardarProductosSeleccionados"><i class="bx bx-plus"></i> Agregar selección</button>
         </div>
       </div>
     </div>
@@ -181,5 +189,5 @@
       </tbody>
     </table>
   </div>
-  <script src="{% static 'js/gestiones/traslados.js' %}"></script>
+  <script src="{% static 'js/gestiones/traslados.js' %}?v=20260929-01"></script>
 {% endblock main_content %}

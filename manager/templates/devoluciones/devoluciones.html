@@ -1,13 +1,13 @@
 {% extends "menu.html" %}
-{% load static %}
+{% load static pagination_tags %}
 {% block title %}Devoluciones{% endblock %}
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 {% endblock %}
 {% block titulo_content %}
     <div class="tituloscont">
-        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
-        <p class="header__logo">| Devoluciones</p>
+        <img class="logop" src="{% static 'img/LH.webp' %}" alt="">
+        <p class="header__logo">| Devoluciones de Compras</p>
     </div>
 {% endblock %}
 {% block main_content %}
@@ -65,7 +65,7 @@
                     {% if perms.manager.view_devolucioncompra %}
                     <button type="button"
                             class="btn btn-sm btn-primary btn-view"
-                            data-id="{{ devolucion.id }}">
+                            data-token="{{ devolucion.documento_token }}">
                         <i class='bx bx-show'></i>
                     </button>
                     {% endif %}
@@ -93,7 +93,8 @@
             {% endif %}
         </li>
 
-        {% for p in page_obj.paginator.page_range %}
+        {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
+        {% for p in paginas_visibles %}
             <li class="page-item {% if p == page_obj.number %}active{% endif %}">
                 <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
             </li>

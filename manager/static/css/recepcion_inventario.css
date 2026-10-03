@@ -1,0 +1,140 @@
+.hijos-devolucion-modal {
+  overflow: hidden;
+  border: 0;
+  border-radius: 14px;
+  box-shadow: 0 12px 28px
+    color-mix(in srgb, var(--system-secondary, #708984) 22%, transparent);
+}
+.hijos-devolucion-modal .modal-header {
+  padding: 1.15rem 1.3rem;
+  border-bottom-color: color-mix(
+    in srgb,
+    var(--system-primary, #32877f) 18%,
+    #e6efed
+  );
+  background: color-mix(in srgb, var(--system-primary, #32877f) 5%, #fff);
+}
+.hijos-devolucion-modal .modal-title {
+  color: var(--system-primary, #32877f);
+  font-weight: 700;
+}
+.hijos-devolucion-modal .modal-body {
+  padding: 1.15rem 1.3rem 1.3rem;
+}
+.hijos-devolucion-intro {
+  margin: 0 0 0.85rem;
+  color: color-mix(in srgb, var(--system-primary, #32877f) 62%, #263b36);
+  font-size: 0.86rem;
+}
+.hijos-devolucion-lista {
+  display: grid;
+  gap: 0.55rem;
+}
+.hijo-devolucion-option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid
+    color-mix(in srgb, var(--system-primary, #32877f) 18%, #e0ebe8);
+  border-radius: 9px;
+  color: inherit;
+  background: #fff;
+  text-align: left;
+  transition:
+    border-color 0.2s,
+    background 0.2s,
+    box-shadow 0.2s;
+}
+.hijo-devolucion-option:hover {
+  border-color: var(--system-primary, #32877f);
+  background: color-mix(in srgb, var(--system-primary, #32877f) 8%, #fff);
+  box-shadow: 0 4px 11px
+    color-mix(in srgb, var(--system-secondary, #708984) 16%, transparent);
+}
+.hijo-devolucion-option__icon {
+  display: grid;
+  width: 50px;
+  height: 50px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid
+    color-mix(in srgb, var(--system-primary, #32877f) 18%, #deebe8);
+  border-radius: 9px;
+  color: var(--system-primary, #32877f);
+  background: color-mix(in srgb, var(--system-primary, #32877f) 9%, #fff);
+  font-size: 1.45rem;
+}
+.hijo-devolucion-option__info {
+  display: grid;
+  min-width: 0;
+  gap: 0.18rem;
+}
+.hijo-devolucion-option__info strong {
+  overflow: hidden;
+  color: color-mix(in srgb, var(--system-primary, #32877f) 48%, #172522);
+  font-size: 0.92rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hijo-devolucion-option__info span {
+  color: color-mix(in srgb, var(--system-primary, #32877f) 58%, #4c605b);
+  font-size: 0.77rem;
+}
+.hijo-devolucion-option__state {
+  margin-left: auto;
+  color: var(--system-primary, #32877f);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.devolucion-hijo-campos {
+  min-width: 210px;
+}
+.devolucion-hijo-campos .cantidad-hijo {
+  min-height: 39px;
+  border: 1px solid
+    color-mix(in srgb, var(--system-primary, #32877f) 34%, #dce7e5);
+  border-radius: 7px;
+  color: #263b36;
+  font-weight: 700;
+  text-align: center;
+}
+.devolucion-hijo-campos .cantidad-hijo:focus {
+  border-color: var(--system-primary, #32877f);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--system-primary, #32877f) 13%, transparent);
+}
+.equivalencia-hijo {
+  color: color-mix(
+    in srgb,
+    var(--system-primary, #32877f) 62%,
+    #4c605b
+  ) !important;
+  font-size: 0.73rem;
+  line-height: 1.35;
+}
+
+.devolucion-conversion .convertir-hijo-btn {
+  border-color: var(--system-primary, #32877f);
+  color: var(--system-primary, #32877f);
+  background: color-mix(in srgb, var(--system-primary, #32877f) 7%, #fff);
+}
+
+.devolucion-conversion .convertir-hijo-btn:hover,
+.devolucion-conversion .convertir-hijo-btn:focus {
+  border-color: var(--system-primary, #32877f);
+  color: #fff;
+  background: var(--system-primary, #32877f);
+  box-shadow: 0 4px 10px
+    color-mix(in srgb, var(--system-secondary, #708984) 20%, transparent);
+}
+@media (max-width: 1032px) {
+  .hijo-devolucion-option__state {
+    display: none;
+  }
+  .devolucion-hijo-campos {
+    min-width: 175px;
+  }
+}

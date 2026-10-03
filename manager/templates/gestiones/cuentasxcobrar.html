@@ -1,5 +1,5 @@
 {% extends "menu.html" %}
-{% load static %}
+{% load static pagination_tags %}
 
 {% block title %}Cuentas x cobrar{% endblock %}
 
@@ -9,7 +9,7 @@
 
 {% block titulo_content %}
     <div class="tituloscont">
-        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+        <img class="logop" src="{% static 'img/LH.webp' %}" alt="">
         <p class="header__logo">| Cuentas x cobrar</p>
     </div>
 {% endblock %}
@@ -91,6 +91,25 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="modalHistorialCobrar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Historial de abonos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3" id="historialCobrarCuenta"></p>
+                <div class="table-responsive">
+                    <table class="tablas-todo mb-0">
+                        <thead><tr><th>Registrado por</th><th>Fecha</th><th>Cantidad</th></tr></thead>
+                        <tbody id="historialCobrarBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
     <div class="full2">
         <div class="ventanas">
             <div class="ventanasi">
@@ -140,7 +159,9 @@
             </thead>
             <tbody>
                 {% for cuenta in cuentas %}
-                    <tr class="fila-cuenta {{ cuenta.estado_vencimiento }}">
+                    <tr class="fila-cuenta {{ cuenta.estado_vencimiento }}"
+                        data-id="{{ cuenta.id }}"
+                        data-abonos-url="{% url 'cxcobrar_abonos' cuenta.id %}">
                         <td>{{ cuenta.id }}</td>
                         <td>{{ cuenta.cliente.nombre_completo|default:cuenta.cliente.empresa }}</td>
                         <td>{{ cuenta.venta.id_factura_cai.numero_factura }}</td>
@@ -157,15 +178,15 @@
                             {% endif %}
                         </td>
                         <td>{{ cuenta.fecha_vencimiento|date:"d/m/Y" }}</td>
-                        <td>
+                        <td class="estado-centrado">
                             {% if cuenta.estado == 1 %}
-                                <span class="estado-circulo estado-pendiente" title="Pendiente"></span>
+                                <span class="badge bg-warning text-dark">Pendiente</span>
                             {% elif cuenta.estado == 2 %}
-                                <span class="estado-circulo estado-parcial" title="Parcial"></span>
+                                <span class="badge bg-info text-dark">Parcial</span>
                             {% elif cuenta.estado == 3 %}
-                                <span class="estado-circulo estado-pagado" title="Pagado"></span>
+                                <span class="badge bg-success">Pagado</span>
                             {% else %}
-                                <span class="estado-circulo estado-cancelado" title="Cancelado"></span>
+                                <span class="badge bg-danger">Cancelado</span>
                             {% endif %}
                         </td>
                         <td>
@@ -194,7 +215,8 @@
             <li class="page-item {% if page <= 1 %}disabled{% endif %}">
                 <a class="page-link" href="?page={{ page|add:"-1" }}&search={{ search }}">«</a>
             </li>
-            {% for p in page_range %}
+            {% paginas_cercanas page total_pages as paginas_visibles %}
+            {% for p in paginas_visibles %}
                 <li class="page-item {% if p == page %}active{% endif %}">
                     <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
                 </li>

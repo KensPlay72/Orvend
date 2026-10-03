@@ -1,5 +1,5 @@
 {% extends "menu.html" %}
-{% load static %}
+{% load static pagination_tags %}
 {% block title %}
     Categorías
 {% endblock title %}
@@ -9,7 +9,7 @@
 {% block titulo_content %}
     <div class="tituloscont">
         <img class="logop"
-             src="{% static 'img/LH.png' %}"
+             src="{% static 'img/LH.webp' %}"
              alt="logo"
              width="0"
              height="0" />
@@ -17,14 +17,29 @@
     </div>
 {% endblock titulo_content %}
 {% block main_content %}
-    {% if perms.manager.add_categorias %}
-        <button id="toggleDropdownPanel"
-                class="btn-dropdown"
-                data-bs-toggle="modal"
-                data-bs-target="#modalregis">
-            <i class="bx bx-plus-circle"></i> Agregar
-        </button>
+    <div class="catalog-toolbar">
+      <div>
+        {% if perms.manager.add_categorias %}
+            <button id="toggleDropdownPanel"
+                    class="btn-dropdown"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalregis">
+                <i class="bx bx-plus-circle"></i> Agregar
+            </button>
+        {% endif %}
+      </div>
+    {% if request.user.is_superuser %}
+        {% url 'exportar_catalogo_excel' 'categorias' as exportar_categorias %}
+        {% url 'descargar_plantilla_catalogo' 'categorias' as plantilla_categorias %}
+        {% url 'importar_catalogo_excel' 'categorias' as importar_categorias %}
+        <div class="catalog-import-actions catalog-toolbar__actions">
+            <a class="catalog-export-btn" href="{{ exportar_categorias }}"><i class="bx bx-spreadsheet"></i> Exportar</a>
+            <button type="button" class="catalog-import-btn" data-bs-toggle="modal" data-bs-target="#modalImportarCategorias"><i class="bx bx-upload"></i> Importar</button>
+            <a class="catalog-template-btn" href="{{ plantilla_categorias }}"><i class="bx bx-download"></i> Plantilla</a>
+        </div>
+        {% include "gestiones/_modal_importar_excel.html" with modal_id="modalImportarCategorias" titulo="categorías" import_url=importar_categorias %}
     {% endif %}
+    </div>
     <div class="modal fade"
          id="modalregis"
          tabindex="-1"
@@ -49,20 +64,21 @@
                                    id="ncategoria"
                                    class="form-control"
                                    placeholder="Nombre"
-                                   required>
+                                   required 
+                                   autocomplete="off">
                         </div>
                         <br>
                         <div class="form-group">
                             <label for="desccategoria">Descripción de la categoría</label>
                             <textarea name="desccategoria"
                                       id="desccategoria"
+                                      autocomplete="off"
                                       rows="2"
                                       maxlength="100"
                                       class="form-control"
                                       required
                                       placeholder="Descripción"></textarea>
                         </div>
-                        <br>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -89,7 +105,7 @@
                 <div class="modal-body">
                     <form id="putregistro" enctype="multipart/form-data">
                         {% csrf_token %}
-                        <input type="text" id="idedit" hidden>
+                        <input type="text" id="idedit" hidden autocomplete="off">
                         <div class="form-group">
                             <label for="ncategoriaedit">Nombre de la categoría</label>
                             <input type="text"
@@ -97,7 +113,8 @@
                                    id="ncategoriaedit"
                                    class="form-control"
                                    placeholder="Nombre"
-                                   required>
+                                   required 
+                                   autocomplete="off">
                         </div>
                         <br>
                         <div class="form-group">
@@ -107,6 +124,7 @@
                                       rows="2"
                                       maxlength="100"
                                       required
+                                      autocomplete="off"
                                       class="form-control"
                                       placeholder="Descripción"></textarea>
                         </div>
@@ -149,11 +167,11 @@
                         <td>{{ categoria.id }}</td>
                         <td>{{ categoria.nombre }}</td>
                         <td>{{ categoria.descripcion }}</td>
-                        <td>
+                        <td class="estado-centrado">
                             {% if categoria.is_active %}
-                                <span class="estado-circulo estado-activo"></span>
+                                <span class="badge bg-success">Activo</span>
                             {% else %}
-                                <span class="estado-circulo estado-inactivo"></span>
+                                <span class="badge bg-danger">Inactivo</span>
                             {% endif %}
                         </td>
                         <td>
@@ -177,6 +195,8 @@
                             {% endif %}
                         </td>
                     </tr>
+                {% empty %}
+                    <tr><td colspan="5" class="text-center table-empty-state">No hay categorías registradas.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -191,7 +211,8 @@
                     <span class="page-link">«</span>
                 {% endif %}
             </li>
-            {% for p in page_obj.paginator.page_range %}
+            {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
+            {% for p in paginas_visibles %}
                 <li class="page-item {% if p == page_obj.number %}active{% endif %}">
                     <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
                 </li>
@@ -208,5 +229,6 @@
     </nav>
     <br>
     <script type="module" src="{% static 'js/gestiones/categorias.js' %}"></script>
+    <script src="{% static 'js/importar_excel.js' %}"></script>
     <script type="module" src="{% static 'js/chektext.js' %}"></script>
 {% endblock main_content %}

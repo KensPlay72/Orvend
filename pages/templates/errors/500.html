@@ -1,0 +1,25 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Error interno | OrvendMart</title>
+  <link rel="stylesheet" href="{% static 'css/error_pages.css' %}">
+</head>
+<body class="error-page-body" style="--error-primary: {{ tema_principal }}; --error-secondary: {{ tema_secundario }}; --error-button: {{ tema_botones }};">
+  <main class="error-card">
+    <div class="error-brand">Orvend<span>Mart</span></div>
+    <div class="error-mark" aria-hidden="true">!</div>
+    <span class="error-code">Error 500</span>
+    <h1>Ocurrió un error inesperado</h1>
+    <p>No pudimos completar la operación. Intenta nuevamente en unos momentos.</p>
+    {% if error_detail %}
+      <p class="error-detail"><strong>Detalle técnico:</strong> {{ error_detail }}</p>
+    {% endif %}
+    <div class="error-actions">
+      <button class="error-button" type="button" onclick="history.back()">Volver atrás</button>
+    </div>
+  </main>
+</body>
+</html>

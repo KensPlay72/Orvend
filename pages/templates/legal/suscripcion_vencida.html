@@ -1,0 +1,29 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Suscripción no vigente | OrvendMart</title>
+  <link rel="icon" href="{% static 'img/logo-card.ico' %}" type="image/x-icon">
+  <link rel="stylesheet" href="{% static 'plugins/css/boxicons.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/legal.css' %}">
+</head>
+<body class="legal-body subscription-body" style="--legal-primary: {{ tema_principal }}; --legal-secondary: {{ tema_secundario }}; --legal-button: {{ tema_botones }};">
+  <main class="subscription-card">
+    <a class="legal-brand" href="{% url 'home' %}"><img src="{% static 'img/LH1.webp' %}" alt="OrvendMart"></a>
+    <span class="subscription-icon"><i class="bx bx-calendar-x"></i></span>
+    <span class="subscription-label">SUSCRIPCIÓN NO VIGENTE</span>
+    <h1>El acceso al sistema está temporalmente restringido</h1>
+    <p>La suscripción de esta instalación finalizó o está suspendida. Para recuperar el acceso, comunícate con el administrador responsable del pago.</p>
+    {% if suscripcion.configurada and suscripcion.fecha_fin %}
+      <p class="subscription-date">Período registrado hasta: <strong>{{ suscripcion.fecha_fin }}</strong></p>
+    {% endif %}
+    <div class="subscription-actions">
+      <a class="legal-button" href="{% url 'home' %}"><i class="bx bx-home-alt"></i> Página principal</a>
+      <a class="legal-button legal-button--outline" href="{% url 'login' %}"><i class="bx bx-log-in"></i> Iniciar sesión</a>
+    </div>
+    <p class="subscription-help">¿Necesitas ayuda? Escribe a <a href="mailto:soporte@orvendmart.com">soporte@orvendmart.com</a>.</p>
+  </main>
+</body>
+</html>

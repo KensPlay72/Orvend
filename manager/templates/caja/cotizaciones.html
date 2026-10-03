@@ -1,0 +1,66 @@
+{% extends "menu.html" %}
+{% load static pagination_tags %}
+
+{% block title %}Cotizaciones{% endblock title %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/manager.css' %}">
+<link rel="stylesheet" href="{% static 'css/devoluciones_venta.css' %}">
+{% endblock extra_css %}
+
+{% block titulo_content %}
+<div class="tituloscont">
+    <img class="logop" src="{% static 'img/LH.webp' %}" alt="logo" width="0" height="0">
+    <p class="header__logo">| Cotizaciones</p>
+</div>
+{% endblock titulo_content %}
+
+{% block main_content %}
+<div class="tabla">
+    <div class="tabla-container">
+        <table class="tablas-todo">
+            <thead>
+                <tr>
+                    <th>Número</th>
+                    <th>Fecha</th>
+                    <th>Cliente</th>
+                    <th>RTN / DNI</th>
+                    <th>Sucursal</th>
+                    <th>Cant. productos</th>
+                    <th>Total</th>
+                    <th>PDF</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cotizacion in cotizaciones %}
+                <tr>
+                    <td>{{ cotizacion.numero_cotizacion }}</td>
+                    <td>{{ cotizacion.f_creacion|date:"d/m/Y h:i A" }}</td>
+                    <td>{% if cotizacion.cliente_nombre %}{{ cotizacion.cliente_nombre }}{% elif cotizacion.cliente %}{{ cotizacion.cliente.nombre }}{% else %}Cliente final{% endif %}</td>
+                    <td>{% if cotizacion.cliente and cotizacion.cliente.dni %}{% if cotizacion.con_rtn %}RTN: {% else %}DNI: {% endif %}{{ cotizacion.cliente.dni }}{% else %}—{% endif %}</td>
+                    <td>{{ cotizacion.sucursal }}</td>
+                    <td>{{ cotizacion.cantidad_productos|floatformat:2 }}</td>
+                    <td>L. {{ cotizacion.total|floatformat:2 }}</td>
+                    <td><a class="btn classbotones" target="_blank" href="{% url 'imprimir_cotizacion' cotizacion.documento_token %}" title="Descargar cotización"><i class="bx bx-download"></i></a></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-center py-3 table-empty-state">Aún no hay cotizaciones generadas.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<nav class="d-flex justify-content-center mt-4" aria-label="Páginas de cotizaciones">
+    <ul class="pagination">
+        <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+            {% if page_obj.has_previous %}<a class="page-link" href="?page={{ page_obj.previous_page_number }}&buscar={{ busqueda|urlencode }}">«</a>{% else %}<span class="page-link">«</span>{% endif %}
+        </li>
+        {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
+        {% for p in paginas_visibles %}
+        <li class="page-item {% if p == page_obj.number %}active{% endif %}"><a class="page-link" href="?page={{ p }}&buscar={{ busqueda|urlencode }}">{{ p }}</a></li>
+        {% endfor %}
+        <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+            {% if page_obj.has_next %}<a class="page-link" href="?page={{ page_obj.next_page_number }}&buscar={{ busqueda|urlencode }}">»</a>{% else %}<span class="page-link">»</span>{% endif %}
+        </li>
+    </ul>
+</nav>
+{% endblock main_content %}

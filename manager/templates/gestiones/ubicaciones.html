@@ -1,15 +1,15 @@
 {% extends "menu.html" %}
-{% load static %}
+{% load static pagination_tags %}
 {% block title %}
     Ubicaciones
 {% endblock title %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=ubicaciones-modal-20260930" />
 {% endblock extra_css %}
 {% block titulo_content %}
     <div class="tituloscont">
         <img class="logop"
-             src="{% static 'img/LH.png' %}"
+             src="{% static 'img/LH.webp' %}"
              alt=""
              width="0"
              height="0">
@@ -30,7 +30,7 @@
          tabindex="-1"
          aria-labelledby="exampleModalCenterTitle"
          aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered ubicaciones-modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="exampleModalLongTitle">Registrar Ubicación</h5>
@@ -40,7 +40,7 @@
                             aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="postregistro" enctype="multipart/form-data">
+                    <form id="postregistro" class="ubicaciones-form" enctype="multipart/form-data">
                         {% csrf_token %}
                         <!-- ========================= -->
                         <!-- NOMBRE -->
@@ -114,16 +114,15 @@
                         <!-- ========================= -->
                         <!-- SELECT BODEGA -->
                         <!-- ========================= -->
-                        <div class="provselect displaynone" id="bodega_container">
-                            <br>
-                            <p>Bodega:</p>
+                        <div class="ubicaciones-bodega-field" id="bodega_container" hidden>
+                            <label for="bodegaid">Bodega relacionada</label>
                             <div class="form-group mb-3">
                                 <input type="hidden" name="bodegaid" id="bodegaid">
-                                <div class="dropdown select-container w-100">
+                                <div class="dropdown select-container gestion-producto-select ubicaciones-bodega-select w-100">
                                     <button type="button" class="btn w-100 text-start form-control">Escriba para buscar...</button>
                                     <div class="dropdown-menu w-100 p-0">
                                         <div class="search-box p-2">
-                                            <input type="text" class="form-control" placeholder="Buscar bodega...">
+                                            <input type="text" class="form-control" placeholder="Buscar bodega..." autocomplete="off">
                                         </div>
                                         <div class="options list-group list-group-flush"></div>
                                     </div>
@@ -144,7 +143,7 @@
          tabindex="-1"
          aria-labelledby="exampleModalCenterTitle"
          aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered ubicaciones-modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="exampleModalLongTitle">Editar Ubicación</h5>
@@ -154,7 +153,7 @@
                             aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="putregistro" enctype="multipart/form-data">
+                    <form id="putregistro" class="ubicaciones-form" enctype="multipart/form-data">
                         {% csrf_token %}
                         <input type="hidden" id="idedit">
                         <!-- ========================= -->
@@ -237,16 +236,15 @@
                         <!-- ========================= -->
                         <!-- BODEGA -->
                         <!-- ========================= -->
-                        <div class="provselect displaynone" id="bodega_containeredit">
-                            <br>
-                            <p>Bodega:</p>
+                        <div class="ubicaciones-bodega-field" id="bodega_containeredit" hidden>
+                            <label for="bodegaidedit">Bodega relacionada</label>
                             <div class="form-group mb-3">
                                 <input type="hidden" name="bodegaidedit" id="bodegaidedit">
-                                <div class="dropdown select-container w-100">
+                                <div class="dropdown select-container gestion-producto-select ubicaciones-bodega-select w-100">
                                     <button type="button" class="btn w-100 text-start form-control">Escriba para buscar...</button>
                                     <div class="dropdown-menu w-100 p-0">
                                         <div class="search-box p-2">
-                                            <input type="text" class="form-control" placeholder="Buscar bodega...">
+                                            <input type="text" class="form-control" placeholder="Buscar bodega..." autocomplete="off">
                                         </div>
                                         <div class="options list-group list-group-flush"></div>
                                     </div>
@@ -303,11 +301,11 @@
                             {% endif %}
                         </td>
                         <!-- ESTADO -->
-                        <td>
+                        <td class="estado-centrado">
                             {% if ubicacion.is_active %}
-                                <span class="estado-circulo estado-activo"></span>
+                                <span class="badge bg-success">Activo</span>
                             {% else %}
-                                <span class="estado-circulo estado-inactivo"></span>
+                                <span class="badge bg-danger">Inactivo</span>
                             {% endif %}
                         </td>
                         <!-- ACCIONES -->
@@ -346,7 +344,8 @@
                 {% endif %}
             </li>
             <!-- PÁGINAS -->
-            {% for p in page_obj.paginator.page_range %}
+            {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
+            {% for p in paginas_visibles %}
                 <li class="page-item {% if p == page_obj.number %}active{% endif %}">
                     <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
                 </li>
@@ -363,6 +362,6 @@
         </ul>
     </nav>
     <br>
-    <script type="module" src="{% static 'js/gestiones/ubicaciones.js' %}"></script>
+    <script type="module" src="{% static 'js/gestiones/ubicaciones.js' %}?v=ubicaciones-bodega-20260930"></script>
     <script type="module" src="{% static 'js/chektext.js' %}"></script>
 {% endblock main_content %}

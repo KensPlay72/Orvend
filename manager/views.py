@@ -2,34 +2,55 @@ import json
 import textwrap
 import traceback
 from datetime import datetime, timedelta, date
-from decimal import Decimal, InvalidOperation
+from zoneinfo import ZoneInfo
+from decimal import Decimal, InvalidOperation, ROUND_DOWN
 from io import BytesIO
+from openpyxl import Workbook, load_workbook
+from openpyxl.cell import WriteOnlyCell
+from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.utils import get_column_letter
 from django.urls import reverse
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
+from django.core import signing
 from django.db import transaction
-from django.db.models import Q, Sum, OuterRef, Subquery, F, Min, Max
-from django.http import Http404, HttpResponse, JsonResponse
+from django.db.models import Q, Sum, OuterRef, Subquery, F, Min, Max, Prefetch, Value, DecimalField, Count
+from django.http import Http404, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods, require_POST
-from reportlab.lib.pagesizes import letter
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.colors import HexColor
+from reportlab.pdfbase import pdfmetrics
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 from django.core.exceptions import PermissionDenied
 from django.db.models import Max
 from reportlab.lib.units import mm
 from .nextcloud import subir_archivo, obtener_archivo,eliminar_archivo
+from PIL import Image, UnidentifiedImageError
+from .whatsapp import enviar_factura_por_whatsapp
+from .notificaciones_alertas import actualizar_notificaciones_alertas
+from .notificaciones_service import estado_notificaciones_usuario
+from .notificaciones_realtime import publicar_actualizacion_usuarios
 import os
 import uuid
-from django.db.models.functions import TruncDate
+from django.db.models.functions import TruncDate, Coalesce
 import random
+from urllib.parse import urlencode, urljoin
 
 
-from .enums import EstadoCompra, EstadoCuenta, EstadoDevolucionCompra, Estados
+from .enums import (
+    EstadoCompra,
+    EstadoCuenta,
+    EstadoDevolucionCompra,
+    Estados,
+    MotivoDevolucion,
+)
 from .models import (
     Categorias,
     Clientes,
@@ -60,16 +81,227 @@ from .models import (
     facturas_cai,
     Ventas,
     DetalleVenta,
+    Cotizacion,
+    DetalleCotizacion,
+    DevolucionVenta,
+    DevolucionVentaDetalle,
     tarjetas,
     CajaAC,
+    Combos,
+    ComboImagen,
+    BannerTienda,
+    ConfiguracionEmpresa,
     DetalleCuadreCaja,
+    RetiroCaja,
+    Notificacion,
+    DetalleCombo,
     ProductosRel,
     ReservaInventario,
 )
 
 
+ZONA_HONDURAS = ZoneInfo("America/Tegucigalpa")
+
+
+def _fecha_honduras(valor):
+    """Convierte fechas almacenadas en UTC a la hora local de Honduras."""
+    if timezone.is_naive(valor):
+        return timezone.make_aware(valor, ZONA_HONDURAS)
+    return timezone.localtime(valor, ZONA_HONDURAS)
+
+
+def _rango_fechas_honduras(fecha_inicio, fecha_fin):
+    """Devuelve un rango [inicio, fin) para filtrar ventas por fecha hondureña."""
+    inicio = date.fromisoformat(str(fecha_inicio))
+    fin = date.fromisoformat(str(fecha_fin)) + timedelta(days=1)
+    return (
+        timezone.make_aware(datetime.combine(inicio, datetime.min.time()), ZONA_HONDURAS),
+        timezone.make_aware(datetime.combine(fin, datetime.min.time()), ZONA_HONDURAS),
+    )
+
+
+def _logo_empresa_pdf():
+    """Obtiene el logo configurado o conserva el logo predeterminado del ERP."""
+    logo_predeterminado = os.path.join(settings.BASE_DIR, "static", "img", "LH.webp")
+    try:
+        configuracion = ConfiguracionEmpresa.objects.filter(
+            is_active=True, is_delete=False
+        ).first()
+        if configuracion and configuracion.logo_archivo:
+            contenido = obtener_archivo(
+                configuracion.logo_archivo,
+                settings.NEXTCLOUD_FOLDER_CONFI,
+            ).content
+            return ImageReader(BytesIO(contenido))
+    except Exception:
+        pass
+    return logo_predeterminado
+
+
+def _puede_gestionar_configuracion(usuario):
+    return usuario.is_superuser or usuario.has_perm("manager.gestionar_configuracion")
+
+
+def _puede_gestionar_tienda(usuario):
+    return usuario.is_superuser or usuario.has_perm("manager.gestionar_tienda_virtual")
+
+
+def _puede_operar_caja(usuario):
+    return usuario.is_superuser or usuario.has_perm("manager.operar_caja")
+
+
+def _puede_generar_cotizaciones(usuario):
+    return _puede_operar_caja(usuario) or usuario.has_perm("manager.generar_cotizaciones")
+
+
+def _requiere_superusuario(request):
+    if not request.user.is_superuser:
+        raise PermissionDenied
+
+
+def _normalizar_encabezado_excel(valor):
+    return (
+        str(valor or "")
+        .strip()
+        .lower()
+        .replace("á", "a")
+        .replace("é", "e")
+        .replace("í", "i")
+        .replace("ó", "o")
+        .replace("ú", "u")
+        .replace(" ", "_")
+    )
+
+
+def _leer_filas_excel(archivo):
+    if not archivo or not archivo.name.lower().endswith(".xlsx"):
+        raise ValueError("Selecciona un archivo Excel con extensión .xlsx.")
+
+    libro = load_workbook(archivo, read_only=True, data_only=True)
+    hoja = libro.active
+    filas = hoja.iter_rows(values_only=True)
+    encabezados = [_normalizar_encabezado_excel(valor) for valor in next(filas, [])]
+    if not encabezados or not any(encabezados):
+        raise ValueError("El archivo no contiene encabezados.")
+
+    datos = []
+    for numero_fila, valores in enumerate(filas, start=2):
+        if not any(valor not in (None, "") for valor in valores):
+            continue
+        datos.append(
+            (
+                numero_fila,
+                {
+                    encabezados[indice]: valores[indice]
+                    for indice in range(min(len(encabezados), len(valores)))
+                    if encabezados[indice]
+                },
+            )
+        )
+    return encabezados, datos
+
+
+def _respuesta_excel(libro, nombre_archivo):
+    salida = BytesIO()
+    libro.save(salida)
+    salida.seek(0)
+    response = HttpResponse(
+        salida.getvalue(),
+        content_type=(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ),
+    )
+    response["Content-Disposition"] = f'attachment; filename="{nombre_archivo}"'
+    return response
+
+
+def _libro_exportacion_grande(titulo, encabezados, anchos=None):
+    """Libro en modo streaming para exportaciones que pueden tener miles de filas."""
+    libro = Workbook(write_only=True)
+    hoja = libro.create_sheet(title=titulo)
+    relleno = PatternFill("solid", fgColor="32877F")
+    fila_encabezado = []
+    for encabezado in encabezados:
+        celda = WriteOnlyCell(hoja, value=encabezado)
+        celda.font = Font(bold=True, color="FFFFFF")
+        celda.fill = relleno
+        celda.alignment = Alignment(horizontal="center")
+        fila_encabezado.append(celda)
+    hoja.append(fila_encabezado)
+    hoja.freeze_panes = "A2"
+    if anchos:
+        for indice, ancho in enumerate(anchos, start=1):
+            hoja.column_dimensions[get_column_letter(indice)].width = ancho
+    return libro, hoja
+
+
+def _agregar_fila_exportacion(hoja, valores, formatos=None):
+    """Agrega una fila sin retener celdas anteriores en memoria."""
+    formatos = formatos or {}
+    fila = []
+    for indice, valor in enumerate(valores, start=1):
+        formato = formatos.get(indice)
+        if formato:
+            celda = WriteOnlyCell(hoja, value=valor)
+            celda.number_format = formato
+            fila.append(celda)
+        else:
+            fila.append(valor)
+    hoja.append(fila)
+
+
+def _libro_plantilla(titulo, encabezados):
+    libro = Workbook()
+    hoja = libro.active
+    hoja.title = titulo
+    hoja.append(encabezados)
+    relleno = PatternFill("solid", fgColor="32877F")
+    for celda in hoja[1]:
+        celda.font = Font(bold=True, color="FFFFFF")
+        celda.fill = relleno
+        celda.alignment = Alignment(horizontal="center")
+        hoja.column_dimensions[celda.column_letter].width = max(len(celda.value) + 4, 18)
+    hoja.freeze_panes = "A2"
+    return libro
+
+
+def _puede_ver_cotizaciones(usuario):
+    return usuario.is_superuser or usuario.has_perm("manager.view_cotizacion")
+
+
+def _validar_color_tienda(valor, etiqueta):
+    valor = (valor or "").strip().upper()
+    if len(valor) != 7 or not valor.startswith("#"):
+        raise ValueError(f"{etiqueta} debe tener formato hexadecimal, por ejemplo #32877F")
+    try:
+        int(valor[1:], 16)
+    except ValueError as error:
+        raise ValueError(f"{etiqueta} debe tener formato hexadecimal válido") from error
+    return valor
+
+
+def _validar_banner_tienda(archivo):
+    formatos = {"image/jpeg", "image/png", "image/webp"}
+    if archivo.content_type not in formatos:
+        raise ValueError("Cada banner debe ser JPG, PNG o WEBP")
+    if archivo.size > 5 * 1024 * 1024:
+        raise ValueError("Cada banner puede pesar como máximo 5 MB")
+    try:
+        imagen = Image.open(archivo)
+        ancho, alto = imagen.size
+        imagen.verify()
+    except (UnidentifiedImageError, OSError) as error:
+        raise ValueError("Uno de los banners no es una imagen válida") from error
+    finally:
+        archivo.seek(0)
+    if (ancho, alto) != (1920, 640):
+        raise ValueError("Cada banner debe medir exactamente 1920 × 640 píxeles")
+
+
 @login_required
 def dashboard_view(request):
+    if not request.user.is_superuser and not request.user.has_perm("manager.ver_dashboard"):
+        raise PermissionDenied("No tiene permiso para ver el dashboard")
 
     # ==========================================================
     # FECHAS
@@ -262,7 +494,7 @@ def dashboard_view(request):
 
     fecha_limite = hoy + timedelta(days=30)
 
-    alertas_vencimiento = (
+    vencimientos_query = (
         Inventarios.objects
         .filter(
             is_active=True,
@@ -281,8 +513,9 @@ def dashboard_view(request):
         )
         .order_by(
             "fvencimiento"
-        )[:10]
+        )
     )
+    alertas_vencimiento = vencimientos_query[:10]
 
     # ==========================================================
     # CUENTAS POR PAGAR
@@ -388,6 +621,7 @@ def umedidas_view(request):
         "page_obj": page_obj,
         "search": search,
         "mostrar_buscador": True,
+        "fecha_hoy": timezone.localdate(timezone=ZONA_HONDURAS).strftime("%Y-%m-%d"),
     }
 
     return render(request, "gestiones/presentaciones.html", context)
@@ -559,14 +793,23 @@ def search_umedidas(request):
 
     search = request.GET.get("search", "").strip()
 
-    if not search or len(search) < 2:
-        return JsonResponse([], safe=False)
-
-    items = (
-        UMedidas.objects.filter(is_delete=False, is_active=True)
-        .filter(Q(nombre__icontains=search) | Q(abreviatura__icontains=search))
-        .order_by("nombre")[:20]
-    )
+    items = UMedidas.objects.filter(is_delete=False, is_active=True)
+    if search:
+        items = items.filter(
+            Q(nombre__icontains=search) | Q(abreviatura__icontains=search)
+        ).order_by("nombre")[:20]
+    else:
+        # Muestra primero las presentaciones realmente utilizadas y completa
+        # las cinco sugerencias con las demás disponibles cuando sea necesario.
+        items = items.annotate(
+            veces_usada=Count(
+                "umedida_productos",
+                filter=Q(
+                    umedida_productos__is_active=True,
+                    umedida_productos__is_delete=False,
+                ),
+            )
+        ).order_by("-veces_usada", "nombre")[:5]
 
     data = [
         {"id": u.id, "nombre": u.nombre, "abreviatura": u.abreviatura} for u in items
@@ -740,14 +983,21 @@ def search_marcas(request):
 
     search = request.GET.get("search", "").strip()
 
-    if not search or len(search) < 2:
-        return JsonResponse([], safe=False)
-
-    items = (
-        Marcas.objects.filter(is_delete=False, is_active=True)
-        .filter(Q(nombre__icontains=search) | Q(descripcion__icontains=search))
-        .order_by("nombre")[:20]
-    )
+    items = Marcas.objects.filter(is_delete=False, is_active=True)
+    if search:
+        items = items.filter(
+            Q(nombre__icontains=search) | Q(descripcion__icontains=search)
+        ).order_by("nombre")[:20]
+    else:
+        items = items.annotate(
+            veces_usada=Count(
+                "marca_productos",
+                filter=Q(
+                    marca_productos__is_active=True,
+                    marca_productos__is_delete=False,
+                ),
+            )
+        ).order_by("-veces_usada", "nombre")[:5]
 
     data = [
         {"id": m.id, "nombre": m.nombre, "descripcion": m.descripcion} for m in items
@@ -923,14 +1173,21 @@ def search_categorias(request):
 
     search = request.GET.get("search", "").strip()
 
-    if not search or len(search) < 2:
-        return JsonResponse([], safe=False)
-
-    items = (
-        Categorias.objects.filter(is_delete=False, is_active=True)
-        .filter(Q(nombre__icontains=search) | Q(descripcion__icontains=search))
-        .order_by("nombre")[:20]
-    )
+    items = Categorias.objects.filter(is_delete=False, is_active=True)
+    if search:
+        items = items.filter(
+            Q(nombre__icontains=search) | Q(descripcion__icontains=search)
+        ).order_by("nombre")[:20]
+    else:
+        items = items.annotate(
+            veces_usada=Count(
+                "categoria_productos",
+                filter=Q(
+                    categoria_productos__is_active=True,
+                    categoria_productos__is_delete=False,
+                ),
+            )
+        ).order_by("-veces_usada", "nombre")[:5]
 
     data = [
         {"id": c.id, "nombre": c.nombre, "descripcion": c.descripcion} for c in items
@@ -990,11 +1247,12 @@ def post_proveedor(request):
         telefono = (data.get("telefono") or "").strip()
         email = (data.get("email") or "").strip()
 
-        if not all(
-            [nombre_legal, nombre_comercial, rtn, dias_credito, telefono, email]
-        ):
+        if not all([nombre_legal, nombre_comercial, rtn, dias_credito]):
             return JsonResponse(
-                {"success": False, "message": "Todos los campos son obligatorios"},
+                {
+                    "success": False,
+                    "message": "Nombre legal, nombre comercial, RTN y días de crédito son obligatorios",
+                },
                 status=400,
             )
 
@@ -1044,6 +1302,7 @@ def get_proveedor(request, id):
                     "dias_credito": proveedor.dias_credito,
                     "telefono": proveedor.telefono,
                     "email": proveedor.email,
+                    "saldo": float(proveedor.saldo or 0),
                     "is_active": proveedor.is_active,
                 },
             }
@@ -1071,11 +1330,12 @@ def put_proveedor(request, id):
         # adaptado a tu JS
         is_active = data.get("IsActive", True)
 
-        if not all(
-            [nombre_legal, nombre_comercial, rtn, dias_credito, telefono, email]
-        ):
+        if not all([nombre_legal, nombre_comercial, rtn, dias_credito]):
             return JsonResponse(
-                {"success": False, "message": "Todos los campos son obligatorios"},
+                {
+                    "success": False,
+                    "message": "Nombre legal, nombre comercial, RTN y días de crédito son obligatorios",
+                },
                 status=400,
             )
 
@@ -1144,22 +1404,23 @@ def search_proveedores(request):
 
     proveedores = Proveedores.objects.filter(is_delete=False, is_active=True)
 
-    # si hay texto buscar coincidencias
     if search:
         proveedores = proveedores.filter(
             Q(nombre_legal__icontains=search) | Q(nombre_comercial__icontains=search)
         ).order_by("nombre_legal")
     else:
-        # sugerencias iniciales al abrir
-        proveedores = proveedores.order_by("-id")
+        proveedores = proveedores.annotate(
+            veces_usado=Count("proveedor_compras")
+        ).order_by("-veces_usado", "nombre_legal")
 
-    proveedores = proveedores[:8]
+    proveedores = proveedores[:5] if not search else proveedores[:20]
 
     results = [
         {
             "id": p.id,
             "nombreLegal": p.nombre_legal,
             "nombreComercial": p.nombre_comercial,
+            "saldo": float(p.saldo or 0),
         }
         for p in proveedores
     ]
@@ -1397,7 +1658,7 @@ def productos_view(request):
         )
 
     paginator = Paginator(
-        query.order_by("id"),
+        query.order_by("nombre", "id"),
         10,
     )
 
@@ -1420,6 +1681,838 @@ def productos_view(request):
 
 
 @login_required
+@permission_required("manager.view_combos", raise_exception=True)
+def combos_view(request):
+    costo_reciente = Subquery(
+        DetalleCompra.objects.filter(producto_id=OuterRef("pk"))
+        .order_by("-compra__fecha_compra", "-id")
+        .values("precio_compra")[:1]
+    )
+    productos = (
+        Productos.objects.filter(is_active=True, is_delete=False)
+        .annotate(
+            existencia=Sum("producto_inventarios__cantidad"),
+            costo_actual=costo_reciente,
+        )
+        .filter(existencia__gt=0)
+        .order_by("nombre")
+    )
+    productos_catalogo = []
+    for producto in productos.select_related("unidad_medida").prefetch_related(
+        "imagenes_producto"
+    ):
+        imagen = next(iter(producto.imagenes_producto.all()), None)
+        productos_catalogo.append(
+            {
+                "id": producto.id,
+                "nombre": producto.nombre,
+                "sku": producto.codigo_sku,
+                "stock": float(producto.existencia or 0),
+                "costo": float(producto.costo_actual or 0),
+                "presentacion": producto.unidad_medida.abreviatura,
+                "imagen": (
+                    reverse("producto_imagen", args=[imagen.id])
+                    if imagen and imagen.imagen_archivo
+                    else "/static/img/default.webp"
+                ),
+            }
+        )
+
+    return render(
+        request,
+        "gestiones/combos.html",
+        {
+            "productos_catalogo": productos_catalogo,
+            "total_combos": Combos.objects.filter(is_delete=False).count(),
+            "puede_registrar_combo": request.user.has_perm("manager.add_combos"),
+            "mostrar_buscador": False,
+        },
+    )
+
+
+@login_required
+@permission_required("manager.view_combos", raise_exception=True)
+def combos_list_view(request):
+    paginator = Paginator(
+        Combos.objects.filter(is_delete=False).select_related("imagen").order_by("nombre"),
+        10,
+    )
+    page_obj = paginator.get_page(request.GET.get("page", 1))
+    return render(
+        request,
+        "gestiones/combos_list.html",
+        {
+            "combos": page_obj,
+            "page_obj": page_obj,
+            "mostrar_buscador": False,
+        },
+    )
+
+
+@login_required
+@permission_required("manager.view_combos", raise_exception=True)
+def detalle_combo(request, combo_id):
+    combo = get_object_or_404(
+        Combos.objects.prefetch_related("detalles__producto__imagenes_producto"),
+        id=combo_id,
+        is_delete=False,
+    )
+    detalles = []
+    for detalle in combo.detalles.select_related("producto", "producto__unidad_medida"):
+        imagen = next(iter(detalle.producto.imagenes_producto.all()), None)
+        detalles.append(
+            {
+                "nombre": detalle.producto.nombre,
+                "sku": detalle.producto.codigo_sku,
+                "presentacion": detalle.producto.unidad_medida.abreviatura,
+                "cantidad": str(detalle.cantidad),
+                "imagen": (
+                    reverse("producto_imagen", args=[imagen.id])
+                    if imagen and imagen.imagen_archivo
+                    else "/static/img/default.webp"
+                ),
+            }
+        )
+    return JsonResponse(
+        {
+            "success": True,
+            "combo": {"nombre": combo.nombre, "sku": combo.codigo_sku},
+            "detalles": detalles,
+        }
+    )
+
+
+@login_required
+def combo_imagen(request, imagen_id):
+    try:
+        imagen = ComboImagen.objects.get(
+            id=imagen_id,
+            combo__is_delete=False,
+        )
+        response_nextcloud = obtener_archivo(imagen.imagen_archivo)
+        return HttpResponse(
+            response_nextcloud.content,
+            content_type=response_nextcloud.headers.get(
+                "Content-Type", "application/octet-stream"
+            ),
+        )
+    except ComboImagen.DoesNotExist:
+        return HttpResponse("Imagen no encontrada", status=404)
+    except Exception as error:
+        return HttpResponse(f"Error obteniendo imagen: {str(error)}", status=500)
+
+
+@login_required
+def configuracion_view(request):
+    if not _puede_gestionar_configuracion(request.user):
+        raise PermissionDenied
+    configuracion = ConfiguracionEmpresa.objects.filter(
+        is_delete=False
+    ).prefetch_related("banners_tienda").first()
+    return render(
+        request,
+        "gestiones/configuracion.html",
+        {
+            "configuracion": configuracion,
+            "banner_principal": (
+                configuracion.banners_tienda.filter(tipo=BannerTienda.TIPO_BANNER).first()
+                if configuracion
+                else None
+            ),
+            "banners_carrusel": (
+                configuracion.banners_tienda.filter(tipo=BannerTienda.TIPO_CARRUSEL)
+                if configuracion
+                else []
+            ),
+            "puede_gestionar_tienda": _puede_gestionar_tienda(request.user),
+            "mostrar_buscador": False,
+        },
+    )
+
+
+@login_required
+@require_POST
+def guardar_configuracion(request):
+    if not _puede_gestionar_configuracion(request.user):
+        raise PermissionDenied
+    try:
+        nombre_comercial = request.POST.get("nombre_comercial", "").strip()
+        if not nombre_comercial:
+            raise ValueError("Ingresa el nombre comercial del negocio")
+        for campo, etiqueta in (("rtn", "El RTN"), ("telefono", "El teléfono")):
+            valor = request.POST.get(campo, "").strip()
+            if valor and not valor.isdigit():
+                raise ValueError(f"{etiqueta} solo puede contener números")
+
+        configuracion = ConfiguracionEmpresa.objects.filter(is_delete=False).first()
+        creando = configuracion is None
+        if creando:
+            configuracion = ConfiguracionEmpresa(u_creo_id=request.user.id)
+
+        for campo in (
+            "nombre_comercial",
+            "razon_social",
+            "rtn",
+            "telefono",
+            "email",
+            "direccion",
+            "mensaje_factura",
+        ):
+            setattr(configuracion, campo, request.POST.get(campo, "").strip())
+        try:
+            dias_validez = int(request.POST.get("cotizacion_dias_validez", 7))
+        except (TypeError, ValueError):
+            raise ValueError("Los días de validez de la cotización no son válidos")
+        if not 1 <= dias_validez <= 365:
+            raise ValueError("Los días de validez de la cotización deben estar entre 1 y 365")
+        configuracion.cotizacion_dias_validez = dias_validez
+        diseno_factura = request.POST.get(
+            "diseno_factura", ConfiguracionEmpresa.DISENO_RECIBO
+        )
+        if diseno_factura not in {
+            ConfiguracionEmpresa.DISENO_RECIBO,
+            ConfiguracionEmpresa.DISENO_PAGINA,
+        }:
+            raise ValueError("El diseño de factura seleccionado no es válido")
+        configuracion.diseno_factura = diseno_factura
+        moneda = request.POST.get(
+            "moneda", ConfiguracionEmpresa.MONEDA_LEMPIRA
+        )
+        if moneda not in {
+            ConfiguracionEmpresa.MONEDA_LEMPIRA,
+            ConfiguracionEmpresa.MONEDA_DOLAR,
+        }:
+            raise ValueError("La moneda seleccionada no es válida")
+        configuracion.moneda = moneda
+        puede_gestionar_tienda = _puede_gestionar_tienda(request.user)
+        configuracion.tienda_color_primario = _validar_color_tienda(
+            request.POST.get("tienda_color_primario", "#32877F"),
+            "El color primario",
+        )
+        configuracion.tienda_color_secundario = _validar_color_tienda(
+            request.POST.get("tienda_color_secundario", "#10463E"),
+            "El color secundario",
+        )
+        configuracion.tienda_color_acento = _validar_color_tienda(
+            request.POST.get("tienda_color_acento", "#F5A623"),
+            "El color de botones",
+        )
+        configuracion.tienda_subtitulo = request.POST.get(
+            "tienda_subtitulo", ""
+        ).strip()
+        configuracion.u_modifico_id = request.user.id
+        configuracion.f_modificacion = timezone.now()
+
+        logo = request.FILES.get("logo")
+        quitar_logo = request.POST.get("quitar_logo") == "true"
+        if logo:
+            extension = logo.name.rsplit(".", 1)[-1].lower()
+            if extension not in {"jpg", "jpeg", "png", "webp"}:
+                raise ValueError("El logo debe ser JPG, PNG o WEBP")
+            nombre_original = logo.name.replace(" ", "_")
+            nombre_archivo = f"empresa_{uuid.uuid4().hex[:8]}_{nombre_original}"
+            logo_url = subir_archivo(
+                logo,
+                nombre_archivo,
+                settings.NEXTCLOUD_FOLDER_CONFI,
+            )
+            logo_anterior = configuracion.logo_archivo
+            configuracion.logo_nombre = nombre_original
+            configuracion.logo_archivo = nombre_archivo
+            configuracion.logo_url = logo_url
+            configuracion.save()
+            if logo_anterior:
+                eliminar_archivo(logo_anterior, settings.NEXTCLOUD_FOLDER_CONFI)
+
+        # La primera configuración puede no traer logo. Debe persistirse antes
+        # de consultar o crear BannerTienda, que tiene una FK obligatoria.
+        if configuracion.pk is None:
+            configuracion.save()
+
+        if not puede_gestionar_tienda:
+            banners_eliminar = []
+        else:
+            banners_eliminar = json.loads(request.POST.get("eliminar_banners", "[]"))
+        if not isinstance(banners_eliminar, list):
+            raise ValueError("Los banners a eliminar no son válidos")
+        for banner in BannerTienda.objects.filter(
+            configuracion=configuracion,
+            id__in=banners_eliminar,
+        ):
+            eliminar_archivo(banner.imagen_archivo, settings.NEXTCLOUD_FOLDER_CONFI)
+            banner.delete()
+
+        banner_principal = request.FILES.get("banner_principal")
+        carrusel = request.FILES.getlist("carrusel")
+        if not puede_gestionar_tienda and (banner_principal or carrusel):
+            raise PermissionDenied
+        if not puede_gestionar_tienda:
+            banner_principal, carrusel = None, []
+        existentes_carrusel = BannerTienda.objects.filter(
+            configuracion=configuracion,
+            tipo=BannerTienda.TIPO_CARRUSEL,
+        ).count()
+        if carrusel and not 2 <= existentes_carrusel + len(carrusel) <= 5:
+            raise ValueError("El carrusel debe tener entre 2 y 5 imágenes")
+        if banner_principal and BannerTienda.objects.filter(
+            configuracion=configuracion,
+            tipo=BannerTienda.TIPO_BANNER,
+        ).exists():
+            raise ValueError("Solo puedes tener un banner principal")
+        banners = [(banner_principal, BannerTienda.TIPO_BANNER)] if banner_principal else []
+        banners += [(imagen, BannerTienda.TIPO_CARRUSEL) for imagen in carrusel]
+        orden_inicial = (
+            BannerTienda.objects.filter(configuracion=configuracion).aggregate(
+                mayor=Max("orden")
+            )["mayor"]
+            or 0
+        )
+        for indice, (banner, tipo_banner) in enumerate(banners, start=1):
+            _validar_banner_tienda(banner)
+            extension = banner.name.rsplit(".", 1)[-1].lower()
+            nombre_original = banner.name.replace(" ", "_")
+            nombre_archivo = f"banner_{uuid.uuid4().hex[:10]}.{extension}"
+            banner_url = subir_archivo(
+                banner,
+                nombre_archivo,
+                settings.NEXTCLOUD_FOLDER_CONFI,
+            )
+            BannerTienda.objects.create(
+                configuracion=configuracion,
+                imagen_nombre=nombre_original,
+                imagen_archivo=nombre_archivo,
+                imagen_url=banner_url,
+                orden=orden_inicial + indice,
+                tipo=tipo_banner,
+            )
+        else:
+            logo_anterior = configuracion.logo_archivo if quitar_logo else ""
+            if quitar_logo:
+                configuracion.logo_nombre = ""
+                configuracion.logo_archivo = ""
+                configuracion.logo_url = ""
+            configuracion.save()
+            if logo_anterior:
+                eliminar_archivo(logo_anterior, settings.NEXTCLOUD_FOLDER_CONFI)
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "Configuración creada correctamente" if creando else "Configuración actualizada correctamente",
+            }
+        )
+    except ValueError as error:
+        return JsonResponse({"success": False, "message": str(error)}, status=400)
+    except Exception:
+        traceback.print_exc()
+        return JsonResponse(
+            {"success": False, "message": "No fue posible guardar la configuración"},
+            status=500,
+        )
+
+
+@login_required
+def configuracion_logo(request):
+    if not _puede_gestionar_configuracion(request.user):
+        raise PermissionDenied
+    configuracion = ConfiguracionEmpresa.objects.filter(is_delete=False).first()
+    if not configuracion or not configuracion.logo_archivo:
+        return HttpResponse("Logo no encontrado", status=404)
+    try:
+        archivo = obtener_archivo(
+            configuracion.logo_archivo,
+            settings.NEXTCLOUD_FOLDER_CONFI,
+        )
+        return HttpResponse(
+            archivo.content,
+            content_type=archivo.headers.get("Content-Type", "application/octet-stream"),
+        )
+    except Exception:
+        return HttpResponse("No fue posible obtener el logo", status=500)
+
+
+@login_required
+def configuracion_banner(request, banner_id):
+    if not _puede_gestionar_configuracion(request.user):
+        raise PermissionDenied
+    banner = get_object_or_404(BannerTienda, id=banner_id)
+    try:
+        archivo = obtener_archivo(
+            banner.imagen_archivo,
+            settings.NEXTCLOUD_FOLDER_CONFI,
+        )
+        return HttpResponse(
+            archivo.content,
+            content_type=archivo.headers.get("Content-Type", "image/jpeg"),
+        )
+    except Exception:
+        return HttpResponse("No fue posible obtener el banner", status=500)
+
+
+@login_required
+@require_POST
+@permission_required("manager.add_combos", raise_exception=True)
+def guardar_combo(request):
+    try:
+        es_json = request.content_type and request.content_type.startswith(
+            "application/json"
+        )
+        data = json.loads(request.body) if es_json else request.POST
+        nombre = (data.get("nombre") or "").strip()
+        codigo_sku = (data.get("codigo_sku") or "").strip()
+        detalles_recibidos = data.get("detalles") or []
+        if not es_json:
+            detalles_recibidos = json.loads(detalles_recibidos or "[]")
+        imagen_combo = request.FILES.get("imagen")
+
+        if imagen_combo:
+            extension = imagen_combo.name.rsplit(".", 1)[-1].lower()
+            if extension not in {"jpg", "jpeg", "png", "webp"}:
+                raise ValueError("La imagen del combo debe ser JPG, PNG o WEBP")
+
+        if not nombre or not codigo_sku:
+            raise ValueError("Ingresa el nombre y SKU del combo")
+        if len(nombre) > 120 or len(codigo_sku) > 50:
+            raise ValueError("El nombre o SKU supera la longitud permitida")
+        if not detalles_recibidos:
+            raise ValueError("Agrega al menos un producto al combo")
+
+        def decimal_positivo(valor, campo):
+            try:
+                numero = Decimal(str(valor))
+            except (InvalidOperation, TypeError, ValueError):
+                raise ValueError(f"{campo} no es válido")
+            if numero < 0:
+                raise ValueError(f"{campo} no puede ser negativo")
+            return numero
+
+        precio_venta = decimal_positivo(data.get("precio_venta"), "El precio de venta")
+        precio_minimo = decimal_positivo(data.get("precio_minimo"), "El precio mínimo")
+        precio_maximo = decimal_positivo(data.get("precio_maximo"), "El precio máximo")
+        if precio_minimo > precio_venta or precio_venta > precio_maximo:
+            raise ValueError("El precio de venta debe estar entre el mínimo y el máximo")
+
+        cantidades = {}
+        for detalle in detalles_recibidos:
+            try:
+                producto_id = int(detalle.get("producto_id"))
+            except (TypeError, ValueError):
+                raise ValueError("Hay un producto inválido en el combo")
+            if producto_id in cantidades:
+                raise ValueError("No repitas productos en el combo")
+            cantidad = decimal_positivo(detalle.get("cantidad"), "La cantidad")
+            if cantidad <= 0:
+                raise ValueError("La cantidad debe ser mayor que cero")
+            cantidades[producto_id] = cantidad
+
+        with transaction.atomic():
+            if Combos.objects.filter(codigo_sku__iexact=codigo_sku).exists():
+                raise ValueError("Ya existe un combo con este SKU")
+
+            productos = {
+                producto.id: producto
+                for producto in Productos.objects.filter(
+                    id__in=cantidades,
+                    is_active=True,
+                    is_delete=False,
+                ).annotate(existencia=Sum("producto_inventarios__cantidad"))
+            }
+            if len(productos) != len(cantidades):
+                raise ValueError("Uno o más productos ya no están disponibles")
+
+            detalles_combo = []
+            costo_total = Decimal("0.00")
+            for producto_id, cantidad in cantidades.items():
+                producto = productos[producto_id]
+                existencia = producto.existencia or Decimal("0")
+                if cantidad > existencia:
+                    raise ValueError(
+                        f"La cantidad de {producto.nombre} supera las existencias disponibles"
+                    )
+                ultima_compra = (
+                    DetalleCompra.objects.filter(producto_id=producto_id)
+                    .order_by("-compra__fecha_compra", "-id")
+                    .values_list("precio_compra", flat=True)
+                    .first()
+                )
+                costo_unitario = ultima_compra or Decimal("0.00")
+                costo_total += costo_unitario * cantidad
+                detalles_combo.append(
+                    DetalleCombo(
+                        producto=producto,
+                        cantidad=cantidad,
+                        costo_unitario=costo_unitario,
+                    )
+                )
+
+            combo = Combos.objects.create(
+                nombre=nombre,
+                codigo_sku=codigo_sku,
+                costo_total=costo_total,
+                precio_venta=precio_venta,
+                precio_venta_min=precio_minimo,
+                precio_venta_max=precio_maximo,
+                u_creo_id=request.user.id,
+            )
+            for detalle in detalles_combo:
+                detalle.combo = combo
+            DetalleCombo.objects.bulk_create(detalles_combo)
+
+            if imagen_combo:
+                nombre_original = imagen_combo.name.replace(" ", "_")
+                nombre_archivo = f"combo_{uuid.uuid4().hex[:8]}_{nombre_original}"
+                imagen_url = subir_archivo(imagen_combo, nombre_archivo)
+                ComboImagen.objects.create(
+                    combo=combo,
+                    imagen_nombre=nombre_original,
+                    imagen_archivo=nombre_archivo,
+                    imagen_url=imagen_url,
+                )
+
+        return JsonResponse(
+            {"success": True, "message": "Combo registrado correctamente", "id": combo.id},
+            status=201,
+        )
+    except ValueError as error:
+        return JsonResponse({"success": False, "message": str(error)}, status=400)
+    except json.JSONDecodeError:
+        return JsonResponse({"success": False, "message": "La información enviada no es válida"}, status=400)
+    except Exception:
+        traceback.print_exc()
+        return JsonResponse(
+            {"success": False, "message": "No fue posible registrar el combo"},
+            status=500,
+        )
+
+
+@login_required
+@require_POST
+@permission_required("manager.change_combos", raise_exception=True)
+def cambiar_estado_combo(request, combo_id):
+    combo = get_object_or_404(Combos, id=combo_id, is_delete=False)
+    combo.is_active = not combo.is_active
+    combo.u_modifico_id = request.user.id
+    combo.f_modificacion = timezone.now()
+    combo.save(update_fields=["is_active", "u_modifico_id", "f_modificacion"])
+    return JsonResponse(
+        {
+            "success": True,
+            "activo": combo.is_active,
+            "message": "Combo activado correctamente"
+            if combo.is_active
+            else "Combo inactivado correctamente",
+        }
+    )
+
+
+@login_required
+@permission_required("manager.view_productos", raise_exception=True)
+def exportar_productos_excel(request):
+    search = request.GET.get("search", "").strip()
+
+    productos = Productos.objects.select_related(
+        "categoria",
+        "unidad_medida",
+        "marca",
+    ).filter(is_delete=False)
+
+    if search:
+        productos = productos.filter(
+            Q(nombre__icontains=search) | Q(codigo_sku__icontains=search)
+        )
+
+    encabezados = [
+        "ID producto",
+        "Producto",
+        "Descripción",
+        "Categoría",
+        "Presentación",
+        "Marca",
+        "SKU",
+        "Precio venta",
+        "Precio mínimo",
+        "Precio máximo",
+        "Impuesto",
+        "Equivalencia",
+        "Es producto padre",
+        "Requiere vencimiento",
+        "Estado",
+    ]
+    libro, hoja = _libro_exportacion_grande(
+        "Productos",
+        encabezados,
+        [12, 34, 38, 22, 20, 20, 22, 16, 16, 16, 12, 14, 18, 20, 14],
+    )
+
+    for producto in productos.order_by("id").iterator(chunk_size=500):
+        _agregar_fila_exportacion(
+            hoja,
+            [
+                producto.id,
+                producto.nombre,
+                producto.descripcion,
+                producto.categoria.nombre,
+                producto.unidad_medida.nombre,
+                producto.marca.nombre,
+                producto.codigo_sku,
+                producto.precio_venta,
+                producto.precio_venta_min,
+                producto.precio_venta_max,
+                producto.impuesto / Decimal("100"),
+                producto.equival_unid,
+                "Sí" if producto.is_master else "No",
+                "Sí" if producto.vencimiento else "No",
+                "Activo" if producto.is_active else "Inactivo",
+            ],
+            formatos={8: "#,##0.00", 9: "#,##0.00", 10: "#,##0.00", 11: "0.00%"},
+        )
+    return _respuesta_excel(libro, "productos.xlsx")
+
+
+CATALOGOS_IMPORTABLES = {
+    "categorias": (Categorias, "Categorías"),
+    "marcas": (Marcas, "Marcas"),
+    "presentaciones": (UMedidas, "Presentaciones"),
+}
+
+
+@login_required
+def exportar_catalogo_excel(request, tipo):
+    _requiere_superusuario(request)
+    configuracion = CATALOGOS_IMPORTABLES.get(tipo)
+    if not configuracion:
+        raise Http404("Catálogo no válido")
+
+    modelo, titulo = configuracion
+    libro = _libro_plantilla(titulo, ["ID", "Nombre", "Descripción"])
+    hoja = libro.active
+    for registro in modelo.objects.filter(is_delete=False).order_by("id"):
+        hoja.append([registro.id, registro.nombre, getattr(registro, "descripcion", "")])
+    hoja.auto_filter.ref = hoja.dimensions
+    return _respuesta_excel(libro, f"{tipo}.xlsx")
+
+
+@login_required
+def descargar_plantilla_catalogo(request, tipo):
+    _requiere_superusuario(request)
+    configuracion = CATALOGOS_IMPORTABLES.get(tipo)
+    if not configuracion:
+        raise Http404("Catálogo no válido")
+
+    _, titulo = configuracion
+    encabezados = (
+        ["Nombre", "Abreviatura", "Valor"]
+        if tipo == "presentaciones"
+        else ["Nombre", "Descripción"]
+    )
+    return _respuesta_excel(
+        _libro_plantilla(titulo, encabezados), f"plantilla_{tipo}.xlsx"
+    )
+
+
+@login_required
+@require_POST
+def importar_catalogo_excel(request, tipo):
+    _requiere_superusuario(request)
+    configuracion = CATALOGOS_IMPORTABLES.get(tipo)
+    if not configuracion:
+        return JsonResponse({"success": False, "message": "Catálogo no válido."}, status=404)
+
+    modelo, titulo = configuracion
+    try:
+        encabezados, filas = _leer_filas_excel(request.FILES.get("archivo"))
+        requeridos = (
+            {"nombre", "abreviatura", "valor"}
+            if tipo == "presentaciones"
+            else {"nombre", "descripcion"}
+        )
+        if not requeridos.issubset(encabezados):
+            faltantes = ", ".join(sorted(requeridos - set(encabezados)))
+            raise ValueError(f"Faltan columnas requeridas: {faltantes}.")
+
+        errores = []
+        registros = []
+        nombres_archivo = set()
+        existentes = set(
+            modelo.objects.filter(is_delete=False).values_list("nombre", flat=True)
+        )
+        for numero, fila in filas:
+            nombre = str(fila.get("nombre") or "").strip()
+            if not nombre:
+                errores.append(f"Fila {numero}: el nombre es obligatorio.")
+                continue
+            clave = nombre.casefold()
+            if clave in nombres_archivo or nombre in existentes:
+                errores.append(f"Fila {numero}: el nombre '{nombre}' ya existe.")
+                continue
+            nombres_archivo.add(clave)
+
+            if tipo == "presentaciones":
+                abreviatura = str(fila.get("abreviatura") or "").strip()
+                try:
+                    valor = int(fila.get("valor"))
+                except (TypeError, ValueError):
+                    valor = 0
+                if not abreviatura or valor <= 0:
+                    errores.append(
+                        f"Fila {numero}: abreviatura y valor mayor a cero son obligatorios."
+                    )
+                    continue
+                registros.append({"nombre": nombre, "abreviatura": abreviatura, "valor": valor})
+            else:
+                registros.append(
+                    {"nombre": nombre, "descripcion": str(fila.get("descripcion") or "").strip()}
+                )
+
+        if errores:
+            raise ValueError("\n".join(errores[:8]))
+        if not registros:
+            raise ValueError("No se encontraron filas para importar.")
+
+        with transaction.atomic():
+            modelo.objects.bulk_create(
+                [modelo(**registro, u_creo_id=request.user.id) for registro in registros]
+            )
+        return JsonResponse({"success": True, "message": f"{len(registros)} {titulo.lower()} importadas correctamente."})
+    except ValueError as error:
+        return JsonResponse({"success": False, "message": str(error)}, status=400)
+    except Exception as error:
+        # En desarrollo el motivo se devuelve al modal para que el usuario pueda
+        # corregir el archivo o aplicar la migración correspondiente. En
+        # producción se conserva el mensaje genérico y el detalle queda en log.
+        traceback.print_exc()
+        mensaje = (
+            f"No se pudo importar el archivo: {error}"
+            if settings.DEBUG
+            else "No se pudo importar el archivo."
+        )
+        return JsonResponse({"success": False, "message": mensaje}, status=500)
+
+
+PRODUCTOS_PLANTILLA = [
+    "Nombre", "Descripción", "Categoría ID", "Presentación ID", "Marca ID", "SKU",
+    "Precio venta", "Precio mínimo", "Precio máximo", "Impuesto", "Equivalencia",
+    "Es padre", "Requiere vencimiento",
+]
+
+
+@login_required
+def descargar_plantilla_productos(request):
+    _requiere_superusuario(request)
+    return _respuesta_excel(
+        _libro_plantilla("Productos", PRODUCTOS_PLANTILLA), "plantilla_productos.xlsx"
+    )
+
+
+@login_required
+@require_POST
+def importar_productos_excel(request):
+    _requiere_superusuario(request)
+    try:
+        encabezados, filas = _leer_filas_excel(request.FILES.get("archivo"))
+        requeridos = {_normalizar_encabezado_excel(encabezado) for encabezado in PRODUCTOS_PLANTILLA}
+        if not requeridos.issubset(encabezados):
+            faltantes = ", ".join(sorted(requeridos - set(encabezados)))
+            raise ValueError(f"Faltan columnas requeridas: {faltantes}.")
+
+        productos = []
+        errores = []
+        skus_archivo = set()
+        skus_existentes = set(Productos.objects.values_list("codigo_sku", flat=True))
+        categorias = {item.id: item for item in Categorias.objects.filter(is_active=True, is_delete=False)}
+        presentaciones = {item.id: item for item in UMedidas.objects.filter(is_active=True, is_delete=False)}
+        marcas = {item.id: item for item in Marcas.objects.filter(is_active=True, is_delete=False)}
+
+        for numero, fila in filas:
+            try:
+                nombre = str(fila.get("nombre") or "").strip()
+                sku = str(fila.get("sku") or "").strip()
+                categoria_id = int(fila.get("categoria_id"))
+                presentacion_id = int(fila.get("presentacion_id"))
+                marca_id = int(fila.get("marca_id"))
+                precio_venta = Decimal(str(fila.get("precio_venta"))).quantize(Decimal("0.01"))
+
+                def decimal_opcional(valor):
+                    if valor is None or str(valor).strip().lower() in {"", "null", "none", "n/a"}:
+                        return None
+                    return Decimal(str(valor)).quantize(Decimal("0.01"))
+
+                precio_minimo = decimal_opcional(fila.get("precio_minimo"))
+                precio_maximo = decimal_opcional(fila.get("precio_maximo"))
+                impuesto = Decimal(str(fila.get("impuesto"))).quantize(Decimal("0.01"))
+                equivalencia = int(fila.get("equivalencia"))
+            except (InvalidOperation, TypeError, ValueError):
+                errores.append(f"Fila {numero}: revisa IDs, precios, impuesto y equivalencia.")
+                continue
+
+            if (
+                not nombre
+                or not sku
+                or len(nombre) > 100
+                or len(sku) > 100
+                or equivalencia <= 0
+                or precio_venta < 0
+                or (precio_minimo is not None and precio_minimo < 0)
+                or (precio_maximo is not None and precio_maximo < 0)
+                or (
+                    precio_minimo is not None
+                    and precio_maximo is not None
+                    and precio_maximo < precio_minimo
+                )
+            ):
+                errores.append(
+                    f"Fila {numero}: nombre y SKU admiten hasta 100 caracteres; "
+                    "revisa también precios y equivalencia."
+                )
+                continue
+            if sku in skus_archivo or sku in skus_existentes:
+                errores.append(f"Fila {numero}: el SKU '{sku}' ya existe.")
+                continue
+            if categoria_id not in categorias or presentacion_id not in presentaciones or marca_id not in marcas:
+                errores.append(f"Fila {numero}: categoría, presentación o marca no existe o está inactiva.")
+                continue
+
+            si = {"si", "sí", "true", "1", "yes"}
+            productos.append(
+                Productos(
+                    nombre=nombre,
+                    descripcion=str(fila.get("descripcion") or "").strip(),
+                    categoria_id=categoria_id,
+                    unidad_medida_id=presentacion_id,
+                    marca_id=marca_id,
+                    codigo_sku=sku,
+                    precio_venta=precio_venta,
+                    precio_venta_min=precio_minimo,
+                    precio_venta_max=precio_maximo,
+                    impuesto=impuesto,
+                    equival_unid=equivalencia,
+                    is_master=str(fila.get("es_padre") or "").strip().lower() in si,
+                    vencimiento=str(fila.get("requiere_vencimiento") or "").strip().lower() in si,
+                    u_creo_id=request.user.id,
+                )
+            )
+            skus_archivo.add(sku)
+
+        if errores:
+            raise ValueError("\n".join(errores[:8]))
+        if not productos:
+            raise ValueError("No se encontraron filas para importar.")
+        with transaction.atomic():
+            Productos.objects.bulk_create(productos)
+        return JsonResponse({"success": True, "message": f"{len(productos)} productos importados correctamente."})
+    except ValueError as error:
+        return JsonResponse({"success": False, "message": str(error)}, status=400)
+    except Exception as error:
+        traceback.print_exc()
+        mensaje = (
+            f"No se pudo importar el archivo: {error}"
+            if settings.DEBUG
+            else "No se pudo importar el archivo."
+        )
+        return JsonResponse({"success": False, "message": mensaje}, status=500)
+
+
+@login_required
 def producto_imagen(request, imagen_id):
 
     try:
@@ -1431,7 +2524,7 @@ def producto_imagen(request, imagen_id):
 
         # Consultar la imagen directamente en Nextcloud
         response_nextcloud = obtener_archivo(
-            imagen.imagen_url
+            imagen.imagen_archivo
         )
 
         # Devolver la imagen al navegador
@@ -1464,8 +2557,13 @@ def producto_imagen(request, imagen_id):
 def api_productos(request):
 
     search = request.GET.get("search", "").strip()
-    page = int(request.GET.get("page", 1))
-    limit = int(request.GET.get("limit", 10))
+    try:
+        page = max(1, int(request.GET.get("page", 1)))
+        # El endpoint es público para las vistas internas: no se permiten
+        # páginas enormes solicitadas desde una URL manipulada.
+        limit = min(50, max(1, int(request.GET.get("limit", 10))))
+    except ValueError:
+        return JsonResponse({"error": "Paginación inválida"}, status=400)
 
     query = (
         Productos.objects.select_related(
@@ -1492,7 +2590,7 @@ def api_productos(request):
     # =========================
 
     paginator = Paginator(
-        query.order_by("id"),
+        query.order_by("nombre", "id"),
         limit,
     )
 
@@ -1547,6 +2645,8 @@ def api_productos(request):
                 "nombre": p.nombre,
                 "codigoSKU": p.codigo_sku,
                 "precioVenta": str(p.precio_venta),
+                "precioVentaMin": str(p.precio_venta_min) if p.precio_venta_min is not None else "",
+                "precioVentaMax": str(p.precio_venta_max) if p.precio_venta_max is not None else "",
 
                 "unidadMedida": {
                     "nombre": (
@@ -1606,6 +2706,58 @@ def api_productos(request):
 
 
 @login_required
+def api_productos_caja(request):
+    """Productos vendibles en la sucursal del cajero, paginados para móvil."""
+    if not _puede_generar_cotizaciones(request.user):
+        raise PermissionDenied("No tiene permiso para buscar productos en Caja")
+
+    perfil = get_object_or_404(PerfilUsuario, usuarios=request.user)
+    if not perfil.ubicacion_id:
+        return JsonResponse({"error": "El usuario no pertenece a ninguna ubicación"}, status=400)
+
+    try:
+        page = max(1, int(request.GET.get("page", 1)))
+        limit = min(20, max(1, int(request.GET.get("limit", 10))))
+    except ValueError:
+        return JsonResponse({"error": "Paginación inválida"}, status=400)
+
+    busqueda = request.GET.get("search", "").strip()
+    ubicaciones = obtener_ubicaciones_inventario(perfil.ubicacion_id)
+    cero = Value(Decimal("0"), output_field=DecimalField(max_digits=18, decimal_places=6))
+    existencia = Inventarios.objects.filter(
+        producto_id=OuterRef("pk"), ubicacion_id__in=ubicaciones,
+        is_delete=False, cantidad__gt=0,
+    ).values("producto_id").annotate(total=Sum("cantidad")).values("total")[:1]
+    reservado = ReservaInventario.objects.filter(
+        producto_id=OuterRef("pk"), ubicacion_id__in=ubicaciones,
+        estado=ReservaInventario.Estado.RESERVADA, is_delete=False,
+    ).values("producto_id").annotate(total=Sum("cantidad")).values("total")[:1]
+
+    productos = Productos.objects.select_related("unidad_medida").prefetch_related("imagenes_producto").filter(
+        is_delete=False, is_active=True,
+    ).annotate(
+        existencia_caja=Coalesce(Subquery(existencia), cero),
+        reservado_caja=Coalesce(Subquery(reservado), cero),
+    ).filter(existencia_caja__gt=F("reservado_caja"))
+    if busqueda:
+        productos = productos.filter(Q(nombre__icontains=busqueda) | Q(codigo_sku__icontains=busqueda))
+
+    page_obj = Paginator(productos.order_by("nombre", "id"), limit).get_page(page)
+    results = []
+    for producto in page_obj:
+        imagen = producto.imagenes_producto.first()
+        results.append({
+            "codigoSKU": producto.codigo_sku,
+            "nombre": producto.nombre,
+            "stock": str(producto.existencia_caja - producto.reservado_caja),
+            "precioVenta": str(producto.precio_venta),
+            "unidad": producto.unidad_medida.nombre if producto.unidad_medida else "",
+            "imagenUrl": request.build_absolute_uri(reverse("producto_imagen", args=[imagen.id])) if imagen else "",
+        })
+    return JsonResponse({"results": results, "page": page_obj.number, "totalPages": page_obj.paginator.num_pages})
+
+
+@login_required
 @permission_required("manager.add_productos", raise_exception=True)
 @require_http_methods(["POST"])
 def post_producto(request):
@@ -1616,7 +2768,9 @@ def post_producto(request):
         unidad_medida_id = request.POST.get("unidad_medida")
         marca_id = request.POST.get("marca")
         codigo_sku = request.POST.get("codigo_sku", "").strip()
-        precio_venta = request.POST.get("precio_venta")
+        precio_venta = request.POST.get("precio_venta", "").replace(",", ".")
+        precio_venta_min = request.POST.get("precio_venta_min", "").replace(",", ".")
+        precio_venta_max = request.POST.get("precio_venta_max", "").replace(",", ".")
         vencimiento = str(request.POST.get("Vencimiento")).lower() == "true"
         impuesto = request.POST.get("impuesto", "0").strip()
 
@@ -1659,6 +2813,31 @@ def post_producto(request):
                 status=400,
             )
 
+        try:
+            precio_venta = Decimal(precio_venta)
+            precio_venta_min = Decimal(precio_venta_min) if precio_venta_min else None
+            precio_venta_max = Decimal(precio_venta_max) if precio_venta_max else None
+        except (InvalidOperation, ValueError):
+            return JsonResponse(
+                {"success": False, "message": "Los precios deben ser valores numéricos válidos"},
+                status=400,
+            )
+
+        if (
+            precio_venta < 0
+            or (precio_venta_min is not None and precio_venta_min < 0)
+            or (precio_venta_max is not None and precio_venta_max < 0)
+            or (
+                precio_venta_min is not None
+                and precio_venta_max is not None
+                and precio_venta_max < precio_venta_min
+            )
+        ):
+            return JsonResponse(
+                {"success": False, "message": "El precio máximo debe ser mayor o igual al precio mínimo"},
+                status=400,
+            )
+
         # =====================
         # CREAR PRODUCTO
         # =====================
@@ -1670,6 +2849,8 @@ def post_producto(request):
             marca=marca,
             codigo_sku=codigo_sku,
             precio_venta=precio_venta,
+            precio_venta_min=precio_venta_min,
+            precio_venta_max=precio_venta_max,
             vencimiento=vencimiento,
             impuesto=impuesto,
             is_master=espadre,
@@ -1695,6 +2876,7 @@ def post_producto(request):
             ProductosImagenes.objects.create(
                 producto=producto,
                 imagen_nombre=original_name,
+                imagen_archivo=nuevo_nombre,
                 imagen_url=imagen_url,
             )
 
@@ -1769,6 +2951,8 @@ def get_producto(request, id):
                 "descripcion": producto.descripcion,
                 "codigoSKU": producto.codigo_sku,
                 "precioVenta": float(producto.precio_venta),
+                "precioVentaMin": float(producto.precio_venta_min) if producto.precio_venta_min is not None else None,
+                "precioVentaMax": float(producto.precio_venta_max) if producto.precio_venta_max is not None else None,
                 "isActive": producto.is_active,
                 "vencimiento": producto.vencimiento,
                 "impuesto": float(producto.impuesto),
@@ -1877,12 +3061,38 @@ def put_producto(request, id):
             "",
         ).strip()
 
-        precio = data.get(
-            "precioVenta",
-            "0",
-        ).replace(",", ".")
+        precio_venta = data.get("precioVenta", "").replace(",", ".")
+        precio_venta_min = data.get("precioVentaMin", "").replace(",", ".")
+        precio_venta_max = data.get("precioVentaMax", "").replace(",", ".")
 
-        producto.precio_venta = float(precio)
+        try:
+            precio_venta = Decimal(precio_venta)
+            precio_venta_min = Decimal(precio_venta_min) if precio_venta_min else None
+            precio_venta_max = Decimal(precio_venta_max) if precio_venta_max else None
+        except (InvalidOperation, ValueError):
+            return JsonResponse(
+                {"success": False, "message": "Los precios deben ser valores numéricos válidos"},
+                status=400,
+            )
+
+        if (
+            precio_venta < 0
+            or (precio_venta_min is not None and precio_venta_min < 0)
+            or (precio_venta_max is not None and precio_venta_max < 0)
+            or (
+                precio_venta_min is not None
+                and precio_venta_max is not None
+                and precio_venta_max < precio_venta_min
+            )
+        ):
+            return JsonResponse(
+                {"success": False, "message": "El precio máximo debe ser mayor o igual al precio mínimo"},
+                status=400,
+            )
+
+        producto.precio_venta_min = precio_venta_min
+        producto.precio_venta_max = precio_venta_max
+        producto.precio_venta = precio_venta
 
         impuesto = data.get(
             "impuesto",
@@ -1933,17 +3143,8 @@ def put_producto(request, id):
 
                 try:
 
-                    # URL real donde está el archivo en Nextcloud
-                    url_nextcloud = imagen.imagen_url
-
-                    # Limpiar doble slash
-                    url_nextcloud = url_nextcloud.replace(
-                        "/Productos//",
-                        "/Productos/",
-                    )
-
                     eliminar_archivo(
-                        url_nextcloud
+                        imagen.imagen_archivo
                     )
 
                 except Exception as e:
@@ -2000,6 +3201,7 @@ def put_producto(request, id):
             ProductosImagenes.objects.create(
                 producto=producto,
                 imagen_nombre=nombre_original,
+                imagen_archivo=nuevo_nombre,
                 imagen_url=imagen_url,
             )
 
@@ -2054,14 +3256,25 @@ def search_productos(request):
 
     search = request.GET.get("search", "").strip()
 
-    if not search or len(search) < 2:
-        return JsonResponse([], safe=False)
-
-    items = (
-        Productos.objects.filter(is_delete=False, is_active=True)
-        .filter(Q(nombre__icontains=search) | Q(codigo_sku__icontains=search))
-        .select_related("marca", "categoria")[:20]
+    items = Productos.objects.filter(is_delete=False, is_active=True).select_related(
+        "marca", "categoria"
     )
+    if search:
+        items = items.filter(
+            Q(nombre__icontains=search) | Q(codigo_sku__icontains=search)
+        ).order_by("nombre")[:20]
+    else:
+        # Las sugerencias iniciales muestran los cinco productos que más se
+        # han utilizado en ventas; si hay menos, se completan con los demás.
+        items = items.annotate(
+            veces_usada=Count(
+                "producto_venta_detalles",
+                filter=Q(
+                    producto_venta_detalles__is_delete=False,
+                    producto_venta_detalles__venta__is_delete=False,
+                ),
+            )
+        ).order_by("-veces_usada", "nombre")[:5]
 
     data = [
         {
@@ -2081,7 +3294,7 @@ def search_productos(request):
 @login_required
 @permission_required("manager.view_productos", raise_exception=True)
 def get_productos_padre(request):
-
+    search = request.GET.get("search", "").strip()
     productos = (
         Productos.objects.select_related(
             "categoria",
@@ -2090,10 +3303,25 @@ def get_productos_padre(request):
         )
         .filter(
             is_delete=False,
+            is_active=True,
             is_master=True,
         )
-        .order_by("nombre")
     )
+
+    if search:
+        productos = productos.filter(
+            Q(nombre__icontains=search) | Q(codigo_sku__icontains=search)
+        ).order_by("nombre")[:20]
+    else:
+        productos = productos.annotate(
+            veces_usada=Count(
+                "producto_venta_detalles",
+                filter=Q(
+                    producto_venta_detalles__is_delete=False,
+                    producto_venta_detalles__venta__is_delete=False,
+                ),
+            )
+        ).order_by("-veces_usada", "nombre")[:5]
 
     data = []
 
@@ -2105,6 +3333,8 @@ def get_productos_padre(request):
                 "descripcion": producto.descripcion,
                 "codigoSKU": producto.codigo_sku,
                 "precioVenta": float(producto.precio_venta),
+                "precioVentaMin": float(producto.precio_venta_min) if producto.precio_venta_min is not None else None,
+                "precioVentaMax": float(producto.precio_venta_max) if producto.precio_venta_max is not None else None,
                 "isActive": producto.is_active,
                 "vencimiento": producto.vencimiento,
                 "impuesto": float(producto.impuesto),
@@ -2166,7 +3396,7 @@ def get_productos_padre(request):
 @login_required
 @permission_required("manager.view_productos", raise_exception=True)
 def get_productos_hijos(request):
-
+    search = request.GET.get("search", "").strip()
     productos = (
         Productos.objects.select_related(
             "categoria",
@@ -2175,10 +3405,25 @@ def get_productos_hijos(request):
         )
         .filter(
             is_delete=False,
+            is_active=True,
             is_master=False,
         )
-        .order_by("nombre")
     )
+
+    if search:
+        productos = productos.filter(
+            Q(nombre__icontains=search) | Q(codigo_sku__icontains=search)
+        ).order_by("nombre")[:20]
+    else:
+        productos = productos.annotate(
+            veces_usada=Count(
+                "producto_venta_detalles",
+                filter=Q(
+                    producto_venta_detalles__is_delete=False,
+                    producto_venta_detalles__venta__is_delete=False,
+                ),
+            )
+        ).order_by("-veces_usada", "nombre")[:5]
 
     data = []
 
@@ -2190,6 +3435,8 @@ def get_productos_hijos(request):
                 "descripcion": producto.descripcion,
                 "codigoSKU": producto.codigo_sku,
                 "precioVenta": float(producto.precio_venta),
+                "precioVentaMin": float(producto.precio_venta_min) if producto.precio_venta_min is not None else None,
+                "precioVentaMax": float(producto.precio_venta_max) if producto.precio_venta_max is not None else None,
                 "isActive": producto.is_active,
                 "vencimiento": producto.vencimiento,
                 "impuesto": float(producto.impuesto),
@@ -3042,9 +4289,15 @@ def search_ubicaciones(request):
             Q(nombre__icontains=search) | Q(codigo__icontains=search)
         ).order_by("nombre")
     else:
-        items = items.order_by("-id")
+        # Se consideran compras y traslados para sugerir las ubicaciones más
+        # usadas. Los conteos distintos evitan duplicados al combinar relaciones.
+        items = items.annotate(
+            uso_compras=Count("ubicacion_compras", distinct=True),
+            uso_origen=Count("ubicacion_origen_traslados", distinct=True),
+            uso_destino=Count("ubicacion_destino_traslados", distinct=True),
+        ).order_by("-uso_compras", "-uso_origen", "-uso_destino", "nombre")
 
-    items = items[:8]
+    items = items[:5] if not search else items[:20]
 
     data = [
         {
@@ -3070,11 +4323,13 @@ def search_bodegas(request):
     if search:
         items = items.filter(
             Q(nombre__icontains=search) | Q(codigo__icontains=search)
-        ).order_by("nombre")
+        ).order_by("nombre")[:20]
     else:
-        items = items.order_by("-id")
-
-    items = items[:8]
+        items = items.annotate(
+            uso_compras=Count("ubicacion_compras", distinct=True),
+            uso_origen=Count("ubicacion_origen_traslados", distinct=True),
+            uso_destino=Count("ubicacion_destino_traslados", distinct=True),
+        ).order_by("-uso_compras", "-uso_origen", "-uso_destino", "nombre")[:5]
 
     data = [
         {
@@ -3100,7 +4355,7 @@ def compras_view(request):
     compras = Compras.objects.select_related("proveedor", "ubicacion")
 
     # SOLO SUS COMPRAS
-    compras = compras.filter(u_creo_id=request.user.id)
+    compras = compras.filter(u_creo_id=request.user.id, is_delete=False)
 
     # Búsqueda
     if search:
@@ -3112,7 +4367,9 @@ def compras_view(request):
         )
 
     # CONTADORES (IMPORTANTE: sin search para que sean totales reales)
-    base_compras = Compras.objects.filter(u_creo_id=request.user.id)
+    base_compras = Compras.objects.filter(
+        u_creo_id=request.user.id, is_delete=False
+    )
 
     total_compras = base_compras.count()
 
@@ -3142,6 +4399,135 @@ def compras_view(request):
 
 @login_required
 @permission_required("manager.view_compras", raise_exception=True)
+def exportar_compras_excel(request):
+    """Genera el detalle de compras para el rango de fechas solicitado."""
+    fecha_inicio = request.GET.get("fecha_inicio", "").strip()
+    fecha_fin = request.GET.get("fecha_fin", "").strip()
+    if not fecha_inicio or not fecha_fin:
+        return HttpResponse("Debe indicar la fecha inicial y final.", status=400)
+
+    try:
+        inicio_honduras, fin_honduras = _rango_fechas_honduras(
+            fecha_inicio, fecha_fin
+        )
+    except (TypeError, ValueError):
+        return HttpResponse("El rango de fechas no es válido.", status=400)
+
+    if inicio_honduras >= fin_honduras:
+        return HttpResponse("La fecha inicial no puede ser posterior a la final.", status=400)
+
+    compras = (
+        Compras.objects.select_related("proveedor", "ubicacion")
+        .prefetch_related("compra_detalles__producto")
+        .filter(
+            is_delete=False,
+            fecha_compra__gte=inicio_honduras,
+            fecha_compra__lt=fin_honduras,
+        )
+        .order_by("-fecha_compra", "-id")
+    )
+
+    encabezados = [
+        "Compra",
+        "Fecha",
+        "Proveedor",
+        "Recepción",
+        "Tipo de compra",
+        "Estado",
+        "Vencimiento",
+        "Producto",
+        "SKU",
+        "Cantidad",
+        "Precio unitario",
+        "Impuesto %",
+        "Impuesto unitario",
+        "Antes de impuesto",
+        "Impuestos línea",
+        "Total línea",
+        "Total compra antes de impuesto",
+        "Total impuestos compra",
+        "Total compra después de impuesto",
+        "Saldo utilizado",
+        "Saldo pendiente crédito",
+    ]
+    libro, hoja = _libro_exportacion_grande(
+        "Compras",
+        encabezados,
+        [12, 20, 28, 22, 16, 18, 16, 34, 22, 12, 16, 12, 16, 16, 16, 16, 18, 18, 20, 16, 20],
+    )
+
+    for compra in compras.iterator(chunk_size=200):
+        total_antes = Decimal(compra.total_antes_impuesto or 0)
+        total_impuesto = Decimal(compra.total_impuesto or 0)
+        if total_antes == 0 and total_impuesto == 0:
+            total_antes = Decimal(compra.total)
+        saldo_utilizado = Decimal(compra.saldo_utilizado or 0)
+        saldo_pendiente_credito = (
+            Decimal(compra.total) - saldo_utilizado
+            if compra.tipo_compra == Compras.TIPO_CREDITO
+            else Decimal("0.00")
+        )
+
+        for detalle in compra.compra_detalles.all():
+            precio = Decimal(detalle.precio_compra)
+            cantidad = Decimal(detalle.cantidad)
+            impuesto_unitario = Decimal(detalle.impuesto_unitario or 0)
+            precio_con_impuesto = Decimal(
+                detalle.precio_compra_con_impuesto or detalle.precio_compra
+            )
+            subtotal = precio * cantidad
+            impuesto_linea = impuesto_unitario * cantidad
+            _agregar_fila_exportacion(
+                hoja,
+                [
+                    compra.id,
+                    _fecha_honduras(compra.fecha_compra).replace(tzinfo=None),
+                    compra.proveedor.nombre_comercial,
+                    compra.ubicacion.nombre,
+                    compra.get_tipo_compra_display(),
+                    compra.get_estado_display(),
+                    _fecha_honduras(compra.fecha_vencimiento).date()
+                    if compra.fecha_vencimiento
+                    else "",
+                    detalle.producto.nombre,
+                    detalle.producto.codigo_sku,
+                    cantidad,
+                    precio,
+                    Decimal(detalle.impuesto_porcentaje or 0),
+                    impuesto_unitario,
+                    subtotal,
+                    impuesto_linea,
+                    precio_con_impuesto * cantidad,
+                    total_antes,
+                    total_impuesto,
+                    compra.total,
+                    saldo_utilizado,
+                    saldo_pendiente_credito,
+                ],
+                formatos={
+                    2: "dd/mm/yyyy hh:mm",
+                    7: "dd/mm/yyyy",
+                    10: "#,##0.00",
+                    11: "#,##0.00",
+                    12: "#,##0.00",
+                    13: "#,##0.00",
+                    14: "#,##0.00",
+                    15: "#,##0.00",
+                    16: "#,##0.00",
+                    17: "#,##0.00",
+                    18: "#,##0.00",
+                    19: "#,##0.00",
+                    20: "#,##0.00",
+                    21: "#,##0.00",
+                },
+            )
+    return _respuesta_excel(
+        libro, f"compras_{fecha_inicio}_{fecha_fin}.xlsx"
+    )
+
+
+@login_required
+@permission_required("manager.view_compras", raise_exception=True)
 def realizarcompra_view(request):
     return render(request, "compras/realizarcompra.html", {})
 
@@ -3161,6 +4547,7 @@ def post_compra(request):
         proveedor_id = data.get("proveedorId")
         ubicacion_id = data.get("recepcionId")
         tipo_compra = data.get("tipoCompra", 1)
+        usar_saldo = bool(data.get("usarSaldo", False))
         observaciones = data.get("observaciones", "").strip()
         detalles = data.get("detalles", [])
 
@@ -3197,7 +4584,8 @@ def post_compra(request):
             )
 
         with transaction.atomic():
-            total = Decimal("0.00")
+            total_antes_impuesto = Decimal("0.00")
+            total_impuesto = Decimal("0.00")
             detalles_procesados = []
 
             for item in detalles:
@@ -3206,17 +4594,18 @@ def post_compra(request):
                 try:
                     cantidad = Decimal(str(item.get("cantidad") or 0))
                     precio = Decimal(str(item.get("precioCompra") or 0))
+                    impuesto_porcentaje = Decimal(str(item.get("impuesto") or 0))
                 except:
                     return JsonResponse(
-                        {"success": False, "message": "Cantidad o precio inválido"},
+                        {"success": False, "message": "Cantidad, precio o impuesto inválido"},
                         status=400,
                     )
 
-                if cantidad <= 0 or precio <= 0:
+                if cantidad <= 0 or precio <= 0 or impuesto_porcentaje < 0 or impuesto_porcentaje > 100:
                     return JsonResponse(
                         {
                             "success": False,
-                            "message": "Cantidad y precio deben ser mayores a 0",
+                            "message": "Cantidad y precio deben ser mayores a 0; el impuesto debe estar entre 0 y 100",
                         },
                         status=400,
                     )
@@ -3234,11 +4623,30 @@ def post_compra(request):
                     )
 
                 subtotal = cantidad * precio
-                total += subtotal
+                impuesto_unitario = (precio * impuesto_porcentaje / Decimal("100")).quantize(Decimal("0.01"))
+                impuesto_linea = impuesto_unitario * cantidad
+                precio_con_impuesto = precio + impuesto_unitario
+                total_antes_impuesto += subtotal
+                total_impuesto += impuesto_linea
 
                 detalles_procesados.append(
-                    {"producto": producto, "cantidad": cantidad, "precio": precio}
+                    {
+                        "producto": producto,
+                        "cantidad": cantidad,
+                        "precio": precio,
+                        "impuesto_porcentaje": impuesto_porcentaje,
+                        "impuesto_unitario": impuesto_unitario,
+                        "precio_con_impuesto": precio_con_impuesto,
+                    }
                 )
+
+            total = total_antes_impuesto + total_impuesto
+            saldo_utilizado = (
+                min(Decimal(proveedor.saldo or 0), total)
+                if usar_saldo
+                else Decimal("0")
+            )
+            saldo_pendiente = total - saldo_utilizado
 
             compra = Compras.objects.create(
                 proveedor=proveedor,
@@ -3247,6 +4655,9 @@ def post_compra(request):
                 observaciones=observaciones,
                 estado=EstadoCompra.PENDIENTE,
                 total=total,
+                total_antes_impuesto=total_antes_impuesto,
+                total_impuesto=total_impuesto,
+                saldo_utilizado=saldo_utilizado,
                 u_creo_id=request.user.id,
             )
 
@@ -3256,6 +4667,9 @@ def post_compra(request):
                     producto=item["producto"],
                     cantidad=item["cantidad"],
                     precio_compra=item["precio"],
+                    impuesto_porcentaje=item["impuesto_porcentaje"],
+                    impuesto_unitario=item["impuesto_unitario"],
+                    precio_compra_con_impuesto=item["precio_con_impuesto"],
                     u_creo_id=request.user.id,
                 )
 
@@ -3265,12 +4679,16 @@ def post_compra(request):
                 )
                 compra.save()
 
-            if tipo_compra == Compras.TIPO_CREDITO:
+            if saldo_utilizado > 0:
+                proveedor.saldo = Decimal(proveedor.saldo or 0) - saldo_utilizado
+                proveedor.save(update_fields=["saldo"])
+
+            if tipo_compra == Compras.TIPO_CREDITO and saldo_pendiente > 0:
                 CuentasPorPagar.objects.create(
                     proveedor_id=proveedor.id,
                     compra_id=compra.id,
-                    monto_total=total,
-                    monto_pendiente=total,
+                    monto_total=saldo_pendiente,
+                    monto_pendiente=saldo_pendiente,
                     fecha_vencimiento=compra.fecha_vencimiento or timezone.now(),
                     estado=EstadoCuenta.PENDIENTE,
                     u_creo_id=request.user.id,
@@ -3290,18 +4708,172 @@ def post_compra(request):
         )
 
 
+def _tracking_compra(compra):
+    """Construye el recorrido visual usando únicamente estados ya persistidos."""
+    recepcion_registrada = HAutorizarCompra.objects.filter(compra_id=compra.id).exists()
+    cantidades_autorizadas = dict(
+        HAutorizarCompra.objects.filter(compra_id=compra.id)
+        .values("producto_id")
+        .annotate(total=Sum("cantidad_autorizada"))
+        .values_list("producto_id", "total")
+    )
+    inventario_ingresado = Inventarios.objects.filter(
+        compra_id=compra.id,
+        is_active=True,
+        is_delete=False,
+    ).exists()
+    devolucion = (
+        DevolucionCompra.objects.filter(compra_id=compra.id, is_delete=False)
+        .order_by("-f_creacion", "-id")
+        .first()
+    )
+    cantidades_compradas = dict(
+        compra.compra_detalles.values("producto_id")
+        .annotate(total=Sum("cantidad"))
+        .values_list("producto_id", "total")
+    )
+    # Inventario solo se considera un paso completado cuando toda la compra
+    # fue autorizada. Una recepción parcial debe permanecer en Recepción.
+    recepcion_completa = bool(cantidades_compradas) and all(
+        (cantidades_autorizadas.get(producto_id, Decimal("0")) + Decimal("0.000005"))
+        >= cantidad
+        for producto_id, cantidad in cantidades_compradas.items()
+    )
+    cantidades_devueltas = dict(
+        DevolucionCompraDetalle.objects.filter(
+            compra_id=compra.id,
+            devolucion_compra__estado__in=(
+                EstadoDevolucionCompra.PENDIENTE,
+                EstadoDevolucionCompra.APROBADA,
+                EstadoDevolucionCompra.COMPLETADA,
+            ),
+        )
+        .values("producto_id")
+        .annotate(total=Sum("cantidad"))
+        .values_list("producto_id", "total")
+    )
+    devolucion_total = bool(cantidades_compradas) and all(
+        (cantidades_devueltas.get(producto_id, Decimal("0")) + Decimal("0.000005"))
+        >= cantidad
+        for producto_id, cantidad in cantidades_compradas.items()
+    )
+
+    def detalle_estado_devolucion():
+        if devolucion.estado == EstadoDevolucionCompra.RECHAZADA:
+            # Las devoluciones anteriores guardaban el motivo dentro de
+            # observaciones; se conserva esa compatibilidad.
+            marca_motivo = "RECHAZO:"
+            observaciones = devolucion.observaciones or ""
+            if marca_motivo in observaciones:
+                motivo = observaciones.rsplit(marca_motivo, 1)[-1].strip()
+                if motivo:
+                    return f"Motivo: {motivo}"
+            return "Motivo de rechazo no registrado"
+
+        if devolucion.estado in (
+            EstadoDevolucionCompra.APROBADA,
+            EstadoDevolucionCompra.COMPLETADA,
+        ):
+            return (
+                f"Resolución: {devolucion.get_resolucion_display()}"
+                if devolucion.resolucion
+                else "Resolución pendiente de registrar"
+            )
+        return ""
+
+    pasos = [
+        {"nombre": "Compra", "icono": "bx-cart"},
+        {"nombre": "Llegada", "detalle": "Bodega", "icono": "bx-package"},
+        {"nombre": "Recepción", "icono": "bx-clipboard"},
+    ]
+    paso_actual = 0
+    if compra.fecha_llegada_bodega:
+        paso_actual = 1
+    if recepcion_registrada:
+        paso_actual = 2
+    if not devolucion_total:
+        pasos.append({"nombre": "Inventario", "icono": "bx-box"})
+        if inventario_ingresado and recepcion_completa:
+            paso_actual = len(pasos) - 1
+    if devolucion:
+        pasos.append(
+            {
+                "nombre": "Devolución",
+                "icono": "bx-undo",
+            }
+        )
+        pasos.append(
+            {
+                "nombre": devolucion.get_estado_display(),
+                "ayuda": detalle_estado_devolucion(),
+                "icono": (
+                    "bx-check-circle"
+                    if devolucion.estado in (
+                        EstadoDevolucionCompra.APROBADA,
+                        EstadoDevolucionCompra.COMPLETADA,
+                    )
+                    else "bx-x-circle"
+                    if devolucion.estado in (
+                        EstadoDevolucionCompra.RECHAZADA,
+                        EstadoDevolucionCompra.CANCELADA,
+                    )
+                    else "bx-time-five"
+                ),
+            }
+        )
+        paso_actual = len(pasos) - 1
+        # Un rechazo devuelve los productos a recepción para que vuelvan a
+        # inventario. Puede coexistir con el Inventario previo de una
+        # recepción parcial, por eso el icono se repite al final.
+        if devolucion.estado == EstadoDevolucionCompra.RECHAZADA:
+            pasos.append(
+                {
+                    "nombre": "Inventario",
+                    "icono": "bx-box",
+                    "ayuda": "Productos reintegrados al inventario tras el rechazo.",
+                }
+            )
+            paso_actual = len(pasos) - 1
+
+    return {
+        "clave": str(compra.documento_token),
+        "pasos": pasos,
+        "paso_actual": paso_actual,
+        "version": (
+            f"{devolucion.id}:{devolucion.estado}:{devolucion.resolucion or ''}:{devolucion.observaciones}:{int(devolucion_total)}"
+            if devolucion
+            else f"normal:{int(devolucion_total)}"
+        ),
+    }
+
+
 @login_required
-@permission_required("manager.view_compras", raise_exception=True)
-def detalle_compra_view(request, id):
+def detalle_compra_view(request, token):
+
+    puede_ver_compras = request.user.has_perm("manager.view_compras")
+    puede_recepcionar = request.user.has_perm(
+        "manager.gestionar_recepcion_inventario"
+    )
+    if not puede_ver_compras and not puede_recepcionar:
+        raise PermissionDenied("No tiene permiso para ver el detalle de la compra")
 
     compra = get_object_or_404(
         Compras.objects.select_related("proveedor", "ubicacion").prefetch_related(
             "compra_detalles__producto"
         ),
-        id=id,
-        u_creo_id=request.user.id,
+        documento_token=token,
     )
+    if not puede_ver_compras:
+        ubicaciones_permitidas = _ubicaciones_recepcion_usuario(request.user)
+        if (
+            ubicaciones_permitidas is not None
+            and compra.ubicacion_id not in ubicaciones_permitidas
+        ):
+            raise PermissionDenied("No puede ver compras de esta ubicación")
 
+    # Solo el permiso de Compras habilita importes; la vista desde la que se
+    # abrió el detalle no modifica esa autorización.
+    mostrar_importes = puede_ver_compras
     detalles = []
 
     for d in compra.compra_detalles.all():
@@ -3311,27 +4883,66 @@ def detalle_compra_view(request, id):
             {
                 "productoNombre": producto.nombre,
                 "productoId": producto.id,
-                "presentacion": (
-                    getattr(producto.unidad_medida, "abreviatura", "N/A")
-                    if hasattr(producto, "unidad_medida")
-                    else "N/A"
-                ),
-                "sku": getattr(producto, "codigo_sku", "N/A"),
-                "precioCompra": float(d.precio_compra),
                 "cantidad": float(d.cantidad),
-                "total": float(d.cantidad * d.precio_compra),
             }
         )
+        if mostrar_importes:
+            impuesto_unitario = Decimal(d.impuesto_unitario or 0)
+            precio_con_impuesto = Decimal(
+                d.precio_compra_con_impuesto or d.precio_compra
+            )
+            subtotal = Decimal(d.cantidad) * Decimal(d.precio_compra)
+            detalles[-1].update(
+                {
+                    "presentacion": (
+                        getattr(producto.unidad_medida, "abreviatura", "N/A")
+                        if hasattr(producto, "unidad_medida")
+                        else "N/A"
+                    ),
+                    "sku": getattr(producto, "codigo_sku", "N/A"),
+                    "precioCompra": float(d.precio_compra),
+                    "impuesto": float(d.impuesto_porcentaje or 0),
+                    "impuestoUnitario": float(impuesto_unitario),
+                    "subtotal": float(subtotal),
+                    "total": float(Decimal(d.cantidad) * precio_con_impuesto),
+                }
+            )
+
+    total_antes_impuesto = Decimal(compra.total_antes_impuesto or 0)
+    total_impuesto = Decimal(compra.total_impuesto or 0)
+    if total_antes_impuesto == 0 and total_impuesto == 0:
+        total_antes_impuesto = Decimal(compra.total)
 
     data = {
         "id": compra.id,
+        "token": compra.documento_token,
         "ubicacion": compra.ubicacion.nombre,
         "proveedorNombre": compra.proveedor.nombre_comercial,
         "tipoCompra": compra.get_tipo_compra_display(),
-        "total": float(compra.total),
-        "totalProductos": float(sum(d.cantidad for d in compra.compra_detalles.all())),
+        "totalProductos": int(sum(d.cantidad for d in compra.compra_detalles.all())),
         "detalles": detalles,
+        "mostrar_importes": mostrar_importes,
+        "puede_marcar_llegada": (
+            puede_recepcionar
+            and compra.fecha_llegada_bodega is None
+            and compra.estado == EstadoCompra.PENDIENTE
+        ),
+        "llegada_registrada": compra.fecha_llegada_bodega is not None,
+        "tracking": _tracking_compra(compra),
     }
+
+    if mostrar_importes:
+        data.update(
+            {
+                "totalAntesImpuesto": float(total_antes_impuesto),
+                "totalImpuesto": float(total_impuesto),
+                "total": float(compra.total),
+                "saldoUtilizado": float(compra.saldo_utilizado or 0),
+                "saldoPendiente": float(
+                    Decimal(compra.total) - Decimal(compra.saldo_utilizado or 0)
+                ),
+            }
+        )
 
     return render(request, "compras/detallecompra.html", {"compra": data})
 
@@ -3339,7 +4950,7 @@ def detalle_compra_view(request, id):
 @csrf_exempt
 @login_required
 @permission_required("manager.view_compras", raise_exception=True)
-def proxy_compras_pdf(request, id):
+def proxy_compras_pdf(request, token):
 
     if request.method != "POST":
         return JsonResponse(
@@ -3352,8 +4963,7 @@ def proxy_compras_pdf(request, id):
             Compras.objects.select_related("proveedor", "ubicacion").prefetch_related(
                 "compra_detalles__producto"
             ),
-            id=id,
-            u_creo_id=request.user.id,
+            documento_token=token,
         )
 
         # Consultar usuario creador
@@ -3384,20 +4994,26 @@ def proxy_compras_pdf(request, id):
                 for d in compra.compra_detalles.all()
             ],
             "total": float(compra.total),
+            "saldoUtilizado": float(compra.saldo_utilizado or 0),
+            "saldoPendiente": float(
+                Decimal(compra.total) - Decimal(compra.saldo_utilizado or 0)
+            ),
         }
 
         pdf_bytes = generar_pdf_compra(data)
 
         response = HttpResponse(pdf_bytes, content_type="application/pdf")
-        response["Content-Disposition"] = f'attachment; filename="Compra_{id}.pdf"'
+        response["Content-Disposition"] = f'attachment; filename="Compra_{compra.id}.pdf"'
         return response
 
     except Exception as e:
         return JsonResponse({"success": False, "message": str(e)}, status=500)
 
 
-@login_required
-def generar_pdf_compra(compra, logo_path="static/img/LH.png"):
+def generar_pdf_compra(compra, logo_path=None):
+
+    if logo_path is None:
+        logo_path = _logo_empresa_pdf()
 
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=letter)
@@ -3475,20 +5091,20 @@ def generar_pdf_compra(compra, logo_path="static/img/LH.png"):
             y_table = height - 50
 
     # Totales
-    impuesto = subtotal * 0.15
-    total = subtotal + impuesto
+    total = compra["total"]
+    saldo_pendiente = compra.get("saldoPendiente", total)
 
     y_tot = y_table - 30
 
     c.drawRightString(420, y_tot, "Subtotal:")
     c.drawRightString(520, y_tot, f"{subtotal:.2f}")
 
-    c.drawRightString(420, y_tot - 15, "Impuesto 15%:")
-    c.drawRightString(520, y_tot - 15, f"{impuesto:.2f}")
+    c.drawRightString(420, y_tot - 15, "Saldo pendiente:")
+    c.drawRightString(520, y_tot - 15, f"{saldo_pendiente:.2f}")
 
     c.setFont("Helvetica-Bold", 10)
     c.drawRightString(420, y_tot - 30, "TOTAL:")
-    c.drawRightString(520, y_tot - 30, f"{total:.2f}")
+    c.drawRightString(520, y_tot - 30, f"{saldo_pendiente:.2f}")
 
     # Firmas
     y_sign = 80
@@ -3499,7 +5115,6 @@ def generar_pdf_compra(compra, logo_path="static/img/LH.png"):
     c.line(350, y_sign, 500, y_sign)
     c.drawString(350, y_sign - 15, f"Proveedor: {compra['proveedorNombre']}")
 
-    c.showPage()
     c.save()
 
     pdf = buffer.getvalue()
@@ -3509,13 +5124,16 @@ def generar_pdf_compra(compra, logo_path="static/img/LH.png"):
 
 @login_required
 @permission_required("manager.change_compras", raise_exception=True)
-def editar_compra(request, id):
+def editar_compra(request, token):
     compra = get_object_or_404(
         Compras.objects.select_related("proveedor", "ubicacion").prefetch_related(
             "compra_detalles__producto__unidad_medida"
         ),
-        id=id,
+        documento_token=token,
     )
+
+    if compra.es_cambio:
+        return HttpResponseForbidden("Las compras generadas por cambio no se pueden editar")
 
     detalles = compra.compra_detalles.all()
 
@@ -3525,6 +5143,9 @@ def editar_compra(request, id):
         "ubicacionId": compra.ubicacion.id,
         "ubicacionNombre": getattr(compra.ubicacion, "nombre", "N/A"),
         "totalCompra": float(compra.total),
+        "totalAntesImpuesto": float(compra.total_antes_impuesto or 0),
+        "totalImpuesto": float(compra.total_impuesto or 0),
+        "saldoUtilizado": float(compra.saldo_utilizado or 0),
         "tipoCompra": compra.tipo_compra,
         "observaciones": compra.observaciones,
         "detalles": [
@@ -3534,6 +5155,11 @@ def editar_compra(request, id):
                 "productoNombre": d.producto.nombre,
                 "cantidad": float(d.cantidad),
                 "precioCompra": float(d.precio_compra),
+                "impuesto": float(d.impuesto_porcentaje or 0),
+                "impuestoUnitario": float(d.impuesto_unitario or 0),
+                "precioCompraConImpuesto": float(
+                    d.precio_compra_con_impuesto or d.precio_compra
+                ),
                 "sku": getattr(d.producto, "codigo_sku", "N/A"),
                 "presentacion": getattr(
                     getattr(d.producto, "unidad_medida", None), "abreviatura", "N/A"
@@ -3544,7 +5170,9 @@ def editar_compra(request, id):
     }
 
     return render(
-        request, "compras/editarcompra.html", {"compra": compra_data, "idcompra": id}
+        request,
+        "compras/editarcompra.html",
+        {"compra": compra_data, "compra_token": compra.documento_token},
     )
 
 
@@ -3552,7 +5180,7 @@ def editar_compra(request, id):
 @transaction.atomic
 @login_required
 @permission_required("manager.change_compras", raise_exception=True)
-def editar_compra_put(request, id):
+def editar_compra_put(request, token):
 
     if request.method != "PUT":
         return JsonResponse({"message": "Método no permitido"}, status=405)
@@ -3562,13 +5190,21 @@ def editar_compra_put(request, id):
 
         proveedor_id = data.get("proveedorId")
         tipo_compra = int(data.get("tipoCompra"))
+        usar_saldo = bool(data.get("usarSaldo", False))
         observaciones = data.get("observaciones", "")
         ubicacion_id = data.get("recepcionId")
         detalles = data.get("detalles", [])
 
         compra = get_object_or_404(
-            Compras.objects.prefetch_related("compra_detalles"), id=id
+            Compras.objects.select_related("proveedor").prefetch_related("compra_detalles"),
+            documento_token=token,
         )
+
+        if compra.es_cambio:
+            return JsonResponse(
+                {"message": "Las compras generadas por cambio no se pueden editar"},
+                status=400,
+            )
 
         # =====================
         # VALIDACIONES
@@ -3581,12 +5217,33 @@ def editar_compra_put(request, id):
         if not Ubicaciones.objects.filter(id=ubicacion_id, is_delete=False).exists():
             return JsonResponse({"message": "Ubicación no válida"}, status=400)
 
-        if not Proveedores.objects.filter(id=proveedor_id, is_delete=False).exists():
+        proveedor_nuevo = Proveedores.objects.filter(
+            id=proveedor_id, is_delete=False
+        ).first()
+        if not proveedor_nuevo:
             return JsonResponse({"message": "Proveedor no válido"}, status=400)
+
+        if tipo_compra == Compras.TIPO_CREDITO:
+            if not request.user.has_perm("manager.view_cuentasporpagar"):
+                return JsonResponse(
+                    {"message": "No tiene permiso para comprar al crédito"}, status=403
+                )
+            if not proveedor_nuevo.dias_credito or proveedor_nuevo.dias_credito <= 0:
+                return JsonResponse(
+                    {"message": "El proveedor no tiene días de crédito disponibles"}, status=400
+                )
 
         # =====================
         # ACTUALIZAR COMPRA
         # =====================
+        proveedor_anterior = compra.proveedor
+        saldo_anterior_utilizado = Decimal(compra.saldo_utilizado or 0)
+        if saldo_anterior_utilizado > 0:
+            proveedor_anterior.saldo = Decimal(proveedor_anterior.saldo or 0) + saldo_anterior_utilizado
+            proveedor_anterior.save(update_fields=["saldo"])
+            if proveedor_anterior.id == proveedor_nuevo.id:
+                proveedor_nuevo.refresh_from_db(fields=["saldo"])
+
         compra.proveedor_id = proveedor_id
         compra.tipo_compra = tipo_compra
         compra.ubicacion_id = ubicacion_id
@@ -3602,13 +5259,26 @@ def editar_compra_put(request, id):
         # =====================
         # RECREAR DETALLES
         # =====================
-        total = Decimal("0.00")
+        total_antes_impuesto = Decimal("0.00")
+        total_impuesto = Decimal("0.00")
 
         for d in detalles:
             producto_id = d.get("productoId")
 
-            cantidad = Decimal(str(d.get("cantidad", 0)))
-            precio = Decimal(str(d.get("precioCompra", 0)))
+            try:
+                cantidad = Decimal(str(d.get("cantidad", 0)))
+                precio = Decimal(str(d.get("precioCompra", 0)))
+                impuesto_porcentaje = Decimal(str(d.get("impuesto") or 0))
+            except (InvalidOperation, TypeError, ValueError):
+                return JsonResponse(
+                    {"message": "Cantidad, precio o impuesto inválido"}, status=400
+                )
+
+            if cantidad <= 0 or precio <= 0 or impuesto_porcentaje < 0 or impuesto_porcentaje > 100:
+                return JsonResponse(
+                    {"message": "Cantidad y precio deben ser mayores a 0; el impuesto debe estar entre 0 y 100"},
+                    status=400,
+                )
 
             if not Productos.objects.filter(id=producto_id, is_delete=False).exists():
                 return JsonResponse(
@@ -3616,20 +5286,41 @@ def editar_compra_put(request, id):
                 )
 
             subtotal = cantidad * precio
-            total += subtotal
+            impuesto_unitario = (precio * impuesto_porcentaje / Decimal("100")).quantize(Decimal("0.01"))
+            impuesto_linea = impuesto_unitario * cantidad
+            precio_con_impuesto = precio + impuesto_unitario
+            total_antes_impuesto += subtotal
+            total_impuesto += impuesto_linea
 
             DetalleCompra.objects.create(
                 compra=compra,
                 producto_id=producto_id,
                 cantidad=cantidad,
                 precio_compra=precio,
+                impuesto_porcentaje=impuesto_porcentaje,
+                impuesto_unitario=impuesto_unitario,
+                precio_compra_con_impuesto=precio_con_impuesto,
                 u_creo_id=request.user.id,
             )
 
         # =====================
         # TOTAL
         # =====================
+        total = total_antes_impuesto + total_impuesto
+        saldo_utilizado = (
+            min(Decimal(proveedor_nuevo.saldo or 0), total)
+            if usar_saldo
+            else Decimal("0")
+        )
+        saldo_pendiente = total - saldo_utilizado
+        if saldo_utilizado > 0:
+            proveedor_nuevo.saldo = Decimal(proveedor_nuevo.saldo or 0) - saldo_utilizado
+            proveedor_nuevo.save(update_fields=["saldo"])
+
         compra.total = total
+        compra.total_antes_impuesto = total_antes_impuesto
+        compra.total_impuesto = total_impuesto
+        compra.saldo_utilizado = saldo_utilizado
 
         # =====================
         # CUENTA POR PAGAR
@@ -3656,8 +5347,8 @@ def editar_compra_put(request, id):
 
                 cuenta.proveedor_id = proveedor_id
 
-                cuenta.monto_total = total
-                cuenta.monto_pendiente = max(total - abonado, Decimal("0.00"))
+                cuenta.monto_total = saldo_pendiente
+                cuenta.monto_pendiente = max(saldo_pendiente - abonado, Decimal("0.00"))
 
                 # estado automático
                 if cuenta.monto_pendiente <= 0:
@@ -3672,12 +5363,12 @@ def editar_compra_put(request, id):
                 cuenta.f_modificacion = timezone.now()
                 cuenta.save()
 
-            else:
+            elif saldo_pendiente > 0:
                 CuentasPorPagar.objects.create(
                     proveedor_id=proveedor_id,
                     compra_id=compra.id,
-                    monto_total=total,
-                    monto_pendiente=total,
+                    monto_total=saldo_pendiente,
+                    monto_pendiente=saldo_pendiente,
                     fecha_vencimiento=compra.fecha_vencimiento,
                     estado=EstadoCuenta.PENDIENTE,
                     u_creo_id=request.user.id,
@@ -3743,6 +5434,20 @@ def cuentas_por_pagar_view(request):
 
     page_number = request.GET.get("page", 1)
     page_obj = paginator.get_page(page_number)
+
+    hoy = timezone.localdate()
+    for cuenta in page_obj:
+        cuenta.dias_restantes = (cuenta.fecha_vencimiento.date() - hoy).days
+        cuenta.dias_en_mora = max(-cuenta.dias_restantes, 0)
+
+        if cuenta.monto_pendiente <= Decimal("0"):
+            cuenta.estado_vencimiento = "cuenta-al-dia"
+        elif cuenta.dias_restantes < 0:
+            cuenta.estado_vencimiento = "cuenta-en-mora"
+        elif cuenta.dias_restantes <= 5:
+            cuenta.estado_vencimiento = "cuenta-por-vencer"
+        else:
+            cuenta.estado_vencimiento = "cuenta-al-dia"
 
     # =====================
     # CONTEXTO
@@ -3827,6 +5532,82 @@ def cuentas_por_cobrar_view(request):
             "page_range": paginator.page_range,
             "mostrar_buscador": True,
         },
+    )
+
+
+@login_required
+@permission_required("manager.view_cuentasporpagar", raise_exception=True)
+def historial_abonos_pagar(request, id):
+    cuenta = get_object_or_404(CuentasPorPagar, id=id, is_delete=False)
+    abonos = list(
+        RegistroAbonos.objects.filter(
+            cuenta_por_pagar=cuenta,
+            is_delete=False,
+        ).order_by("-f_creacion", "-id")
+    )
+    usuarios = User.objects.in_bulk(
+        [abono.u_creo_id for abono in abonos if abono.u_creo_id]
+    )
+
+    def nombre_usuario(usuario_id):
+        usuario = usuarios.get(usuario_id)
+        if not usuario:
+            return "Sistema"
+        return usuario.username
+
+    return JsonResponse(
+        {
+            "success": True,
+            "cuenta": cuenta.id,
+            "abonos": [
+                {
+                    "usuario": nombre_usuario(abono.u_creo_id),
+                    "fecha": timezone.localtime(abono.f_creacion).strftime(
+                        "%d/%m/%Y %I:%M %p"
+                    ),
+                    "monto": f"{abono.monto_abonado:.2f}",
+                }
+                for abono in abonos
+            ],
+        }
+    )
+
+
+@login_required
+@permission_required("manager.view_cuentasporcobrar", raise_exception=True)
+def historial_abonos_cobrar(request, id):
+    cuenta = get_object_or_404(CuentasPorCobrar, id=id, is_delete=False)
+    abonos = list(
+        RegistroAbonosCobrar.objects.filter(
+            cuenta_por_cobrar=cuenta,
+            is_delete=False,
+        ).order_by("-f_creacion", "-id")
+    )
+    usuarios = User.objects.in_bulk(
+        [abono.u_creo_id for abono in abonos if abono.u_creo_id]
+    )
+
+    def nombre_usuario(usuario_id):
+        usuario = usuarios.get(usuario_id)
+        if not usuario:
+            return "Sistema"
+        return usuario.username
+
+    return JsonResponse(
+        {
+            "success": True,
+            "cuenta": cuenta.id,
+            "abonos": [
+                {
+                    "usuario": nombre_usuario(abono.u_creo_id),
+                    "fecha": timezone.localtime(abono.f_creacion).strftime(
+                        "%d/%m/%Y %I:%M %p"
+                    ),
+                    "monto": f"{abono.monto_abonado:.2f}",
+                }
+                for abono in abonos
+            ],
+        }
     )
 
 
@@ -4049,6 +5830,73 @@ def clientes_view(request):
     return render(request, "clientes.html", context)
 
 
+@login_required
+@permission_required("manager.view_clientes", raise_exception=True)
+def exportar_clientes_excel(request):
+    search = request.GET.get("search", "").strip()
+    puede_ver_credito = request.user.has_perm("manager.view_cuentasporcobrar")
+    puede_ver_whatsapp = request.user.has_perm("manager.enviar_facturas_whatsapp")
+
+    clientes = Clientes.objects.filter(is_delete=False)
+    if search:
+        clientes = clientes.filter(
+            Q(dni__icontains=search)
+            | Q(nombre__icontains=search)
+            | Q(nombre2__icontains=search)
+            | Q(apellido__icontains=search)
+            | Q(apellido2__icontains=search)
+            | Q(empresa__icontains=search)
+            | Q(email__icontains=search)
+            | Q(telefono__icontains=search)
+        )
+
+    encabezados = [
+        "ID cliente",
+        "DNI/RTN",
+        "Nombre",
+        "Empresa",
+        "Dirección",
+        "Teléfono",
+        "Correo",
+        "País",
+        "Departamento",
+        "Municipio",
+        "Estado",
+    ]
+    if puede_ver_credito:
+        encabezados.extend(["Días de crédito", "Crédito máximo"])
+    if puede_ver_whatsapp:
+        encabezados.append("Enviar facturas por WhatsApp")
+    libro, hoja = _libro_exportacion_grande(
+        "Clientes", encabezados, [14, 18, 32, 28, 36, 18, 28, 18, 22, 22, 14, 16, 18, 24]
+    )
+
+    for cliente in clientes.order_by("id").iterator(chunk_size=500):
+        fila = [
+            cliente.id,
+            cliente.dni,
+            cliente.nombre_completo or "",
+            cliente.empresa or "",
+            cliente.direccion or "",
+            cliente.telefono or "",
+            cliente.email or "",
+            cliente.pais or "",
+            cliente.departamento or "",
+            cliente.municipio or "",
+            "Activo" if cliente.is_active else "Inactivo",
+        ]
+        if puede_ver_credito:
+            fila.extend([cliente.d_credito or 0, cliente.max_credito or Decimal("0")])
+        if puede_ver_whatsapp:
+            fila.append("Sí" if cliente.enviar_factura_whatsapp else "No")
+        formatos = {}
+        if puede_ver_credito:
+            formatos[encabezados.index("Crédito máximo") + 1] = "#,##0.00"
+        _agregar_fila_exportacion(hoja, fila, formatos=formatos)
+
+    return _respuesta_excel(libro, "clientes.xlsx")
+
+
 @csrf_exempt
 @login_required
 @permission_required(
@@ -4187,6 +6035,12 @@ def post_clientes(request):
 
             telefono=data.get("telefono") or None,
 
+            enviar_factura_whatsapp=(
+                bool(data.get("enviar_factura_whatsapp", False))
+                if request.user.has_perm("manager.enviar_facturas_whatsapp")
+                else False
+            ),
+
             email=data.get("email") or None,
 
             pais=data.get("pais") or None,
@@ -4293,6 +6147,12 @@ def get_cliente(request, id):
             "direccion": cliente.direccion,
 
             "telefono": cliente.telefono,
+
+            "enviar_factura_whatsapp": (
+                cliente.enviar_factura_whatsapp
+                if request.user.has_perm("manager.enviar_facturas_whatsapp")
+                else False
+            ),
 
             "email": cliente.email,
 
@@ -4451,6 +6311,13 @@ def put_cliente(request, id):
             data.get("telefono") or None
         )
 
+        # Solo el permiso específico puede cambiar la autorización de envío.
+        # Sin él, el valor ya guardado se conserva aunque alguien altere el JS.
+        if request.user.has_perm("manager.enviar_facturas_whatsapp"):
+            cliente.enviar_factura_whatsapp = bool(
+                data.get("enviar_factura_whatsapp", False)
+            )
+
 
         # ==========================================================
         # UBICACION
@@ -4555,8 +6422,14 @@ def put_cliente(request, id):
         )
 
 @login_required
-@permission_required("manager.view_clientes", raise_exception=True)
 def search_clientes(request):
+
+    if not (
+        request.user.is_superuser
+        or request.user.has_perm("manager.view_clientes")
+        or _puede_generar_cotizaciones(request.user)
+    ):
+        raise PermissionDenied("No tiene permiso para buscar clientes")
 
     search = request.GET.get("search", "").strip()
 
@@ -4602,41 +6475,84 @@ def dashboard_bodega(request):
     return render(request, "bodega/dashboard.html")
 
 
+def _ubicaciones_recepcion_usuario(user):
+    """Ubicaciones que puede recibir; None significa acceso global."""
+    if user.is_superuser or user.has_perm("manager.multirecepcion"):
+        return None
+    try:
+        ubicacion = PerfilUsuario.objects.select_related("ubicacion").get(
+            usuarios=user
+        ).ubicacion
+    except PerfilUsuario.DoesNotExist:
+        raise PermissionDenied("El usuario no tiene una ubicación asignada")
+
+    permitidas = {ubicacion.id}
+    if ubicacion.bodega_id:
+        permitidas.add(ubicacion.bodega_id)
+    if ubicacion.es_bodega:
+        permitidas.update(
+            Ubicaciones.objects.filter(
+                bodega_id=ubicacion.id, is_active=True, is_delete=False
+            ).values_list("id", flat=True)
+        )
+    return permitidas
+
+
 @login_required
-@permission_required("manager.view_hautorizarcompra", raise_exception=True)
+@permission_required("manager.gestionar_recepcion_inventario", raise_exception=True)
 def recepcion_inventario_view(request):
 
     search = request.GET.get("search", "").strip()
+    ubicaciones_permitidas = _ubicaciones_recepcion_usuario(request.user)
 
     recepciones = []
 
     # =========================================================
     # COMPRAS
     # =========================================================
-    compras_qs = Compras.objects.select_related("proveedor").prefetch_related(
-        "compra_detalles",
-        "compra_autorizaciones",
-        "compra_devoluciones__devolucion_detalles",
+    compras_qs = (
+        Compras.objects.filter(is_delete=False)
+        .select_related("proveedor", "ubicacion", "llegada_bodega_por")
+        .prefetch_related("compra_detalles")
     )
+    if ubicaciones_permitidas is not None:
+        compras_qs = compras_qs.filter(ubicacion_id__in=ubicaciones_permitidas)
 
     if search:
         compras_qs = compras_qs.filter(
             Q(id__icontains=search) | Q(proveedor__nombre_comercial__icontains=search)
         )
 
+    # Antes se hacía una suma de autorizaciones y otra de devoluciones por cada
+    # producto de cada compra. En una recepción grande eso creaba N+1 consultas.
+    # Las dos agregaciones se resuelven ahora en consultas agrupadas fijas.
+    compras_ids = list(compras_qs.values_list("id", flat=True))
+    autorizados_por_producto = {
+        (fila["compra_id"], fila["producto_id"]): fila["total"] or Decimal("0")
+        for fila in HAutorizarCompra.objects.filter(compra_id__in=compras_ids)
+        .values("compra_id", "producto_id")
+        .annotate(total=Sum("cantidad_autorizada"))
+    }
+    devueltos_por_producto = {
+        (fila["compra_id"], fila["producto_id"]): fila["total"] or Decimal("0")
+        for fila in DevolucionCompraDetalle.objects.filter(
+            compra_id__in=compras_ids,
+            devolucion_compra__estado__in=ESTADOS_DEVOLUCION_ACTIVA,
+        )
+        .values("compra_id", "producto_id")
+        .annotate(total=Sum("cantidad"))
+    }
+
     for c in compras_qs:
         total_productos = Decimal("0.00")
 
         for d in c.compra_detalles.all():
-            autorizado = c.compra_autorizaciones.filter(
-                producto_id=d.producto_id
-            ).aggregate(total=Sum("cantidad_autorizada"))["total"] or Decimal("0.00")
-
-            devuelto = DevolucionCompraDetalle.objects.filter(
-                compra_id=c.id,
-                producto_id=d.producto_id,
-                devolucion_compra__estado=EstadoDevolucionCompra.PENDIENTE,
-            ).aggregate(total=Sum("cantidad"))["total"] or Decimal("0.00")
+            autorizado = autorizados_por_producto.get(
+                (c.id, d.producto_id), Decimal("0.00")
+            )
+            devuelto = devueltos_por_producto.get(
+                (c.id, d.producto_id), Decimal("0.00")
+            )
 
             pendiente = d.cantidad - autorizado - devuelto
 
@@ -4646,22 +6562,47 @@ def recepcion_inventario_view(request):
         recepciones.append(
             {
                 "id": c.id,
+                "token": c.documento_token,
                 "tipo": "Compra",
                 "tipo_codigo": "COMPRA",
+                "detalle_url": reverse("detalle_compra", args=[c.documento_token]),
+                "es_cambio": c.es_cambio,
                 "referencia": getattr(c.proveedor, "nombre_comercial", ""),
                 "fecha": c.fecha_compra,
                 "cantidad": float(total_productos),
                 "estado": c.estado,
-                "puede_autorizar": total_productos > 0,
+                "llego_bodega": c.fecha_llegada_bodega is not None,
+                "fecha_llegada_bodega": c.fecha_llegada_bodega,
+                "llegada_bodega_por": c.llegada_bodega_por,
+                "llegada_bodega_usuario": (
+                    c.llegada_bodega_por.get_full_name()
+                    or c.llegada_bodega_por.username
+                    if c.llegada_bodega_por
+                    else ""
+                ),
+                "puede_marcar_llegada": (
+                    total_productos > 0
+                    and c.fecha_llegada_bodega is None
+                    and c.estado == EstadoCompra.PENDIENTE
+                ),
+                "puede_autorizar": (
+                    total_productos > 0 and c.fecha_llegada_bodega is not None
+                ),
             }
         )
 
     # =========================================================
     # TRASLADOS
     # =========================================================
-    traslados_qs = Traslados.objects.select_related(
-        "ubicacion_origen", "ubicacion_destino"
-    ).prefetch_related("detalles_traslado")
+    traslados_qs = (
+        Traslados.objects.filter(is_delete=False)
+        .select_related("ubicacion_origen", "ubicacion_destino")
+        .prefetch_related("detalles_traslado")
+    )
+    if ubicaciones_permitidas is not None:
+        traslados_qs = traslados_qs.filter(
+            ubicacion_destino_id__in=ubicaciones_permitidas
+        )
 
     if search:
         traslados_qs = traslados_qs.filter(
@@ -4681,12 +6622,16 @@ def recepcion_inventario_view(request):
         recepciones.append(
             {
                 "id": t.id,
+                "token": t.documento_token,
                 "tipo": "Traslado",
                 "tipo_codigo": "TRASLADO",
+                "detalle_url": "",
                 "referencia": f"{t.ubicacion_origen.nombre} → {t.ubicacion_destino.nombre}",
                 "fecha": t.f_creacion,
                 "cantidad": float(total_pendiente),
                 "estado": t.estado,
+                "llego_bodega": False,
+                "puede_marcar_llegada": False,
                 "puede_autorizar": total_pendiente > 0,
             }
         )
@@ -4700,10 +6645,18 @@ def recepcion_inventario_view(request):
     # CONTADORES
     # =========================================================
     entradas_completadas = len([x for x in recepciones if x["estado"] == "Completado"])
-    entradas_pendientes = len([x for x in recepciones if x["estado"] == "Pendiente"])
+    entradas_pendientes = len(
+        [
+            x
+            for x in recepciones
+            if x["estado"] in (EstadoCompra.PENDIENTE, EstadoCompra.LLEGADA_BODEGA)
+        ]
+    )
     total_entradas = len(recepciones)
 
-    total_devoluciones = DevolucionCompra.objects.filter(compra__in=compras_qs).count()
+    total_devoluciones = DevolucionCompra.objects.filter(
+        compra_id__in=compras_ids
+    ).count()
 
     # =========================================================
     # PAGINADOR MANUAL
@@ -4729,8 +6682,64 @@ def recepcion_inventario_view(request):
 
 
 @login_required
-@permission_required("manager.view_hautorizarcompra", raise_exception=True)
-def autorizar_entrada_view(request, tipo, id):
+@require_POST
+@transaction.atomic
+@permission_required("manager.gestionar_recepcion_inventario", raise_exception=True)
+def marcar_llegada_compra(request, token):
+    """Registra la entrega física en bodega sin afectar el inventario."""
+    compra = get_object_or_404(
+        Compras.objects.select_for_update().select_related("ubicacion"),
+        documento_token=token,
+        is_active=True,
+        is_delete=False,
+    )
+    ubicaciones_permitidas = _ubicaciones_recepcion_usuario(request.user)
+    if (
+        ubicaciones_permitidas is not None
+        and compra.ubicacion_id not in ubicaciones_permitidas
+    ):
+        raise PermissionDenied("No puede registrar llegadas para esta ubicación")
+
+    if compra.fecha_llegada_bodega:
+        return JsonResponse(
+            {"ok": True, "mensaje": "La llegada ya estaba registrada."}
+        )
+    if compra.estado != EstadoCompra.PENDIENTE:
+        return JsonResponse(
+            {
+                "ok": False,
+                "mensaje": "Solo puede marcar llegadas de compras pendientes.",
+            },
+            status=400,
+        )
+
+    compra.fecha_llegada_bodega = timezone.now()
+    compra.llegada_bodega_por = request.user
+    compra.estado = EstadoCompra.LLEGADA_BODEGA
+    compra.u_modifico_id = request.user.id
+    compra.f_modificacion = timezone.now()
+    compra.save(
+        update_fields=[
+            "fecha_llegada_bodega",
+            "llegada_bodega_por",
+            "estado",
+            "u_modifico_id",
+            "f_modificacion",
+        ]
+    )
+    return JsonResponse(
+        {
+            "ok": True,
+            "mensaje": "La llegada a bodega fue registrada. Aún no se ingresó inventario.",
+        }
+    )
+
+
+@login_required
+@permission_required("manager.gestionar_recepcion_inventario", raise_exception=True)
+def autorizar_entrada_view(request, tipo, token):
+
+    ubicaciones_permitidas = _ubicaciones_recepcion_usuario(request.user)
 
     # =========================================================
     # SI ES COMPRA
@@ -4741,14 +6750,24 @@ def autorizar_entrada_view(request, tipo, id):
                 "compra_detalles__producto__unidad_medida",
                 "compra_detalles__producto__marca",
             ),
-            id=id,
+            documento_token=token,
         )
+
+        if (
+            ubicaciones_permitidas is not None
+            and compra.ubicacion_id not in ubicaciones_permitidas
+        ):
+            raise PermissionDenied("No puede recibir compras de esta ubicación")
+        if not compra.fecha_llegada_bodega:
+            raise PermissionDenied(
+                "Primero debe marcar la llegada de la compra a bodega"
+            )
 
         historial = HAutorizarCompra.objects.filter(compra_id=compra.id)
 
         devoluciones_pendientes = DevolucionCompraDetalle.objects.filter(
             compra_id=compra.id,
-            devolucion_compra__estado=EstadoDevolucionCompra.PENDIENTE,
+            devolucion_compra__estado__in=ESTADOS_DEVOLUCION_ACTIVA,
         )
 
         detalles = []
@@ -4764,8 +6783,34 @@ def autorizar_entrada_view(request, tipo, id):
 
             disponible = d.cantidad - autorizado - bloqueado
 
-            if disponible < 0:
+            # Compatibilidad con recepciones antiguas guardadas con dos
+            # decimales: evita dejar una fracción residual de presentación.
+            if disponible <= Decimal("0.005"):
                 disponible = Decimal("0")
+
+            hijos = []
+            relaciones_hijo = ProductosRel.objects.filter(
+                producto_master=d.producto,
+                is_active=True,
+                is_delete=False,
+                producto_relacionado__is_active=True,
+                producto_relacionado__is_delete=False,
+            ).select_related("producto_relacionado__unidad_medida")
+            equivalencia_padre = Decimal(d.producto.equival_unid or 1)
+            for relacion in relaciones_hijo:
+                hijo = relacion.producto_relacionado
+                equivalencia_hijo = Decimal(hijo.equival_unid or 1)
+                maximo_hijo = (disponible * equivalencia_padre) / equivalencia_hijo
+                hijos.append(
+                    {
+                        "id": hijo.id,
+                        "nombre": hijo.nombre,
+                        "sku": hijo.codigo_sku or "N/A",
+                        "presentacion": getattr(hijo.unidad_medida, "abreviatura", "unidad"),
+                        "equivalencia": float(equivalencia_padre / equivalencia_hijo),
+                        "maximo": float(maximo_hijo),
+                    }
+                )
 
             detalles.append(
                 {
@@ -4779,13 +6824,15 @@ def autorizar_entrada_view(request, tipo, id):
                     ),
                     "marcas": getattr(d.producto.marca, "nombre", "N/A"),
                     "requiereVencimiento": d.producto.vencimiento,
+                    "hijos": hijos,
                 }
             )
 
         puede_autorizar = any(x["cantidad"] > 0 for x in detalles)
 
         compra_data = {
-            "id": compra.id,
+        "id": compra.id,
+        "token": compra.documento_token,
             "proveedorNombre": compra.proveedor.nombre_legal,
             "total": float(compra.total),
             "tipoCompra": compra.tipo_compra,
@@ -4794,6 +6841,7 @@ def autorizar_entrada_view(request, tipo, id):
             "detalles": detalles,
             "puede_autorizar": puede_autorizar,
             "tipo": "Compra",
+            "tracking": _tracking_compra(compra),
         }
 
     # =========================================================
@@ -4807,8 +6855,14 @@ def autorizar_entrada_view(request, tipo, id):
                 "detalles_traslado__producto__unidad_medida",
                 "detalles_traslado__producto__marca",
             ),
-            id=id,
+            documento_token=token,
         )
+
+        if (
+            ubicaciones_permitidas is not None
+            and traslado.ubicacion_destino_id not in ubicaciones_permitidas
+        ):
+            raise PermissionDenied("No puede recibir traslados de esta ubicación")
 
         detalles = []
 
@@ -4850,12 +6904,26 @@ def autorizar_entrada_view(request, tipo, id):
     else:
         raise Http404("Tipo no válido")
 
+    # Evita columnas vacías: solo se muestran cuando algún detalle realmente
+    # requiere fecha de vencimiento o puede convertirse a un producto hijo.
+    compra_data["mostrar_vencimiento"] = any(
+        detalle.get("requiereVencimiento", False)
+        for detalle in compra_data["detalles"]
+    )
+    compra_data["mostrar_conversion"] = any(
+        detalle.get("hijos", []) for detalle in compra_data["detalles"]
+    )
+    paginator = Paginator(compra_data["detalles"], 10)
+    detalles_paginados = paginator.get_page(request.GET.get("page", 1))
+
     return render(
         request,
         "bodega/confiinventario.html",
         {
-            "compra_id": id,
+            "compra_id": compra_data["id"],
             "compra": compra_data,
+            "detalles": detalles_paginados,
+            "page_obj": detalles_paginados,
         },
     )
 
@@ -4926,6 +6994,17 @@ def obtener_productos_relacionados(producto, cantidad):
             rel.producto_master.id
         ] = rel.producto_master
 
+        # Un hijo comparte existencias con todos los demás hijos del mismo
+        # padre. Por ello, una salida de uno debe actualizar a cada hermano.
+        for hermano in ProductosRel.objects.select_related(
+            "producto_relacionado"
+        ).filter(
+            producto_master=rel.producto_master,
+            is_active=True,
+            is_delete=False,
+        ):
+            productos[hermano.producto_relacionado.id] = hermano.producto_relacionado
+
     # ==========================================
     # CONVERTIR A UNIDAD BASE
     # ==========================================
@@ -4967,11 +7046,59 @@ def obtener_productos_relacionados(producto, cantidad):
 
     return productos_inventario
 
-        
+
+ESTADOS_DEVOLUCION_ACTIVA = (
+    EstadoDevolucionCompra.PENDIENTE,
+    EstadoDevolucionCompra.APROBADA,
+)
+
+
+def actualizar_estado_recepcion_compra(compra):
+    """Calcula el estado con unidades recibidas y devoluciones activas."""
+    autorizados = dict(
+        HAutorizarCompra.objects.filter(compra_id=compra.id)
+        .values("producto_id").annotate(total=Sum("cantidad_autorizada"))
+        .values_list("producto_id", "total")
+    )
+    devueltos = dict(
+        DevolucionCompraDetalle.objects.filter(
+            compra_id=compra.id,
+            devolucion_compra__estado__in=ESTADOS_DEVOLUCION_ACTIVA,
+        ).values("producto_id").annotate(total=Sum("cantidad")).values_list("producto_id", "total")
+    )
+    detalles = compra.compra_detalles.all()
+    hay_devolucion = any(devueltos.values())
+    completada = all(
+        (
+            autorizados.get(detalle.producto_id, Decimal("0"))
+            + devueltos.get(detalle.producto_id, Decimal("0"))
+            + Decimal("0.005")
+        ) >= detalle.cantidad
+        for detalle in detalles
+    )
+
+    if hay_devolucion:
+        nuevo_estado = EstadoCompra.CON_DEVOLUCION
+    elif completada:
+        nuevo_estado = EstadoCompra.COMPLETADO
+    elif any(autorizados.values()):
+        nuevo_estado = EstadoCompra.RECEPCION_PARCIAL
+    else:
+        nuevo_estado = (
+            EstadoCompra.LLEGADA_BODEGA
+            if compra.fecha_llegada_bodega
+            else EstadoCompra.PENDIENTE
+        )
+
+    if compra.estado != nuevo_estado:
+        compra.estado = nuevo_estado
+        compra.save(update_fields=["estado"])
+
+
 @csrf_exempt
 @transaction.atomic
 @login_required
-@permission_required("manager.add_hautorizarcompra", raise_exception=True)
+@permission_required("manager.gestionar_recepcion_inventario", raise_exception=True)
 def post_autorizar_inventario(request):
 
     if request.method != "POST":
@@ -4991,6 +7118,7 @@ def post_autorizar_inventario(request):
                 {"success": False, "message": "Datos incompletos"}, status=400
             )
 
+        ubicaciones_permitidas = _ubicaciones_recepcion_usuario(request.user)
 
         # =====================================================
         # COMPRA
@@ -5003,6 +7131,15 @@ def post_autorizar_inventario(request):
                 .prefetch_related("compra_detalles"),
                 id=entrada_id,
             )
+            if (
+                ubicaciones_permitidas is not None
+                and entrada.ubicacion_id not in ubicaciones_permitidas
+            ):
+                raise PermissionDenied("No puede recibir compras de esta ubicación")
+            if not entrada.fecha_llegada_bodega:
+                raise PermissionDenied(
+                    "Primero debe marcar la llegada de la compra a bodega"
+                )
 
             ubicacion_destino = entrada.ubicacion
 
@@ -5040,10 +7177,13 @@ def post_autorizar_inventario(request):
                     or Decimal("0")
                 )
 
-                pendiente = (
-                    detalle.cantidad
-                    - autorizado_actual
-                )
+                devuelto_actual = DevolucionCompraDetalle.objects.filter(
+                    compra_id=entrada.id,
+                    producto_id=producto_id,
+                    devolucion_compra__estado__in=ESTADOS_DEVOLUCION_ACTIVA,
+                ).aggregate(total=Sum("cantidad"))["total"] or Decimal("0")
+
+                pendiente = detalle.cantidad - autorizado_actual - devuelto_actual
 
                 if cantidad > pendiente:
 
@@ -5099,11 +7239,8 @@ def post_autorizar_inventario(request):
                 # PRODUCTO + RELACIONES
                 # =====================================================
 
-                productos_inventario = (
-                    obtener_productos_relacionados(
-                        producto,
-                        cantidad,
-                    )
+                productos_inventario = obtener_productos_relacionados(
+                    producto, cantidad
                 )
 
                 # =====================================================
@@ -5151,52 +7288,7 @@ def post_autorizar_inventario(request):
                         compra_id=entrada.id,
                     )
 
-            # =====================================================
-            # ACTUALIZAR ESTADO DE LA COMPRA
-            # =====================================================
-
-            autorizados = (
-                HAutorizarCompra.objects
-                .filter(compra_id=entrada.id)
-                .values("producto_id")
-                .annotate(
-                    total=Sum("cantidad_autorizada")
-                )
-            )
-
-            map_autorizados = {
-                a["producto_id"]: a["total"]
-                for a in autorizados
-            }
-
-            completado = all(
-                map_autorizados.get(
-                    detalle.producto_id,
-                    Decimal("0")
-                ) >= detalle.cantidad
-                for detalle in detalles
-            )
-
-            alguno_autorizado = any(
-                map_autorizados.get(
-                    detalle.producto_id,
-                    Decimal("0")
-                ) > 0
-                for detalle in detalles
-            )
-
-            if completado:
-                entrada.estado = EstadoCompra.COMPLETADO
-
-            elif alguno_autorizado:
-                entrada.estado = EstadoCompra.RECEPCION_PARCIAL
-
-            else:
-                entrada.estado = EstadoCompra.PENDIENTE
-
-            entrada.save(
-                update_fields=["estado"]
-            )
+            actualizar_estado_recepcion_compra(entrada)
                 
         # =====================================================
         # TRASLADO
@@ -5210,6 +7302,11 @@ def post_autorizar_inventario(request):
                 ),
                 id=entrada_id,
             )
+            if (
+                ubicaciones_permitidas is not None
+                and entrada.ubicacion_destino_id not in ubicaciones_permitidas
+            ):
+                raise PermissionDenied("No puede recibir traslados de esta ubicación")
 
             origen = entrada.ubicacion_origen
             destino = entrada.ubicacion_destino
@@ -5655,6 +7752,12 @@ def post_devolucion_compra(request):
             ),
             id=compra_id,
         )
+        ubicaciones_permitidas = _ubicaciones_recepcion_usuario(request.user)
+        if (
+            ubicaciones_permitidas is not None
+            and compra.ubicacion_id not in ubicaciones_permitidas
+        ):
+            raise PermissionDenied("No puede devolver compras de esta ubicación")
 
         productos_validados = []
 
@@ -5664,15 +7767,14 @@ def post_devolucion_compra(request):
         for p in productos:
             producto_id = p.get("ProductoId")
             cantidad_raw = p.get("Cantidad", 0)
+            producto_hijo_id = p.get("ProductoHijoId")
+            cantidad_hijo_raw = p.get("CantidadHijo")
             motivo_raw = p.get("Motivo")
 
             try:
                 cantidad = Decimal(str(cantidad_raw or 0))
             except:
                 raise Exception(f"Cantidad inválida para producto {producto_id}")
-
-            if cantidad <= 0:
-                continue
 
             if motivo_raw in [None, ""]:
                 raise Exception(f"Debe indicar motivo para producto {producto_id}")
@@ -5686,7 +7788,40 @@ def post_devolucion_compra(request):
             if not detalle_compra:
                 raise Exception(f"Producto {producto_id} no pertenece a esta compra")
 
+            producto_hijo = None
+            cantidad_hijo = None
+            if producto_hijo_id:
+                relacion = ProductosRel.objects.select_related(
+                    "producto_master", "producto_relacionado"
+                ).filter(
+                    producto_master_id=producto_id,
+                    producto_relacionado_id=producto_hijo_id,
+                    is_active=True,
+                    is_delete=False,
+                ).first()
+                if not relacion:
+                    raise Exception("El producto hijo no pertenece a la presentación comprada")
+                try:
+                    cantidad_hijo = Decimal(str(cantidad_hijo_raw or 0))
+                except (InvalidOperation, TypeError, ValueError):
+                    raise Exception("La cantidad de unidades a devolver no es válida")
+                if cantidad_hijo <= 0:
+                    raise Exception("La cantidad de unidades a devolver debe ser mayor que cero")
+                producto_hijo = relacion.producto_relacionado
+                equivalencia_padre = Decimal(relacion.producto_master.equival_unid or 1)
+                equivalencia_hijo = Decimal(producto_hijo.equival_unid or 1)
+                cantidad = (cantidad_hijo * equivalencia_hijo / equivalencia_padre).quantize(
+                    Decimal("0.000001")
+                )
+
+            if cantidad <= 0:
+                continue
+
             cantidad_comprada = detalle_compra.cantidad
+            cantidad_recibida = HAutorizarCompra.objects.filter(
+                compra_id=compra.id,
+                producto_id=producto_id,
+            ).aggregate(total=Sum("cantidad_autorizada"))["total"] or Decimal("0")
 
             # =========================
             # DEVOLUCIONES ACTIVAS (IMPORTANTE)
@@ -5695,13 +7830,10 @@ def post_devolucion_compra(request):
             cantidad_devuelta = DevolucionCompraDetalle.objects.filter(
                 compra_id=compra.id,
                 producto_id=producto_id,
-                devolucion_compra__estado__in=[
-                    EstadoDevolucionCompra.PENDIENTE,
-                    EstadoDevolucionCompra.APROBADA,
-                ],
+                devolucion_compra__estado__in=ESTADOS_DEVOLUCION_ACTIVA,
             ).aggregate(total=Sum("cantidad"))["total"] or Decimal("0")
 
-            disponible = cantidad_comprada - cantidad_devuelta
+            disponible = cantidad_comprada - cantidad_recibida - cantidad_devuelta
 
             if cantidad > disponible:
                 raise Exception(
@@ -5709,8 +7841,23 @@ def post_devolucion_compra(request):
                     f"Disponible: {disponible}"
                 )
 
+            # Al devolver una unidad hija se convierte toda la presentación
+            # pendiente: las unidades no devueltas se reciben de inmediato.
+            cantidad_a_confirmar = (
+                disponible - cantidad if producto_hijo else Decimal("0")
+            )
+
             productos_validados.append(
-                {"producto_id": producto_id, "cantidad": cantidad, "motivo": motivo}
+                {
+                    "producto_id": producto_id,
+                    "producto_padre": detalle_compra.producto,
+                    "detalle_compra": detalle_compra,
+                    "cantidad": cantidad,
+                    "motivo": motivo,
+                    "producto_hijo_id": producto_hijo.id if producto_hijo else None,
+                    "cantidad_hijo": cantidad_hijo,
+                    "cantidad_a_confirmar": cantidad_a_confirmar,
+                }
             )
 
         if not productos_validados:
@@ -5736,7 +7883,59 @@ def post_devolucion_compra(request):
                 producto_id=item["producto_id"],
                 cantidad=item["cantidad"],
                 motivo=item["motivo"],
+                producto_hijo_id=item["producto_hijo_id"],
+                cantidad_hijo=item["cantidad_hijo"],
             )
+
+        # Las unidades restantes de una presentación convertida ingresan en la
+        # misma transacción. Ej.: caja de 12, devolución de 2 = recepción de 10.
+        for item in productos_validados:
+            cantidad_a_confirmar = item["cantidad_a_confirmar"]
+            if cantidad_a_confirmar <= 0:
+                continue
+
+            HAutorizarCompra.objects.create(
+                compra=compra,
+                producto_id=item["producto_id"],
+                cantidad_comprada=item["detalle_compra"].cantidad,
+                cantidad_autorizada=cantidad_a_confirmar,
+                fvencimiento=None,
+                u_creo_id=request.user.id,
+            )
+
+            for inventario_item in obtener_productos_relacionados(
+                item["producto_padre"], cantidad_a_confirmar
+            ):
+                producto_inventario = inventario_item["producto"]
+                cantidad_inventario = inventario_item["cantidad"]
+                stock_anterior = (
+                    Inventarios.objects.filter(
+                        producto=producto_inventario,
+                        ubicacion=compra.ubicacion,
+                    ).aggregate(total=Sum("cantidad"))["total"]
+                    or Decimal("0")
+                )
+                stock_resultante = stock_anterior + cantidad_inventario
+
+                Inventarios.objects.create(
+                    producto=producto_inventario,
+                    ubicacion=compra.ubicacion,
+                    compra=compra,
+                    cantidad=cantidad_inventario,
+                    fvencimiento=None,
+                    u_creo_id=request.user.id,
+                )
+                MovimientoInventario.objects.create(
+                    tipo_movimiento=TipoMovimientoInventario.ENTRADA_COMPRA,
+                    producto=producto_inventario,
+                    ubicacion_destino=compra.ubicacion,
+                    cantidad=cantidad_inventario,
+                    stock_anterior=stock_anterior,
+                    stock_resultante=stock_resultante,
+                    compra_id=compra.id,
+                )
+
+        actualizar_estado_recepcion_compra(compra)
 
         # =========================
         # RECARGAR DEVOLUCIÓN
@@ -5769,8 +7968,9 @@ def post_devolucion_compra(request):
 # ─────────────────────────────────────────────────────────────
 # GENERADOR PDF DEVOLUCION DJANGO
 # ─────────────────────────────────────────────────────────────
-@login_required
-def generar_pdf_devolucion(devolucion, logo_path="static/img/LH.png"):
+def generar_pdf_devolucion(devolucion, logo_path=None):
+    if logo_path is None:
+        logo_path = _logo_empresa_pdf()
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
@@ -5802,7 +8002,7 @@ def generar_pdf_devolucion(devolucion, logo_path="static/img/LH.png"):
     y = height - 80
     line_height = 18
 
-    fecha = devolucion.f_creacion.strftime("%d/%m/%Y %H:%M")
+    fecha = _fecha_honduras(devolucion.f_creacion).strftime("%d/%m/%Y %H:%M")
 
     proveedor_nombre = getattr(
         devolucion.compra.proveedor, "nombre_legal", None
@@ -5821,9 +8021,21 @@ def generar_pdf_devolucion(devolucion, logo_path="static/img/LH.png"):
     c.drawString(300, y, f"Fecha: {fecha}")
     c.drawString(300, y - line_height, f"Estado: {devolucion.estado}")
     c.drawString(300, y - 2 * line_height, f"Total Productos: {total_productos}")
+    if devolucion.resolucion:
+        resolucion_texto = dict(DevolucionCompra.RESOLUCION_OPCIONES).get(
+            devolucion.resolucion, devolucion.resolucion
+        )
+        c.drawString(300, y - 3 * line_height, f"Resolución: {resolucion_texto}")
+        if devolucion.resolucion == DevolucionCompra.RESOLUCION_SALDO_FAVOR:
+            c.drawString(
+                300,
+                y - 4 * line_height,
+                f"Saldo a favor: L. {devolucion.monto_resolucion:.2f}",
+            )
 
     # Línea
-    y_sep = y - 4 * line_height - 5
+    lineas_resolucion = 2 if devolucion.resolucion == DevolucionCompra.RESOLUCION_SALDO_FAVOR else (1 if devolucion.resolucion else 0)
+    y_sep = y - (4 + lineas_resolucion) * line_height - 5
     c.line(50, y_sep, width - 50, y_sep)
 
     # ============================================
@@ -5841,18 +8053,20 @@ def generar_pdf_devolucion(devolucion, logo_path="static/img/LH.png"):
     c.setFont("Helvetica", 10)
 
     motivos_dict = {
-        0: "Producto Dañado",
-        1: "Producto Vencido",
-        2: "Error de Pedido",
-        3: "Producto Incorrecto",
-        4: "Exceso Inventario",
-        5: "Otro",
+        0: "Producto Dañado",  # Compatibilidad con devoluciones anteriores.
+        1: "Producto Dañado",
+        2: "Producto Vencido",
+        3: "Error de Pedido",
+        4: "Producto Incorrecto",
+        5: "Exceso Inventario",
+        6: "Otro",
     }
 
-    for item in devolucion.devolucion_detalles.select_related("producto").all():
-        producto_nombre = str(item.producto.nombre)[:28]
-        sku = str(item.producto.codigo_sku)
-        cantidad = str(item.cantidad)
+    for item in devolucion.devolucion_detalles.select_related("producto", "producto_hijo").all():
+        producto_devolucion = item.producto_hijo or item.producto
+        producto_nombre = str(producto_devolucion.nombre)[:28]
+        sku = str(producto_devolucion.codigo_sku)
+        cantidad = f"{item.cantidad_hijo} und." if item.producto_hijo_id else str(item.cantidad)
         motivo = motivos_dict.get(item.motivo, "N/A")
 
         c.drawString(50, y_table, producto_nombre)
@@ -5920,7 +8134,7 @@ def inventario_view(request):
         .prefetch_related(
             "imagenes_producto" 
         )
-        .filter(is_delete=False)
+        .filter(is_active=True, is_delete=False)
     )
 
     if search:
@@ -5930,7 +8144,7 @@ def inventario_view(request):
             | Q(marca__nombre__icontains=search)
         )
 
-    paginator = Paginator(productos_qs.order_by("nombre"), 12)
+    paginator = Paginator(productos_qs.order_by("nombre", "id"), 10)
     page_obj = paginator.get_page(request.GET.get("page"))
 
     descuentos = Descuento.objects.filter(
@@ -5995,9 +8209,11 @@ def inventario_view(request):
         imagen_obj = p.imagenes_producto.all().first()
 
         imagen_url = (
-            imagen_obj.imagen_url
-            if imagen_obj and imagen_obj.imagen_url
-            else "/static/img/noimage.png"
+            request.build_absolute_uri(
+                reverse("producto_imagen", args=[imagen_obj.id])
+            )
+            if imagen_obj and imagen_obj.imagen_archivo
+            else "/static/img/default.webp"
         )
 
         productos_list.append(
@@ -6050,8 +8266,147 @@ def inventario_view(request):
             "page_range": paginator.page_range,
             "search": search,
             "mostrar_buscador": True,
+            "mostrar_exportar_inventario": True,
         },
     )
+
+
+@login_required
+@permission_required("manager.view_inventarios", raise_exception=True)
+def exportar_inventario_excel(request):
+    """Exporta las existencias agrupadas de todas las ubicaciones activas."""
+    search = request.GET.get("search", "").strip()
+
+    productos = (
+        Productos.objects.select_related("categoria", "unidad_medida", "marca")
+        .filter(is_active=True, is_delete=False)
+        .prefetch_related(
+            Prefetch(
+                "producto_master_rel",
+                queryset=ProductosRel.objects.select_related(
+                    "producto_master", "producto_relacionado"
+                ),
+                to_attr="relaciones_como_master",
+            ),
+            Prefetch(
+                "producto_relacionado_rel",
+                queryset=ProductosRel.objects.select_related(
+                    "producto_master", "producto_relacionado"
+                ),
+                to_attr="relaciones_como_relacionado",
+            ),
+            Prefetch(
+                "producto_compra_detalles",
+                queryset=(
+                    DetalleCompra.objects.filter(
+                        is_delete=False,
+                        compra__is_delete=False,
+                    )
+                    .select_related("compra__proveedor")
+                    .order_by("-compra__fecha_compra")
+                ),
+                to_attr="compras_producto",
+            ),
+        )
+    )
+
+    if search:
+        productos = productos.filter(
+            Q(nombre__icontains=search)
+            | Q(codigo_sku__icontains=search)
+            | Q(marca__nombre__icontains=search)
+        )
+
+    productos = list(productos.order_by("nombre"))
+    existencias = dict(
+        Inventarios.objects.filter(
+            producto_id__in=[producto.id for producto in productos],
+            is_delete=False,
+        )
+        .values("producto_id")
+        .annotate(total=Sum("cantidad"))
+        .values_list("producto_id", "total")
+    )
+    fechas_vencimiento = {}
+    for producto_id, fecha in (
+        Inventarios.objects.filter(
+            producto_id__in=[producto.id for producto in productos],
+            is_delete=False,
+            cantidad__gt=0,
+            fvencimiento__isnull=False,
+        )
+        .order_by("producto_id", "fvencimiento")
+        .values_list("producto_id", "fvencimiento")
+    ):
+        fecha_formateada = _fecha_honduras(fecha).strftime("%d/%m/%Y")
+        fechas_producto = fechas_vencimiento.setdefault(producto_id, [])
+        if fecha_formateada not in fechas_producto:
+            fechas_producto.append(fecha_formateada)
+
+    encabezados = [
+        "ID producto",
+        "Producto",
+        "Categoría",
+        "Marca",
+        "Presentación",
+        "SKU",
+        "Proveedor",
+        "Existencia mayor",
+        "Existencia menor",
+        "Equivalencia menor",
+        "Equivalencia mayor",
+        "Es padre",
+        "Fechas de vencimiento",
+    ]
+    libro, hoja = _libro_exportacion_grande(
+        "Inventario",
+        encabezados,
+        [14, 36, 22, 20, 20, 22, 28, 18, 18, 18, 18, 14, 30],
+    )
+
+    for producto in productos:
+        existencia = existencias.get(producto.id) or Decimal("0")
+        equivalencia_menor, equivalencia_mayor = _obtener_equivalencias_producto(
+            producto
+        )
+        unidades_menores = existencia * Decimal(producto.equival_unid or 1)
+        existencia = existencia.quantize(Decimal("0.01"), rounding=ROUND_DOWN)
+        unidades_menores = unidades_menores.quantize(
+            Decimal("0.01"), rounding=ROUND_DOWN
+        )
+
+        # El Excel recibe enteros como enteros; los decimales se truncaron arriba
+        # para no convertir, por ejemplo, 6.968 en 6.97.
+        if existencia == existencia.to_integral_value():
+            existencia = int(existencia)
+        if unidades_menores == unidades_menores.to_integral_value():
+            unidades_menores = int(unidades_menores)
+
+        _agregar_fila_exportacion(
+            hoja,
+            [
+                producto.id,
+                producto.nombre,
+                producto.categoria.nombre,
+                producto.marca.nombre,
+                producto.unidad_medida.nombre,
+                producto.codigo_sku,
+                _obtener_proveedor_producto(producto),
+                existencia,
+                unidades_menores,
+                equivalencia_menor,
+                equivalencia_mayor,
+                "Sí" if producto.is_master else "No",
+                ", ".join(fechas_vencimiento.get(producto.id, [])),
+            ],
+            formatos={
+                8: "#,##0" if isinstance(existencia, int) else "#,##0.00",
+                9: "#,##0" if isinstance(unidades_menores, int) else "#,##0.00",
+                10: "#,##0",
+                11: "#,##0",
+            },
+        )
+    return _respuesta_excel(libro, "inventario.xlsx")
 
 
 @login_required
@@ -6141,9 +8496,7 @@ def get_inventario_producto(request, id):
             # STOCK DISPONIBLE
             # ==========================================
 
-            stock_disponible = (
-                stock_fisico - reservado
-            )
+            stock_disponible = stock_fisico - reservado
 
             if stock_disponible < 0:
                 stock_disponible = Decimal(
@@ -6160,7 +8513,7 @@ def get_inventario_producto(request, id):
                         "ubicacion__nombre"
                     ],
                     "cantidad": float(
-                        stock_disponible
+                        _stock_para_mostrar(stock_disponible)
                     ),
                 }
             )
@@ -6173,7 +8526,9 @@ def get_inventario_producto(request, id):
             producto.imagenes_producto.first()
         )
 
-        if imagen:
+        tiene_imagen = bool(imagen and imagen.imagen_archivo)
+
+        if tiene_imagen:
             imagen_url = request.build_absolute_uri(
                 reverse(
                     "producto_imagen",
@@ -6181,7 +8536,7 @@ def get_inventario_producto(request, id):
                 )
             )
         else:
-            imagen_url = "/static/img/noimage.png"
+            imagen_url = "/static/img/default.webp"
 
         # ==========================================
         # RESPUESTA
@@ -6193,6 +8548,7 @@ def get_inventario_producto(request, id):
                     "id": producto.id,
                     "nombre": producto.nombre,
                     "imagenUrl": imagen_url,
+                    "tieneImagen": tiene_imagen,
                 },
                 "inventario": inventario_list,
             }
@@ -6242,13 +8598,16 @@ def devoluciones_view(request):
 
 @login_required
 @permission_required("manager.view_devolucioncompra", raise_exception=True)
-def detalle_devolucion_view(request, id):
+def detalle_devolucion_view(request, token):
 
     devolucion = get_object_or_404(
         DevolucionCompra.objects.select_related(
             "compra", "compra__proveedor", "compra__ubicacion"
-        ).prefetch_related("devolucion_detalles__producto"),
-        id=id,
+        ).prefetch_related(
+            "devolucion_detalles__producto",
+            "devolucion_detalles__producto_hijo",
+        ),
+        documento_token=token,
         compra__u_creo_id=request.user.id,
     )
 
@@ -6263,7 +8622,7 @@ def detalle_devolucion_view(request, id):
 @login_required
 @permission_required("manager.change_devolucioncompra", raise_exception=True)
 @transaction.atomic
-def aprobar_devolucion_view(request, id):
+def aprobar_devolucion_view(request, token):
 
     if request.method != "POST":
         return JsonResponse(
@@ -6271,7 +8630,28 @@ def aprobar_devolucion_view(request, id):
         )
 
     try:
-        devolucion = get_object_or_404(DevolucionCompra, id=id)
+        data = json.loads(request.body or "{}")
+        resolucion = data.get("resolucion")
+        resoluciones_validas = {
+            DevolucionCompra.RESOLUCION_CAMBIO,
+            DevolucionCompra.RESOLUCION_SALDO_FAVOR,
+        }
+        if resolucion not in resoluciones_validas:
+            return JsonResponse(
+                {"success": False, "message": "Debe seleccionar una resolución válida"},
+                status=400,
+            )
+
+        devolucion = get_object_or_404(
+            DevolucionCompra.objects.select_related(
+                "compra__proveedor", "compra__ubicacion"
+            ).prefetch_related(
+                "compra__compra_detalles",
+                "devolucion_detalles__producto",
+                "devolucion_detalles__producto_hijo",
+            ),
+            documento_token=token,
+        )
 
         if devolucion.estado != EstadoDevolucionCompra.PENDIENTE:
             return JsonResponse(
@@ -6279,9 +8659,88 @@ def aprobar_devolucion_view(request, id):
                 status=400,
             )
 
+        detalles_compra = {
+            detalle.producto_id: detalle
+            for detalle in devolucion.compra.compra_detalles.all()
+        }
+        productos_resolucion = []
+        monto_resolucion = Decimal("0")
+
+        for detalle_devolucion in devolucion.devolucion_detalles.all():
+            detalle_compra = detalles_compra.get(detalle_devolucion.producto_id)
+            if not detalle_compra:
+                raise Exception("No se encontró el costo original del producto devuelto")
+
+            producto_resolucion = detalle_devolucion.producto_hijo or detalle_devolucion.producto
+            cantidad_resolucion = (
+                detalle_devolucion.cantidad_hijo
+                if detalle_devolucion.producto_hijo_id
+                else detalle_devolucion.cantidad
+            )
+            if not cantidad_resolucion or cantidad_resolucion <= 0:
+                raise Exception("La devolución contiene una cantidad inválida")
+
+            equivalencia_origen = Decimal(detalle_devolucion.producto.equival_unid or 1)
+            equivalencia_producto = Decimal(producto_resolucion.equival_unid or 1)
+            costo_unitario_exacto = (
+                Decimal(detalle_compra.precio_compra)
+                * equivalencia_producto
+                / equivalencia_origen
+            )
+            monto_linea = (costo_unitario_exacto * Decimal(cantidad_resolucion)).quantize(
+                Decimal("0.01")
+            )
+            monto_resolucion += monto_linea
+            productos_resolucion.append(
+                {
+                    "producto": producto_resolucion,
+                    "cantidad": cantidad_resolucion,
+                    "precio_compra": costo_unitario_exacto.quantize(Decimal("0.01")),
+                }
+            )
+
+        monto_resolucion = monto_resolucion.quantize(Decimal("0.01"))
+        compra_cambio = None
+        proveedor = devolucion.compra.proveedor
+
+        if resolucion == DevolucionCompra.RESOLUCION_CAMBIO:
+            compra_cambio = Compras.objects.create(
+                proveedor=proveedor,
+                tipo_compra=devolucion.compra.tipo_compra,
+                estado=EstadoCompra.PENDIENTE,
+                total=Decimal("0"),
+                es_cambio=True,
+                observaciones=f"Compra de reposición por devolución #{devolucion.id}",
+                ubicacion=devolucion.compra.ubicacion,
+                u_creo_id=request.user.id,
+            )
+            for producto in productos_resolucion:
+                DetalleCompra.objects.create(
+                    compra=compra_cambio,
+                    producto=producto["producto"],
+                    cantidad=producto["cantidad"],
+                    precio_compra=Decimal("0"),
+                    u_creo_id=request.user.id,
+                )
+        else:
+            proveedor.saldo = (proveedor.saldo or Decimal("0")) + monto_resolucion
+            proveedor.save(update_fields=["saldo"])
+
         devolucion.estado = EstadoDevolucionCompra.APROBADA
+        devolucion.resolucion = resolucion
+        devolucion.monto_resolucion = monto_resolucion
+        devolucion.compra_cambio = compra_cambio
         devolucion.u_modifico_id = request.user.id
-        devolucion.save()
+        devolucion.save(
+            update_fields=[
+                "estado",
+                "resolucion",
+                "monto_resolucion",
+                "compra_cambio",
+                "u_modifico_id",
+            ]
+        )
+        actualizar_estado_recepcion_compra(devolucion.compra)
 
         pdf = generar_pdf_devolucion(devolucion)
 
@@ -6300,7 +8759,7 @@ def aprobar_devolucion_view(request, id):
 @login_required
 @permission_required("manager.change_devolucioncompra", raise_exception=True)
 @transaction.atomic
-def rechazar_devolucion_view(request, id):
+def rechazar_devolucion_view(request, token):
 
     if request.method != "POST":
         return JsonResponse(
@@ -6311,7 +8770,7 @@ def rechazar_devolucion_view(request, id):
         data = json.loads(request.body or "{}")
         motivo_rechazo = data.get("motivo", "Sin motivo")
 
-        devolucion = get_object_or_404(DevolucionCompra, id=id)
+        devolucion = get_object_or_404(DevolucionCompra, documento_token=token)
 
         if devolucion.estado != EstadoDevolucionCompra.PENDIENTE:
             return JsonResponse(
@@ -6325,6 +8784,7 @@ def rechazar_devolucion_view(request, id):
         ) + f" | RECHAZO: {motivo_rechazo}"
         devolucion.u_modifico_id = request.user.id
         devolucion.save()
+        actualizar_estado_recepcion_compra(devolucion.compra)
 
         pdf = generar_pdf_devolucion(devolucion)
 
@@ -6356,10 +8816,10 @@ def inventario_por_ubicacion(request, ubicacion_id):
         ProductosImagenes.objects
         .filter(
             producto_id=OuterRef("producto_id"),
-            imagen_url__isnull=False,
+            imagen_archivo__isnull=False,
         )
         .exclude(
-            imagen_url=""
+            imagen_archivo=""
         )
         .values("id")[:1]
     )
@@ -6771,39 +9231,224 @@ def post_traslado(request):
 # __________________________
 ## RUTA DE CAJA##
 # _________________________
+def _efectivo_disponible_retiro(caja, incluir_pendientes=False):
+    """Efectivo físico esperado para una caja, descontando retiros."""
+    fecha_caja = timezone.localdate(caja.fecha_apertura)
+    ventas_contado = Ventas.objects.filter(
+        u_creo_id=caja.usuario_id,
+        f_creacion__date=fecha_caja,
+        tipo_pago="contado",
+    ).aggregate(total=Sum("total"))["total"] or Decimal("0.00")
+
+    estados = [RetiroCaja.Estado.COMPLETADO]
+    if incluir_pendientes:
+        estados.append(RetiroCaja.Estado.PENDIENTE)
+    retiros = RetiroCaja.objects.filter(
+        caja=caja,
+        estado__in=estados,
+        is_active=True,
+        is_delete=False,
+    ).aggregate(total=Sum("monto"))["total"] or Decimal("0.00")
+    return caja.monto_apertura + ventas_contado - retiros
+
+
+@login_required
+@permission_required("manager.gestionar_retiros_caja", raise_exception=True)
+def retiros_caja_view(request):
+    cajas = list(
+        CajaAC.objects.filter(estado__in=["abierta", "cuadre"], is_active=True, is_delete=False)
+        .order_by("fecha_apertura")
+    )
+    usuarios = {
+        usuario.id: (f"{usuario.first_name} {usuario.last_name}".strip() or usuario.username)
+        for usuario in User.objects.filter(id__in=[caja.usuario_id for caja in cajas])
+    }
+    for caja in cajas:
+        caja.cajero_nombre = usuarios.get(caja.usuario_id, "No disponible")
+        caja.efectivo_disponible = _efectivo_disponible_retiro(caja, incluir_pendientes=True)
+
+    retiros = list(RetiroCaja.objects.select_related("caja").order_by("-f_creacion")[:100])
+    ids_usuarios = {retiro.cajero_id for retiro in retiros}
+    nombres_retiros = {
+        usuario.id: (f"{usuario.first_name} {usuario.last_name}".strip() or usuario.username)
+        for usuario in User.objects.filter(id__in=ids_usuarios)
+    }
+    for retiro in retiros:
+        retiro.cajero_nombre = nombres_retiros.get(retiro.cajero_id, "No disponible")
+    return render(request, "caja/retiros_caja.html", {"cajas": cajas, "retiros": retiros, "usuarios": usuarios, "mostrar_buscador_retiros": True})
+
+
+@login_required
+@permission_required("manager.gestionar_retiros_caja", raise_exception=True)
+def retiros_caja_list_view(request):
+    retiros_query = RetiroCaja.objects.select_related("caja").order_by("-f_creacion")
+    paginator = Paginator(retiros_query, 10)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    retiros = list(page_obj)
+    nombres = {
+        usuario.id: (f"{usuario.first_name} {usuario.last_name}".strip() or usuario.username)
+        for usuario in User.objects.filter(id__in={retiro.cajero_id for retiro in retiros})
+    }
+    for retiro in retiros:
+        retiro.cajero_nombre = nombres.get(retiro.cajero_id, "No disponible")
+    return render(
+        request,
+        "caja/retiros_caja_list.html",
+        {
+            "retiros": retiros,
+            "page_obj": page_obj,
+            "search": request.GET.get("search", ""),
+            "mostrar_buscador_retiros": True,
+            "buscador_retiros_listado": True,
+        },
+    )
+
+
+@login_required
+@require_POST
+@permission_required("manager.gestionar_retiros_caja", raise_exception=True)
+def crear_retiro_caja(request):
+    try:
+        caja = CajaAC.objects.get(
+            id=request.POST.get("caja_id"),
+            estado__in=["abierta", "cuadre"],
+            is_active=True,
+            is_delete=False,
+        )
+        monto = Decimal(request.POST.get("monto", "0"))
+    except (CajaAC.DoesNotExist, InvalidOperation, TypeError):
+        return JsonResponse({"ok": False, "mensaje": "Datos del retiro no válidos."}, status=400)
+
+    if monto <= 0:
+        return JsonResponse({"ok": False, "mensaje": "El monto debe ser mayor que cero."}, status=400)
+
+    disponible = _efectivo_disponible_retiro(caja, incluir_pendientes=True)
+    if monto > disponible:
+        return JsonResponse({"ok": False, "mensaje": "El retiro supera el efectivo disponible en caja."}, status=400)
+
+    retiro = RetiroCaja.objects.create(
+        caja=caja,
+        cajero_id=caja.usuario_id,
+        monto=monto,
+        observaciones=(request.POST.get("observaciones") or "").strip(),
+        u_creo_id=request.user.id,
+    )
+    Notificacion.objects.create(
+        usuario_id=caja.usuario_id,
+        tipo=Notificacion.Tipo.RETIRO_CAJA,
+        titulo="Retiro solicitado",
+        mensaje=f"L. {monto:.2f} · Caja #{caja.id}",
+        retiro_caja=retiro,
+        u_creo_id=request.user.id,
+    )
+    return JsonResponse({"ok": True, "mensaje": "Solicitud de retiro enviada al cajero."})
+
+
+@login_required
+@require_POST
+def completar_retiro_caja(request, id):
+    retiro = get_object_or_404(
+        RetiroCaja,
+        id=id,
+        cajero_id=request.user.id,
+        estado=RetiroCaja.Estado.PENDIENTE,
+        is_active=True,
+        is_delete=False,
+    )
+    retiro.estado = RetiroCaja.Estado.COMPLETADO
+    retiro.completado_por_id = request.user.id
+    retiro.fecha_completado = timezone.now()
+    retiro.u_modifico_id = request.user.id
+    retiro.save()
+    Notificacion.objects.filter(
+        retiro_caja=retiro,
+        usuario_id=request.user.id,
+        leida=False,
+        is_active=True,
+        is_delete=False,
+    ).update(leida=True, u_modifico_id=request.user.id, f_modificacion=timezone.now())
+    return JsonResponse({"ok": True, "mensaje": "Retiro confirmado."})
+
+
+@login_required
+@require_POST
+def marcar_notificacion_leida(request, id):
+    """Marca un aviso propio como visto sin recargar la vista actual."""
+    notificacion = get_object_or_404(
+        Notificacion,
+        id=id,
+        usuario=request.user,
+        leida=False,
+        is_active=True,
+        is_delete=False,
+    )
+    notificacion.leida = True
+    notificacion.u_modifico_id = request.user.id
+    notificacion.f_modificacion = timezone.now()
+    notificacion.save(update_fields=["leida", "u_modifico_id", "f_modificacion"])
+    pendientes = Notificacion.objects.filter(
+        usuario=request.user,
+        leida=False,
+        is_active=True,
+        is_delete=False,
+    ).count()
+    return JsonResponse({"ok": True, "pendientes": pendientes})
+
+
+@login_required
+@require_GET
+def estado_notificaciones(request):
+    """Devuelve el panel vigente; las alertas se sincronizan por eventos/tarea."""
+    return JsonResponse(estado_notificaciones_usuario(request.user))
+
+
 @login_required
 def caja_view(request):
 
-    if not request.user.groups.filter(name="cajeros").exists():
-        raise PermissionDenied("No tienes permiso")
+    if not _puede_generar_cotizaciones(request.user):
+        raise PermissionDenied("No tiene permiso para acceder a Caja")
+
+    puede_operar_caja = _puede_operar_caja(request.user)
 
     hoy = timezone.localdate()
 
-    caja_hoy = CajaAC.objects.filter(
+    caja_pendiente = CajaAC.objects.filter(
         usuario_id=request.user.id,
-        fecha_apertura__date=hoy
-    ).first()
+        estado__in=["abierta", "cuadre"],
+    ).order_by("fecha_apertura", "id").first()
+
+    cajas_hoy = CajaAC.objects.filter(
+        usuario_id=request.user.id,
+        fecha_apertura__date=hoy,
+    )
+    caja_cerrada = cajas_hoy.filter(estado="cerrada").exists()
 
     mostrar_modal_apertura = False
     caja_cerrada_hoy = False
     caja_abierta = False
 
-    if caja_hoy is None:
-        # El usuario todavía no ha abierto caja hoy.
-        mostrar_modal_apertura = True
-
-    elif caja_hoy.estado == "abierta":
-        # La caja está abierta.
-        caja_abierta = True
-
-    elif caja_hoy.estado == "cuadre":
-        # Ya inició el cierre pero todavía no ha
-        # terminado el cuadre.
+    if (
+        caja_pendiente
+        and timezone.localdate(caja_pendiente.fecha_apertura) < hoy
+        and puede_operar_caja
+    ):
+        # Defensa adicional si se accede a Caja sin pasar por el middleware.
         return redirect("cuadre_caja")
 
-    elif caja_hoy.estado == "cerrada":
+    if caja_pendiente and caja_pendiente.estado == "abierta":
+        caja_abierta = timezone.localdate(caja_pendiente.fecha_apertura) == hoy
+
+    elif caja_pendiente and caja_pendiente.estado == "cuadre" and puede_operar_caja:
+        # Ya inició el cierre pero todavía no ha terminado el cuadre.
+        return redirect("cuadre_caja")
+
+    elif caja_cerrada:
         # Ya terminó completamente la caja del día.
         caja_cerrada_hoy = True
+
+    elif puede_operar_caja:
+        # El usuario todavía no ha abierto caja hoy.
+        mostrar_modal_apertura = True
 
     context = {
         "mostrar_buscador": False,
@@ -6811,6 +9456,12 @@ def caja_view(request):
         "mostrar_modal_apertura": mostrar_modal_apertura,
         "caja_cerrada_hoy": caja_cerrada_hoy,
         "caja_abierta": caja_abierta,
+        "caja_pendiente_anterior": bool(
+            caja_pendiente
+            and timezone.localdate(caja_pendiente.fecha_apertura) != hoy
+        ),
+        "puede_operar_caja": puede_operar_caja,
+        "puede_generar_cotizaciones": _puede_generar_cotizaciones(request.user),
     }
 
     return render(request, "caja/caja.html", context)
@@ -6818,6 +9469,7 @@ def caja_view(request):
 
 @login_required
 @require_POST
+@permission_required("manager.operar_caja", raise_exception=True)
 def abrir_caja(request):
 
     try:
@@ -6840,21 +9492,18 @@ def abrir_caja(request):
 
     hoy = timezone.localdate()
 
-    caja_hoy = CajaAC.objects.filter(
+    caja_pendiente = CajaAC.objects.filter(
         usuario_id=request.user.id,
-        fecha_apertura__date=hoy
-    ).first()
+        estado__in=["abierta", "cuadre"],
+    ).order_by("fecha_apertura", "id").first()
 
-    if caja_hoy:
+    if caja_pendiente:
 
-        if caja_hoy.estado == "cerrada":
-            mensaje = "Esta caja ya fue cerrada por el día de hoy."
-
-        elif caja_hoy.estado == "cuadre":
+        if caja_pendiente.estado == "cuadre":
             mensaje = "Esta caja ya se encuentra en proceso de cuadre."
 
         else:
-            mensaje = "Ya existe una caja abierta para el día de hoy."
+            mensaje = "Debe cerrar la caja pendiente antes de abrir una nueva."
 
         return JsonResponse({
             "ok": False,
@@ -6878,15 +9527,15 @@ def abrir_caja(request):
 
 @login_required
 @require_POST
+@permission_required("manager.operar_caja", raise_exception=True)
 def iniciar_cuadre(request):
 
     hoy = timezone.localdate()
 
     caja = CajaAC.objects.filter(
         usuario_id=request.user.id,
-        fecha_apertura__date=hoy,
-        estado="abierta"
-    ).first()
+        estado="abierta",
+    ).order_by("fecha_apertura", "id").first()
 
     if not caja:
         return JsonResponse({
@@ -6905,18 +9554,30 @@ def iniciar_cuadre(request):
 
 
 @login_required
+@permission_required("manager.operar_caja", raise_exception=True)
 def cuadre_caja(request):
-
-    if not request.user.groups.filter(name="cajeros").exists():
-        raise PermissionDenied("No tienes permiso")
 
     hoy = timezone.localdate()
 
     caja = CajaAC.objects.filter(
         usuario_id=request.user.id,
-        fecha_apertura__date=hoy,
-        estado="cuadre"
-    ).first()
+        estado="cuadre",
+    ).order_by("fecha_apertura", "id").first()
+
+    if not caja:
+        # Al entrar otro día, la caja abierta pendiente pasa directamente al
+        # proceso de cierre; no puede seguir operándose ni abrirse otra.
+        caja = CajaAC.objects.filter(
+            usuario_id=request.user.id,
+            estado="abierta",
+            fecha_apertura__date__lt=hoy,
+            is_active=True,
+            is_delete=False,
+        ).order_by("fecha_apertura", "id").first()
+        if caja:
+            caja.estado = "cuadre"
+            caja.u_modifico_id = request.user.id
+            caja.save(update_fields=["estado", "u_modifico_id"])
 
     if not caja:
         return redirect("caja")
@@ -6925,25 +9586,70 @@ def cuadre_caja(request):
     # VENTAS DEL USUARIO HOY
     # =========================
 
-    ventas_hoy = Ventas.objects.filter(
+    fecha_caja = timezone.localdate(caja.fecha_apertura)
+    ventas_por_tipo = Ventas.objects.filter(
         u_creo_id=request.user.id,
-        f_creacion__date=hoy
-    ).aggregate(
-        total=Sum("total")
-    )["total"] or Decimal("0.00")
+        f_creacion__date=fecha_caja
+    ).values("tipo_pago").annotate(total=Sum("total"))
+
+    totales_pago = {
+        venta["tipo_pago"]: venta["total"] or Decimal("0.00")
+        for venta in ventas_por_tipo
+    }
+    ventas_hoy = sum(totales_pago.values(), Decimal("0.00"))
+    ventas_contado = totales_pago.get("contado", Decimal("0.00"))
+    ventas_deposito = totales_pago.get("depostivo", Decimal("0.00"))
+    ventas_tarjeta = totales_pago.get("tarjeta", Decimal("0.00"))
+    ventas_cheque = totales_pago.get("cheque", Decimal("0.00"))
+    total_retiros = RetiroCaja.objects.filter(
+        caja=caja,
+        estado=RetiroCaja.Estado.COMPLETADO,
+        is_active=True,
+        is_delete=False,
+    ).aggregate(total=Sum("monto"))["total"] or Decimal("0.00")
 
     # =========================
     # TOTAL ESPERADO
     # =========================
 
-    total_esperado = (
-        caja.monto_apertura + ventas_hoy
+    total_esperado = _efectivo_disponible_retiro(caja)
+    configuracion = ConfiguracionEmpresa.objects.filter(
+        is_active=True, is_delete=False
+    ).only("moneda").first()
+    es_dolar = bool(
+        configuracion
+        and configuracion.moneda == ConfiguracionEmpresa.MONEDA_DOLAR
+    )
+    denominaciones_efectivo = (
+        [
+            Decimal("0.01"), Decimal("0.05"), Decimal("0.10"),
+            Decimal("0.25"), Decimal("0.50"), Decimal("1.00"),
+            Decimal("5.00"), Decimal("10.00"), Decimal("20.00"),
+            Decimal("50.00"), Decimal("100.00"),
+        ]
+        if es_dolar
+        else [
+            Decimal("1.00"), Decimal("2.00"), Decimal("5.00"),
+            Decimal("10.00"), Decimal("20.00"), Decimal("50.00"),
+            Decimal("100.00"), Decimal("200.00"), Decimal("500.00"),
+        ]
     )
 
     context = {
         "caja": caja,
         "ventas_hoy": ventas_hoy,
+        "ventas_contado": ventas_contado,
+        "ventas_deposito": ventas_deposito,
+        "ventas_tarjeta": ventas_tarjeta,
+        "ventas_cheque": ventas_cheque,
+        "total_retiros": total_retiros,
         "total_esperado": total_esperado,
+        "denominaciones_efectivo": denominaciones_efectivo,
+        "descripcion_denominaciones": (
+            "Ingresa la cantidad de monedas y billetes por denominación"
+            if es_dolar
+            else "Ingresa la cantidad de billetes por denominación"
+        ),
     }
 
     return render(
@@ -6954,6 +9660,7 @@ def cuadre_caja(request):
 
 @login_required
 @transaction.atomic
+@permission_required("manager.operar_caja", raise_exception=True)
 def cerrar_cuadre_caja(request):
 
     if request.method != "POST":
@@ -6965,16 +9672,12 @@ def cerrar_cuadre_caja(request):
             status=405
         )
 
-    if not request.user.groups.filter(name="cajeros").exists():
-        raise PermissionDenied("No tienes permiso")
-
     hoy = timezone.localdate()
 
     caja = CajaAC.objects.filter(
         usuario_id=request.user.id,
-        fecha_apertura__date=hoy,
-        estado="cuadre"
-    ).first()
+        estado="cuadre",
+    ).order_by("fecha_apertura", "id").first()
 
     if not caja:
         return JsonResponse(
@@ -6992,17 +9695,23 @@ def cerrar_cuadre_caja(request):
         # DENOMINACIONES
         # =========================
 
-        denominaciones = [
-            Decimal("1.00"),
-            Decimal("2.00"),
-            Decimal("5.00"),
-            Decimal("10.00"),
-            Decimal("20.00"),
-            Decimal("50.00"),
-            Decimal("100.00"),
-            Decimal("200.00"),
-            Decimal("500.00"),
-        ]
+        configuracion = ConfiguracionEmpresa.objects.filter(
+            is_active=True, is_delete=False
+        ).only("moneda").first()
+        denominaciones = (
+            [
+                Decimal("0.01"), Decimal("0.05"), Decimal("0.10"),
+                Decimal("0.25"), Decimal("0.50"), Decimal("1.00"),
+                Decimal("5.00"), Decimal("10.00"), Decimal("20.00"),
+                Decimal("50.00"), Decimal("100.00"),
+            ]
+            if configuracion and configuracion.moneda == ConfiguracionEmpresa.MONEDA_DOLAR
+            else [
+                Decimal("1.00"), Decimal("2.00"), Decimal("5.00"),
+                Decimal("10.00"), Decimal("20.00"), Decimal("50.00"),
+                Decimal("100.00"), Decimal("200.00"), Decimal("500.00"),
+            ]
+        )
 
         total_contado = Decimal("0.00")
 
@@ -7037,20 +9746,60 @@ def cerrar_cuadre_caja(request):
         # VENTAS DEL DÍA
         # =========================
 
-        ventas_hoy = Ventas.objects.filter(
+        fecha_caja = timezone.localdate(caja.fecha_apertura)
+        ventas_por_tipo = Ventas.objects.filter(
             u_creo_id=request.user.id,
-            f_creacion__date=hoy
-        ).aggregate(
-            total=Sum("total")
-        )["total"] or Decimal("0.00")
+            f_creacion__date=fecha_caja
+        ).values("tipo_pago").annotate(total=Sum("total"))
+
+        totales_pago = {
+            venta["tipo_pago"]: venta["total"] or Decimal("0.00")
+            for venta in ventas_por_tipo
+        }
+        ventas_hoy = sum(totales_pago.values(), Decimal("0.00"))
+        ventas_contado = totales_pago.get("contado", Decimal("0.00"))
+        ventas_deposito = totales_pago.get("depostivo", Decimal("0.00"))
+        ventas_tarjeta = totales_pago.get("tarjeta", Decimal("0.00"))
+        ventas_cheque = totales_pago.get("cheque", Decimal("0.00"))
+        total_retiros = RetiroCaja.objects.filter(
+            caja=caja,
+            estado=RetiroCaja.Estado.COMPLETADO,
+            is_active=True,
+            is_delete=False,
+        ).aggregate(total=Sum("monto"))["total"] or Decimal("0.00")
+
+        montos_otros_pagos = {}
+        for tipo, esperado in {
+            "deposito": ventas_deposito,
+            "tarjeta": ventas_tarjeta,
+            "cheque": ventas_cheque,
+        }.items():
+            valor_recibido = (data.get(f"monto_{tipo}") or "").strip()
+            if esperado > 0 and not valor_recibido:
+                return JsonResponse(
+                    {
+                        "ok": False,
+                        "mensaje": f"Ingrese el monto recibido por {tipo}.",
+                    },
+                    status=400,
+                )
+
+            recibido = Decimal(valor_recibido or "0.00")
+            if recibido < 0:
+                return JsonResponse(
+                    {
+                        "ok": False,
+                        "mensaje": "Los montos recibidos no pueden ser negativos.",
+                    },
+                    status=400,
+                )
+            montos_otros_pagos[tipo] = recibido
 
         # =========================
         # TOTAL ESPERADO
         # =========================
 
-        total_esperado = (
-            caja.monto_apertura + ventas_hoy
-        )
+        total_esperado = _efectivo_disponible_retiro(caja)
 
         # =========================
         # DIFERENCIA
@@ -7077,13 +9826,51 @@ def cerrar_cuadre_caja(request):
                 subtotal=detalle["subtotal"],
             )
 
+        # Un retiro pendiente nunca salió físicamente de la caja. Al cerrar,
+        # queda cancelado y su aviso deja de mostrarse al cajero.
+        retiros_pendientes = RetiroCaja.objects.select_for_update().filter(
+            caja=caja,
+            estado=RetiroCaja.Estado.PENDIENTE,
+            is_active=True,
+            is_delete=False,
+        )
+        ids_retiros_pendientes = list(retiros_pendientes.values_list("id", flat=True))
+        if ids_retiros_pendientes:
+            ahora = timezone.now()
+            retiros_pendientes.update(
+                estado=RetiroCaja.Estado.CANCELADO,
+                u_modifico_id=request.user.id,
+                f_modificacion=ahora,
+            )
+            Notificacion.objects.filter(
+                retiro_caja_id__in=ids_retiros_pendientes,
+                is_active=True,
+                is_delete=False,
+            ).update(
+                leida=True,
+                is_active=False,
+                is_delete=True,
+                u_modifico_id=request.user.id,
+                f_modificacion=ahora,
+            )
+            transaction.on_commit(
+                lambda usuario_id=caja.usuario_id: publicar_actualizacion_usuarios([usuario_id])
+            )
+
         # =========================
         # CERRAR CAJA
         # =========================
 
         caja.ventas = ventas_hoy
+        caja.retiros_total = total_retiros
         caja.monto_cierre = total_contado
         caja.diferencia = diferencia
+        caja.deposito_esperado = ventas_deposito
+        caja.deposito_recibido = montos_otros_pagos["deposito"]
+        caja.tarjeta_esperado = ventas_tarjeta
+        caja.tarjeta_recibido = montos_otros_pagos["tarjeta"]
+        caja.cheque_esperado = ventas_cheque
+        caja.cheque_recibido = montos_otros_pagos["cheque"]
         caja.fecha_cierre = timezone.now()
         caja.estado = "cerrada"
 
@@ -7095,6 +9882,18 @@ def cerrar_cuadre_caja(request):
             "total_contado": str(total_contado),
             "total_esperado": str(total_esperado),
             "diferencia": str(diferencia),
+            "otros_pagos": {
+                tipo: {
+                    "esperado": str(esperado),
+                    "recibido": str(montos_otros_pagos[tipo]),
+                    "diferencia": str(montos_otros_pagos[tipo] - esperado),
+                }
+                for tipo, esperado in {
+                    "deposito": ventas_deposito,
+                    "tarjeta": ventas_tarjeta,
+                    "cheque": ventas_cheque,
+                }.items()
+            },
         })
 
     except (ValueError, InvalidOperation) as e:
@@ -7239,15 +10038,26 @@ def cajas_manager_view(request):
         # =========================
 
         if caja.estado == "cerrada":
-
-            caja.total_cierre = (
-                caja.monto_apertura +
-                caja.ventas
+            caja.cerro_con = (
+                (caja.monto_cierre or Decimal("0.00"))
+                + (caja.deposito_recibido or Decimal("0.00"))
+                + (caja.tarjeta_recibido or Decimal("0.00"))
+                + (caja.cheque_recibido or Decimal("0.00"))
+            )
+            # Recursos efectivamente recibidos más efectivo retirado.
+            caja.total_cierre = caja.cerro_con + (caja.retiros_total or Decimal("0.00"))
+            caja.diferencia_general = (
+                (caja.diferencia or Decimal("0.00"))
+                + ((caja.deposito_recibido or Decimal("0.00")) - (caja.deposito_esperado or Decimal("0.00")))
+                + ((caja.tarjeta_recibido or Decimal("0.00")) - (caja.tarjeta_esperado or Decimal("0.00")))
+                + ((caja.cheque_recibido or Decimal("0.00")) - (caja.cheque_esperado or Decimal("0.00")))
             )
 
         else:
 
             caja.total_cierre = None
+            caja.cerro_con = None
+            caja.diferencia_general = None
 
 
     context = {
@@ -7281,11 +10091,926 @@ def obtener_ubicaciones_inventario(ubicacion_id):
     return ubicaciones
 
 
+def _generar_nota_credito():
+    while True:
+        nota_credito = f"NC-{uuid.uuid4().hex[:12].upper()}"
+        if not DevolucionVenta.objects.filter(nota_credito=nota_credito).exists():
+            return nota_credito
+
+
+def _reintegrar_inventario_devolucion(venta, detalle_venta, cantidad):
+    """Reintegra al inventario las mismas equivalencias afectadas en la venta."""
+    ubicaciones = obtener_ubicaciones_inventario(venta.sucursal_id)
+
+    for item in obtener_productos_relacionados(detalle_venta.producto, cantidad):
+        producto_inventario = item["producto"]
+        cantidad_reintegrar = Decimal(item["cantidad"])
+
+        if cantidad_reintegrar <= 0:
+            continue
+
+        lote = (
+            Inventarios.objects.select_for_update()
+            .filter(
+                producto=producto_inventario,
+                ubicacion_id=venta.sucursal_id,
+            )
+            .order_by("f_creacion", "id")
+            .first()
+        )
+
+        if not lote:
+            lote_referencia = (
+                Inventarios.objects.select_for_update()
+                .filter(
+                    producto=producto_inventario,
+                    ubicacion_id__in=ubicaciones,
+                )
+                .order_by("f_creacion", "id")
+                .first()
+            )
+            lote = Inventarios.objects.create(
+                producto=producto_inventario,
+                compra_id=lote_referencia.compra_id if lote_referencia else None,
+                ubicacion_id=venta.sucursal_id,
+                cantidad=Decimal("0"),
+                stock_minimo=lote_referencia.stock_minimo if lote_referencia else Decimal("5"),
+                fvencimiento=lote_referencia.fvencimiento if lote_referencia else None,
+                u_creo_id=venta.u_creo_id,
+            )
+
+        stock_anterior = lote.cantidad
+        lote.cantidad += cantidad_reintegrar
+        lote.save(update_fields=["cantidad"])
+
+        stock_resultante = (
+            Inventarios.objects.filter(
+                producto=producto_inventario,
+                ubicacion_id=venta.sucursal_id,
+            ).aggregate(total=Sum("cantidad"))["total"]
+            or Decimal("0")
+        )
+
+        MovimientoInventario.objects.create(
+            tipo_movimiento=TipoMovimientoInventario.DEVOLUCION_CLIENTE,
+            producto=producto_inventario,
+            ubicacion_destino_id=venta.sucursal_id,
+            cantidad=cantidad_reintegrar,
+            stock_anterior=stock_anterior,
+            stock_resultante=stock_resultante,
+            venta_id=venta.id,
+        )
+
+
+@login_required
+@permission_required("manager.add_devolucionventa", raise_exception=True)
+def devoluciones_venta_view(request):
+    return render(
+        request,
+        "caja/devoluciones_venta.html",
+        {"motivos": MotivoDevolucion.choices, "mostrar_buscar_factura": True},
+    )
+
+
+@login_required
+@permission_required("manager.add_devolucionventa", raise_exception=True)
+def buscar_factura_devolucion_venta(request, numero_factura):
+    try:
+        venta = (
+            Ventas.objects.select_related("id_factura_cai", "id_cliente", "sucursal")
+            .prefetch_related("venta_detalles__producto")
+            .filter(id_factura_cai__numero_factura=numero_factura)
+            .first()
+        )
+
+        if not venta:
+            return JsonResponse(
+                {"success": False, "message": "No se encontró la factura"},
+                status=404,
+            )
+
+        detalles = []
+        for detalle in venta.venta_detalles.filter(producto__isnull=False):
+            cantidad_devuelta = (
+                DevolucionVentaDetalle.objects.filter(
+                    detalle_venta=detalle,
+                    devolucion_venta__is_delete=False,
+                )
+                .exclude(devolucion_venta__estado=DevolucionVenta.Estado.ANULADA)
+                .aggregate(total=Sum("cantidad"))["total"]
+                or Decimal("0")
+            )
+            cantidad_disponible = max(detalle.cantidad - cantidad_devuelta, Decimal("0"))
+
+            detalles.append(
+                {
+                    "detalleVentaId": detalle.id,
+                    "producto": detalle.producto.nombre,
+                    "cantidadVendida": str(detalle.cantidad),
+                    "cantidadDevuelta": str(cantidad_devuelta),
+                    "cantidadDisponible": str(cantidad_disponible),
+                    "precioUnitario": str(detalle.precio_unitario),
+                }
+            )
+
+        cliente = (
+            {
+                "id": venta.id_cliente.id,
+                "nombre": (
+                    (venta.id_cliente.empresa or venta.id_cliente.nombre_completo)
+                    if venta.con_rtn
+                    else venta.id_cliente.nombre_completo
+                ),
+            }
+            if venta.id_cliente
+            else {"id": None, "nombre": "Consumidor Final"}
+        )
+
+        return JsonResponse(
+            {
+                "success": True,
+                "factura": {
+                    "id": venta.id_factura_cai.id,
+                    "numero": venta.id_factura_cai.numero_factura,
+                    "fecha": venta.f_creacion.strftime("%d/%m/%Y"),
+                    "sucursal": venta.sucursal.nombre,
+                    "tipoVenta": venta.tipo_venta,
+                    "tipoVentaTexto": venta.get_tipo_venta_display(),
+                    "cliente": cliente,
+                },
+                "detalles": detalles,
+            }
+        )
+    except Exception:
+        traceback.print_exc()
+        return JsonResponse(
+            {"success": False, "message": "No fue posible consultar la factura."},
+            status=500,
+        )
+
+
+@require_POST
+@login_required
+@permission_required("manager.add_devolucionventa", raise_exception=True)
+@transaction.atomic
+def crear_devolucion_venta(request):
+    try:
+        data = json.loads(request.body)
+        factura_id = data.get("facturaId")
+        motivo = data.get("motivo")
+        justificacion = (data.get("justificacion") or "").strip()
+        resolucion_solicitada = data.get("resolucion")
+        detalles_solicitados = data.get("detalles", [])
+
+        if not factura_id or not detalles_solicitados:
+            return JsonResponse(
+                {"success": False, "message": "Seleccione al menos un producto"},
+                status=400,
+            )
+
+        if not justificacion:
+            return JsonResponse(
+                {"success": False, "message": "La justificación es obligatoria"},
+                status=400,
+            )
+
+        try:
+            motivo = int(motivo)
+        except (TypeError, ValueError):
+            motivo = None
+
+        if motivo not in dict(MotivoDevolucion.choices):
+            return JsonResponse(
+                {"success": False, "message": "Seleccione un motivo válido"},
+                status=400,
+            )
+
+        venta = (
+            Ventas.objects.select_for_update(of=("self",))
+            .select_related("id_factura_cai", "sucursal")
+            .filter(id_factura_cai_id=factura_id)
+            .first()
+        )
+        if not venta:
+            return JsonResponse(
+                {"success": False, "message": "La factura no existe"}, status=404
+            )
+
+        if venta.tipo_venta == Ventas.TIPO_VENTA_CREDITO:
+            if resolucion_solicitada not in {
+                DevolucionVenta.RESOLUCION_NOTA_CREDITO,
+                DevolucionVenta.RESOLUCION_DEDUCIR_SALDO,
+            }:
+                return JsonResponse(
+                    {"success": False, "message": "Seleccione cómo resolver la devolución a crédito"},
+                    status=400,
+                )
+        else:
+            resolucion_solicitada = DevolucionVenta.RESOLUCION_NOTA_CREDITO
+
+        detalle_ids = [item.get("detalleVentaId") for item in detalles_solicitados]
+        if len(detalle_ids) != len(set(detalle_ids)):
+            return JsonResponse(
+                {"success": False, "message": "No repita productos en la devolución"},
+                status=400,
+            )
+
+        detalles_venta = {
+            detalle.id: detalle
+            for detalle in DetalleVenta.objects.select_for_update(of=("self",))
+            .select_related("producto")
+            .filter(id__in=detalle_ids, venta=venta)
+        }
+
+        if len(detalles_venta) != len(set(detalle_ids)):
+            return JsonResponse(
+                {"success": False, "message": "Hay productos que no pertenecen a la factura"},
+                status=400,
+            )
+
+        devolucion = DevolucionVenta.objects.create(
+            venta=venta,
+            nota_credito=_generar_nota_credito(),
+            motivo=motivo,
+            justificacion=justificacion,
+            monto_total=Decimal("0"),
+            resolucion=resolucion_solicitada,
+            u_creo_id=request.user.id,
+        )
+
+        monto_total = Decimal("0")
+        for item in detalles_solicitados:
+            detalle_venta = detalles_venta[item.get("detalleVentaId")]
+            try:
+                cantidad = Decimal(str(item.get("cantidad")))
+            except (InvalidOperation, TypeError, ValueError):
+                raise ValueError("La cantidad devuelta no es válida")
+
+            if cantidad <= 0:
+                raise ValueError("La cantidad devuelta debe ser mayor a cero")
+
+            cantidad_previa = (
+                DevolucionVentaDetalle.objects.filter(
+                    detalle_venta=detalle_venta,
+                    devolucion_venta__is_delete=False,
+                )
+                .exclude(devolucion_venta__estado=DevolucionVenta.Estado.ANULADA)
+                .aggregate(total=Sum("cantidad"))["total"]
+                or Decimal("0")
+            )
+            cantidad_disponible = detalle_venta.cantidad - cantidad_previa
+
+            if cantidad > cantidad_disponible:
+                raise ValueError(
+                    f"La cantidad de {detalle_venta.producto.nombre} excede lo disponible para devolver"
+                )
+
+            proporcion = cantidad / detalle_venta.cantidad
+            total_linea_original = (
+                (detalle_venta.cantidad * detalle_venta.precio_unitario)
+                - detalle_venta.descuento
+                + (detalle_venta.impuesto_15 * detalle_venta.cantidad)
+                + (detalle_venta.impuesto_18 * detalle_venta.cantidad)
+            )
+            total_detalle = total_linea_original * proporcion
+            DevolucionVentaDetalle.objects.create(
+                devolucion_venta=devolucion,
+                detalle_venta=detalle_venta,
+                producto=detalle_venta.producto,
+                cantidad=cantidad,
+                precio_unitario=detalle_venta.precio_unitario,
+                total=total_detalle,
+            )
+            detalle_venta.monto_devuelto = (
+                Decimal(detalle_venta.monto_devuelto or 0) + total_detalle
+            )
+            detalle_venta.save(update_fields=["monto_devuelto"])
+            _reintegrar_inventario_devolucion(venta, detalle_venta, cantidad)
+            monto_total += total_detalle
+
+        devolucion.monto_total = monto_total
+        if resolucion_solicitada == DevolucionVenta.RESOLUCION_DEDUCIR_SALDO:
+            cuenta = CuentasPorCobrar.objects.select_for_update(of=("self",)).filter(
+                venta=venta,
+                is_delete=False,
+            ).first()
+            if not cuenta:
+                raise ValueError("La factura no tiene una cuenta por cobrar activa")
+            if monto_total > cuenta.monto_pendiente:
+                raise ValueError(
+                    "La devolución excede el saldo pendiente; seleccione nota de crédito"
+                )
+
+            nuevo_pendiente = cuenta.monto_pendiente - monto_total
+            abono = RegistroAbonosCobrar.objects.create(
+                cuenta_por_cobrar=cuenta,
+                monto_abonado=monto_total,
+                monto_pendiente=nuevo_pendiente,
+                liquidado=(nuevo_pendiente <= 0),
+                u_creo_id=request.user.id,
+            )
+            cuenta.monto_pendiente = nuevo_pendiente
+            cuenta.estado = (
+                EstadoCuenta.PAGADO
+                if nuevo_pendiente <= 0
+                else EstadoCuenta.PARCIAL
+            )
+            cuenta.u_modifico_id = request.user.id
+            cuenta.f_modificacion = timezone.now()
+            cuenta.save()
+            devolucion.abono_cxc = abono
+            devolucion.estado = DevolucionVenta.Estado.USADA
+            devolucion.fecha_uso = timezone.now()
+
+        devolucion.save(
+            update_fields=[
+                "monto_total",
+                "estado",
+                "abono_cxc",
+                "fecha_uso",
+            ]
+        )
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "Devolución registrada correctamente",
+                "notaCredito": devolucion.nota_credito,
+                "monto": str(devolucion.monto_total),
+                "resolucion": devolucion.resolucion,
+            }
+        )
+
+    except (ValueError, KeyError) as error:
+        transaction.set_rollback(True)
+        return JsonResponse({"success": False, "message": str(error)}, status=400)
+    except Exception as error:
+        transaction.set_rollback(True)
+        return JsonResponse({"success": False, "message": str(error)}, status=500)
+
+
+def _nombre_cliente_devolucion(venta):
+    if not venta.id_cliente:
+        return "Consumidor Final"
+    if venta.con_rtn:
+        return venta.id_cliente.empresa or venta.id_cliente.nombre_completo
+    return venta.id_cliente.nombre_completo
+
+
+def _consulta_devoluciones_venta(fecha_inicio, fecha_fin, sucursal):
+    inicio_honduras, fin_honduras = _rango_fechas_honduras(fecha_inicio, fecha_fin)
+    devoluciones = DevolucionVenta.objects.select_related(
+        "venta__id_factura_cai", "venta__id_cliente", "venta__sucursal"
+    ).prefetch_related("detalles__producto").filter(
+        is_delete=False,
+        f_creacion__gte=inicio_honduras,
+        f_creacion__lt=fin_honduras,
+    ).order_by("-f_creacion")
+
+    if sucursal:
+        devoluciones = devoluciones.filter(venta__sucursal_id=sucursal)
+
+    return devoluciones
+
+
+@login_required
+@permission_required("manager.view_devolucionventa", raise_exception=True)
+def devoluciones_venta_list(request):
+    fecha_hoy = timezone.localdate(timezone=ZONA_HONDURAS).strftime("%Y-%m-%d")
+    fecha_inicio = request.GET.get("fecha_inicio") or fecha_hoy
+    fecha_fin = request.GET.get("fecha_fin") or fecha_hoy
+    sucursal = request.GET.get("sucursal")
+
+    devoluciones = _consulta_devoluciones_venta(fecha_inicio, fecha_fin, sucursal)
+    page_obj = Paginator(devoluciones, 25).get_page(request.GET.get("page"))
+
+    return render(
+        request,
+        "caja/devoluciones_venta_list.html",
+        {
+            "page_obj": page_obj,
+            "fecha_inicio": fecha_inicio,
+            "fecha_fin": fecha_fin,
+            "sucursales": Ubicaciones.objects.filter(es_tienda=True, is_delete=False),
+            "sucursal_seleccionada": sucursal,
+        },
+    )
+
+
+@login_required
+@permission_required("manager.view_devolucionventa", raise_exception=True)
+def exportar_devoluciones_venta_excel(request):
+    fecha_hoy = timezone.localdate(timezone=ZONA_HONDURAS).strftime("%Y-%m-%d")
+    fecha_inicio = request.GET.get("fecha_inicio") or fecha_hoy
+    fecha_fin = request.GET.get("fecha_fin") or fecha_hoy
+    sucursal = request.GET.get("sucursal")
+
+    devoluciones = _consulta_devoluciones_venta(fecha_inicio, fecha_fin, sucursal)
+
+    libro = Workbook()
+    hoja = libro.active
+    hoja.title = "Devoluciones venta"
+    encabezados = [
+        "Nota de devolución", "Fecha", "Factura", "Cliente", "Sucursal",
+        "Motivo", "Justificación", "Productos", "Monto", "Estado",
+    ]
+    hoja.append(encabezados)
+
+    color_encabezado = PatternFill("solid", fgColor="32877F")
+    for celda in hoja[1]:
+        celda.font = Font(bold=True, color="FFFFFF")
+        celda.fill = color_encabezado
+        celda.alignment = Alignment(horizontal="center")
+
+    for devolucion in devoluciones:
+        productos = "; ".join(
+            f"{detalle.producto.nombre} x {detalle.cantidad:.2f}"
+            for detalle in devolucion.detalles.all()
+        )
+        hoja.append([
+            devolucion.nota_credito,
+            _fecha_honduras(devolucion.f_creacion).date(),
+            devolucion.venta.id_factura_cai.numero_factura,
+            _nombre_cliente_devolucion(devolucion.venta),
+            devolucion.venta.sucursal.nombre,
+            devolucion.get_motivo_display(),
+            devolucion.justificacion,
+            productos,
+            devolucion.monto_total,
+            devolucion.get_estado_display(),
+        ])
+
+    for celda in hoja["B"][1:]:
+        celda.number_format = "dd/mm/yyyy"
+    for celda in hoja["I"][1:]:
+        celda.number_format = '#,##0.00'
+
+    for columna in range(1, hoja.max_column + 1):
+        letra = get_column_letter(columna)
+        ancho = max(len(str(hoja.cell(fila, columna).value or "")) for fila in range(1, hoja.max_row + 1))
+        hoja.column_dimensions[letra].width = min(ancho + 2, 42)
+
+    hoja.freeze_panes = "A2"
+    hoja.auto_filter.ref = hoja.dimensions
+    salida = BytesIO()
+    libro.save(salida)
+    salida.seek(0)
+
+    response = HttpResponse(
+        salida.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = (
+        f'attachment; filename="devoluciones_venta_{fecha_inicio}_{fecha_fin}.xlsx"'
+    )
+    return response
+
+
+@login_required
+@permission_required("manager.operar_caja", raise_exception=True)
+def notas_credito_disponibles(request):
+    referencia = (request.GET.get("search") or "").strip()
+
+    if not referencia:
+        return JsonResponse({"success": True, "notas": []})
+
+    notas = DevolucionVenta.objects.select_related(
+        "venta__sucursal", "venta__id_cliente", "venta__id_factura_cai"
+    ).filter(
+        estado=DevolucionVenta.Estado.DISPONIBLE,
+        is_active=True,
+        is_delete=False,
+    )
+
+    if not request.user.is_superuser:
+        perfil = PerfilUsuario.objects.filter(usuarios=request.user).first()
+        if not perfil or not perfil.ubicacion_id:
+            return JsonResponse(
+                {"success": False, "message": "El usuario no tiene una sucursal asignada"},
+                status=400,
+            )
+        notas = notas.filter(venta__sucursal_id=perfil.ubicacion_id)
+
+    filtro_busqueda = Q(nota_credito__icontains=referencia)
+    if referencia.isdigit():
+        filtro_busqueda |= Q(
+            venta__id_factura_cai__numero_factura=int(referencia)
+        )
+    notas = notas.filter(filtro_busqueda)
+
+    return JsonResponse(
+        {
+            "success": True,
+            "notas": [
+                {
+                    "id": nota.id,
+                    "nota": nota.nota_credito,
+                    "monto": str(nota.monto_total),
+                    "factura": nota.venta.id_factura_cai.numero_factura,
+                    "cliente": (
+                        nota.venta.id_cliente.nombre_completo
+                        if nota.venta.id_cliente
+                        else "Consumidor Final"
+                    ),
+                }
+                for nota in notas.order_by("-f_creacion")
+            ],
+        }
+    )
+
+def _stock_disponible_caja(producto_id, ubicaciones):
+    existencia = (
+        Inventarios.objects.filter(
+            producto_id=producto_id,
+            ubicacion_id__in=ubicaciones,
+            is_delete=False,
+            cantidad__gt=0,
+        ).aggregate(total=Sum("cantidad"))["total"]
+        or Decimal("0")
+    )
+    reservado = (
+        ReservaInventario.objects.filter(
+            producto_id=producto_id,
+            ubicacion_id__in=ubicaciones,
+            estado=ReservaInventario.Estado.RESERVADA,
+            is_delete=False,
+        ).aggregate(total=Sum("cantidad"))["total"]
+        or Decimal("0")
+    )
+    return max(Decimal(str(existencia)) - Decimal(str(reservado)), Decimal("0"))
+
+
+def _stock_para_mostrar(stock):
+    """Muestra dos decimales sin redondear el inventario físico real."""
+    return Decimal(str(stock)).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
+
+
+def _datos_combo_caja(combo, ubicaciones):
+    detalles = list(combo.detalles.select_related("producto"))
+    if not detalles:
+        return None
+
+    disponibilidad = []
+    for detalle in detalles:
+        if not detalle.producto.is_active or detalle.producto.is_delete:
+            return None
+        disponibilidad.append(
+            _stock_disponible_caja(detalle.producto_id, ubicaciones) / detalle.cantidad
+        )
+    stock = min(disponibilidad) if disponibilidad else Decimal("0")
+    if stock <= 0:
+        return None
+
+    return {
+        "id": combo.id,
+        "combo_id": combo.id,
+        "es_combo": True,
+        "codigo_sku": combo.codigo_sku,
+        "nombre": combo.nombre,
+        "precio_venta": combo.precio_venta,
+        "precio_venta_min": combo.precio_venta_min,
+        "precio_venta_max": combo.precio_venta_max,
+        "id_categoria": None,
+        "isv": Decimal("0"),
+        "tipos_isv": Decimal("0"),
+        "stock": stock,
+        "lleva": 0,
+        "paga": 0,
+        "descuentos": 0,
+        "acumulable": False,
+    }
+
+
+def _numero_siguiente_cotizacion():
+    ultima = Cotizacion.objects.select_for_update().order_by("-id").first()
+    consecutivo = 1
+    if ultima:
+        try:
+            consecutivo = int(ultima.numero_cotizacion.rsplit("-", 1)[-1]) + 1
+        except (ValueError, IndexError):
+            consecutivo = ultima.id + 1
+    return f"COT-{consecutivo:06d}"
+
+
+@login_required
+@require_POST
+def crear_cotizacion(request):
+    try:
+        if not _puede_generar_cotizaciones(request.user):
+            raise PermissionDenied("No tiene permiso para generar cotizaciones")
+        data = json.loads(request.body)
+        productos = data.get("productos", [])
+        cliente_id = data.get("cliente_id")
+        cliente_nombre = (data.get("cliente_nombre") or "").strip()
+        con_rtn = bool(data.get("con_rtn"))
+
+        if not productos:
+            return JsonResponse({"success": False, "message": "Agregue productos a la cotización"}, status=400)
+
+        perfil = PerfilUsuario.objects.get(usuarios=request.user)
+        if not perfil.ubicacion_id:
+            return JsonResponse({"success": False, "message": "El usuario no tiene una sucursal asignada"}, status=400)
+
+        with transaction.atomic():
+            cliente = None
+            if cliente_id:
+                cliente = Clientes.objects.filter(
+                    id=cliente_id, is_active=True, is_delete=False
+                ).first()
+                if not cliente:
+                    return JsonResponse({"success": False, "message": "El cliente seleccionado no existe"}, status=400)
+
+            subtotal_total = Decimal("0")
+            descuento_total = Decimal("0")
+            impuesto_15_total = Decimal("0")
+            impuesto_18_total = Decimal("0")
+            lineas = []
+
+            for item in productos:
+                cantidad = Decimal(str(item.get("cantidad", 0)))
+                precio = Decimal(str(item.get("precio_venta", 0)))
+                descuento = Decimal(str(item.get("descuento", 0)))
+                if cantidad <= 0 or precio < 0:
+                    raise ValueError("Las cantidades y precios de la cotización no son válidos")
+
+                combo_id = item.get("combo_id")
+                producto_id = item.get("id")
+                producto = None
+                combo = None
+                if combo_id:
+                    combo = Combos.objects.filter(id=combo_id, is_active=True, is_delete=False).first()
+                    if not combo:
+                        raise ValueError("Uno de los combos ya no está disponible")
+                    codigo = combo.codigo_sku
+                    nombre = combo.nombre
+                else:
+                    producto = Productos.objects.filter(id=producto_id, is_active=True, is_delete=False).first()
+                    if not producto:
+                        raise ValueError("Uno de los productos ya no está disponible")
+                    codigo = producto.codigo_sku
+                    nombre = producto.nombre
+
+                impuesto_15 = Decimal(str(item.get("isv15_acumulable", 0)))
+                impuesto_18 = Decimal(str(item.get("isv18_acumulable", 0)))
+                subtotal = cantidad * precio
+                subtotal_total += subtotal
+                descuento_total += descuento
+                impuesto_15_total += impuesto_15
+                impuesto_18_total += impuesto_18
+                lineas.append({
+                    "producto": producto, "combo": combo, "codigo": codigo, "nombre": nombre,
+                    "cantidad": cantidad, "precio": precio, "descuento": descuento,
+                    "impuesto_15": impuesto_15, "impuesto_18": impuesto_18, "subtotal": subtotal,
+                })
+
+            cotizacion = Cotizacion.objects.create(
+                numero_cotizacion=_numero_siguiente_cotizacion(),
+                cliente=cliente,
+                cliente_nombre=cliente_nombre if cliente else "",
+                con_rtn=con_rtn if cliente else False,
+                sucursal_id=perfil.ubicacion_id,
+                subtotal=subtotal_total,
+                descuento=descuento_total,
+                impuesto_15=impuesto_15_total,
+                impuesto_18=impuesto_18_total,
+                total=subtotal_total + impuesto_15_total + impuesto_18_total - descuento_total,
+                u_creo_id=request.user.id,
+            )
+            for linea in lineas:
+                DetalleCotizacion.objects.create(
+                    cotizacion=cotizacion,
+                    producto=linea["producto"], combo=linea["combo"], codigo=linea["codigo"],
+                    nombre=linea["nombre"], cantidad=linea["cantidad"],
+                    precio_unitario=linea["precio"], descuento=linea["descuento"],
+                    impuesto_15=linea["impuesto_15"], impuesto_18=linea["impuesto_18"],
+                    subtotal=linea["subtotal"], u_creo_id=request.user.id,
+                )
+
+        return JsonResponse({
+            "success": True,
+            "id": cotizacion.id,
+            "numero": cotizacion.numero_cotizacion,
+            "pdf_url": reverse(
+                "imprimir_cotizacion",
+                kwargs={"token": cotizacion.documento_token},
+            ),
+        })
+    except (ValueError, InvalidOperation, json.JSONDecodeError) as error:
+        return JsonResponse({"success": False, "message": str(error)}, status=400)
+    except PerfilUsuario.DoesNotExist:
+        return JsonResponse({"success": False, "message": "El usuario no tiene un perfil configurado"}, status=400)
+    except Exception as error:
+        return JsonResponse({"success": False, "message": str(error)}, status=500)
+
+
+@login_required
+def imprimir_cotizacion(request, token):
+    if not (_puede_generar_cotizaciones(request.user) or _puede_ver_cotizaciones(request.user)):
+        raise PermissionDenied("No tiene permiso para imprimir cotizaciones")
+    filtros_cotizacion = {
+        "documento_token": token,
+        "is_active": True,
+        "is_delete": False,
+    }
+    cotizacion = get_object_or_404(
+        Cotizacion.objects.select_related("cliente", "sucursal"),
+        **filtros_cotizacion,
+    )
+    detalles = list(cotizacion.detalles.filter(is_active=True, is_delete=False).order_by("id"))
+    configuracion = ConfiguracionEmpresa.objects.filter(
+        is_active=True, is_delete=False
+    ).first()
+    simbolo_moneda = configuracion.simbolo_moneda if configuracion else "L."
+    color_primario = HexColor(
+        (configuracion.tienda_color_primario if configuracion else "#32877F")
+        or "#32877F"
+    )
+    ancho, alto = A4
+    margen = 38
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=A4)
+    y = alto - 48
+    try:
+        pdf.drawImage(_logo_empresa_pdf(), margen, y - 32, width=125, height=42, preserveAspectRatio=True, mask="auto")
+    except Exception:
+        pass
+    pdf.setFont("Helvetica-Bold", 20)
+    pdf.setFillColor(color_primario)
+    pdf.drawRightString(ancho - margen, y, "COTIZACIÓN")
+    pdf.setFillColor("#000000")
+    pdf.setFont("Helvetica-Bold", 10)
+    pdf.drawRightString(ancho - margen, y - 18, cotizacion.numero_cotizacion)
+    pdf.setFont("Helvetica", 9)
+    pdf.drawRightString(ancho - margen, y - 33, _fecha_honduras(cotizacion.f_creacion).strftime("%d/%m/%Y %I:%M %p"))
+    nombre_empresa = configuracion.nombre_comercial if configuracion else "Orvend Mart"
+    datos_empresa = [nombre_empresa]
+    if configuracion:
+        datos_empresa.extend(textwrap.wrap(configuracion.direccion or "", width=34))
+        if configuracion.rtn:
+            datos_empresa.append(f"RTN: {configuracion.rtn}")
+        if configuracion.email:
+            datos_empresa.append(configuracion.email)
+        if configuracion.telefono:
+            datos_empresa.append(f"Tel.: {configuracion.telefono}")
+
+    empresa_y = y - 45
+    for indice, linea in enumerate(datos_empresa):
+        pdf.setFont("Helvetica-Bold" if indice == 0 else "Helvetica", 9 if indice == 0 else 8)
+        pdf.drawString(margen, empresa_y, linea)
+        empresa_y -= 11
+    y = min(y - 70, empresa_y - 9)
+    pdf.setStrokeColor("#D8E5E2")
+    pdf.line(margen, y, ancho - margen, y)
+    y -= 22
+    pdf.setFont("Helvetica-Bold", 9)
+    pdf.drawString(margen, y, "CLIENTE")
+    pdf.drawString(ancho / 2 + 5, y, "SUCURSAL")
+    y -= 15
+    pdf.setFont("Helvetica", 10)
+    pdf.drawString(margen, y, cotizacion.cliente_nombre or (cotizacion.cliente.nombre if cotizacion.cliente else "Cliente final"))
+    pdf.drawString(ancho / 2 + 5, y, str(cotizacion.sucursal))
+    if cotizacion.con_rtn and cotizacion.cliente and cotizacion.cliente.dni:
+        y -= 14
+        pdf.setFont("Helvetica", 9)
+        pdf.drawString(margen, y, f"RTN: {cotizacion.cliente.dni}")
+    y -= 30
+    columnas = [
+        margen,
+        margen + 250,
+        margen + 310,
+        margen + 385,
+        margen + 465,
+        ancho - margen,
+    ]
+    tabla_superior = y
+    y_fila = y - 32
+    detalles_visibles = []
+    for detalle in detalles:
+        if y_fila < 205:
+            break
+        detalles_visibles.append(detalle)
+        y_fila -= 20
+    tabla_inferior = y_fila + 8
+    pdf.setFillColor("#FFFFFF")
+    pdf.setStrokeColor("#D8E5E2")
+    pdf.roundRect(
+        margen,
+        tabla_inferior,
+        ancho - (margen * 2),
+        tabla_superior - tabla_inferior,
+        7,
+        fill=1,
+        stroke=1,
+    )
+    pdf.setFillColor(color_primario)
+    pdf.roundRect(margen, y - 18, ancho - (margen * 2), 18, 7, fill=1, stroke=0)
+    pdf.rect(margen, y - 18, ancho - (margen * 2), 10, fill=1, stroke=0)
+    pdf.setFillColor("#FFFFFF")
+    pdf.setFont("Helvetica-Bold", 8)
+    pdf.drawString(columnas[0] + 12, y - 12, "PRODUCTO")
+    pdf.drawString(columnas[1] + 8, y - 12, "CANT.")
+    pdf.drawString(columnas[2] + 8, y - 12, "P/U")
+    pdf.drawString(columnas[3] + 8, y - 12, "DESCUENTO")
+    pdf.drawString(columnas[4] + 8, y - 12, "TOTAL")
+    y -= 32
+    pdf.setFillColor("#263B36")
+    pdf.setFont("Helvetica", 8)
+    for indice, detalle in enumerate(detalles_visibles):
+        nombre = textwrap.shorten(detalle.nombre, width=40, placeholder="...")
+        total_linea = detalle.subtotal - detalle.descuento
+        if indice % 2 == 0:
+            pdf.setFillColor("#F4F8F7")
+            pdf.rect(margen + 1, y - 15, ancho - (margen * 2) - 2, 19, fill=1, stroke=0)
+        pdf.setStrokeColor("#E2ECE9")
+        pdf.line(margen + 1, y - 8, ancho - margen - 1, y - 8)
+        pdf.setFillColor("#263B36")
+        pdf.drawString(columnas[0] + 12, y, nombre)
+        pdf.drawString(columnas[1] + 8, y, f"{detalle.cantidad:g}")
+        pdf.drawString(columnas[2] + 8, y, f"{simbolo_moneda} {detalle.precio_unitario:.2f}")
+        pdf.drawString(columnas[3] + 8, y, f"{simbolo_moneda} {detalle.descuento:.2f}")
+        pdf.drawRightString(columnas[5] - 12, y, f"{simbolo_moneda} {total_linea:.2f}")
+        y -= 20
+    # Los importes siempre se mantienen en la esquina inferior derecha,
+    # independientemente de cuántos productos tenga la cotización.
+    y = 150
+    total_x = ancho - margen
+    pdf.setFont("Helvetica", 9)
+    pdf.drawRightString(total_x, y, f"Subtotal: {simbolo_moneda} {cotizacion.subtotal:.2f}")
+    y -= 15
+    pdf.drawRightString(total_x, y, f"Descuento: {simbolo_moneda} {cotizacion.descuento:.2f}")
+    y -= 15
+    pdf.drawRightString(total_x, y, f"ISV: {simbolo_moneda} {(cotizacion.impuesto_15 + cotizacion.impuesto_18):.2f}")
+    y -= 22
+    pdf.setFont("Helvetica-Bold", 13)
+    pdf.setFillColor(color_primario)
+    pdf.drawRightString(total_x, y, f"TOTAL: {simbolo_moneda} {cotizacion.total:.2f}")
+    dias_validez = configuracion.cotizacion_dias_validez if configuracion else 7
+    fecha_vencimiento = _fecha_honduras(cotizacion.f_creacion) + timedelta(days=dias_validez)
+    pdf.setFillColor("#71817D")
+    pdf.setFont("Helvetica", 8)
+    if configuracion and configuracion.mensaje_factura:
+        pdf.drawString(
+            margen,
+            68,
+            textwrap.shorten(configuracion.mensaje_factura, width=115, placeholder="..."),
+        )
+    pdf.drawString(
+        margen,
+        55,
+        f"Cotización válida por {dias_validez} días (hasta {fecha_vencimiento.strftime('%d/%m/%Y')}).",
+    )
+    pdf.drawString(margen, 42, "Documento informativo. No es una factura ni genera un compromiso de pago.")
+    pdf.showPage()
+    pdf.save()
+    respuesta = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+    respuesta["Content-Disposition"] = f'inline; filename="{cotizacion.numero_cotizacion}.pdf"'
+    return respuesta
+
+
+@login_required
+def cotizaciones_view(request):
+    if not _puede_ver_cotizaciones(request.user):
+        raise PermissionDenied("No tiene permiso para ver cotizaciones")
+
+    cotizaciones = Cotizacion.objects.select_related("cliente", "sucursal").filter(
+        is_active=True,
+        is_delete=False,
+    )
+    busqueda = request.GET.get("buscar", "").strip()
+    if busqueda:
+        cotizaciones = cotizaciones.filter(
+            Q(numero_cotizacion__icontains=busqueda)
+            | Q(cliente_nombre__icontains=busqueda)
+            | Q(cliente__nombre__icontains=busqueda)
+            | Q(cliente__dni__icontains=busqueda)
+        )
+
+    cotizaciones = cotizaciones.annotate(
+        cantidad_productos=Coalesce(
+            Sum(
+                "detalles__cantidad",
+                filter=Q(detalles__is_active=True, detalles__is_delete=False),
+            ),
+            Value(Decimal("0"), output_field=DecimalField(max_digits=18, decimal_places=2)),
+        )
+    )
+    page_obj = Paginator(cotizaciones.order_by("-f_creacion"), 10).get_page(
+        request.GET.get("page", 1)
+    )
+    return render(request, "caja/cotizaciones.html", {
+        "cotizaciones": page_obj,
+        "page_obj": page_obj,
+        "busqueda": busqueda,
+        "mostrar_buscador": False,
+        "mostrar_buscador_cotizaciones": True,
+        "mostrar_codigo": False,
+    })
+
+
 @login_required
 def busqueda_codigo(request, codigo):
-    if not request.user.groups.filter(name="cajeros").exists():
-        return JsonResponse({"error": "Usuario no valido"}, status=403)
-
+    if not _puede_generar_cotizaciones(request.user):
+        raise PermissionDenied("No tiene permiso para buscar productos en Caja")
     # ==========================================
     # VERIFICAR PERFIL Y UBICACIÓN
     # ==========================================
@@ -7314,6 +11039,38 @@ def busqueda_codigo(request, codigo):
         sucursal_id
     )
 
+    cotizacion = (
+        Cotizacion.objects.prefetch_related("detalles")
+        .filter(
+            numero_cotizacion__iexact=codigo,
+            sucursal_id=sucursal_id,
+            is_active=True,
+            is_delete=False,
+        )
+        .first()
+    )
+    if cotizacion:
+        return JsonResponse({
+            "es_cotizacion": True,
+            "numero_cotizacion": cotizacion.numero_cotizacion,
+            "productos": [
+                {
+                    "id": detalle.producto_id,
+                    "combo_id": detalle.combo_id,
+                    "es_combo": bool(detalle.combo_id),
+                    "codigo_sku": detalle.codigo,
+                    "nombre": detalle.nombre,
+                    "cantidad": float(detalle.cantidad),
+                    "precio_venta": float(detalle.precio_unitario),
+                    "descuento": float(detalle.descuento),
+                    "subtotal": float(detalle.subtotal),
+                    "isv_15": float(detalle.impuesto_15),
+                    "isv_18": float(detalle.impuesto_18),
+                }
+                for detalle in cotizacion.detalles.filter(is_active=True, is_delete=False)
+            ],
+        })
+
     # ==========================================
     # BUSCAR PRODUCTO
     # ==========================================
@@ -7328,47 +11085,7 @@ def busqueda_codigo(request, codigo):
         # EXISTENCIA FÍSICA
         # TIENDA + BODEGA SI ESTÁN RELACIONADAS
         # ==========================================
-        existencia = (
-            Inventarios.objects.filter(
-                producto_id=producto.id,
-                ubicacion_id__in=ubicaciones,
-                is_delete=False,
-                cantidad__gt=0
-            )
-            .aggregate(
-                total=Sum("cantidad")
-            )["total"]
-            or Decimal("0")
-        )
-
-        existencia = Decimal(str(existencia))
-
-        # ==========================================
-        # RESERVAS ACTIVAS
-        # TIENDA + BODEGA
-        # ==========================================
-        reservado = (
-            ReservaInventario.objects.filter(
-                producto_id=producto.id,
-                ubicacion_id__in=ubicaciones,
-                estado=ReservaInventario.Estado.RESERVADA,
-                is_delete=False
-            )
-            .aggregate(
-                total=Sum("cantidad")
-            )["total"]
-            or Decimal("0")
-        )
-
-        reservado = Decimal(str(reservado))
-
-        # ==========================================
-        # EXISTENCIA DISPONIBLE
-        # ==========================================
-        stock_disponible = existencia - reservado
-
-        if stock_disponible < 0:
-            stock_disponible = Decimal("0")
+        stock_disponible = _stock_disponible_caja(producto.id, ubicaciones)
 
         if stock_disponible <= 0:
             return JsonResponse(
@@ -7390,10 +11107,12 @@ def busqueda_codigo(request, codigo):
             "codigo_sku": producto.codigo_sku,
             "nombre": producto.nombre,
             "precio_venta": producto.precio_venta,
+            "precio_venta_min": producto.precio_venta_min,
+            "precio_venta_max": producto.precio_venta_max,
             "id_categoria": producto.categoria_id,
             "isv": isv,
             "tipos_isv": producto.impuesto,
-            "stock": stock_disponible,
+            "stock": _stock_para_mostrar(stock_disponible),
         }
 
         # ==========================================
@@ -7419,20 +11138,26 @@ def busqueda_codigo(request, codigo):
         return JsonResponse(data)
 
     except Productos.DoesNotExist:
-        return JsonResponse(
-            {"error": "Producto no encontrado"},
-            status=404
-        )
+        combo = Combos.objects.filter(
+            codigo_sku=codigo,
+            is_delete=False,
+            is_active=True,
+        ).first()
+        if not combo:
+            return JsonResponse({"error": "Producto o combo no encontrado"}, status=404)
+        datos_combo = _datos_combo_caja(combo, ubicaciones)
+        if not datos_combo:
+            return JsonResponse(
+                {"error": "El combo no tiene existencias disponibles en esta sucursal"},
+                status=400,
+            )
+        return JsonResponse(datos_combo)
 
 
 @login_required
 def busqueda_nombre(request, producto):
-    if not request.user.groups.filter(name="cajeros").exists():
-        return JsonResponse(
-            {"error": "Usuario no valido"},
-            status=403
-        )
-
+    if not _puede_generar_cotizaciones(request.user):
+        raise PermissionDenied("No tiene permiso para buscar productos en Caja")
     # ==========================================
     # VERIFICAR PERFIL Y UBICACIÓN
     # ==========================================
@@ -7487,47 +11212,7 @@ def busqueda_nombre(request, producto):
         # EXISTENCIA FÍSICA
         # TIENDA + BODEGA SI ESTÁN RELACIONADAS
         # ==========================================
-        existencia = (
-            Inventarios.objects.filter(
-                producto_id=c.id,
-                ubicacion_id__in=ubicaciones,
-                is_delete=False,
-                cantidad__gt=0
-            )
-            .aggregate(
-                total=Sum("cantidad")
-            )["total"]
-            or Decimal("0")
-        )
-
-        existencia = Decimal(str(existencia))
-
-        # ==========================================
-        # RESERVAS ACTIVAS
-        # TIENDA + BODEGA
-        # ==========================================
-        reservado = (
-            ReservaInventario.objects.filter(
-                producto_id=c.id,
-                ubicacion_id__in=ubicaciones,
-                estado=ReservaInventario.Estado.RESERVADA,
-                is_delete=False
-            )
-            .aggregate(
-                total=Sum("cantidad")
-            )["total"]
-            or Decimal("0")
-        )
-
-        reservado = Decimal(str(reservado))
-
-        # ==========================================
-        # STOCK DISPONIBLE
-        # ==========================================
-        stock_disponible = existencia - reservado
-
-        if stock_disponible < 0:
-            stock_disponible = Decimal("0")
+        stock_disponible = _stock_disponible_caja(c.id, ubicaciones)
 
         # ==========================================
         # SI NO HAY STOCK DISPONIBLE
@@ -7577,6 +11262,8 @@ def busqueda_nombre(request, producto):
             "codigo_sku": c.codigo_sku,
             "nombre": c.nombre,
             "precio_venta": c.precio_venta,
+            "precio_venta_min": c.precio_venta_min,
+            "precio_venta_max": c.precio_venta_max,
             "lleva": lleva,
             "paga": paga,
             "descuento": descuento,
@@ -7585,10 +11272,20 @@ def busqueda_nombre(request, producto):
                 Decimal(c.impuesto) / Decimal(100)
             ),
             "tipos_isv": c.impuesto,
-            "stock": stock_disponible,
+            "stock": _stock_para_mostrar(stock_disponible),
         }
 
         data.append(producto_data)
+
+    combos = Combos.objects.filter(
+        is_delete=False,
+        is_active=True,
+        nombre__icontains=producto,
+    ).order_by("nombre")[:20]
+    for combo in combos:
+        datos_combo = _datos_combo_caja(combo, ubicaciones)
+        if datos_combo:
+            data.append(datos_combo)
 
     return JsonResponse(
         data,
@@ -7596,11 +11293,40 @@ def busqueda_nombre(request, producto):
     )
 
 
+def _desglosar_precio_venta_incluye_isv(precio_venta, porcentaje_isv):
+    """Separa el precio final configurado en subtotal e ISV.
+
+    En Caja el precio de venta ya es el importe que paga el cliente. Por ello
+    el ISV se calcula sobre ese importe y no se vuelve a sumar al total.
+    """
+    precio = Decimal(str(precio_venta or 0))
+    porcentaje = Decimal(str(porcentaje_isv or 0))
+    impuesto = precio * porcentaje / Decimal("100")
+    return precio - impuesto, impuesto
+
+
 @login_required
 @require_http_methods(["POST"])
+@permission_required("manager.operar_caja", raise_exception=True)
 def guardar_compra(request):
     try:
         with transaction.atomic():
+
+            caja_abierta_hoy = (
+                CajaAC.objects.select_for_update()
+                .filter(
+                    usuario_id=request.user.id,
+                    estado="abierta",
+                    fecha_apertura__date=timezone.localdate(),
+                    is_active=True,
+                    is_delete=False,
+                )
+                .exists()
+            )
+            if not caja_abierta_hoy:
+                raise Exception(
+                    "Debes abrir una caja del día antes de realizar una venta."
+                )
 
             # =====================================================
             # PERFIL / UBICACIONES COMPARTIDAS
@@ -7629,6 +11355,7 @@ def guardar_compra(request):
             productos = data.get("productos", [])
             tarjeta = data.get("tarjeta", [])
             cliente = data.get("cliente", {})
+            nota_credito_id = data.get("nota_credito_id")
 
             if not pago:
                 raise Exception("No se recibieron los datos de pago")
@@ -7637,6 +11364,45 @@ def guardar_compra(request):
                 raise Exception("No se recibieron productos")
 
             tipo_pago = pago[0].get("tipo_pago")
+            if tipo_pago not in {"contado", "tarjeta", "credito", "depostivo", "cheque"}:
+                raise Exception("El tipo de pago seleccionado no es válido")
+
+            try:
+                total_original = Decimal(str(pago[0].get("total_original")))
+            except (InvalidOperation, TypeError, ValueError):
+                raise Exception("El total de la venta no es válido")
+
+            monto_nota_credito = Decimal("0")
+            nota_credito = None
+            if nota_credito_id:
+                nota_credito = (
+                    DevolucionVenta.objects.select_for_update()
+                    .select_related("venta__sucursal")
+                    .filter(
+                        id=nota_credito_id,
+                        estado=DevolucionVenta.Estado.DISPONIBLE,
+                        is_active=True,
+                        is_delete=False,
+                    )
+                    .first()
+                )
+                if not nota_credito:
+                    raise Exception("La nota de crédito ya no está disponible")
+
+                if (
+                    not request.user.is_superuser
+                    and nota_credito.venta.sucursal_id != sucursal_id
+                ):
+                    raise Exception("La nota de crédito no pertenece a esta sucursal")
+
+                monto_nota_credito = nota_credito.monto_total
+                if total_original < monto_nota_credito:
+                    raise Exception(
+                        "La compra debe ser igual o mayor al valor de la nota de crédito"
+                    )
+
+            total_a_pagar = total_original - monto_nota_credito
+            pago[0]["total"] = total_a_pagar
 
             if tipo_pago == "credito":
                 if not request.user.has_perm("manager.view_cuentasporcobrar"):
@@ -7799,10 +11565,20 @@ def guardar_compra(request):
 
             costo_total_venta = Decimal("0")
             utilidad_total_venta = Decimal("0")
+            subtotal_venta = Decimal("0")
+            impuesto_15_venta = Decimal("0")
+            impuesto_18_venta = Decimal("0")
+            descuento_venta = Decimal("0")
 
             # =====================================================
             # CREAR VENTA
             # =====================================================
+
+            tipo_venta = (
+                Ventas.TIPO_VENTA_CREDITO
+                if tipo_pago == "credito"
+                else Ventas.TIPO_VENTA_CONTADO
+            )
 
             venta = Ventas.objects.create(
                 id_factura_cai=factura_cai,
@@ -7812,12 +11588,29 @@ def guardar_compra(request):
                 impuesto_15=pago[0].get("isv15"),
                 impuesto_18=pago[0].get("isv18"),
                 descuento=pago[0].get("descuento"),
+                nota_credito=monto_nota_credito,
+                con_rtn=bool(cliente.get("con_rtn")),
                 total=pago[0].get("total"),
                 tipo_pago=tipo_pago,
+                tipo_venta=tipo_venta,
                 costo_total=0,
                 utilidad_total=0,
                 u_creo_id=request.user.id,
             )
+
+            if nota_credito:
+                nota_credito.estado = DevolucionVenta.Estado.USADA
+                nota_credito.venta_aplicada = venta
+                nota_credito.fecha_uso = timezone.now()
+                nota_credito.u_modifico_id = request.user.id
+                nota_credito.save(
+                    update_fields=[
+                        "estado",
+                        "venta_aplicada",
+                        "fecha_uso",
+                        "u_modifico_id",
+                    ]
+                )
 
             # =====================================================
             # TARJETA
@@ -7886,6 +11679,7 @@ def guardar_compra(request):
             for p in productos:
 
                 producto_id = p.get("id")
+                combo_id = p.get("combo_id")
 
                 cantidad_vendida = Decimal(
                     str(p.get("cantidad"))
@@ -7901,35 +11695,54 @@ def guardar_compra(request):
                         f"{p.get('nombre')}"
                     )
 
-                # =================================================
-                # PRODUCTO
-                # =================================================
-
-                producto = (
-                    Productos.objects
-                    .filter(
-                        id=producto_id,
-                        is_active=True,
-                        is_delete=False,
+                if combo_id:
+                    combo = (
+                        Combos.objects.prefetch_related("detalles__producto")
+                        .filter(id=combo_id, is_active=True, is_delete=False)
+                        .first()
                     )
-                    .first()
-                )
-
-                if not producto:
-                    raise Exception(
-                        f"El producto {producto_id} no existe o está inactivo"
+                    if not combo or not combo.detalles.exists():
+                        raise Exception("El combo no existe, está inactivo o no tiene productos")
+                    if precio_venta != combo.precio_venta:
+                        if not request.user.has_perm("manager.modificar_precio_caja"):
+                            raise Exception("No tiene permiso para modificar precios en caja")
+                        if precio_venta < combo.precio_venta_min or precio_venta > combo.precio_venta_max:
+                            raise Exception("El precio del combo está fuera del rango permitido")
+                    producto = None
+                    productos_inventario = [
+                        {"producto": detalle.producto, "cantidad": detalle.cantidad * cantidad_vendida}
+                        for detalle in combo.detalles.all()
+                    ]
+                else:
+                    producto = (
+                        Productos.objects
+                        .filter(id=producto_id, is_active=True, is_delete=False)
+                        .first()
                     )
-
-                # =================================================
-                # PRODUCTOS RELACIONADOS
-                # =================================================
-
-                productos_inventario = (
-                    obtener_productos_relacionados(
-                        producto,
-                        cantidad_vendida,
+                    if not producto:
+                        raise Exception(f"El producto {producto_id} no existe o está inactivo")
+                    if precio_venta != producto.precio_venta:
+                        if not request.user.has_perm("manager.modificar_precio_caja"):
+                            raise Exception("No tiene permiso para modificar precios en caja")
+                        if (
+                            producto.precio_venta_min is not None
+                            and precio_venta < producto.precio_venta_min
+                        ):
+                            raise Exception(
+                                f"El precio de {producto.nombre} no puede ser menor a "
+                                f"L. {producto.precio_venta_min:.2f}"
+                            )
+                        if (
+                            producto.precio_venta_max is not None
+                            and precio_venta > producto.precio_venta_max
+                        ):
+                            raise Exception(
+                                f"El precio de {producto.nombre} no puede ser mayor a "
+                                f"L. {producto.precio_venta_max:.2f}"
+                            )
+                    productos_inventario = obtener_productos_relacionados(
+                        producto, cantidad_vendida
                     )
-                )
 
                 costo_total_producto = Decimal("0")
 
@@ -8156,8 +11969,32 @@ def guardar_compra(request):
                         )
 
                 # =================================================
-                # COSTO Y UTILIDAD
+                # PRECIO FINAL, ISV Y UTILIDAD
                 # =================================================
+
+                porcentaje_isv = (
+                    Decimal(str(producto.impuesto or 0))
+                    if producto
+                    else Decimal("0")
+                )
+                precio_sin_isv, impuesto_unitario = (
+                    _desglosar_precio_venta_incluye_isv(
+                        precio_venta, porcentaje_isv
+                    )
+                )
+                subtotal_linea = cantidad_vendida * precio_sin_isv
+                impuesto_linea = cantidad_vendida * impuesto_unitario
+                descuento_linea = Decimal(str(p.get("descuento", 0)))
+
+                if porcentaje_isv == Decimal("15"):
+                    impuesto_15_linea = impuesto_linea
+                    impuesto_18_linea = Decimal("0")
+                elif porcentaje_isv == Decimal("18"):
+                    impuesto_15_linea = Decimal("0")
+                    impuesto_18_linea = impuesto_linea
+                else:
+                    impuesto_15_linea = Decimal("0")
+                    impuesto_18_linea = Decimal("0")
 
                 costo_promedio = (
                     costo_total_producto /
@@ -8165,7 +12002,7 @@ def guardar_compra(request):
                 )
 
                 utilidad_unitaria = (
-                    precio_venta -
+                    precio_sin_isv -
                     costo_promedio
                 )
 
@@ -8181,6 +12018,10 @@ def guardar_compra(request):
                 utilidad_total_venta += (
                     utilidad_total
                 )
+                subtotal_venta += subtotal_linea
+                impuesto_15_venta += impuesto_15_linea
+                impuesto_18_venta += impuesto_18_linea
+                descuento_venta += descuento_linea
 
                 # =================================================
                 # DETALLE DE VENTA
@@ -8188,36 +12029,18 @@ def guardar_compra(request):
 
                 DetalleVenta.objects.create(
                     venta=venta,
-                    producto_id=producto_id,
+                    producto=producto,
+                    combo_id=combo_id if combo_id else None,
                     cantidad=cantidad_vendida,
                     precio_unitario=precio_venta,
                     costo_unitario=costo_promedio,
                     utilidad_unitaria=utilidad_unitaria,
                     utilidad_total=utilidad_total,
-                    descuento=Decimal(
-                        str(
-                            p.get(
-                                "descuento",
-                                0,
-                            )
-                        )
-                    ),
-                    impuesto_15=Decimal(
-                        str(
-                            p.get(
-                                "isv_15",
-                                0,
-                            )
-                        )
-                    ),
-                    impuesto_18=Decimal(
-                        str(
-                            p.get(
-                                "isv_18",
-                                0,
-                            )
-                        )
-                    ),
+                    descuento=descuento_linea,
+                    subtotal=subtotal_linea,
+                    monto_devuelto=Decimal("0"),
+                    impuesto_15=impuesto_15_linea,
+                    impuesto_18=impuesto_18_linea,
                     u_creo_id=request.user.id,
                 )
 
@@ -8227,13 +12050,70 @@ def guardar_compra(request):
 
             venta.costo_total = costo_total_venta
             venta.utilidad_total = utilidad_total_venta
+            venta.subtotal = subtotal_venta
+            venta.impuesto_15 = impuesto_15_venta
+            venta.impuesto_18 = impuesto_18_venta
+            venta.descuento = descuento_venta
+            venta.total = (
+                subtotal_venta
+                + impuesto_15_venta
+                + impuesto_18_venta
+                - descuento_venta
+                - monto_nota_credito
+            )
 
             venta.save(
                 update_fields=[
                     "costo_total",
                     "utilidad_total",
+                    "subtotal",
+                    "impuesto_15",
+                    "impuesto_18",
+                    "descuento",
+                    "total",
                 ]
             )
+
+            # =====================================================
+            # ENVÍO DE FACTURA POR WHATSAPP
+            # =====================================================
+            # n8n recibe una URL firmada temporal. La factura normal conserva
+            # su protección de sesión y permisos dentro del ERP.
+            cliente_factura = venta.id_cliente
+            if (
+                cliente_factura
+                and cliente_factura.enviar_factura_whatsapp
+                and cliente_factura.telefono
+            ):
+                token_descarga = signing.dumps(
+                    {"factura_token": str(factura_cai.documento_token)},
+                    salt="manager.factura-n8n-v1",
+                    compress=True,
+                )
+                ruta_factura = reverse(
+                    "descargar_factura_n8n",
+                    kwargs={"token": factura_cai.documento_token},
+                )
+                base_publica = settings.FACTURA_PUBLIC_BASE_URL
+                factura_url = (
+                    urljoin(base_publica.rstrip("/") + "/", ruta_factura.lstrip("/"))
+                    if base_publica
+                    else request.build_absolute_uri(ruta_factura)
+                )
+                factura_url = f"{factura_url}?{urlencode({'access_token': token_descarga})}"
+                nombre_cliente = (
+                    (cliente_factura.empresa or cliente_factura.nombre_completo)
+                    if venta.con_rtn
+                    else (cliente_factura.nombre_completo or cliente_factura.empresa)
+                )
+                transaction.on_commit(
+                    lambda: enviar_factura_por_whatsapp(
+                        nombre_cliente=nombre_cliente or "Cliente",
+                        telefono=cliente_factura.telefono,
+                        factura_url=factura_url,
+                        numero_factura=factura_cai.numero_factura,
+                    )
+                )
 
             # =====================================================
             # RESPUESTA
@@ -8245,6 +12125,10 @@ def guardar_compra(request):
                     "id_factura": factura_cai.id,
                     "numero_factura": numero_factura,
                     "es_sat": es_sat,
+                    "pdf_url": reverse(
+                        "imprimir_factura",
+                        kwargs={"token": factura_cai.documento_token},
+                    ),
                 }
             )
 
@@ -8259,8 +12143,155 @@ def guardar_compra(request):
         )
 
         
-@login_required
-def imprimir_factura(request, id_factura):
+def _generar_factura_pagina_pdf(factura_cai, venta, detalles, cajero, configuracion):
+    """Factura A4 con el mismo lenguaje visual que las cotizaciones."""
+    ancho, alto = A4
+    margen = 38
+    color = HexColor(configuracion.tienda_color_primario or "#32877F")
+    simbolo_moneda = configuracion.simbolo_moneda
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=A4)
+    y = alto - 48
+
+    try:
+        pdf.drawImage(
+            _logo_empresa_pdf(), margen, y - 32, width=125, height=42,
+            preserveAspectRatio=True, mask="auto",
+        )
+    except Exception:
+        pass
+
+    pdf.setFillColor(color)
+    pdf.setFont("Helvetica-Bold", 20)
+    pdf.drawRightString(ancho - margen, y, "FACTURA")
+    pdf.setFillColor("#000000")
+    pdf.setFont("Helvetica-Bold", 10)
+    pdf.drawRightString(ancho - margen, y - 18, f"No. {factura_cai.numero_factura}")
+    pdf.setFont("Helvetica", 9)
+    pdf.drawRightString(
+        ancho - margen, y - 33,
+        _fecha_honduras(venta.f_creacion).strftime("%d/%m/%Y %I:%M %p"),
+    )
+    pdf.setFont("Helvetica", 8)
+    if factura_cai.es_sat and factura_cai.id_cai:
+        pdf.drawRightString(ancho - margen, y - 47, f"CAI: {factura_cai.id_cai.numero_cai}")
+    else:
+        pdf.drawRightString(ancho - margen, y - 47, "Factura personalizada")
+
+    datos_empresa = [configuracion.nombre_comercial]
+    datos_empresa.extend(textwrap.wrap(configuracion.direccion or "", width=34))
+    if configuracion.rtn:
+        datos_empresa.append(f"RTN: {configuracion.rtn}")
+    if configuracion.email:
+        datos_empresa.append(configuracion.email)
+    if configuracion.telefono:
+        datos_empresa.append(f"Tel.: {configuracion.telefono}")
+    empresa_y = y - 45
+    for indice, linea in enumerate(datos_empresa):
+        pdf.setFont("Helvetica-Bold" if indice == 0 else "Helvetica", 9 if indice == 0 else 8)
+        pdf.drawString(margen, empresa_y, linea)
+        empresa_y -= 11
+    y = min(y - 70, empresa_y - 9)
+
+    pdf.setStrokeColor("#D8E5E2")
+    pdf.line(margen, y, ancho - margen, y)
+    y -= 20
+    pdf.setFont("Helvetica-Bold", 9)
+    pdf.drawString(margen, y, "CLIENTE")
+    pdf.drawString(ancho / 2 + 5, y, "SUCURSAL")
+    y -= 15
+    pdf.setFont("Helvetica", 10)
+    if venta.id_cliente:
+        cliente = (venta.id_cliente.empresa or venta.id_cliente.nombre_completo) if venta.con_rtn else venta.id_cliente.nombre_completo
+    else:
+        cliente = "Consumidor final"
+    pdf.drawString(margen, y, cliente)
+    pdf.drawString(ancho / 2 + 5, y, str(venta.sucursal))
+    if venta.con_rtn and venta.id_cliente and venta.id_cliente.dni:
+        y -= 14
+        pdf.setFont("Helvetica", 9)
+        pdf.drawString(margen, y, f"RTN: {venta.id_cliente.dni}")
+    y -= 30
+
+    columnas = [
+        margen,
+        margen + 250,
+        margen + 310,
+        margen + 385,
+        margen + 465,
+        ancho - margen,
+    ]
+    tabla_superior = y
+    y_fila = y - 32
+    detalles_visibles = []
+    for detalle in detalles:
+        if y_fila < 205:
+            break
+        detalles_visibles.append(detalle)
+        y_fila -= 20
+    tabla_inferior = y_fila + 8
+    pdf.setFillColor("#FFFFFF")
+    pdf.setStrokeColor("#D8E5E2")
+    pdf.roundRect(margen, tabla_inferior, ancho - (margen * 2), tabla_superior - tabla_inferior, 7, fill=1, stroke=1)
+    pdf.setFillColor(color)
+    pdf.roundRect(margen, tabla_superior - 18, ancho - (margen * 2), 18, 7, fill=1, stroke=0)
+    pdf.rect(margen, tabla_superior - 18, ancho - (margen * 2), 10, fill=1, stroke=0)
+    pdf.setFillColor("#FFFFFF")
+    pdf.setFont("Helvetica-Bold", 8)
+    pdf.drawString(columnas[0] + 12, tabla_superior - 12, "PRODUCTO")
+    pdf.drawString(columnas[1] + 8, tabla_superior - 12, "CANT.")
+    pdf.drawString(columnas[2] + 8, tabla_superior - 12, "P/U")
+    pdf.drawString(columnas[3] + 8, tabla_superior - 12, "DESCUENTO")
+    pdf.drawString(columnas[4] + 8, tabla_superior - 12, "TOTAL")
+
+    y = tabla_superior - 32
+    pdf.setFillColor("#263B36")
+    pdf.setFont("Helvetica", 8)
+    for indice, detalle in enumerate(detalles_visibles):
+        nombre = detalle.combo.nombre if detalle.combo_id else detalle.producto.nombre
+        total_linea = (detalle.cantidad * detalle.precio_unitario) - detalle.descuento
+        if indice % 2 == 0:
+            pdf.setFillColor("#F4F8F7")
+            pdf.rect(margen + 1, y - 15, ancho - (margen * 2) - 2, 19, fill=1, stroke=0)
+        pdf.setStrokeColor("#E2ECE9")
+        pdf.line(margen + 1, y - 8, ancho - margen - 1, y - 8)
+        pdf.setFillColor("#263B36")
+        pdf.drawString(columnas[0] + 12, y, textwrap.shorten(nombre, width=40, placeholder="..."))
+        pdf.drawString(columnas[1] + 8, y, f"{detalle.cantidad:g}")
+        pdf.drawString(columnas[2] + 8, y, f"{simbolo_moneda} {detalle.precio_unitario:.2f}")
+        pdf.drawString(columnas[3] + 8, y, f"{simbolo_moneda} {detalle.descuento:.2f}")
+        pdf.drawRightString(columnas[5] - 12, y, f"{simbolo_moneda} {total_linea:.2f}")
+        y -= 20
+
+    total_x = ancho - margen
+    y = 150
+    pdf.setFont("Helvetica", 9)
+    pdf.drawRightString(total_x, y, f"Subtotal: {simbolo_moneda} {venta.subtotal:.2f}")
+    y -= 15
+    pdf.drawRightString(total_x, y, f"Descuento: {simbolo_moneda} {venta.descuento:.2f}")
+    y -= 15
+    pdf.drawRightString(total_x, y, f"ISV: {simbolo_moneda} {(venta.impuesto_15 + venta.impuesto_18):.2f}")
+    y -= 22
+    pdf.setFont("Helvetica-Bold", 13)
+    pdf.setFillColor(color)
+    pdf.drawRightString(total_x, y, f"TOTAL: {simbolo_moneda} {venta.total:.2f}")
+    pdf.setFillColor("#71817D")
+    pdf.setFont("Helvetica", 8)
+    if configuracion.mensaje_factura:
+        pdf.drawString(margen, 52, textwrap.shorten(configuracion.mensaje_factura, width=115, placeholder="..."))
+    pdf.drawString(margen, 39, f"Cajero: {cajero}")
+    pdf.showPage()
+    pdf.save()
+    return buffer.getvalue()
+
+
+def imprimir_factura(request, token, es_integracion=False):
+    if not es_integracion and not (
+        request.user.is_superuser
+        or _puede_operar_caja(request.user)
+        or request.user.has_perm("manager.view_ventas")
+    ):
+        raise PermissionDenied("No tiene permiso para imprimir facturas")
 
     # ==========================================
     # FACTURA CAI
@@ -8271,7 +12302,7 @@ def imprimir_factura(request, id_factura):
             "id_cai",
             "id_cai__id_sucursal",
         )
-        .filter(id=id_factura)
+        .filter(documento_token=token)
         .first()
     )
 
@@ -8299,11 +12330,22 @@ def imprimir_factura(request, id_factura):
     # DETALLE
     # ==========================================
 
-    detalles = (
-        DetalleVenta.objects.select_related("producto")
+    detalles = list(
+        DetalleVenta.objects.select_related("producto", "combo")
+        .prefetch_related("combo__detalles__producto")
         .filter(venta=venta)
         .order_by("id")
     )
+
+    def nombre_linea_factura(detalle):
+        if detalle.combo_id:
+            componentes = " | ".join(
+                f"{componente.cantidad:.2f}".rstrip("0").rstrip(".")
+                + f" × {componente.producto.nombre}"
+                for componente in detalle.combo.detalles.all()
+            )
+            return f"{detalle.combo.nombre} ({componentes})"
+        return str(detalle.producto)
 
     # ==========================================
     # TARJETA
@@ -8334,30 +12376,112 @@ def imprimir_factura(request, id_factura):
     es_sat = factura_cai.es_sat
 
     # ==========================================
-    # SUCURSAL
+    # IDENTIDAD COMERCIAL
     # ==========================================
 
-    direccion = ""
-
-    if venta.sucursal:
-        direccion = getattr(venta.sucursal, "ubicacion", "")
+    configuracion = ConfiguracionEmpresa.objects.filter(
+        is_active=True, is_delete=False
+    ).first()
+    nombre_empresa = (
+        configuracion.nombre_comercial if configuracion else "Orvend Mart"
+    )
+    direccion_empresa = (
+        configuracion.direccion
+        if configuracion and configuracion.direccion
+        else getattr(venta.sucursal, "ubicacion", "")
+    )
+    lineas_empresa = [nombre_empresa]
+    lineas_empresa.extend(textwrap.wrap(direccion_empresa, width=35))
+    if configuracion and configuracion.rtn:
+        lineas_empresa.append(f"RTN: {configuracion.rtn}")
+    if configuracion and configuracion.email:
+        lineas_empresa.append(configuracion.email)
+    if configuracion and configuracion.telefono:
+        lineas_empresa.append(f"Tel.: {configuracion.telefono}")
+    mensaje_factura = (
+        configuracion.mensaje_factura
+        if configuracion and configuracion.mensaje_factura
+        else "Gracias por su compra"
+    )
+    if (
+        configuracion
+        and configuracion.diseno_factura == ConfiguracionEmpresa.DISENO_PAGINA
+    ):
+        return HttpResponse(
+            _generar_factura_pagina_pdf(
+                factura_cai,
+                venta,
+                detalles,
+                cajero,
+                configuracion,
+            ),
+            content_type="application/pdf",
+            headers={"Content-Disposition": 'inline; filename="factura.pdf"'},
+        )
+    lineas_mensaje_factura = textwrap.wrap(mensaje_factura, width=35) or [mensaje_factura]
 
     # ==========================================
     # CALCULAR ALTO DINAMICO
     # ==========================================
 
     ancho_ticket = 80 * mm
+    margen_ticket = 10
+    inicio_producto = margen_ticket
+    fin_producto = 110
+    inicio_cantidad = fin_producto
+    fin_cantidad = 175
+    inicio_total = fin_cantidad
+    fin_total = ancho_ticket - margen_ticket
+    centro_cantidad = (inicio_cantidad + fin_cantidad) / 2
+    ancho_producto = fin_producto - inicio_producto
 
-    lineas_direccion = len(textwrap.wrap(direccion, width=35))
+    def envolver_linea_producto(texto):
+        palabras = texto.split()
+        lineas, linea_actual = [], ""
+        for palabra in palabras:
+            candidata = f"{linea_actual} {palabra}".strip()
+            if linea_actual and pdfmetrics.stringWidth(candidata, "Helvetica", 8) > ancho_producto:
+                lineas.append(linea_actual)
+                linea_actual = palabra
+            else:
+                linea_actual = candidata
+        if linea_actual:
+            lineas.append(linea_actual)
+        return lineas or ["-"]
+
+    lineas_detalle_factura = [
+        envolver_linea_producto(nombre_linea_factura(detalle))
+        for detalle in detalles
+    ]
+
+    # El recibo se dibuja desde la parte superior. Antes se reservaban 145 mm
+    # fijos y luego se sumaba el contenido variable, dejando mucho papel en
+    # blanco después del mensaje. Calculamos cada bloque con los mismos saltos
+    # verticales usados al imprimir para que el corte quede justo al final.
+    cantidad_lineas_totales = 4 + int(
+        bool(venta.nota_credito and venta.nota_credito > 0)
+    )
+    alto_encabezado = 60 + (len(lineas_empresa) * 11)
+    alto_datos_factura = 83
+    alto_cliente = 44 if venta.con_rtn and venta.id_cliente else 32
+    alto_tabla = 22 + (
+        sum(len(lineas) for lineas in lineas_detalle_factura) * 12
+    )
+    alto_totales = 38 + (cantidad_lineas_totales * 12)
+    alto_tarjeta = 47 if tarjeta else 0
+    alto_pie = 25 + (len(lineas_mensaje_factura) * 10)
 
     alto_ticket = (
-        130 * mm  # encabezado, cliente, totales y pie
-        + (len(detalles) * 12)
-        + (lineas_direccion * 10)
+        25  # margen superior
+        + alto_encabezado
+        + alto_datos_factura
+        + alto_cliente
+        + alto_tabla
+        + alto_totales
+        + alto_tarjeta
+        + alto_pie
+        + 15  # margen inferior de seguridad
     )
-
-    if tarjeta:
-        alto_ticket += 15 * mm
 
     # ==========================================
     # CREAR PDF
@@ -8375,18 +12499,29 @@ def imprimir_factura(request, id_factura):
     # ENCABEZADO
     # ==========================================
 
-    pdf.setFont("Helvetica-Bold", 14)
+    logo_path = _logo_empresa_pdf()
+    logo_width = 80
+    logo_height = 32
 
-    pdf.drawCentredString(ancho / 2, y, "ORVEND MART")
+    try:
+        pdf.drawImage(
+            logo_path,
+            (ancho - logo_width) / 2,
+            y - logo_height + 8,
+            width=logo_width,
+            height=logo_height,
+            preserveAspectRatio=True,
+            mask="auto",
+        )
+    except Exception:
+        # La factura sigue generándose aunque el archivo del logo no esté disponible.
+        pass
 
-    y -= 18
-
-    pdf.setFont("Helvetica", 8)
-
-    for linea in textwrap.wrap(direccion, width=35):
+    y -= 40
+    for indice, linea in enumerate(lineas_empresa):
+        pdf.setFont("Helvetica-Bold" if indice == 0 else "Helvetica", 10 if indice == 0 else 8)
         pdf.drawCentredString(ancho / 2, y, linea)
-
-        y -= 10
+        y -= 11
 
     y -= 5
 
@@ -8424,7 +12559,9 @@ def imprimir_factura(request, id_factura):
     y -= 12
 
     pdf.drawCentredString(
-        ancho / 2, y, f"Fecha: {venta.f_creacion.strftime('%d/%m/%Y %I:%M %p')}"
+        ancho / 2,
+        y,
+        f"Fecha: {_fecha_honduras(venta.f_creacion).strftime('%d/%m/%Y %I:%M %p')}",
     )
 
     y -= 12
@@ -8446,7 +12583,13 @@ def imprimir_factura(request, id_factura):
     pdf.setFont("Helvetica", 8)
 
     if venta.id_cliente:
-        pdf.drawString(10, y, f"{venta.id_cliente}")
+        if venta.con_rtn:
+            nombre_empresa = venta.id_cliente.empresa or venta.id_cliente.nombre_completo
+            pdf.drawString(10, y, nombre_empresa[:42])
+            y -= 12
+            pdf.drawString(10, y, f"RTN: {venta.id_cliente.dni}")
+        else:
+            pdf.drawString(10, y, venta.id_cliente.nombre_completo[:42])
 
     else:
         pdf.drawString(10, y, "Consumidor Final")
@@ -8459,13 +12602,9 @@ def imprimir_factura(request, id_factura):
 
     pdf.setFont("Helvetica-Bold", 8)
 
-    pdf.drawString(10, y, "PRODUCTO")
-
-    pdf.drawRightString(150, y, "CANT")
-
-    pdf.drawRightString(205, y, "P/U")
-
-    pdf.drawRightString(290, y, "TOTAL")
+    pdf.drawString(inicio_producto, y, "PRODUCTO")
+    pdf.drawCentredString(centro_cantidad, y, "CANT (P/U)")
+    pdf.drawRightString(fin_total, y, "TOTAL")
 
     y -= 10
 
@@ -8475,21 +12614,18 @@ def imprimir_factura(request, id_factura):
 
     pdf.setFont("Helvetica", 8)
 
-    for detalle in detalles:
+    for detalle, lineas_nombre in zip(detalles, lineas_detalle_factura):
         total_linea = detalle.cantidad * detalle.precio_unitario
 
-        # producto limitado para no invadir columnas
-        nombre_producto = str(detalle.producto)[:18]
+        cantidad_y_precio = f"{detalle.cantidad:.2f}({detalle.precio_unitario:.2f})"
 
-        pdf.drawString(10, y, nombre_producto)
+        for indice, linea_nombre in enumerate(lineas_nombre):
+            pdf.drawString(inicio_producto, y, linea_nombre)
+            if indice == 0:
+                pdf.drawCentredString(centro_cantidad, y, cantidad_y_precio)
+                pdf.drawRightString(fin_total, y, f"{total_linea:.2f}")
+            y -= 12
 
-        pdf.drawRightString(150, y, str(detalle.cantidad))
-
-        pdf.drawRightString(205, y, f"{detalle.precio_unitario:.2f}")
-
-        pdf.drawRightString(290, y, f"{total_linea:.2f}")
-
-        y -= 12
 
     # ==========================================
     # TOTALES
@@ -8503,17 +12639,26 @@ def imprimir_factura(request, id_factura):
 
     pdf.setFont("Helvetica", 8)
 
-    for nombre, valor in [
+    totales_factura = [
         ("Subtotal", venta.subtotal),
         ("ISV 15%", venta.impuesto_15),
         ("ISV 18%", venta.impuesto_18),
         ("Descuento", venta.descuento),
-    ]:
+    ]
+    if venta.nota_credito and venta.nota_credito > 0:
+        totales_factura.append(("Devolución", venta.nota_credito))
+
+    for nombre, valor in totales_factura:
         # Etiqueta a la izquierda
         pdf.drawString(10, y, nombre)
 
         # Valor alineado a la derecha
-        pdf.drawRightString(ancho - 10, y, f"L {valor:.2f}")
+        monto_mostrado = (
+            f"- L {valor:.2f}"
+            if nombre == "Devolución"
+            else f"L {valor:.2f}"
+        )
+        pdf.drawRightString(ancho - 10, y, monto_mostrado)
 
         y -= 12
 
@@ -8558,8 +12703,9 @@ def imprimir_factura(request, id_factura):
     y -= 25
 
     pdf.setFont("Helvetica", 8)
-
-    pdf.drawCentredString(ancho / 2, y, "Gracias por su compra")
+    for linea in lineas_mensaje_factura:
+        pdf.drawCentredString(ancho / 2, y, linea)
+        y -= 10
 
     pdf.save()
 
@@ -8570,6 +12716,36 @@ def imprimir_factura(request, id_factura):
         content_type="application/pdf",
         headers={"Content-Disposition": 'inline; filename="factura.pdf"'},
     )
+
+
+def descargar_factura_n8n(request, token):
+    """API interna para que n8n descargue una factura durante un minuto."""
+    access_token = request.GET.get("access_token", "")
+
+    try:
+        data = signing.loads(
+            access_token,
+            salt="manager.factura-n8n-v1",
+            max_age=settings.N8N_FACTURA_URL_EXPIRA_SEGUNDOS,
+        )
+    except signing.SignatureExpired:
+        return JsonResponse(
+            {"success": False, "message": "El enlace temporal de factura expiró."},
+            status=403,
+        )
+    except signing.BadSignature:
+        return JsonResponse(
+            {"success": False, "message": "El enlace temporal de factura no es válido."},
+            status=403,
+        )
+
+    if data.get("factura_token") != str(token):
+        return JsonResponse(
+            {"success": False, "message": "El token no corresponde a la factura."},
+            status=403,
+        )
+
+    return imprimir_factura(request, token, es_integracion=True)
 
 
 @login_required
@@ -8784,6 +12960,25 @@ def post_datos_sat(request):
 
 @login_required
 def descuento_cupon(request, cupon, id):
+
+    if not _puede_operar_caja(request.user):
+        return JsonResponse(
+            {"error": "No tiene permiso para aplicar cupones"},
+            status=403,
+        )
+
+    caja_abierta = CajaAC.objects.filter(
+        usuario_id=request.user.id,
+        fecha_apertura__date=timezone.localdate(),
+        estado="abierta",
+        is_active=True,
+        is_delete=False,
+    ).exists()
+    if not caja_abierta:
+        return JsonResponse(
+            {"error": "La caja debe estar abierta para aplicar cupones"},
+            status=400,
+        )
 
     producto = Productos.objects.get(id=id)
 
@@ -9108,6 +13303,62 @@ def traslados_list(request):
             "search": search,
         },
     )
+
+
+@login_required
+@permission_required("manager.view_traslados", raise_exception=True)
+def detalle_traslado_view(request, token):
+    traslado = get_object_or_404(
+        Traslados.objects.select_related(
+            "solicitado_por",
+            "autorizado_por",
+            "ubicacion_origen",
+            "ubicacion_destino",
+        ).prefetch_related(
+            "detalles_traslado__producto__unidad_medida",
+            "detalles_traslado__producto__marca",
+        ),
+        documento_token=token,
+        is_delete=False,
+    )
+
+    detalles = []
+    total_solicitado = Decimal("0")
+    total_trasladado = Decimal("0")
+    for detalle in traslado.detalles_traslado.all():
+        producto = detalle.producto
+        cantidad_solicitada = Decimal(detalle.cantidad_solicitada or 0)
+        cantidad_trasladada = Decimal(detalle.cantidad_entregada or 0)
+        total_solicitado += cantidad_solicitada
+        total_trasladado += cantidad_trasladada
+        detalles.append(
+            {
+                "nombre": producto.nombre,
+                "presentacion": getattr(producto.unidad_medida, "abreviatura", "N/A"),
+                "marca": getattr(producto.marca, "nombre", "N/A"),
+                "sku": producto.codigo_sku or "N/A",
+                "cantidad_solicitada": cantidad_solicitada,
+                "cantidad_trasladada": cantidad_trasladada,
+            }
+        )
+
+    data = {
+        "id": traslado.id,
+        "origen": traslado.ubicacion_origen.nombre,
+        "destino": traslado.ubicacion_destino.nombre,
+        "solicitado_por": traslado.solicitado_por.username,
+        "autorizado_por": (
+            traslado.autorizado_por.username if traslado.autorizado_por else "Pendiente"
+        ),
+        "fecha_solicitud": traslado.f_creacion,
+        "fecha_autorizacion": traslado.fecha_autorizacion,
+        "estado": traslado.get_estado_display(),
+        "observaciones": traslado.observaciones,
+        "total_solicitado": total_solicitado,
+        "total_trasladado": total_trasladado,
+        "detalles": detalles,
+    }
+    return render(request, "traslados/detalletraslado.html", {"traslado": data})
 
 
 @login_required
@@ -9550,7 +13801,7 @@ def put_descuento(request, id):
 @permission_required("manager.view_ventas", raise_exception=True)
 def ventas_view(request):
 
-    fecha_hoy = date.today()
+    fecha_hoy = timezone.localdate(timezone=ZONA_HONDURAS)
 
     fecha_inicio = request.GET.get("fecha_inicio")
     fecha_fin = request.GET.get("fecha_fin")
@@ -9562,17 +13813,19 @@ def ventas_view(request):
     if not fecha_fin:
         fecha_fin = fecha_hoy.strftime("%Y-%m-%d")
 
+    inicio_honduras, fin_honduras = _rango_fechas_honduras(fecha_inicio, fecha_fin)
     detalles = (
         DetalleVenta.objects.select_related(
             "producto",
+            "combo",
             "venta",
             "venta__id_cliente",
             "venta__sucursal",
             "venta__id_factura_cai",
         )
         .filter(
-            venta__f_creacion__date__gte=fecha_inicio,
-            venta__f_creacion__date__lte=fecha_fin,
+            venta__f_creacion__gte=inicio_honduras,
+            venta__f_creacion__lt=fin_honduras,
         )
         .order_by("-venta__id")
     )
@@ -9583,6 +13836,17 @@ def ventas_view(request):
 
     if sucursal:
         detalles = detalles.filter(venta__sucursal_id=sucursal)
+
+    devoluciones_por_detalle = dict(
+        DevolucionVentaDetalle.objects.filter(
+            detalle_venta__in=detalles,
+            devolucion_venta__is_delete=False,
+        )
+        .exclude(devolucion_venta__estado=DevolucionVenta.Estado.ANULADA)
+        .values("detalle_venta_id")
+        .annotate(total=Sum("total"))
+        .values_list("detalle_venta_id", "total")
+    )
 
     # ======================================
     # TOTAL GENERAL
@@ -9603,6 +13867,17 @@ def ventas_view(request):
 
     for detalle in page_obj:
         detalle.cajero_nombre = usuarios.get(detalle.venta.u_creo_id, "No disponible")
+        detalle.subtotal_linea = detalle.subtotal or (
+            detalle.cantidad * detalle.precio_unitario
+        )
+        detalle.devolucion_linea = (
+            devoluciones_por_detalle.get(detalle.id, Decimal("0")) or Decimal("0")
+        )
+        detalle.total_neto_linea = (
+            detalle.subtotal_linea
+            - (detalle.descuento or Decimal("0"))
+            - detalle.devolucion_linea
+        )
 
     context = {
         "page_obj": page_obj,
@@ -9622,3 +13897,234 @@ def ventas_view(request):
         "inventario/ventas.html",
         context,
     )
+
+
+def _obtener_equivalencias_producto(producto):
+    """Devuelve la equivalencia menor y mayor de la presentación relacionada."""
+    relaciones = (
+        getattr(producto, "relaciones_como_master", [])
+        or getattr(producto, "relaciones_como_relacionado", [])
+    )
+
+    if not relaciones:
+        return producto.equival_unid, producto.equival_unid
+
+    relacion = relaciones[0]
+    return (
+        relacion.producto_relacionado.equival_unid,
+        relacion.producto_master.equival_unid,
+    )
+
+
+def _obtener_proveedor_producto(producto):
+    """Obtiene el proveedor de la compra más reciente del producto."""
+    compras_producto = getattr(producto, "compras_producto", [])
+    if not compras_producto:
+        return ""
+
+    return compras_producto[0].compra.proveedor.nombre_comercial
+
+
+@login_required
+@permission_required("manager.view_ventas", raise_exception=True)
+def exportar_ventas_excel(request):
+    fecha_hoy = timezone.localdate(timezone=ZONA_HONDURAS).strftime("%Y-%m-%d")
+    fecha_inicio = request.GET.get("fecha_inicio") or fecha_hoy
+    fecha_fin = request.GET.get("fecha_fin") or fecha_hoy
+    sucursal = request.GET.get("sucursal")
+
+    inicio_honduras, fin_honduras = _rango_fechas_honduras(fecha_inicio, fecha_fin)
+    detalles = (
+        DetalleVenta.objects.select_related(
+            "producto",
+            "combo",
+            "producto__categoria",
+            "producto__marca",
+            "producto__unidad_medida",
+            "venta",
+            "venta__id_cliente",
+            "venta__sucursal",
+            "venta__id_factura_cai",
+        )
+        .prefetch_related(
+            Prefetch(
+                "producto__producto_master_rel",
+                queryset=ProductosRel.objects.select_related(
+                    "producto_master", "producto_relacionado"
+                ),
+                to_attr="relaciones_como_master",
+            ),
+            Prefetch(
+                "producto__producto_relacionado_rel",
+                queryset=ProductosRel.objects.select_related(
+                    "producto_master", "producto_relacionado"
+                ),
+                to_attr="relaciones_como_relacionado",
+            ),
+            Prefetch(
+                "producto__producto_compra_detalles",
+                queryset=(
+                    DetalleCompra.objects.filter(
+                        is_delete=False,
+                        compra__is_delete=False,
+                    )
+                    .select_related("compra__proveedor")
+                    .order_by("-compra__fecha_compra")
+                ),
+                to_attr="compras_producto",
+            ),
+        )
+        .filter(
+            venta__f_creacion__gte=inicio_honduras,
+            venta__f_creacion__lt=fin_honduras,
+        )
+        .order_by("-venta__id")
+    )
+
+    if sucursal:
+        detalles = detalles.filter(venta__sucursal_id=sucursal)
+
+    devoluciones_por_detalle = dict(
+        DevolucionVentaDetalle.objects.filter(
+            detalle_venta__in=detalles,
+            devolucion_venta__is_delete=False,
+        )
+        .exclude(devolucion_venta__estado=DevolucionVenta.Estado.ANULADA)
+        .values("detalle_venta_id")
+        .annotate(total=Sum("total"))
+        .values_list("detalle_venta_id", "total")
+    )
+
+    usuarios = {
+        usuario.id: (f"{usuario.first_name} {usuario.last_name}".strip() or usuario.username)
+        for usuario in User.objects.all()
+    }
+
+    encabezados = [
+        "Factura",
+        "Fecha",
+        "ID cliente",
+        "Nombre cliente",
+        "Cajero",
+        "Sucursal",
+        "Tipo de venta",
+        "Tipo de pago",
+        "ID producto",
+        "Producto",
+        "Categoría",
+        "Proveedor",
+        "Marca",
+        "Presentación",
+        "Cantidad",
+        "Precio unitario",
+        "Costo unitario",
+        "Utilidad unitaria",
+        "Utilidad total",
+        "Subtotal línea",
+        "ISV línea",
+        "ISV %",
+        "Descuento línea",
+        "Devolución línea",
+        "Total neto línea",
+        "Equivalencia mínima",
+        "Equivalencia máxima",
+    ]
+    libro, hoja = _libro_exportacion_grande(
+        "Ventas",
+        encabezados,
+        [16, 14, 14, 28, 22, 22, 16, 20, 15, 34, 22, 24, 20, 20, 12, 16, 16, 16, 16, 16, 16, 16, 12, 16, 16, 16, 16],
+    )
+
+    for detalle in detalles.iterator(chunk_size=200):
+        subtotal_linea = detalle.subtotal or (
+            detalle.cantidad * detalle.precio_unitario
+        )
+        isv_linea = (
+            Decimal(detalle.impuesto_15 or 0)
+            + Decimal(detalle.impuesto_18 or 0)
+        )
+        importe_bruto_linea = Decimal(detalle.precio_unitario or 0) * Decimal(
+            detalle.cantidad or 0
+        )
+        isv_porcentaje = (
+            (isv_linea * Decimal("100") / importe_bruto_linea)
+            if importe_bruto_linea > 0 and isv_linea > 0
+            else Decimal("0")
+        )
+        devolucion_linea = (
+            devoluciones_por_detalle.get(detalle.id, Decimal("0")) or Decimal("0")
+        )
+        total_neto_linea = (
+            subtotal_linea
+            - (detalle.descuento or Decimal("0"))
+            - devolucion_linea
+        )
+        cliente_id = detalle.venta.id_cliente.id if detalle.venta.id_cliente else ""
+        cliente_nombre = (
+            detalle.venta.id_cliente.nombre_completo
+            if detalle.venta.id_cliente
+            else "Consumidor Final"
+        )
+        producto = detalle.producto
+        equivalencia_min, equivalencia_max = (
+            _obtener_equivalencias_producto(producto)
+            if producto
+            else ("", "")
+        )
+        _agregar_fila_exportacion(
+            hoja,
+            [
+                detalle.venta.id_factura_cai.numero_factura
+                if detalle.venta.id_factura_cai
+                else "",
+                _fecha_honduras(detalle.venta.f_creacion).date(),
+                cliente_id,
+                cliente_nombre,
+                usuarios.get(detalle.venta.u_creo_id, "No disponible"),
+                detalle.venta.sucursal.nombre,
+                detalle.venta.get_tipo_venta_display(),
+                {
+                    "contado": "Pago al contado",
+                    "tarjeta": "Pago con tarjeta",
+                    "credito": "Pago a crédito",
+                    "depostivo": "Depósito bancario",
+                    "cheque": "Pago con cheque",
+                }.get(detalle.venta.tipo_pago, detalle.venta.tipo_pago),
+                producto.id if producto else f"COMBO-{detalle.combo_id}",
+                producto.nombre if producto else detalle.combo.nombre,
+                producto.categoria.nombre if producto else "Combo",
+                _obtener_proveedor_producto(producto) if producto else "",
+                producto.marca.nombre if producto else "",
+                producto.unidad_medida.nombre if producto else "",
+                detalle.cantidad,
+                detalle.precio_unitario,
+                detalle.costo_unitario,
+                detalle.utilidad_unitaria,
+                detalle.utilidad_total,
+                subtotal_linea,
+                isv_linea,
+                isv_porcentaje,
+                detalle.descuento,
+                devolucion_linea,
+                total_neto_linea,
+                equivalencia_min,
+                equivalencia_max,
+            ],
+            formatos={
+                2: "dd/mm/yyyy",
+                15: "#,##0.00",
+                16: "#,##0.00",
+                17: "#,##0.00",
+                18: "#,##0.00",
+                19: "#,##0.00",
+                20: "#,##0.00",
+                21: "#,##0.00",
+                22: '0.##"%"',
+                23: "#,##0.00",
+                24: "#,##0.00",
+                25: "#,##0.00",
+                26: "#,##0",
+                27: "#,##0",
+            },
+        )
+    return _respuesta_excel(libro, f"ventas_{fecha_inicio}_{fecha_fin}.xlsx")

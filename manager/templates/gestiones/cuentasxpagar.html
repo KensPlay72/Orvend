@@ -1,12 +1,12 @@
 {% extends "menu.html" %}
-{% load static %}
+{% load static pagination_tags %}
 {% block title %}Cuentas x pagar{% endblock %}
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 {% endblock %}
 {% block titulo_content %}
     <div class="tituloscont">
-        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+        <img class="logop" src="{% static 'img/LH.webp' %}" alt="">
         <p class="header__logo">| Cuentas x pagar</p>
     </div>
 {% endblock %}
@@ -19,7 +19,7 @@
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="exampleModalLongTitle">Registrar Empleado</h5>
+                        <h5 class="modal-title" id="exampleModalLongTitle">Registrar Abono</h5>
                         <button type="button"
                                 class="btn-close"
                                 data-bs-dismiss="modal"
@@ -46,11 +46,31 @@
                                     placeholder="Abono"
                                     oninput="validateNumber(this)" autocomplete="off">
                             </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                                <button type="submit" id="btnregis" class="btn btn classbotones">Guardar</button>
-                            </div>
                         </form>
+                    </div>
+                          <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                <button type="submit" form="postregistro" id="btnregis" class="btn btn classbotones">Guardar</button>
+                            </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="modalHistorialPagar" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Historial de abonos</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted mb-3" id="historialPagarCuenta"></p>
+                        <div class="table-responsive">
+                            <table class="tablas-todo mb-0">
+                                <thead><tr><th>Registrado por</th><th>Fecha</th><th>Cantidad</th></tr></thead>
+                                <tbody id="historialPagarBody"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -118,6 +138,7 @@
                 <th>CompraID</th>
                 <th>Total</th>
                 <th>Pendiente</th>
+                <th>Faltan</th>
                 <th>F. Vencimiento</th>
                 <th>Estado</th>
                 <th>Acciones</th>
@@ -125,7 +146,9 @@
         </thead>
         <tbody>
             {% for cuenta in cuentas %}
-            <tr data-id="{{ cuenta.id }}">
+            <tr class="fila-cuenta {{ cuenta.estado_vencimiento }}"
+                data-id="{{ cuenta.id }}"
+                data-abonos-url="{% url 'cppagar_abonos' cuenta.id %}">
                 <td>{{ cuenta.id }}</td>
 
                 <!-- PROVEEDOR -->
@@ -134,7 +157,7 @@
                 <!-- COMPRA -->
                 <td>
                     <u style="color:blue;">
-                        <a href="{% url 'detalle_compra' cuenta.compra.id %}?page={{ page }}" style="color:blue;">
+                        <a href="{% url 'detalle_compra' cuenta.compra.documento_token %}?page={{ page }}" style="color:blue;">
                             {{ cuenta.compra.id }}
                         </a>
                     </u>
@@ -143,20 +166,29 @@
                 <!-- MONTOS -->
                 <td>L. {{ cuenta.monto_total|floatformat:2 }}</td>
                 <td>L. {{ cuenta.monto_pendiente|floatformat:2 }}</td>
+                <td>
+                    {% if cuenta.monto_pendiente <= 0 %}
+                        Pagada
+                    {% elif cuenta.dias_restantes < 0 %}
+                        Vencida hace {{ cuenta.dias_en_mora }} días
+                    {% else %}
+                        {{ cuenta.dias_restantes }} días
+                    {% endif %}
+                </td>
                 <td>{{ cuenta.fecha_vencimiento|date:"d/m/Y" }}</td>
 
                 <!-- ESTADO -->
-                <td>
+                <td class="estado-centrado">
                     {% if cuenta.estado == 1 %}
-                        <span class="estado-circulo estado-pendiente" title="Pendiente"></span>
+                        <span class="badge bg-warning text-dark">Pendiente</span>
                     {% elif cuenta.estado == 2 %}
-                        <span class="estado-circulo estado-parcial" title="Parcial"></span>
+                        <span class="badge bg-info text-dark">Parcial</span>
                     {% elif cuenta.estado == 3 %}
-                        <span class="estado-circulo estado-pagado" title="Pagado"></span>
+                        <span class="badge bg-success">Pagado</span>
                     {% elif cuenta.estado == 4 %}
-                        <span class="estado-circulo estado-cancelado" title="Cancelado"></span>
+                        <span class="badge bg-danger">Cancelado</span>
                     {% else %}
-                        <span class="estado-circulo estado-desconocido"></span>
+                        <span class="badge bg-secondary">Desconocido</span>
                     {% endif %}
                 </td>
 
@@ -177,7 +209,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="7" class="text-center">No hay cuentas registradas</td>
+                <td colspan="9" class="text-center table-empty-state">No hay cuentas por pagar registradas</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -194,7 +226,8 @@
         </li>
 
         <!-- Números -->
-        {% for p in page_range %}
+        {% paginas_cercanas page total_pages as paginas_visibles %}
+        {% for p in paginas_visibles %}
             <li class="page-item {% if p == page %}active{% endif %}">
                 <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
             </li>

@@ -1,0 +1,22 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acceso denegado | OrvendMart</title>
+  <link rel="stylesheet" href="{% static 'css/error_pages.css' %}">
+</head>
+<body class="error-page-body" style="--error-primary: {{ tema_principal }}; --error-secondary: {{ tema_secundario }}; --error-button: {{ tema_botones }};">
+  <main class="error-card">
+    <div class="error-brand">Orvend<span>Mart</span></div>
+    <div class="error-mark" aria-hidden="true">!</div>
+    <span class="error-code">Error 403</span>
+    <h1>No tienes acceso</h1>
+    <p>Tu usuario no cuenta con los permisos necesarios para entrar a este apartado.</p>
+    <div class="error-actions">
+      <button class="error-button" type="button" onclick="history.back()">Volver atrás</button>
+    </div>
+  </main>
+</body>
+</html>

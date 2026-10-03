@@ -1,5 +1,5 @@
 {% extends "menu.html" %}
-{% load static %}
+{% load static pagination_tags %}
 {% block title %}
     Inventario
 {% endblock title %}
@@ -10,7 +10,7 @@
 {% block titulo_content %}
     <div class="tituloscont">
         <img class="logop"
-             src="{% static 'img/LH.png' %}"
+             src="{% static 'img/LH.webp' %}"
              alt="logo"
              width="0"
              height="0" />
@@ -63,7 +63,8 @@
                         <a class="page-link"
                            href="?page={{ page|add:"-1" }}&search={{ search }}">«</a>
                     </li>
-                    {% for p in page_range %}
+                    {% paginas_cercanas page total_pages as paginas_visibles %}
+                    {% for p in paginas_visibles %}
                         <li class="page-item {% if p == page %}active{% endif %}">
                             <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
                         </li>
@@ -78,7 +79,15 @@
         </div>
         <div class="tbimg">
             <div class="imagenesp">
-                <img id="imgProducto" class="imgProducto" alt="" width="200" height="200">
+                <div id="imagenCargando" class="estado-imagen d-none" role="status" aria-live="polite">
+                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                    <span>Cargando imagen...</span>
+                </div>
+                <div id="sinImagenProducto" class="estado-imagen d-none" aria-live="polite">
+                    <i class="bx bx-image-alt" aria-hidden="true"></i>
+                    <span>El producto no tiene una imagen cargada</span>
+                </div>
+                <img id="imgProducto" class="imgProducto d-none" alt="Imagen del producto" width="200" height="200">
             </div>
             <div class="cantp">
                 <div class="tabla-container">

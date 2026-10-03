@@ -1,0 +1,178 @@
+{% extends "menu.html" %} 
+{% load static %} 
+{% block title %}Devoluciones{% endblock %} 
+{% block extra_css %}
+<link
+  rel="stylesheet"
+  href="{% static 'css/devoluciones_venta.css' %}?v=20260928-05"
+/>
+{% endblock %} 
+{% block titulo_content %}
+<div class="tituloscont">
+  <img
+    class="logop"
+    src="{% static 'img/LH.webp' %}"
+    alt="logo"
+    width="0"
+    height="0"
+  />
+
+  <p class="header__logo">| Devoluciones</p>
+</div>
+{% endblock %} 
+{% block main_content %} 
+{% csrf_token %}
+<div
+  class="devolucion-venta-page"
+  id="devolucionesVentaApp"
+  data-base-url="{% url 'devoluciones_venta' %}"
+  data-crear-url="{% url 'crear_devolucion_venta' %}"
+>
+  <section class="dv-mobile-search-card">
+    <form id="buscarFacturaFormMovil" class="dv-mobile-search">
+      <i class="bx bx-receipt" aria-hidden="true"></i>
+      <input id="numeroFacturaMovil" type="search" inputmode="numeric" pattern="[0-9]*" placeholder="Buscar factura" autocomplete="off" required>
+      <button type="submit" aria-label="Buscar factura"><i class="bx bx-search" aria-hidden="true"></i></button>
+    </form>
+  </section>
+  <section id="resultadoFactura" class="d-none">
+    <div class="dv-card dv-factura-card">
+      <div class="dv-factura-title">
+        <i class="bx bx-receipt"></i>
+        <div>
+          <span>Factura</span>
+          <strong id="facturaNumero"></strong>
+        </div>
+      </div>
+      <div class="dv-factura-datos">
+        <div><span>Fecha</span><strong id="facturaFecha"></strong></div>
+        <div><span>Cliente</span><strong id="facturaCliente"></strong></div>
+        <div><span>Sucursal</span><strong id="facturaSucursal"></strong></div>
+        <div>
+          <span>Tipo de venta</span><strong id="facturaTipoVenta"></strong>
+        </div>
+      </div>
+    </div>
+
+    <section class="dv-card">
+      <div class="dv-section-head">
+        <div>
+          <h5>Productos de la factura</h5>
+          <p>Selecciona los productos y la cantidad que el cliente devuelve.</p>
+        </div>
+        <button
+          type="button"
+          id="seleccionarTodo"
+          class="btn btn-outline-success"
+        >
+          <i class="bx bx-check-double"></i> Toda la factura
+        </button>
+      </div>
+      <div class="tabla-container dv-tabla-container">
+        <table class="tablas-todo">
+          <thead>
+            <tr>
+              <th>Seleccionar</th>
+              <th>Producto</th>
+              <th>Vendido</th>
+              <th>Devuelto</th>
+              <th>Disponible</th>
+              <th>Precio unitario</th>
+              <th>Cantidad a devolver</th>
+            </tr>
+          </thead>
+          <tbody id="productosFacturaBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="dv-card dv-finalizar-card">
+      <button
+        type="button"
+        id="abrirModalDevolucion"
+        class="btn classbotones dv-crear-btn"
+      >
+        <i class="bx bx-credit-card"></i> Generar devolución
+      </button>
+    </section>
+  </section>
+</div>
+
+<div
+  class="modal fade"
+  id="modalDevolucionVenta"
+  tabindex="-1"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Generar devolución</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Cerrar"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group mb-3">
+          <label for="motivoDevolucion">Motivo de devolución</label>
+          <select id="motivoDevolucion" class="form-control" required>
+            <option value="">Seleccione un motivo</option>
+            {% for valor, nombre in motivos %}
+            <option value="{{ valor }}">{{ nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <br />
+        <div class="form-group">
+          <label for="justificacionDevolucion">Justificación</label>
+          <textarea
+            id="justificacionDevolucion"
+            class="form-control"
+            rows="4"
+            maxlength="500"
+            placeholder="Describa el motivo de la devolución"
+            required
+          ></textarea>
+        </div>
+        <div id="resolucionCredito" class="d-none mt-4">
+          <label class="form-label d-block"
+            >Resolver devolución a crédito</label
+          >
+          <input type="hidden" id="resolucionDevolucion" value="" />
+          <div class="d-flex gap-2 flex-wrap">
+            <button
+              type="button"
+              class="btn btn-outline-success resolucion-credito-btn"
+              data-resolucion="NOTA_CREDITO"
+            >
+              <i class="bx bx-credit-card"></i> Generar nota de crédito
+            </button>
+            <button
+              type="button"
+              class="btn btn-outline-primary resolucion-credito-btn"
+              data-resolucion="DEDUCIR_SALDO"
+            >
+              <i class="bx bx-minus-circle"></i> Deducir saldo pendiente
+            </button>
+          </div>
+          <small class="text-muted d-block mt-2"
+            >La deducción se registra como un abono sobre esta factura.</small
+          >
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancelar
+        </button>
+        <button type="button" id="crearDevolucion" class="btn classbotones">
+          <i class="bx bx-save"></i> Guardar devolución
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="{% static 'js/caja/devoluciones_venta.js' %}?v=20260928-05"></script>
+{% endblock %}

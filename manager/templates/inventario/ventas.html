@@ -1,5 +1,5 @@
 {% extends "menu.html" %}
-{% load static %}
+{% load static pagination_tags %}
 {% block title %}
     Ventas
 {% endblock title %}
@@ -9,13 +9,20 @@
 {% endblock extra_css %}
 {% block titulo_content %}
     <div class="tituloscont">
+        <img
+            class="logop"
+            src="{% static 'img/LH.webp' %}"
+            alt="logo"
+            width="0"
+            height="0"
+        />
         <p class="header__logo">| Ventas</p>
     </div>
 {% endblock titulo_content %}
 {% block main_content %}
     <div class="container-fluid">
         <!-- FILTROS -->
-        <form method="get" class="ventas-filter-form">
+        <form method="get" class="ventas-filter-form" id="ventasFilterForm" data-export-url="{% url 'exportar_ventas_excel' %}">
             <div class="ventas-filter-group">
                 <label class="ventas-filter-label">Fecha inicial</label>
                 <input type="date"
@@ -45,12 +52,17 @@
             <div class="ventas-filter-group">
                 <button type="submit" class="ventas-search-btn w-100">Buscar</button>
             </div>
+            <div class="ventas-filter-group ventas-export-group">
+                <button type="button" class="ventas-excel-btn" id="exportarVentasExcel" aria-label="Exportar ventas a Excel" title="Exportar a Excel">
+                    <i class="bx bx-spreadsheet" aria-hidden="true"></i>
+                </button>
+            </div>
         </form>
         <div class="ventas-resumen-grid">
             <div class="ventas-resumen-card">
                 <div>
                     <p class="ventas-resumen-title">Total Vendido</p>
-                    <p class="ventas-resumen-value">L {{ total_vendido|floatformat:2 }}</p>
+                    <p class="ventas-resumen-value">{{ moneda_simbolo }} {{ total_vendido|floatformat:2 }}</p>
                 </div>
                 <div class="ventas-resumen-icon">
                     <i class='bx bx-dollar-circle'></i>
@@ -59,7 +71,7 @@
             <div class="ventas-resumen-card">
                 <div>
                     <p class="ventas-resumen-title">Utilidad Generada</p>
-                    <p class="ventas-resumen-value">L {{ total_utilidad|floatformat:2 }}</p>
+                    <p class="ventas-resumen-value">{{ moneda_simbolo }} {{ total_utilidad|floatformat:2 }}</p>
                 </div>
                 <div class="ventas-resumen-icon">
                     <i class='bx bx-trending-up'></i>
@@ -81,7 +93,9 @@
                         <th>P/U</th>
                         <th>Costo U.</th>
                         <th>Utilidad U.</th>
-                        <th>Utilidad T.</th>
+                        <th>Subtotal</th>
+                        <th>Descuento</th>
+                        <th>Devolución</th>
                         <th>Total Línea</th>
                     </tr>
                 </thead>
@@ -92,26 +106,34 @@
                             <td>{{ d.venta.f_creacion|date:"d/m/Y H:i" }}</td>
                             <td>
                                 {% if d.venta.id_cliente %}
-                                    {{ d.venta.id_cliente.id }}
-                                    |
-                                    {{ d.venta.id_cliente.nombre_completo }}
+                                    {% if d.venta.con_rtn %}
+                                        {{ d.venta.id_cliente.id }}
+                                        |
+                                        {{ d.venta.id_cliente.empresa|default:d.venta.id_cliente.nombre_completo }}
+                                    {% else %}
+                                        {{ d.venta.id_cliente.id }}
+                                        |
+                                        {{ d.venta.id_cliente.nombre_completo }}
+                                    {% endif %}
                                 {% else %}
                                     Consumidor Final
                                 {% endif %}
                             </td>
                             <td>{{ d.cajero_nombre }}</td>
                             <td>{{ d.venta.sucursal.nombre }}</td>
-                            <td>{{ d.producto.nombre }}</td>
+                            <td>{% if d.combo %}{{ d.combo.nombre }}{% else %}{{ d.producto.nombre }}{% endif %}</td>
                             <td>{{ d.cantidad }}</td>
-                            <td>L {{ d.precio_unitario|floatformat:2 }}</td>
-                            <td>L {{ d.costo_unitario|floatformat:2 }}</td>
-                            <td>L {{ d.utilidad_unitaria|floatformat:2 }}</td>
-                            <td>L {{ d.utilidad_total|floatformat:2 }}</td>
-                            <td>L {% widthratio d.cantidad 1 d.precio_unitario %}</td>
+                            <td>{{ moneda_simbolo }} {{ d.precio_unitario|floatformat:2 }}</td>
+                            <td>{{ moneda_simbolo }} {{ d.costo_unitario|floatformat:2 }}</td>
+                            <td>{{ moneda_simbolo }} {{ d.utilidad_unitaria|floatformat:2 }}</td>
+                            <td>{{ moneda_simbolo }} {{ d.subtotal_linea|floatformat:2 }}</td>
+                            <td>{{ moneda_simbolo }} {{ d.descuento|floatformat:2 }}</td>
+                            <td>{{ moneda_simbolo }} {{ d.devolucion_linea|floatformat:2 }}</td>
+                            <td>{{ moneda_simbolo }} {{ d.total_neto_linea|floatformat:2 }}</td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="12" class="text-center">No se encontraron ventas</td>
+                            <td colspan="15" class="text-center">No se encontraron ventas</td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -129,7 +151,8 @@
                         <span class="page-link">«</span>
                     {% endif %}
                 </li>
-                {% for p in page_obj.paginator.page_range %}
+                {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
+                {% for p in paginas_visibles %}
                     <li class="page-item {% if p == page_obj.number %}active{% endif %}">
                         <a class="page-link"
                            href="?page={{ p }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&sucursal={{ sucursal_seleccionada }}">
@@ -149,5 +172,7 @@
                 </li>
             </ul>
         </nav>
+        <br>
     </div>
+    <script src="{% static 'js/gestiones/ventas.js' %}"></script>
 {% endblock main_content %}

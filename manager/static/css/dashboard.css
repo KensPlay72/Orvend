@@ -148,6 +148,22 @@
     z-index: 2;
 }
 
+.card--stock-bajo .card-info {
+    flex: 0 0 auto;
+    align-items: center;
+    text-align: center;
+}
+
+.card--stock-bajo {
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.65rem;
+}
+
+.card--stock-bajo .card-icon {
+    position: static;
+}
+
 .card-title {
     font-size: 14px;
     font-weight: 500;
@@ -218,6 +234,11 @@
 
 .second-row {
     grid-template-columns: repeat(4, 1fr);
+}
+
+/* Sin permiso de cuentas por pagar quedan tres tarjetas, sin espacio vacío. */
+.second-row:has(.card-small:nth-child(3):last-child) {
+    grid-template-columns: repeat(3, 1fr);
 }
 
 
@@ -719,6 +740,11 @@
     gap: 18px;
 }
 
+/* El resumen conserva una distribución equilibrada cuando se ocultan cuentas. */
+.bottom-grid:has(.summary-card:nth-child(2):last-child) {
+    grid-template-columns: repeat(2, 1fr);
+}
+
 
 /* ==========================================================
    SUMMARY CARD
@@ -841,7 +867,7 @@
 }
 
 
-@media (max-width: 700px) {
+@media (max-width: 1032px) {
 
     .dashboard {
         gap: 16px;

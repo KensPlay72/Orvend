@@ -1,5 +1,5 @@
 {% extends "menu.html" %}
-{% load static %}
+{% load static pagination_tags %}
 {% block title %}
     Presentaciones
 {% endblock title %}
@@ -9,7 +9,7 @@
 {% block titulo_content %}
     <div class="tituloscont">
         <img class="logop"
-             src="{% static 'img/LH.png' %}"
+             src="{% static 'img/LH.webp' %}"
              alt=""
              width="0"
              height="0">
@@ -17,14 +17,29 @@
     </div>
 {% endblock titulo_content %}
 {% block main_content %}
-    {% if perms.manager.add_umedidas %}
-        <button id="toggleDropdownPanel"
-                class="btn-dropdown"
-                data-bs-toggle="modal"
-                data-bs-target="#modalregis">
-            <i class="bx bx-plus-circle"></i> Agregar
-        </button>
+    <div class="catalog-toolbar">
+      <div>
+        {% if perms.manager.add_umedidas %}
+            <button id="toggleDropdownPanel"
+                    class="btn-dropdown"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalregis">
+                <i class="bx bx-plus-circle"></i> Agregar
+            </button>
+        {% endif %}
+      </div>
+    {% if request.user.is_superuser %}
+        {% url 'exportar_catalogo_excel' 'presentaciones' as exportar_presentaciones %}
+        {% url 'descargar_plantilla_catalogo' 'presentaciones' as plantilla_presentaciones %}
+        {% url 'importar_catalogo_excel' 'presentaciones' as importar_presentaciones %}
+        <div class="catalog-import-actions catalog-toolbar__actions">
+            <a class="catalog-export-btn" href="{{ exportar_presentaciones }}"><i class="bx bx-spreadsheet"></i> Exportar</a>
+            <button type="button" class="catalog-import-btn" data-bs-toggle="modal" data-bs-target="#modalImportarPresentaciones"><i class="bx bx-upload"></i> Importar</button>
+            <a class="catalog-template-btn" href="{{ plantilla_presentaciones }}"><i class="bx bx-download"></i> Plantilla</a>
+        </div>
+        {% include "gestiones/_modal_importar_excel.html" with modal_id="modalImportarPresentaciones" titulo="presentaciones" import_url=importar_presentaciones %}
     {% endif %}
+    </div>
     <div class="modal fade"
          id="modalregis"
          tabindex="-1"
@@ -144,7 +159,6 @@
                                 <span id="activeTextedit" class="fw-bold text-success">Activo</span>
                             </label>
                         </div>
-                        <br>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -173,11 +187,11 @@
                         <td>{{ presentacion.nombre }}</td>
                         <td>{{ presentacion.abreviatura }}</td>
                         <td>{{ presentacion.valor }}</td>
-                        <td>
+                <td class="estado-centrado">
                             {% if presentacion.is_active %}
-                                <span class="estado-circulo estado-activo" title="Activo"></span>
+                        <span class="badge bg-success">Activo</span>
                             {% else %}
-                                <span class="estado-circulo estado-inactivo" title="Inactivo"></span>
+                        <span class="badge bg-danger">Inactivo</span>
                             {% endif %}
                         </td>
                         <td>
@@ -203,6 +217,8 @@
                             {% endif %}
                         </td>
                     </tr>
+                {% empty %}
+                    <tr><td colspan="6" class="text-center table-empty-state">No hay presentaciones registradas.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -219,7 +235,8 @@
                 {% endif %}
             </li>
             <!--PÁGINAS -->
-            {% for p in page_obj.paginator.page_range %}
+            {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
+            {% for p in paginas_visibles %}
                 <li class="page-item {% if p == page_obj.number %}active{% endif %}">
                     <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
                 </li>
@@ -241,5 +258,6 @@
     }
     </script>
     <script type="module" src="{% static 'js/gestiones/presentaciones.js' %}"></script>
+    <script src="{% static 'js/importar_excel.js' %}"></script>
     <script type="module" src="{% static 'js/chektext.js' %}"></script>
 {% endblock main_content %}

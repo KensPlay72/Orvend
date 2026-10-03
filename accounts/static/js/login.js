@@ -45,6 +45,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     document.getElementById("loader").style.display = "flex";
+    let redireccionando = false;
 
     try {
       const response = await fetch("/accounts/login/", {
@@ -61,7 +62,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
       const data = await response.json();
 
+      // La suscripción vencida siempre se resuelve mediante navegación directa,
+      // nunca con una alerta.
+      if (data.acceso_bloqueado && data.redirect_url) {
+        redireccionando = true;
+        window.location.replace(data.redirect_url);
+        return;
+      }
+
       if (!response.ok) {
+        if (data.redirect_url) {
+          redireccionando = true;
+          window.location.replace(data.redirect_url);
+          return;
+        }
         Swal.fire({
           icon: "error",
           title: "Error",
@@ -81,16 +95,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 return;
             }
 
-            // ✔ ÉXITO → redirect por rol
-            if (data.groups === 1) {
-                window.location.href = "/manager/dashboard/";
-            } else if (data.groups === 2) { 
-                window.location.href = "/manager/caja/";
-            } else if (data.groups === 3) {
-                window.location.href = "/manager/bodega/recepcion_inventario/";
-            } else {
-                window.location.href = "/manager/dashboard/";
-            }
+            // El servidor decide el destino según los permisos del usuario.
+            redireccionando = true;
+            window.location.href = data.redirect_url || "/manager/dashboard/";
             
 
         } catch (error) {
@@ -101,7 +108,9 @@ document.addEventListener("DOMContentLoaded", function () {
             });
 
         } finally {
-            document.getElementById("loader").style.display = "none";
+            if (!redireccionando) {
+                document.getElementById("loader").style.display = "none";
+            }
         }
     });
 });

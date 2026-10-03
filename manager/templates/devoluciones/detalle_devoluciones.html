@@ -5,69 +5,69 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+<link rel="stylesheet" href="{% static 'css/detalle_devoluciones.css' %}?v=20260925" />
 {% endblock %}
 
 {% block titulo_content %}
 <div class="tituloscont">
-    <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+    <img class="logop" src="{% static 'img/LH.webp' %}" alt="">
     <p class="header__logo">| Detalle Devolución #{{ devolucion.id }}</p>
 </div>
 {% endblock %}
 
 {% block main_content %}
 
-<div class="container mt-3">
-
-    <!-- =========================
-         INFO GENERAL
-    ========================== -->
-    <div class="card mb-3">
-        <div class="card-body">
-
-            <h5>Información de la Compra</h5>
-
-            <p><strong>Compra:</strong> #{{ devolucion.compra.id }}</p>
-
-            <p><strong>Proveedor:</strong>
-                {{ devolucion.compra.proveedor.nombre_legal }}
-                {% if devolucion.compra.proveedor.nombre_comercial %}
-                    | {{ devolucion.compra.proveedor.nombre_comercial }}
-                {% endif %}
-            </p>
-
-            <p><strong>Ubicación:</strong> {{ devolucion.compra.ubicacion.nombre }}</p>
-
-            <p><strong>Observaciones:</strong> {{ devolucion.observaciones }}</p>
-
-            <p><strong>Estado:</strong>
-                {% if devolucion.estado == "Pendiente" %}
-                    <span class="badge bg-warning text-dark">Pendiente</span>
-                {% elif devolucion.estado == "Aprobada" %}
-                    <span class="badge bg-success">Aprobada</span>
-                {% elif devolucion.estado == "Rechazada" %}
-                    <span class="badge bg-danger">Rechazada</span>
-                {% elif devolucion.estado == "Completada" %}
-                    <span class="badge bg-primary">Completada</span>
-                {% else %}
-                    <span class="badge bg-secondary">Cancelada</span>
-                {% endif %}
-            </p>
-
+<section class="detalle-devolucion">
+    <div class="detalle-devolucion__hero">
+        <div class="detalle-devolucion__hero-icon"><i class="bx bx-receipt"></i></div>
+        <div>
+            <p class="detalle-devolucion__eyebrow">Solicitud de devolución</p>
+            <h1>Devolución #{{ devolucion.id }}</h1>
+            <p>Compra de proveedor #{{ devolucion.compra.id }}</p>
+        </div>
+        <div class="detalle-devolucion__estado">
+            <span>Estado actual</span>
+            {% if devolucion.estado == "Pendiente" %}
+                <strong class="estado-dev estado-dev--pendiente"><i class="bx bx-time-five"></i> Pendiente</strong>
+            {% elif devolucion.estado == "Aprobada" %}
+                <strong class="estado-dev estado-dev--aprobada"><i class="bx bx-check-circle"></i> Aprobada</strong>
+            {% elif devolucion.estado == "Rechazada" %}
+                <strong class="estado-dev estado-dev--rechazada"><i class="bx bx-x-circle"></i> Rechazada</strong>
+            {% elif devolucion.estado == "Completada" %}
+                <strong class="estado-dev estado-dev--completada"><i class="bx bx-check-double"></i> Completada</strong>
+            {% else %}
+                <strong class="estado-dev estado-dev--cancelada"><i class="bx bx-block"></i> Cancelada</strong>
+            {% endif %}
         </div>
     </div>
 
-    <!-- =========================
-         DETALLES
-    ========================== -->
-    <div class="card mb-3">
-        <div class="card-body">
+    <div class="detalle-devolucion__grid">
+        <article class="detalle-card detalle-card--compra">
+            <div class="detalle-card__title"><i class="bx bx-store-alt"></i><h2>Información de compra</h2></div>
+            <dl class="detalle-info">
+                <div><dt>Proveedor</dt><dd>{{ devolucion.compra.proveedor.nombre_legal }}{% if devolucion.compra.proveedor.nombre_comercial %}<small>{{ devolucion.compra.proveedor.nombre_comercial }}</small>{% endif %}</dd></div>
+                <div><dt>Ubicación</dt><dd>{{ devolucion.compra.ubicacion.nombre }}</dd></div>
+                <div><dt>Fecha de solicitud</dt><dd>{{ devolucion.f_creacion|date:"d/m/Y h:i A" }}</dd></div>
+                <div><dt>ID de Compra</dt><dd>#{{ devolucion.compra.id }}</dd></div>
+            </dl>
+        </article>
 
-            <h5>Productos en Devolución</h5>
+        <article class="detalle-card detalle-card--observaciones">
+            <div class="detalle-card__title"><i class="bx bx-note"></i><h2>Observaciones</h2></div>
+            <p class="detalle-observaciones">{{ devolucion.observaciones|default:"Sin observaciones registradas." }}</p>
+        </article>
+    </div>
 
-            <div class="tabla-container">
-                <table class="tablas-todo">
+    <article class="detalle-card detalle-card--productos">
+        <div class="detalle-card__title detalle-card__title--between">
+            <div><i class="bx bx-package"></i><h2>Productos en devolución</h2></div>
+            <span class="detalle-productos__contador">{{ detalles|length }} producto{{ detalles|length|pluralize:"s" }}</span>
+        </div>
+        <div class="tabla-container detalle-tabla-container">
+            <table class="tablas-todo detalle-tabla">
                     <thead>
                         <tr>
+                            <th>#</th>
                             <th>Producto</th>
                             <th>Cantidad</th>
                             <th>Motivo</th>
@@ -77,9 +77,10 @@
                     <tbody>
                         {% for d in detalles %}
                         <tr>
-                            <td>{{ d.producto.nombre }}</td>
-                            <td>{{ d.cantidad }}</td>
-                            <td>{{ d.get_motivo_display }}</td>
+                            <td class="detalle-tabla__indice">{{ forloop.counter }}</td>
+                            <td>{% if d.producto_hijo %}{{ d.producto_hijo.nombre }}{% else %}{{ d.producto.nombre }}{% endif %}</td>
+                            <td><span class="detalle-tabla__cantidad">{% if d.producto_hijo %}{{ d.cantidad_hijo }} und.{% else %}{{ d.cantidad }}{% endif %}</span></td>
+                            <td><span class="detalle-tabla__motivo">{% if d.motivo == 0 %}Producto dañado{% else %}{{ d.get_motivo_display }}{% endif %}</span></td>
                         </tr>
                         {% empty %}
                         <tr>
@@ -88,31 +89,62 @@
                         {% endfor %}
                     </tbody>
 
-                </table>
-            </div>
-
+            </table>
         </div>
-    </div>
+    </article>
 
-    <!-- =========================
-         ACCIONES
-    ========================== -->
     {% if devolucion.estado == "Pendiente" %}
-    <div class="card">
-        <div class="card-body d-flex gap-2">
-
-            <button class="btn btn-success" id="btnAprobar">
-                ✔ Aprobar Devolución
-            </button>
-
-            <button class="btn btn-danger" id="btnRechazar">
-                ✖ Rechazar
-            </button>
-
+    <div class="detalle-acciones">
+        <div><strong>¿Ya verificaste los productos?</strong><span>Selecciona una acción para finalizar la revisión.</span></div>
+        <div class="detalle-acciones__botones">
+            <button class="btn detalle-btn detalle-btn--rechazar" id="btnRechazar"><i class="bx bx-x"></i> Rechazar</button>
+            <button class="btn detalle-btn detalle-btn--aprobar" id="btnAprobar"><i class="bx bx-check"></i> Aprobar devolución</button>
         </div>
     </div>
     {% endif %}
+</section>
 
+<div class="modal fade" id="modalResolucionDevolucion" tabindex="-1" aria-labelledby="tituloResolucionDevolucion" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="tituloResolucionDevolucion">Resolver devolución</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <label for="resolucionDevolucion" class="form-label">Tipo de resolución</label>
+                <select id="resolucionDevolucion" class="form-select">
+                    <option value="" selected disabled>Seleccione una opción</option>
+                    <option value="CAMBIO">Cambio</option>
+                    <option value="SALDO_FAVOR">Saldo a favor</option>
+                </select>
+                <small class="text-muted d-block mt-2">Cambio genera una compra de reposición. Saldo a favor acredita el importe al proveedor.</small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn classbotones" id="confirmarResolucionDevolucion">Confirmar resolución</button>
+            </div>
+        </div>
+    </div>
 </div>
-    <script type="module" src="{% static 'js/devoluciones/devoluciones.js' %}"></script>
+
+<div class="modal fade" id="modalRechazoDevolucion" tabindex="-1" aria-labelledby="tituloRechazoDevolucion" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="tituloRechazoDevolucion">Motivo del rechazo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <label for="motivoRechazoDevolucion" class="form-label">Indica el motivo</label>
+                <textarea id="motivoRechazoDevolucion" class="form-control" rows="4" placeholder="Escribe el motivo del rechazo..." required autocomplete="off"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn detalle-btn detalle-btn--rechazar" id="confirmarRechazoDevolucion"><i class="bx bx-x"></i> Rechazar devolución</button>
+            </div>
+        </div>
+    </div>
+</div>
+    <script type="module" src="{% static 'js/devoluciones/devoluciones.js' %}?v=20260925-03"></script>
 {% endblock %}

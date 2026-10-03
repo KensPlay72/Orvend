@@ -1,0 +1,219 @@
+{% extends "menu.html" %} 
+{% load static %} 
+{% block title %}Retiro de caja{% endblock %}
+{% block extra_css %}
+<link
+  rel="stylesheet"
+  href="{% static 'css/retiros_caja.css' %}"
+/>
+{% endblock %} 
+{% block titulo_content %}
+<div class="tituloscont">
+  <img
+    class="logop"
+    src="{% static 'img/LH.webp' %}"
+    alt="logo"
+    width="0"
+    height="0"
+  />
+  <p class="header__logo">| Retiro de caja</p>
+</div>
+{% endblock %} 
+{% block main_content %}
+<div class="retiros-shell">
+  <header class="retiros-hero">
+    <div class="retiros-hero__icon"><i class="bx bx-money-withdraw"></i></div>
+    <div>
+      <p>Gestión de caja</p>
+      <h1>Retiro de caja</h1>
+    </div>
+    <a class="retiros-list-link" href="{% url 'retiros_caja_list' %}" title="Ver listado de retiros" aria-label="Ver listado de retiros"
+      ><i class="bx bx-list-ul"></i></a
+    >
+  </header>
+  <br>
+  <section class="retiros-grid" id="cajasActivas">
+    {% for caja in cajas %}
+    <article
+      class="retiro-caja-card"
+      data-cajero="{{ caja.cajero_nombre|lower }}"
+    >
+      <div class="retiro-caja-card__top">
+        <span class="retiro-caja-card__icon"><i class="bx bx-wallet"></i></span
+        ><span class="retiro-status">{{ caja.get_estado_display }}</span>
+      </div>
+      <small>Cajero responsable</small>
+      <h4>{{ caja.cajero_nombre }}</h4>
+      <p>Apertura: {{ caja.fecha_apertura|date:"d/m/Y h:i A" }}</p>
+      <div class="retiro-caja-card__amount">
+        <span>Efectivo disponible</span
+        ><strong>L. {{ caja.efectivo_disponible|floatformat:2 }}</strong>
+      </div>
+      <button
+        class="btn-retiro"
+        data-caja-id="{{ caja.id }}"
+        data-cajero="{{ caja.cajero_nombre }}"
+        data-disponible="{{ caja.efectivo_disponible }}"
+      >
+        <i class="bx bx-plus-circle"></i> Solicitar retiro
+      </button>
+    </article>
+    {% empty %}
+    <div class="retiros-empty">
+      <span class="retiros-empty__icon"><i class="bx bx-wallet-alt"></i></span>
+      <h3>Sin cajas activas</h3>
+      <p>No hay cajas activas para retirar efectivo en este momento.</p>
+    </div>
+    {% endfor %}
+  </section>
+</div>
+<div class="modal fade" id="modalRetiroCaja" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content retiro-modal">
+      <div class="modal-header">
+        <h5 class="modal-title">Solicitar retiro de caja</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Cerrar"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="retiro-modal__summary">
+          <i class="bx bx-user"></i>
+          <div>
+            <small>Cajero responsable</small><strong id="retiroCajero"></strong>
+          </div>
+          <div>
+            <small>Disponible</small><strong id="retiroDisponible"></strong>
+          </div>
+        </div>
+        <form id="postretiro">
+          <div class="mb-3">
+            <label for="retiroMonto" class="form-label">Monto a retirar</label>
+            <input
+              id="retiroMonto"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              class="form-control"
+              placeholder="Monto"
+            />
+          </div>
+          <br />
+          <div class="mb-3">
+            <label for="retiroObservaciones" class="form-label">Observación (opcional)</label>
+            <textarea
+              id="retiroObservaciones"
+              maxlength="250"
+              class="form-control"
+              placeholder="Observación"
+            ></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cerrar</button
+        ><button type="button" form="postretiro" id="guardarRetiro" class="btn classbotones">
+          <i class="bx bx-send"></i> Enviar solicitud
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<form style="display: none">{% csrf_token %}</form>
+<script>
+  let retiroCajaId = null,
+    retiroDisponible = 0;
+  document.querySelectorAll(".btn-retiro[data-caja-id]").forEach((b) =>
+    b.addEventListener("click", () => {
+      retiroCajaId = b.dataset.cajaId;
+      retiroDisponible = Number(b.dataset.disponible);
+      document.getElementById("retiroCajero").textContent = b.dataset.cajero;
+      document.getElementById("retiroDisponible").textContent =
+        `L. ${retiroDisponible.toFixed(2)}`;
+      document.getElementById("retiroMonto").value = "";
+      document.getElementById("retiroObservaciones").value = "";
+      bootstrap.Modal.getOrCreateInstance(
+        document.getElementById("modalRetiroCaja"),
+      ).show();
+    }),
+  );
+  document.getElementById("buscarCajero").addEventListener("input", (e) => {
+    const q = e.target.value.toLowerCase().trim();
+    document
+      .querySelectorAll(".retiro-caja-card")
+      .forEach(
+        (c) => (c.style.display = c.dataset.cajero.includes(q) ? "" : "none"),
+      );
+  });
+  document.getElementById("retiroMonto").addEventListener("input", (event) => {
+    const monto = Number(event.target.value.replace(",", "."));
+    if (Number.isFinite(monto) && monto > retiroDisponible) {
+      event.target.value = retiroDisponible.toFixed(2);
+    }
+  });
+  document.getElementById("guardarRetiro").addEventListener("click", () => {
+    const monto = Number(document.getElementById("retiroMonto").value);
+    if (!monto || monto <= 0 || monto > retiroDisponible) {
+      Swal.fire({
+        icon: "warning",
+        title: "Monto no válido",
+        text: "Ingresa un monto válido.",
+        customClass: { confirmButton: "classbotones" },
+      });
+      return;
+    }
+    Swal.fire({
+      icon: "question",
+      title: "¿Enviar solicitud de retiro?",
+      html: `Se solicitará un retiro de <strong>L. ${monto.toFixed(2)}</strong> al cajero.`,
+      showCancelButton: true,
+      confirmButtonText: "Sí, enviar",
+      cancelButtonText: "Cancelar",
+      reverseButtons: true,
+      customClass: { confirmButton: "classbotones" },
+    }).then((result) => {
+      if (!result.isConfirmed) return;
+      const f = new FormData();
+      f.append("caja_id", retiroCajaId);
+      f.append("monto", monto);
+      f.append(
+        "observaciones",
+        document.getElementById("retiroObservaciones").value,
+      );
+      fetch('{% url "crear_retiro_caja" %}', {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+            .value,
+        },
+        body: f,
+      })
+        .then((r) => r.json())
+        .then((d) => {
+          if (!d.ok) throw Error(d.mensaje);
+          bootstrap.Modal.getInstance(
+            document.getElementById("modalRetiroCaja"),
+          )?.hide();
+          Swal.fire({
+            title: "¡Éxito!",
+            text: d.mensaje || "Retiro solicitado correctamente.",
+            icon: "success",
+            confirmButtonText: "Aceptar",
+            customClass: { confirmButton: "classbotones" },
+          }).then(() => window.location.reload());
+        })
+        .catch((e) =>
+          Swal.fire({
+            icon: "error",
+            title: "No se pudo solicitar",
+            text: e.message,
+          }),
+        );
+    });
+  });
+</script>
+{% endblock %}

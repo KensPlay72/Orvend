@@ -2,6 +2,7 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 from django.contrib import admin
 from django.utils.html import format_html
+from django.urls import reverse
 from .enums import EstadoCuenta
 from .models import (
     Categorias,
@@ -26,12 +27,157 @@ from .models import (
     ProductosRel,
     ProductosImagenes,
     ReservaInventario,
+    DevolucionVenta,
+    DevolucionVentaDetalle,
+    Combos,
+    ComboImagen,
+    ConfiguracionEmpresa,
+    SuscripcionSistema,
+    DetalleCombo,
 )
 from django.utils import timezone
 from django.utils.timezone import now
 from django.db import transaction
 from django import forms
 from decimal import Decimal
+
+
+class DevolucionVentaDetalleInline(admin.TabularInline):
+    model = DevolucionVentaDetalle
+    extra = 0
+    can_delete = False
+    readonly_fields = (
+        "detalle_venta",
+        "producto",
+        "cantidad",
+        "precio_unitario",
+        "total",
+    )
+
+
+class DetalleComboInline(admin.TabularInline):
+    model = DetalleCombo
+    extra = 0
+    autocomplete_fields = ("producto",)
+    readonly_fields = ("costo_unitario",)
+
+
+@admin.register(Combos)
+class CombosAdmin(admin.ModelAdmin):
+    list_display = (
+        "nombre",
+        "codigo_sku",
+        "costo_total",
+        "precio_venta",
+        "precio_venta_min",
+        "precio_venta_max",
+        "is_active",
+    )
+    search_fields = ("nombre", "codigo_sku")
+    list_filter = ("is_active", "is_delete")
+    readonly_fields = ("costo_total", "f_creacion", "f_modificacion")
+    inlines = (DetalleComboInline,)
+
+
+@admin.register(ComboImagen)
+class ComboImagenAdmin(admin.ModelAdmin):
+    list_display = ("combo", "imagen_nombre", "imagen_archivo")
+    search_fields = ("combo__nombre", "combo__codigo_sku", "imagen_nombre")
+
+
+@admin.register(ConfiguracionEmpresa)
+class ConfiguracionEmpresaAdmin(admin.ModelAdmin):
+    list_display = ("nombre_comercial", "rtn", "telefono", "email", "is_active")
+    readonly_fields = ("f_creacion", "f_modificacion", "u_creo_id", "u_modifico_id")
+
+
+@admin.register(SuscripcionSistema)
+class SuscripcionSistemaAdmin(admin.ModelAdmin):
+    list_display = ("fecha_inicio", "fecha_fin", "activa", "estado_actual", "f_modificacion")
+    list_filter = ("activa",)
+    readonly_fields = ("unica_configuracion", "f_creacion", "f_modificacion")
+    fieldsets = (
+        (
+            "💳 Pagos y suscripciones",
+            {
+                "description": "Define el período durante el cual esta instalación puede operar. Las fechas son inclusivas.",
+                "fields": ("fecha_inicio", "fecha_fin", "activa"),
+            },
+        ),
+        ("Notas administrativas", {"fields": ("observaciones",)}),
+        ("Auditoría", {"fields": ("unica_configuracion", "f_creacion", "f_modificacion")} ),
+    )
+
+    @admin.display(description="Estado")
+    def estado_actual(self, obj):
+        return "Vigente" if obj.esta_vigente_en() else "Sin vigencia"
+
+    def has_add_permission(self, request):
+        return not SuscripcionSistema.objects.exists()
+
+
+@admin.register(DevolucionVenta)
+class DevolucionVentaAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "nota_credito",
+        "venta",
+        "cliente",
+        "sucursal",
+        "monto_total",
+        "estado",
+        "f_creacion",
+        "is_delete",
+    )
+    list_filter = ("estado", "is_delete", "venta__sucursal")
+    search_fields = (
+        "nota_credito",
+        "venta__id_factura_cai__numero_factura",
+        "venta__id_cliente__nombre",
+        "venta__id_cliente__apellido",
+        "venta__id_cliente__empresa",
+    )
+    readonly_fields = (
+        "venta",
+        "nota_credito",
+        "monto_total",
+        "venta_aplicada",
+        "fecha_uso",
+        "f_creacion",
+        "f_modificacion",
+        "u_creo_id",
+        "u_modifico_id",
+    )
+    fields = (
+        "venta",
+        "nota_credito",
+        "motivo",
+        "justificacion",
+        "monto_total",
+        "estado",
+        "venta_aplicada",
+        "fecha_uso",
+        "is_active",
+        "is_delete",
+        "f_creacion",
+        "f_modificacion",
+        "u_creo_id",
+        "u_modifico_id",
+    )
+    inlines = (DevolucionVentaDetalleInline,)
+    ordering = ("-f_creacion",)
+
+    @admin.display(description="Cliente")
+    def cliente(self, obj):
+        if not obj.venta.id_cliente:
+            return "Consumidor Final"
+        if obj.venta.con_rtn:
+            return obj.venta.id_cliente.empresa or obj.venta.id_cliente.nombre_completo
+        return obj.venta.id_cliente.nombre_completo
+
+    @admin.display(description="Sucursal")
+    def sucursal(self, obj):
+        return obj.venta.sucursal.nombre
 
 
 @admin.register(UMedidas)
@@ -114,16 +260,17 @@ class ProductosImagenesInline(admin.TabularInline):
     fields = (
         "preview",
         "imagen_nombre",
+        "imagen_archivo",
         "imagen_url",
     )
 
     readonly_fields = ("preview",)
 
     def preview(self, obj):
-        if obj and obj.imagen_url:
+        if obj and obj.imagen_archivo:
             return format_html(
                 '<img src="{}" style="max-height:80px; max-width:80px;" />',
-                obj.imagen_url,
+                reverse("producto_imagen", args=[obj.id]),
             )
         return "-"
 
@@ -143,6 +290,8 @@ class ProductosAdmin(admin.ModelAdmin):
         "marca",
         "unidad_medida",
         "precio_venta",
+        "precio_venta_min",
+        "precio_venta_max",
         "impuesto",
         "equival_unid",
         "is_master",
@@ -202,6 +351,8 @@ class ProductosAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "precio_venta",
+                    "precio_venta_min",
+                    "precio_venta_max",
                     "impuesto",
                 )
             },

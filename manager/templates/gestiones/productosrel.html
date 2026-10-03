@@ -1,12 +1,12 @@
 {% extends "menu.html" %}
-{% load static %}
+{% load static pagination_tags %}
 {% block title %}ProductosREL{% endblock %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=productosrel-select-20260930" />
 {% endblock %}
 {% block titulo_content %}
     <div class="tituloscont">
-        <img class="logop" src="{% static 'img/LH.png' %}" alt="logoempresa">
+        <img class="logop" src="{% static 'img/LH.webp' %}" alt="logoempresa">
         <p class="header__logo">| ProductosREL</p>
     </div>
 {% endblock %}
@@ -47,7 +47,7 @@
                         PRODUCTO PADRE
                     ========================= -->
 
-                    <div class="provselect">
+                    <div class="productosrel-select-field">
 
                         <p>Producto padre:</p>
 
@@ -60,7 +60,7 @@
                                 required
                             >
 
-                            <div class="dropdown select-container w-100">
+                            <div class="dropdown select-container gestion-producto-select producto-rel-select w-100">
 
                                 <button
                                     type="button"
@@ -97,14 +97,11 @@
                     </div>
 
 
-                    <br>
-
-
                     <!-- =========================
                         PRODUCTO HIJO
                     ========================= -->
 
-                    <div class="provselect">
+                    <div class="productosrel-select-field">
 
                         <p>Producto hijo:</p>
 
@@ -117,7 +114,7 @@
                                 required
                             >
 
-                            <div class="dropdown select-container w-100">
+                            <div class="dropdown select-container gestion-producto-select producto-rel-select w-100">
 
                                 <button
                                     type="button"
@@ -202,7 +199,7 @@
          PRODUCTO PADRE
     ========================= -->
     <input type="hidden" id="productorelid">
-    <div class="provselect">
+    <div class="productosrel-select-field">
 
         <p>Producto padre:</p>
 
@@ -215,7 +212,7 @@
                 required
             >
 
-            <div class="dropdown select-container w-100">
+            <div class="dropdown select-container gestion-producto-select producto-rel-select w-100">
 
                 <button
                     type="button"
@@ -252,14 +249,11 @@
     </div>
 
 
-    <br>
-
-
     <!-- =========================
          PRODUCTO HIJO
     ========================= -->
 
-    <div class="provselect">
+    <div class="productosrel-select-field">
 
         <p>Producto hijo:</p>
 
@@ -272,7 +266,7 @@
                 required
             >
 
-            <div class="dropdown select-container w-100">
+            <div class="dropdown select-container gestion-producto-select producto-rel-select w-100">
 
                 <button
                     type="button"
@@ -483,7 +477,8 @@
         </li>
 
         <!-- PÁGINAS -->
-        {% for p in page_obj.paginator.page_range %}
+        {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
+        {% for p in paginas_visibles %}
             <li class="page-item {% if p == page_obj.number %}active{% endif %}">
                 <a class="page-link"
                    href="?page={{ p }}&search={{ search }}">
@@ -507,6 +502,6 @@
     </ul>
 </nav>
         <br>
-        <script type="module" src="{% static 'js/gestiones/productosrel.js' %}"></script>
+        <script type="module" src="{% static 'js/gestiones/productosrel.js' %}?v=productosrel-suggestions-20260930"></script>
         <script type="module" src="{% static 'js/chektext.js' %}"></script>
     {% endblock %}

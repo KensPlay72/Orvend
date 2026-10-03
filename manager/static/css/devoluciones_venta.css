@@ -1,0 +1,426 @@
+.devolucion-venta-page {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.dv-mobile-search-card {
+  display: none;
+}
+
+.header__search.dv-header-search {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  border-radius: 0;
+  min-height: 0;
+  box-shadow: none !important;
+}
+
+.dv-header-search .header__input {
+  min-width: 220px;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #cfe1de;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(25, 70, 63, 0.08);
+}
+
+.dv-header-search__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 39px;
+  height: 39px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  color: #ffffff;
+  background: #32877f;
+  font-size: 1.2rem;
+  box-shadow: 0 3px 8px rgba(50, 135, 127, 0.28);
+}
+
+.dv-header-search__button:hover {
+  background: #246f68;
+}
+
+.dv-header-list-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 39px;
+  height: 39px;
+  border-radius: 10px;
+  color: #ffffff;
+  background: #7552a3;
+  font-size: 1.3rem;
+  box-shadow: 0 3px 8px rgba(117, 82, 163, 0.28);
+}
+
+.dv-header-list-link:hover {
+  color: #ffffff;
+  background: #5d3c88;
+}
+
+.dv-card {
+  margin-bottom: 1rem;
+  padding: 1.2rem;
+  border: 1px solid #e1ecea;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(25, 70, 63, 0.07);
+}
+
+.dv-card h5,
+.dv-card p {
+  margin: 0;
+}
+
+.dv-card p {
+  margin-top: 0.25rem;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.dv-section-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dv-factura-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-left: 5px solid #32877f;
+}
+
+.dv-factura-title,
+.dv-factura-datos,
+.dv-factura-datos div {
+  display: flex;
+  align-items: center;
+}
+
+.dv-factura-title {
+  gap: 0.75rem;
+}
+
+.dv-factura-title > i {
+  color: #32877f;
+  font-size: 2.3rem;
+}
+
+.dv-factura-title div,
+.dv-factura-datos div {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.dv-factura-title span,
+.dv-factura-datos span {
+  color: #6b7280;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.dv-factura-title strong {
+  font-size: 1.2rem;
+}
+
+.dv-factura-datos {
+  gap: 2.5rem;
+}
+
+.dv-tabla-container {
+  width: 100%;
+}
+
+.dv-tabla-container .tablas-todo tbody {
+  height: auto;
+  max-height: 360px;
+}
+
+.dv-tabla-container .tablas-todo tbody tr {
+  cursor: pointer;
+}
+
+.dv-tabla-container .tablas-todo tbody tr.dv-fila-seleccionada td {
+  background: color-mix(in srgb, var(--system-primary) 7%, #fff);
+}
+
+.dv-cantidad-input {
+  width: 105px;
+  margin: auto;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--system-primary) 35%, #fff);
+  border-radius: 7px;
+  color: var(--system-secondary);
+  background: #ffffff;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: none;
+}
+
+.dv-cantidad-input:focus {
+  border-color: var(--system-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--system-primary) 13%, transparent);
+}
+
+.dv-cantidad-input:disabled {
+  border-color: #dbe6e3;
+  color: #92a19d;
+  background: #f1f5f4;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+@media (min-width: 1033px) {
+  .dv-cantidad-input {
+    appearance: textfield;
+    -moz-appearance: textfield;
+    line-height: 1.35;
+    text-align: center;
+  }
+
+  .dv-cantidad-input::-webkit-inner-spin-button,
+  .dv-cantidad-input::-webkit-outer-spin-button {
+    margin: 0;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+}
+
+.dv-finalizar-card {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.dv-finalizar-card label {
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+  color: #355c57;
+}
+
+.dv-crear-btn {
+  height: 42px;
+  white-space: nowrap;
+}
+
+@media (max-width: 1032px) {
+  .header__search.dv-header-search {
+    display: none;
+  }
+
+  .devolucion-venta-page {
+    padding: 0 0.8rem;
+    margin-top: -0.45rem;
+  }
+
+  .dv-mobile-search-card {
+    display: block;
+    margin-bottom: 0.7rem;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid color-mix(in srgb, var(--system-primary) 16%, #fff);
+    border-radius: 13px;
+    background: #fff;
+    box-shadow: 0 5px 15px color-mix(in srgb, var(--system-secondary) 8%, transparent);
+  }
+
+  .dv-mobile-search {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 42px;
+  }
+
+  .dv-mobile-search > i {
+    color: var(--system-primary);
+    font-size: 1.25rem;
+  }
+
+  .dv-mobile-search input {
+    width: 100%;
+    min-width: 0;
+    padding: 0.68rem 0.72rem;
+    border: 1px solid color-mix(in srgb, var(--system-primary) 25%, #fff);
+    border-radius: 9px;
+    outline: 0;
+    font: inherit;
+  }
+
+  .dv-mobile-search input:focus {
+    border-color: var(--system-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--system-primary) 13%, transparent);
+  }
+
+  .dv-mobile-search button {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border: 0;
+    border-radius: 9px;
+    color: #fff;
+    background: var(--system-button);
+    font-size: 1.15rem;
+  }
+
+  .dv-factura-card,
+  .dv-section-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dv-factura-datos {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+    width: 100%;
+  }
+
+  .dv-factura-datos {
+    align-items: stretch;
+  }
+
+  .dv-factura-datos div {
+    min-width: 0;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid color-mix(in srgb, var(--system-primary) 12%, #fff);
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--system-primary) 4%, #fff);
+  }
+
+  .dv-factura-datos strong {
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dv-section-head {
+    gap: 0.75rem;
+  }
+
+  .dv-section-head .btn {
+    width: 100%;
+  }
+
+  .dv-tabla-container {
+    overflow: visible;
+    margin: 0;
+    padding: 0;
+  }
+
+  .dv-tabla-container .tablas-todo {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    background: transparent;
+  }
+
+  .dv-tabla-container .tablas-todo thead {
+    display: none;
+  }
+
+  .dv-tabla-container .tablas-todo tbody {
+    display: grid !important;
+    height: auto !important;
+    max-height: none !important;
+    gap: 0.75rem;
+  }
+
+  .dv-tabla-container .tablas-todo tbody tr {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--system-primary) 17%, #fff);
+    border-radius: 11px;
+    background: #fff;
+    box-shadow: 0 3px 10px color-mix(in srgb, var(--system-secondary) 7%, transparent);
+  }
+
+  .dv-tabla-container .tablas-todo tbody tr:nth-child(even) {
+    background: color-mix(in srgb, var(--system-primary) 2%, #fff);
+  }
+
+  .dv-tabla-container .tablas-todo tbody td {
+    display: flex !important;
+    min-width: 0;
+    min-height: 62px;
+    padding: 0.55rem 0.7rem !important;
+    border: 0 !important;
+    border-bottom: 1px solid color-mix(in srgb, var(--system-primary) 10%, #fff) !important;
+    flex-direction: column;
+    justify-content: center;
+    color: #212529;
+    font-weight: 500;
+    text-align: left !important;
+  }
+
+  .dv-tabla-container .tablas-todo tbody td:nth-child(odd) {
+    border-right: 1px solid color-mix(in srgb, var(--system-primary) 10%, #fff) !important;
+  }
+
+  .dv-tabla-container .tablas-todo tbody td::before {
+    margin-bottom: 0.18rem;
+    color: #212529;
+    content: attr(data-label);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .dv-tabla-container .tablas-todo tbody .dv-producto-celda {
+    grid-column: 1 / -1;
+  }
+
+  .dv-tabla-container .tablas-todo tbody .dv-producto-celda {
+    min-height: 0;
+    border-right: 0 !important;
+    background: color-mix(in srgb, var(--system-primary) 5%, #fff);
+    font-size: 0.96rem;
+    font-weight: 650;
+  }
+
+  .dv-tabla-container .tablas-todo tbody .dv-seleccion-celda {
+    grid-column: 1;
+    grid-row: 4;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.55rem;
+    border-bottom: 0 !important;
+    background: color-mix(in srgb, var(--system-primary) 6%, #fff);
+  }
+
+  .dv-tabla-container .tablas-todo tbody .dv-seleccion-celda::before {
+    margin: 0;
+  }
+
+  .dv-tabla-container .tablas-todo tbody .dv-cantidad-celda {
+    grid-column: 2;
+    grid-row: 4;
+    border-bottom: 0 !important;
+    background: color-mix(in srgb, var(--system-primary) 3%, #fff);
+  }
+
+  .dv-cantidad-input {
+    width: 100%;
+    margin: 0;
+  }
+  }
+
+@media (max-width: 520px) {
+  .dv-factura-datos {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.cache import cache
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -95,6 +96,11 @@ class Clientes(Abstracto):
         blank=True
     )
 
+    enviar_factura_whatsapp = models.BooleanField(
+        default=False,
+        help_text="Envía la factura por WhatsApp al facturar a nombre de este cliente."
+    )
+
     email = models.EmailField(
         max_length=100,
         null=True,
@@ -137,6 +143,17 @@ class Clientes(Abstracto):
         null=True,
         blank=True
     )
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["is_delete", "id"], name="cliente_listado_idx"),
+        ]
+        permissions = [
+            (
+                "enviar_facturas_whatsapp",
+                "Puede marcar clientes para enviar facturas por WhatsApp",
+            ),
+        ]
 
     def generar_codigo_cliente(self):
 
@@ -209,7 +226,8 @@ class UMedidas(Abstracto):
 # PRODUCTOS
 # =========================
 class Productos(Abstracto):
-    nombre = models.CharField(max_length=50)
+    tienda_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    nombre = models.CharField(max_length=100)
 
     descripcion = models.CharField(max_length=200, blank=True, default="")
 
@@ -226,9 +244,15 @@ class Productos(Abstracto):
     )
 
     vencimiento = models.BooleanField(default=False)
-    codigo_sku = models.CharField(max_length=50, unique=True)
+    codigo_sku = models.CharField(max_length=100, unique=True)
 
     precio_venta = models.DecimalField(max_digits=18, decimal_places=2)
+    precio_venta_min = models.DecimalField(
+        max_digits=18, decimal_places=2, null=True, blank=True
+    )
+    precio_venta_max = models.DecimalField(
+        max_digits=18, decimal_places=2, null=True, blank=True
+    )
 
     impuesto = models.DecimalField(max_digits=5, decimal_places=2, default=0)
 
@@ -236,6 +260,19 @@ class Productos(Abstracto):
         default=1
     )
     is_master = models.BooleanField(default=False)
+
+    class Meta:
+        indexes = [
+            # Listados y buscadores de productos/inventario.
+            models.Index(
+                fields=["is_delete", "is_active", "nombre", "id"],
+                name="prod_listado_act_nombre_idx",
+            ),
+            models.Index(
+                fields=["is_delete", "nombre", "id"],
+                name="prod_listado_nombre_idx",
+            ),
+        ]
 
     def __str__(self):
         return self.nombre
@@ -274,10 +311,221 @@ class ProductosImagenes(models.Model):
         Productos, on_delete=models.CASCADE, related_name="imagenes_producto"
     )
     imagen_nombre = models.CharField(max_length=100, null=True, blank=True)
+    # Nombre remoto real (incluye el prefijo aleatorio), independiente del host.
+    imagen_archivo = models.CharField(max_length=150, blank=True, default="")
     imagen_url = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.producto.nombre} - {self.imagen_nombre or self.imagen_url}"
+        return f"{self.producto.nombre} - {self.imagen_nombre or self.imagen_archivo or self.imagen_url}"
+
+
+# =========================
+# COMBOS
+# =========================
+class Combos(Abstracto):
+    nombre = models.CharField(max_length=120)
+    codigo_sku = models.CharField(max_length=50, unique=True)
+    costo_total = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    precio_venta = models.DecimalField(max_digits=18, decimal_places=2)
+    precio_venta_min = models.DecimalField(max_digits=18, decimal_places=2)
+    precio_venta_max = models.DecimalField(max_digits=18, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.nombre} ({self.codigo_sku})"
+
+
+class ComboImagen(models.Model):
+    """Imagen principal opcional de un combo, almacenada en Nextcloud."""
+
+    combo = models.OneToOneField(
+        Combos, on_delete=models.CASCADE, related_name="imagen"
+    )
+    imagen_nombre = models.CharField(max_length=100, null=True, blank=True)
+    imagen_archivo = models.CharField(max_length=150, blank=True, default="")
+    imagen_url = models.CharField(max_length=255, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.combo.nombre} - {self.imagen_nombre or self.imagen_archivo}"
+
+
+class ConfiguracionEmpresa(Abstracto):
+    """Configuración única de la empresa para esta instalación del ERP."""
+
+    nombre_comercial = models.CharField(max_length=150, default="Orvend Mart")
+    razon_social = models.CharField(max_length=180, blank=True, default="")
+    rtn = models.CharField(max_length=30, blank=True, default="")
+    telefono = models.CharField(max_length=30, blank=True, default="")
+    email = models.EmailField(max_length=100, blank=True, default="")
+    direccion = models.CharField(max_length=255, blank=True, default="")
+    mensaje_factura = models.CharField(max_length=180, blank=True, default="")
+    MONEDA_LEMPIRA = "HNL"
+    MONEDA_DOLAR = "USD"
+    MONEDA_OPCIONES = (
+        (MONEDA_LEMPIRA, "L. Lempira"),
+        (MONEDA_DOLAR, "$. Dólar"),
+    )
+    moneda = models.CharField(
+        max_length=3,
+        choices=MONEDA_OPCIONES,
+        default=MONEDA_LEMPIRA,
+    )
+    cotizacion_dias_validez = models.PositiveIntegerField(default=7)
+    DISENO_RECIBO = "RECIBO"
+    DISENO_PAGINA = "PAGINA"
+    DISENO_FACTURA_OPCIONES = (
+        (DISENO_RECIBO, "Recibo"),
+        (DISENO_PAGINA, "Página"),
+    )
+    diseno_factura = models.CharField(
+        max_length=10,
+        choices=DISENO_FACTURA_OPCIONES,
+        default=DISENO_RECIBO,
+    )
+    logo_nombre = models.CharField(max_length=100, blank=True, default="")
+    logo_archivo = models.CharField(max_length=150, blank=True, default="")
+    logo_url = models.CharField(max_length=255, blank=True, default="")
+    tienda_color_primario = models.CharField(max_length=7, default="#32877F")
+    tienda_color_secundario = models.CharField(max_length=7, default="#10463E")
+    tienda_color_acento = models.CharField(max_length=7, default="#F5A623")
+    tienda_subtitulo = models.CharField(max_length=180, blank=True, default="")
+
+    class Meta:
+        verbose_name = "Configuración de empresa"
+        verbose_name_plural = "Configuración de empresa"
+        permissions = [
+            ("gestionar_configuracion", "Puede administrar la configuración de empresa"),
+            ("gestionar_tienda_virtual", "Puede configurar la tienda virtual"),
+        ]
+
+    def __str__(self):
+        return self.nombre_comercial
+
+    @property
+    def simbolo_moneda(self):
+        return "$." if self.moneda == self.MONEDA_DOLAR else "L."
+
+
+class SuscripcionSistema(models.Model):
+    """Vigencia comercial de esta instalación de OrvendMart.
+
+    Solo existe un registro. Mantenerlo separado de la configuración del
+    negocio evita que un usuario operativo pueda cambiar el acceso al sistema.
+    """
+
+    CLAVE_CACHE_ESTADO = "manager:suscripcion_sistema:estado:v1"
+
+    unica_configuracion = models.BooleanField(default=True, unique=True, editable=False)
+    fecha_inicio = models.DateField()
+    fecha_fin = models.DateField()
+    activa = models.BooleanField(default=True)
+    observaciones = models.TextField(blank=True, default="")
+    f_creacion = models.DateTimeField(auto_now_add=True)
+    f_modificacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Pago y suscripción"
+        verbose_name_plural = "Pago y suscripción"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(fecha_fin__gte=models.F("fecha_inicio")),
+                name="suscripcion_fechas_validas",
+            )
+        ]
+
+    def __str__(self):
+        return f"Suscripción {self.fecha_inicio} a {self.fecha_fin}"
+
+    def esta_vigente_en(self, fecha=None):
+        fecha = fecha or timezone.localdate()
+        return self.activa and self.fecha_inicio <= fecha <= self.fecha_fin
+
+    @classmethod
+    def estado_actual(cls):
+        """Obtiene el estado con caché para no consultar la BD por solicitud."""
+        estado = cache.get(cls.CLAVE_CACHE_ESTADO)
+        if estado is not None:
+            return estado
+
+        suscripcion = cls.objects.only(
+            "fecha_inicio", "fecha_fin", "activa"
+        ).first()
+        if suscripcion is None:
+            # Una instalación nueva no queda bloqueada antes de que el
+            # administrador pueda registrar su primer período.
+            estado = {"configurada": False, "vigente": True}
+        else:
+            estado = {
+                "configurada": True,
+                "vigente": suscripcion.esta_vigente_en(),
+                "fecha_inicio": suscripcion.fecha_inicio.isoformat(),
+                "fecha_fin": suscripcion.fecha_fin.isoformat(),
+            }
+
+        # Un período puede vencer al cambiar de día. Un TTL breve evita una
+        # consulta por cada petición sin retrasar materialmente el bloqueo.
+        cache.set(cls.CLAVE_CACHE_ESTADO, estado, timeout=300)
+        return estado
+
+    @classmethod
+    def esta_vigente(cls):
+        return cls.estado_actual()["vigente"]
+
+    @classmethod
+    def invalidar_cache(cls):
+        cache.delete(cls.CLAVE_CACHE_ESTADO)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.invalidar_cache()
+
+    def delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+        self.invalidar_cache()
+
+
+class BannerTienda(models.Model):
+    """Banner opcional de la portada pública, almacenado en Nextcloud."""
+
+    configuracion = models.ForeignKey(
+        ConfiguracionEmpresa,
+        on_delete=models.CASCADE,
+        related_name="banners_tienda",
+    )
+    TIPO_BANNER = "BANNER"
+    TIPO_CARRUSEL = "CARRUSEL"
+    TIPO_OPCIONES = ((TIPO_BANNER, "Banner"), (TIPO_CARRUSEL, "Carrusel"))
+    tipo = models.CharField(max_length=10, choices=TIPO_OPCIONES, default=TIPO_CARRUSEL)
+    imagen_nombre = models.CharField(max_length=120)
+    imagen_archivo = models.CharField(max_length=180, unique=True)
+    imagen_url = models.CharField(max_length=255, blank=True, default="")
+    titulo = models.CharField(max_length=100, blank=True, default="")
+    enlace = models.CharField(max_length=255, blank=True, default="")
+    orden = models.PositiveIntegerField(default=0)
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ("orden", "id")
+
+    def __str__(self):
+        return f"Banner {self.id} - {self.configuracion.nombre_comercial}"
+
+
+class DetalleCombo(models.Model):
+    combo = models.ForeignKey(
+        Combos, on_delete=models.CASCADE, related_name="detalles"
+    )
+    producto = models.ForeignKey(
+        Productos, on_delete=models.PROTECT, related_name="detalles_combo"
+    )
+    cantidad = models.DecimalField(max_digits=18, decimal_places=2)
+    costo_unitario = models.DecimalField(max_digits=18, decimal_places=2)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["combo", "producto"], name="unique_producto_combo"
+            )
+        ]
 
 
 # =========================
@@ -291,6 +539,7 @@ class Proveedores(Abstracto):
 
     telefono = models.CharField(max_length=30)
     email = models.EmailField(max_length=100)
+    saldo = models.DecimalField(max_digits=18, decimal_places=2, default=0, null=True, blank=True) 
 
     def __str__(self):
         return self.nombre_comercial
@@ -339,6 +588,7 @@ class Ubicaciones(Abstracto):
 # COMPRAS
 # =========================
 class Compras(Abstracto):
+    documento_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     TIPO_CONTADO = 1
     TIPO_CREDITO = 2
 
@@ -362,13 +612,48 @@ class Compras(Abstracto):
 
     fecha_compra = models.DateTimeField(auto_now_add=True)
     fecha_vencimiento = models.DateTimeField(null=True, blank=True)
+    fecha_llegada_bodega = models.DateTimeField(null=True, blank=True)
+    llegada_bodega_por = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="compras_llegadas_bodega",
+    )
     total = models.DecimalField(max_digits=18, decimal_places=2)
+    total_antes_impuesto = models.DecimalField(
+        max_digits=18, decimal_places=2, default=0
+    )
+    total_impuesto = models.DecimalField(
+        max_digits=18, decimal_places=2, default=0
+    )
+    saldo_utilizado = models.DecimalField(
+        max_digits=18, decimal_places=2, default=0
+    )
+    es_cambio = models.BooleanField(default=False)
     observaciones = models.CharField(max_length=200, blank=True, default="")
     ubicacion = models.ForeignKey(
         Ubicaciones,
         on_delete=models.PROTECT,
         related_name="ubicacion_compras",
     )
+
+    class Meta:
+        indexes = [
+            # Recepción por ubicación/estado y listados/exportaciones por fecha.
+            models.Index(
+                fields=["is_delete", "ubicacion", "estado", "fecha_compra"],
+                name="compr_recep_ubi_est_fecha_idx",
+            ),
+            models.Index(
+                fields=["is_delete", "fecha_compra"],
+                name="compr_export_fecha_idx",
+            ),
+            models.Index(
+                fields=["u_creo_id", "is_delete", "id"],
+                name="compr_usuario_listado_idx",
+            ),
+        ]
 
     def get_tipo_compra_display(self):
         return dict(self.TIPO_COMPRA_OPCIONES).get(self.tipo_compra, "Desconocido")
@@ -398,6 +683,25 @@ class DetalleCompra(Abstracto):
 
     cantidad = models.DecimalField(max_digits=18, decimal_places=2)
     precio_compra = models.DecimalField(max_digits=18, decimal_places=2)
+    impuesto_porcentaje = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0
+    )
+    impuesto_unitario = models.DecimalField(
+        max_digits=18, decimal_places=2, default=0
+    )
+    precio_compra_con_impuesto = models.DecimalField(
+        max_digits=18, decimal_places=2, default=0
+    )
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["compra", "producto"], name="detallecomp_compra_prod_idx"
+            ),
+            models.Index(
+                fields=["producto", "is_delete"], name="detallecomp_prod_act_idx"
+            ),
+        ]
 
     @property
     def total(self):
@@ -424,15 +728,41 @@ class HAutorizarCompra(Abstracto):
     )
 
     cantidad_comprada = models.DecimalField(max_digits=18, decimal_places=2)
-    cantidad_autorizada = models.DecimalField(max_digits=18, decimal_places=2)
+    # Una recepción convertida desde unidades hijas puede equivaler a una
+    # fracción de presentación (p. ej. 10 de 12 unidades = 0.833333 caja).
+    cantidad_autorizada = models.DecimalField(max_digits=18, decimal_places=6)
 
     fvencimiento = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["compra", "producto"], name="hautcomp_compra_prod_idx"
+            ),
+        ]
+        permissions = [
+            (
+                "gestionar_recepcion_inventario",
+                "Puede gestionar la recepción de inventario",
+            ),
+            (
+                "multirecepcion",
+                "Puede ver y gestionar recepciones de todas las ubicaciones",
+            ),
+        ]
 
 
 # =========================
 # DEVOLUCIÓN COMPRA
 # =========================
 class DevolucionCompra(Abstracto):
+    RESOLUCION_CAMBIO = "CAMBIO"
+    RESOLUCION_SALDO_FAVOR = "SALDO_FAVOR"
+    RESOLUCION_OPCIONES = (
+        (RESOLUCION_CAMBIO, "Cambio"),
+        (RESOLUCION_SALDO_FAVOR, "Saldo a favor"),
+    )
+
     compra = models.ForeignKey(
         Compras,
         on_delete=models.CASCADE,
@@ -440,6 +770,8 @@ class DevolucionCompra(Abstracto):
         null=False,
         blank=False,
     )
+    # Se expone en URLs y documentos en lugar del ID consecutivo interno.
+    documento_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
 
     estado = models.CharField(
         max_length=20,
@@ -447,6 +779,26 @@ class DevolucionCompra(Abstracto):
         default=EstadoDevolucionCompra.PENDIENTE,
     )
     observaciones = models.CharField(max_length=300, blank=True, default="")
+    resolucion = models.CharField(
+        max_length=20, choices=RESOLUCION_OPCIONES, null=True, blank=True
+    )
+    monto_resolucion = models.DecimalField(
+        max_digits=18, decimal_places=2, default=0
+    )
+    compra_cambio = models.ForeignKey(
+        Compras,
+        on_delete=models.SET_NULL,
+        related_name="devoluciones_cambio_origen",
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["compra", "estado"], name="devcomp_compra_estado_idx"
+            ),
+        ]
 
     def __str__(self):
         return f"Devolución #{self.id}"
@@ -478,9 +830,27 @@ class DevolucionCompraDetalle(models.Model):
         blank=False,
     )
 
-    cantidad = models.DecimalField(max_digits=18, decimal_places=2)
+    # Equivalente de la presentación comprada; permite devolver unidades hijo.
+    cantidad = models.DecimalField(max_digits=18, decimal_places=6)
+    producto_hijo = models.ForeignKey(
+        Productos,
+        on_delete=models.PROTECT,
+        related_name="producto_hijo_devolucion_detalles",
+        null=True,
+        blank=True,
+    )
+    cantidad_hijo = models.DecimalField(
+        max_digits=18, decimal_places=2, null=True, blank=True
+    )
 
     motivo = models.IntegerField(choices=MotivoDevolucion.choices)
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["compra", "producto"], name="devcompdet_compra_prod_idx"
+            ),
+        ]
 
     def __str__(self):
         return f"Detalle devolución #{self.id}"
@@ -513,6 +883,13 @@ class CuentasPorPagar(Abstracto):
     estado = models.IntegerField(
         choices=EstadoCuenta.choices, default=EstadoCuenta.PENDIENTE
     )
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["estado", "fecha_vencimiento"], name="cxp_estado_venc_idx"
+            ),
+        ]
 
     def __str__(self):
         return f"Cuenta #{self.id} - {self.get_estado_display()}"
@@ -547,6 +924,7 @@ class RegistroAbonos(Abstracto):
 # TRASLADOS
 # =========================
 class Traslados(Abstracto):
+    documento_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     solicitado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -576,6 +954,14 @@ class Traslados(Abstracto):
     estado = models.CharField(max_length=20, choices=Estados.choices)
 
     observaciones = models.CharField(max_length=255, blank=True, default="")
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["is_delete", "ubicacion_destino", "estado", "f_creacion"],
+                name="traslado_dest_est_fecha_idx",
+            ),
+        ]
 
     def __str__(self):
         return f"Traslado #{self.id}"
@@ -615,11 +1001,23 @@ class Inventarios(Abstracto):
         Ubicaciones, on_delete=models.PROTECT, related_name="ubicacion_inventarios"
     )
 
-    cantidad = models.DecimalField(max_digits=18, decimal_places=2)
+    cantidad = models.DecimalField(max_digits=18, decimal_places=6)
 
     stock_minimo = models.DecimalField(max_digits=18, decimal_places=2, default=5)
 
     fvencimiento = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["producto", "ubicacion", "is_delete"],
+                name="inv_prod_ubi_act_idx",
+            ),
+            models.Index(
+                fields=["producto", "is_delete", "fvencimiento"],
+                name="inv_prod_act_venc_idx",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.producto} - {self.cantidad}"
@@ -671,14 +1069,14 @@ class MovimientoInventario(models.Model):
     )
 
     # Cantidad (siempre positiva)
-    cantidad = models.DecimalField(max_digits=18, decimal_places=2)
+    cantidad = models.DecimalField(max_digits=18, decimal_places=6)
 
     # Auditoría
     stock_anterior = models.DecimalField(
-        max_digits=18, decimal_places=2, null=True, blank=True
+        max_digits=18, decimal_places=6, null=True, blank=True
     )
     stock_resultante = models.DecimalField(
-        max_digits=18, decimal_places=2, null=True, blank=True
+        max_digits=18, decimal_places=6, null=True, blank=True
     )
 
     # Documento origen
@@ -839,6 +1237,7 @@ class datos_sat(Abstracto):
 
 class facturas_cai(Abstracto):
     numero_factura = models.IntegerField(unique=True)
+    documento_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     id_cai = models.ForeignKey(
         datos_sat,
         on_delete=models.PROTECT,
@@ -853,6 +1252,13 @@ class facturas_cai(Abstracto):
 
 
 class Ventas(Abstracto):
+    TIPO_VENTA_CONTADO = "contado"
+    TIPO_VENTA_CREDITO = "credito"
+    TIPO_VENTA_OPCIONES = (
+        (TIPO_VENTA_CONTADO, "Contado"),
+        (TIPO_VENTA_CREDITO, "Crédito"),
+    )
+
     id_factura_cai = models.ForeignKey(
         facturas_cai,
         on_delete=models.PROTECT,
@@ -881,6 +1287,10 @@ class Ventas(Abstracto):
 
     descuento = models.DecimalField(max_digits=18, decimal_places=2)
 
+    nota_credito = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+
+    con_rtn = models.BooleanField(default=False)
+
     costo_total = models.DecimalField(max_digits=18, decimal_places=2, default=0)
 
     utilidad_total = models.DecimalField(max_digits=18, decimal_places=2, default=0)
@@ -888,6 +1298,17 @@ class Ventas(Abstracto):
     total = models.DecimalField(max_digits=18, decimal_places=2)
 
     tipo_pago = models.CharField(max_length=50)
+    tipo_venta = models.CharField(
+        max_length=20, choices=TIPO_VENTA_OPCIONES, default=TIPO_VENTA_CONTADO
+    )
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["f_creacion"], name="venta_fecha_idx"),
+            models.Index(
+                fields=["sucursal", "f_creacion"], name="venta_suc_fecha_idx"
+            ),
+        ]
 
     def __str__(self):
         return f"Venta #{self.id}"
@@ -918,6 +1339,13 @@ class CuentasPorCobrar(Abstracto):
         default=EstadoCuenta.PENDIENTE,
     )
 
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["estado", "fecha_vencimiento"], name="cxc_estado_venc_idx"
+            ),
+        ]
+
     def __str__(self):
         return f"Cuenta por cobrar #{self.id} - {self.get_estado_display()}"
 
@@ -947,7 +1375,19 @@ class DetalleVenta(Abstracto):
     )
 
     producto = models.ForeignKey(
-        Productos, on_delete=models.PROTECT, related_name="producto_venta_detalles"
+        Productos,
+        on_delete=models.PROTECT,
+        related_name="producto_venta_detalles",
+        null=True,
+        blank=True,
+    )
+
+    combo = models.ForeignKey(
+        Combos,
+        on_delete=models.PROTECT,
+        related_name="combo_venta_detalles",
+        null=True,
+        blank=True,
     )
 
     cantidad = models.DecimalField(max_digits=18, decimal_places=2)
@@ -962,9 +1402,157 @@ class DetalleVenta(Abstracto):
 
     descuento = models.DecimalField(max_digits=18, decimal_places=2)
 
+    # Importes por línea para distinguir precio original y devoluciones.
+    subtotal = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    monto_devuelto = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+
     impuesto_15 = models.DecimalField(max_digits=18, decimal_places=2)
 
     impuesto_18 = models.DecimalField(max_digits=18, decimal_places=2)
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["venta", "producto"], name="detalleventa_venta_prod_idx"
+            ),
+        ]
+
+
+class Cotizacion(Abstracto):
+    """Propuesta comercial generada desde Caja; no afecta inventario ni caja."""
+
+    numero_cotizacion = models.CharField(max_length=20, unique=True)
+    documento_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    cliente = models.ForeignKey(
+        Clientes,
+        on_delete=models.PROTECT,
+        related_name="cliente_cotizaciones",
+        null=True,
+        blank=True,
+    )
+    cliente_nombre = models.CharField(max_length=180, blank=True, default="")
+    con_rtn = models.BooleanField(default=False)
+    sucursal = models.ForeignKey(
+        Ubicaciones,
+        on_delete=models.PROTECT,
+        related_name="sucursal_cotizaciones",
+    )
+    subtotal = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    impuesto_15 = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    impuesto_18 = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    descuento = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    total = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+
+    class Meta:
+        ordering = ["-id"]
+        permissions = [
+            ("generar_cotizaciones", "Puede generar cotizaciones desde caja"),
+        ]
+
+    def __str__(self):
+        return self.numero_cotizacion
+
+
+class DetalleCotizacion(Abstracto):
+    cotizacion = models.ForeignKey(
+        Cotizacion,
+        on_delete=models.CASCADE,
+        related_name="detalles",
+    )
+    producto = models.ForeignKey(
+        Productos,
+        on_delete=models.PROTECT,
+        related_name="producto_cotizacion_detalles",
+        null=True,
+        blank=True,
+    )
+    combo = models.ForeignKey(
+        Combos,
+        on_delete=models.PROTECT,
+        related_name="combo_cotizacion_detalles",
+        null=True,
+        blank=True,
+    )
+    codigo = models.CharField(max_length=100)
+    nombre = models.CharField(max_length=255)
+    cantidad = models.DecimalField(max_digits=18, decimal_places=2)
+    precio_unitario = models.DecimalField(max_digits=18, decimal_places=2)
+    descuento = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    impuesto_15 = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    impuesto_18 = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    subtotal = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+
+
+class DevolucionVenta(Abstracto):
+    RESOLUCION_NOTA_CREDITO = "NOTA_CREDITO"
+    RESOLUCION_DEDUCIR_SALDO = "DEDUCIR_SALDO"
+    RESOLUCION_OPCIONES = (
+        (RESOLUCION_NOTA_CREDITO, "Nota de crédito"),
+        (RESOLUCION_DEDUCIR_SALDO, "Deducir saldo"),
+    )
+
+    class Estado(models.TextChoices):
+        DISPONIBLE = "DISPONIBLE", "Disponible"
+        USADA = "USADA", "Usada"
+        ANULADA = "ANULADA", "Anulada"
+
+    venta = models.ForeignKey(
+        Ventas,
+        on_delete=models.PROTECT,
+        related_name="devoluciones_venta",
+    )
+    nota_credito = models.CharField(max_length=24, unique=True)
+    motivo = models.IntegerField(choices=MotivoDevolucion.choices)
+    justificacion = models.CharField(max_length=500)
+    monto_total = models.DecimalField(max_digits=18, decimal_places=2)
+    estado = models.CharField(
+        max_length=12,
+        choices=Estado.choices,
+        default=Estado.DISPONIBLE,
+    )
+    venta_aplicada = models.ForeignKey(
+        Ventas,
+        on_delete=models.PROTECT,
+        related_name="notas_credito_aplicadas",
+        null=True,
+        blank=True,
+    )
+    fecha_uso = models.DateTimeField(null=True, blank=True)
+    resolucion = models.CharField(
+        max_length=20,
+        choices=RESOLUCION_OPCIONES,
+        default=RESOLUCION_NOTA_CREDITO,
+    )
+    abono_cxc = models.OneToOneField(
+        RegistroAbonosCobrar,
+        on_delete=models.SET_NULL,
+        related_name="devolucion_origen",
+        null=True,
+        blank=True,
+    )
+
+    def __str__(self):
+        return f"{self.nota_credito} - Venta #{self.venta_id}"
+
+
+class DevolucionVentaDetalle(models.Model):
+    devolucion_venta = models.ForeignKey(
+        DevolucionVenta,
+        on_delete=models.CASCADE,
+        related_name="detalles",
+    )
+    detalle_venta = models.ForeignKey(
+        DetalleVenta,
+        on_delete=models.PROTECT,
+        related_name="devolucion_detalles",
+    )
+    producto = models.ForeignKey(Productos, on_delete=models.PROTECT)
+    cantidad = models.DecimalField(max_digits=18, decimal_places=2)
+    precio_unitario = models.DecimalField(max_digits=18, decimal_places=2)
+    total = models.DecimalField(max_digits=18, decimal_places=2)
+
+    def __str__(self):
+        return f"Devolución {self.devolucion_venta_id} - {self.producto.nombre}"
 
 
 class tarjetas(Abstracto):
@@ -989,6 +1577,13 @@ class CajaAC(Abstracto):
         ("cuadre", "Cuadre"),
         ("cerrada", "Cerrada"),
     )
+
+    class Meta:
+        permissions = [
+            ("operar_caja", "Puede operar la caja"),
+            ("modificar_precio_caja", "Puede modificar precios en caja"),
+            ("ver_dashboard", "Puede ver el dashboard"),
+        ]
 
     usuario_id = models.IntegerField()
 
@@ -1023,10 +1618,53 @@ class CajaAC(Abstracto):
         default=0
     )
 
+    # Instantánea al cerrar: los retiros no disminuyen las ventas generadas.
+    retiros_total = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
     diferencia = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=0
+    )
+
+    deposito_esperado = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    deposito_recibido = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    tarjeta_esperado = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    tarjeta_recibido = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    cheque_esperado = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    cheque_recibido = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
     )
 
 class DetalleCuadreCaja(models.Model):
@@ -1053,6 +1691,62 @@ class DetalleCuadreCaja(models.Model):
     )
 
 
+class RetiroCaja(Abstracto):
+    class Estado(models.TextChoices):
+        PENDIENTE = "PENDIENTE", "Pendiente"
+        COMPLETADO = "COMPLETADO", "Completado"
+        CANCELADO = "CANCELADO", "Cancelado"
+
+    caja = models.ForeignKey(CajaAC, on_delete=models.PROTECT, related_name="retiros")
+    cajero_id = models.IntegerField()
+    monto = models.DecimalField(max_digits=12, decimal_places=2)
+    estado = models.CharField(max_length=12, choices=Estado.choices, default=Estado.PENDIENTE)
+    completado_por_id = models.IntegerField(null=True, blank=True)
+    fecha_completado = models.DateTimeField(null=True, blank=True)
+    observaciones = models.CharField(max_length=250, blank=True, default="")
+
+    class Meta:
+        permissions = [
+            ("gestionar_retiros_caja", "Puede solicitar retiros de efectivo de caja"),
+        ]
+
+
+class Notificacion(Abstracto):
+    """Avisos dirigidos a un usuario o publicados para todos los usuarios."""
+
+    class Tipo(models.TextChoices):
+        RETIRO_CAJA = "RETIRO_CAJA", "Retiro de caja"
+        STOCK_BAJO = "STOCK_BAJO", "Stock bajo"
+        VENCIMIENTO = "VENCIMIENTO", "Próximo vencimiento"
+        CUENTA_COBRAR = "CUENTA_COBRAR", "Cuenta por cobrar"
+        CUENTA_PAGAR = "CUENTA_PAGAR", "Cuenta por pagar"
+        SISTEMA = "SISTEMA", "Sistema"
+
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="notificaciones",
+    )
+    para_todos = models.BooleanField(default=False)
+    tipo = models.CharField(max_length=20, choices=Tipo.choices, default=Tipo.SISTEMA)
+    titulo = models.CharField(max_length=120)
+    mensaje = models.CharField(max_length=300, blank=True, default="")
+    referencia = models.CharField(max_length=120, blank=True, default="")
+    leida = models.BooleanField(default=False)
+    retiro_caja = models.ForeignKey(
+        RetiroCaja,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notificaciones",
+    )
+
+    class Meta:
+        ordering = ["-f_creacion"]
+
+
 class ReservaInventario(Abstracto):
 
     class Estado(models.TextChoices):
@@ -1074,7 +1768,7 @@ class ReservaInventario(Abstracto):
 
     cantidad = models.DecimalField(
         max_digits=18,
-        decimal_places=2,
+        decimal_places=6,
     )
 
     estado = models.CharField(

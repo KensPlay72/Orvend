@@ -1,5 +1,5 @@
 {% extends "menu.html" %}
-{% load static %}
+{% load static pagination_tags %}
 {% block title %}
     Recepción de Inventario
 {% endblock title %}
@@ -18,7 +18,7 @@
 {% block titulo_content %}
     <div class="tituloscont">
         <img class="logop"
-             src="{% static 'img/LH.png' %}"
+             src="{% static 'img/LH.webp' %}"
              alt="logo"
              width="0"
              height="0" />
@@ -83,15 +83,20 @@
                     <th>Fecha</th>
                     <th>Cant</th>
                     <th>Estado</th>
+                    <th>Llegada</th>
                     <th>Autorizar</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in recepciones %}
-                    <tr data-id="{{ item.id }}" data-tipo="{{ item.tipo_codigo }}">
+                    <tr data-id="{{ item.id }}"
+                        data-tipo="{{ item.tipo_codigo }}"
+                        {% if item.detalle_url %}data-detail-url="{{ item.detalle_url }}" class="recepcion-row--detail"{% endif %}>
                         <td>{{ item.id }}</td>
                         <td>
-                            {% if item.tipo == "Compra" %}
+                            {% if item.es_cambio %}
+                                <span class="badge bg-success">Cambio</span>
+                            {% elif item.tipo == "Compra" %}
                                 <span class="badge bg-primary">Compra</span>
                             {% else %}
                                 <span class="badge bg-info text-dark">Traslado</span>
@@ -103,6 +108,8 @@
                         <td class="estado-centrado">
                             {% if item.estado == "Pendiente" %}
                                 <span class="badge bg-warning text-dark">Pendiente</span>
+                            {% elif item.estado == "Llegada Bodega" %}
+                                <span class="badge estado-llegada-bodega">Llegó a bodega</span>
                             {% elif item.estado == "Completado" %}
                                 <span class="badge bg-success">Completado</span>
                             {% else %}
@@ -110,10 +117,27 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if perms.manager.add_hautorizarcompra and item.estado == "Pendiente" and item.puede_autorizar %}
+                            {% if item.llego_bodega %}
+                                <span class="llegada-bodega-registro"
+                                      title="{{ item.llegada_bodega_usuario }} · {{ item.fecha_llegada_bodega|date:'d/m/Y H:i' }}">
+                                    <i class="bx bx-package"></i> Registrada
+                                </span>
+                            {% elif item.puede_marcar_llegada %}
+                                <button type="button"
+                                        class="btn btn-sm classbotones btn-marcar-llegada"
+                                        data-url="{% url 'marcar_llegada_compra' item.token %}"
+                                        title="Marcar llegada a bodega">
+                                    <i class="bx bx-package"></i> Marcar llegada
+                                </button>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if perms.manager.add_hautorizarcompra and item.puede_autorizar %}
                                 <button type="button"
                                         class="btn btn-sm btn-success btn-edit"
-                                        data-id="{{ item.id }}"
+                                        data-token="{{ item.token }}"
                                         data-tipo="{{ item.tipo }}"
                                         title="Autorizar Recepción">
                                     <i class="bx bx-check-circle"></i>
@@ -123,7 +147,7 @@
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center">No hay entradas disponibles</td>
+                        <td colspan="8" class="text-center">No hay entradas disponibles</td>
                     </tr>
                 {% endfor %}
             </tbody>
@@ -136,7 +160,8 @@
                 <a class="page-link"
                    href="?page={{ page|add:"-1" }}&search={{ search }}">«</a>
             </li>
-            {% for p in page_range %}
+            {% paginas_cercanas page total_pages as paginas_visibles %}
+            {% for p in paginas_visibles %}
                 <li class="page-item {% if p == page %}active{% endif %}">
                     <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
                 </li>
@@ -148,5 +173,5 @@
         </ul>
     </nav>
     <br>
-    <script type="module" src="{% static 'js/bodega/bodega.js' %}"></script>
+    <script type="module" src="{% static 'js/bodega/bodega.js' %}?v=20260926"></script>
 {% endblock main_content %}

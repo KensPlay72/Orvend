@@ -1,5 +1,5 @@
 {% extends "menu.html" %}
-{% load static %}
+{% load static pagination_tags %}
 {% block title %}Compras{% endblock %}
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
@@ -15,7 +15,7 @@
 {% endblock %}
 {% block titulo_content %}
     <div class="tituloscont">
-        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+        <img class="logop" src="{% static 'img/LH.webp' %}" alt="">
         <p class="header__logo">| Compras</p>
     </div>
 {% endblock %}
@@ -59,7 +59,7 @@
         </div>
     </div>
 
-    <div class="bottom_content">
+    <div class="bottom_content compras-header__actions">
         <button id="toggleDropdownPanel" class="btn-dropdown" onclick="location.href='{% url 'realizarcompra' %}'">
             <i class="bx bx-plus-circle"></i> Realizar Compra
         </button>
@@ -68,9 +68,96 @@
             <i class='bx bx-undo'></i> Devoluciones
         </button>
         {% endif %}
+        <button type="button"
+                id="btnExportarCompras"
+                class="productos-export-btn"
+                data-bs-toggle="modal"
+                data-bs-target="#modalExportarCompras"
+                aria-label="Exportar compras a Excel"
+                title="Exportar compras a Excel">
+            <i class="bx bx-spreadsheet" aria-hidden="true"></i>
+        </button>
     </div>
 </div>
 
+<div class="modal fade" id="modalExportarCompras" tabindex="-1"
+     aria-labelledby="modalExportarComprasTitulo" aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <!-- ENCABEZADO -->
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalExportarComprasTitulo">
+                    Exportar compras
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Cerrar">
+                </button>
+            </div>
+
+            <!-- FORMULARIO -->
+            <div class="modal-body">
+                <form id="formExportarCompras"
+                      data-export-url="{% url 'exportar_compras_excel' %}">
+
+                    <div class="row g-3">
+
+                        <div class="col-md-6 form-group">
+                            <label for="fechaInicioCompras" class="form-label">
+                                Fecha inicial
+                            </label>
+
+                            <input type="date"
+                                   id="fechaInicioCompras"
+                                   name="fecha_inicio"
+                                   class="form-control"
+                                   value="{{ fecha_hoy }}"
+                                   required>
+                        </div>
+
+                        <div class="col-md-6 form-group">
+                            <label for="fechaFinCompras" class="form-label">
+                                Fecha final
+                            </label>
+
+                            <input type="date"
+                                   id="fechaFinCompras"
+                                   name="fecha_fin"
+                                   class="form-control"
+                                   value="{{ fecha_hoy }}"
+                                   required>
+                        </div>
+
+                    </div>
+
+                </form>
+            </div>
+
+            <!-- BOTONES -->
+            <div class="modal-footer">
+                <button type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Cerrar
+                </button>
+
+                <button type="submit"
+                        form="formExportarCompras"
+                        id="btnGenerarComprasExcel"
+                        class="btn classbotones">
+                    <i class="bx bx-spreadsheet"></i>
+                    Exportar
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+</div>
 
         <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
 
@@ -81,7 +168,8 @@
             <tr>
                 <th>#</th>
                 <th>Proveedor</th>
-                <th>Tipo Compra</th>
+                <th>Tipo</th>
+                <th>Tipo de pago</th>
                 <th>Total</th>
                 <th>F. Compra</th>
                 <th>F. Vencimiento</th>
@@ -92,11 +180,19 @@
 
         <tbody>
             {% for compra in page_obj %}
-            <tr data-id="{{ compra.id }}">
+            <tr data-token="{{ compra.documento_token }}">
 
                 <td>{{ compra.id }}</td>
 
                 <td>{{ compra.proveedor.nombre_comercial }}</td>
+
+                <td>
+                    {% if compra.es_cambio %}
+                        <span class="badge bg-success">Cambio</span>
+                    {% else %}
+                        <span class="badge bg-primary">Compra</span>
+                    {% endif %}
+                </td>
 
                 <td>{{ compra.get_tipo_compra_display }}</td>
 
@@ -112,25 +208,27 @@
                     {% endif %}
                 </td>
 
-                <td>
+                <td class="estado-centrado">
                     {% if compra.estado == "Pendiente" %}
-                        <span class="estado-circulo estado-pendiente" title="Pendiente"></span>
+                        <span class="badge bg-warning text-dark">Pendiente</span>
+                    {% elif compra.estado == "Llegada Bodega" %}
+                        <span class="badge estado-llegada-bodega">Llegó a bodega</span>
+                    {% elif compra.estado == "Recepcion Parcial" %}
+                        <span class="badge bg-warning text-dark">Recepción parcial</span>
                     {% elif compra.estado == "Completado" %}
-                        <span class="estado-circulo estado-completado" title="Completado"></span>
-                    {% elif compra.estado == "Cancelada" %}
-                        <span class="estado-circulo estado-cancelada" title="Cancelada"></span>
+                        <span class="badge bg-success">Completado</span>
                     {% else %}
-                        <span class="estado-circulo estado-desconocido"></span>
+                        <span class="badge bg-danger">{{ compra.estado }}</span>
                     {% endif %}
                 </td>
 
                 <td>
-                    {% if compra.estado != "Completado" %}
+                    {% if compra.estado == "Pendiente" and not compra.es_cambio %}
 
                         {% if perms.manager.change_compras %}
                         <button type="button"
                                 class="btn btn-sm btn-primary btn-edit"
-                                data-id="{{ compra.id }}">
+                                data-token="{{ compra.documento_token }}">
                             <i class='bx bx-edit'></i>
                         </button>
                         {% endif %}
@@ -138,13 +236,15 @@
 
                         <button type="button"
                                 class="btn btn-sm btn-danger btn-pdf"
-                                data-id="{{ compra.id }}">
+                                data-token="{{ compra.documento_token }}">
                             <i class='bx bxs-file-pdf'></i>
                         </button>
 
                 </td>
 
             </tr>
+            {% empty %}
+            <tr><td colspan="9" class="text-center table-empty-state">No hay compras registradas.</td></tr>
             {% endfor %}
         </tbody>
     </table>
@@ -163,7 +263,8 @@
             {% endif %}
         </li>
 
-        {% for p in page_obj.paginator.page_range %}
+        {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
+        {% for p in paginas_visibles %}
             <li class="page-item {% if p == page_obj.number %}active{% endif %}">
                 <a class="page-link"
                    href="?page={{ p }}&search={{ search }}">
@@ -186,5 +287,5 @@
     </ul>
 </nav>
         <br>
-        <script type="module" src="{% static 'js/compras/compras.js' %}"></script>
+        <script type="module" src="{% static 'js/compras/compras.js' %}?v=20260929-exportar"></script>
 {% endblock %}

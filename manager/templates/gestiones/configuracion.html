@@ -1,0 +1,286 @@
+{% extends "menu.html" %} {% load static %} 
+{% block title %}Configuración{%endblock %} 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+<link
+  rel="stylesheet"
+  href="{% static 'css/configuracion.css' %}?v=20260918-01"
+/>
+{% endblock %} 
+{% block titulo_content %}
+<div class="tituloscont">
+  <img class="logop" src="{% static 'img/LH.webp' %}" alt="" />
+  <p class="header__logo">| Configuración</p>
+</div>
+{% endblock %} 
+{% block main_content %}
+<section class="config-page">
+  <header class="config-hero">
+    <div class="config-hero__icon"><i class="bx bx-cog"></i></div>
+    <div>
+      <p>Personalización de tu ERP</p>
+      <h1>Identidad del negocio</h1>
+      <span
+        >Estos datos quedan listos para usarse en documentos y futuras
+        integraciones.</span
+      >
+    </div>
+  </header>
+
+  <form id="formConfiguracion" class="config-layout" novalidate>
+    {% csrf_token %}
+    <article class="config-card config-card--logo">
+      <div class="config-card__head">
+        <i class="bx bx-image"></i>
+        <h2>Logo para documentos</h2>
+      </div>
+      <div class="config-logo-content">
+        <div class="config-logo-preview">
+          <img
+            id="logoPreview"
+            src="{% if configuracion and configuracion.logo_archivo %}{% url 'configuracion_logo' %}{% else %}{% static 'img/LH.webp' %}{% endif %}"
+            onerror="this.onerror=null;this.src='{% static 'img/default.webp' %}';"
+            alt="Logo del negocio"
+          />
+        </div>
+        <p>
+          Se mostrará en facturas, órdenes de compra y notas de devolución. JPG,
+          PNG o WEBP.
+        </p>
+        <label class="btn classbotones config-upload" for="logoEmpresa"
+          ><i class="bx bx-upload"></i> Cambiar logo</label
+        >
+        <input
+          id="logoEmpresa"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          hidden
+        />
+        <button type="button" class="config-reset" id="quitarLogo">
+          <i class="bx bx-reset"></i> Usar logo predeterminado
+        </button>
+        {% if puede_gestionar_tienda %}
+        <hr class="config-divider" />
+        <strong>Banner principal</strong>
+        <div class="config-banner-preview" id="bannerPreviewBox">
+          {% if banner_principal %}<img
+            id="bannerPreview"
+            src="{% url 'configuracion_banner' banner_principal.id %}"
+            alt="Vista previa del banner"
+          /><button
+            type="button"
+            class="config-banner-remove config-banner-main-remove"
+            data-banner-id="{{ banner_principal.id }}"
+            aria-label="Eliminar banner"
+          >
+            <i class="bx bx-x"></i></button
+          >{% else %}
+          <div class="config-banner-default" id="bannerPreview">
+            Vista predeterminada de la tienda
+          </div>
+          {% endif %}
+        </div>
+        
+        <label class="btn classbotones config-upload" for="bannerPrincipal"
+          >
+          <i class="bx bx-image-add"></i> Subir banner</label
+        ><input
+          id="bannerPrincipal"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          hidden
+        />{% endif %}
+      </div>
+    </article>
+
+    <div class="config-main">
+      <article class="config-card">
+        <div class="config-card__head">
+          <i class="bx bx-store"></i>
+          <h2>Datos comerciales</h2>
+        </div>
+        <div class="config-fields">
+          <label
+            >Nombre comercial<input
+              id="nombreComercial"
+              maxlength="150"
+              value="{{ configuracion.nombre_comercial|default:'Orvend Mart' }}"
+              required
+          /></label>
+          <label
+            >Razón social<input
+              id="razonSocial"
+              maxlength="180"
+              value="{{ configuracion.razon_social|default:'' }}"
+              placeholder="Nombre legal de la empresa"
+          /></label>
+          <label
+            >RTN / Identificación fiscal<input
+              id="rtnEmpresa"
+              type="text"
+              inputmode="numeric"
+              oninput="validarSoloNumeros(this)"
+              maxlength="30"
+              value="{{ configuracion.rtn|default:'' }}"
+              placeholder="Solo números"
+          /></label>
+          <label
+            >Teléfono<input
+              id="telefonoEmpresa"
+              type="text"
+              inputmode="numeric"
+              oninput="validarSoloNumeros(this)"
+              maxlength="30"
+              value="{{ configuracion.telefono|default:'' }}"
+              placeholder="Solo números"
+          /></label>
+          <label>Moneda del sistema
+            <select id="monedaSistema">
+              <option value="HNL" {% if not configuracion or configuracion.moneda == 'HNL' %}selected{% endif %}>L. Lempira</option>
+              <option value="USD" {% if configuracion.moneda == 'USD' %}selected{% endif %}>$. Dólar</option>
+            </select>
+          </label>
+        </div>
+      </article>
+
+      <article class="config-card">
+        <div class="config-card__head">
+          <i class="bx bx-map"></i>
+          <h2>Contacto y documentos</h2>
+        </div>
+        <div class="config-fields config-fields--wide">
+          <label
+            >Correo electrónico<input
+              id="emailEmpresa"
+              type="email"
+              maxlength="100"
+              value="{{ configuracion.email|default:'' }}"
+              placeholder="contacto@negocio.com"
+          /></label>
+          <label
+            >Dirección<textarea
+              id="direccionEmpresa"
+              maxlength="255"
+              placeholder="Dirección que deseas mostrar en documentos"
+            >
+{{ configuracion.direccion|default:'' }}</textarea
+            >
+          </label>
+          <label
+            >Mensaje para factura<textarea
+              id="mensajeFactura"
+              maxlength="180"
+              placeholder="Ej. Gracias por su compra"
+            >
+{{ configuracion.mensaje_factura|default:'' }}</textarea
+            >
+          </label>
+        </div>
+      </article>
+      {% if puede_gestionar_tienda %}
+      <article class="config-card config-carrusel-full">
+        <div class="config-card__head">
+          <i class="bx bx-images"></i>
+          <h2>Carrusel de la tienda</h2>
+        </div>
+        <div class="config-banners__content">
+          <p>Sube de 2 a 5 imágenes de 1920 × 640 px.</p>
+          <div class="config-carrusel-wrap">
+            <div class="config-carrusel-preview" id="carruselPreview">
+              {% for banner in banners_carrusel %}
+              <figure data-banner-id="{{ banner.id }}">
+                <img src="{% url 'configuracion_banner' banner.id %}" alt="Imagen del carrusel" />
+                <button type="button" class="config-banner-remove"><i class="bx bx-x"></i></button>
+              </figure>
+              {% empty %}<span id="carruselVacio">Aún no has agregado imágenes.</span>{% endfor %}
+            </div>
+            <button type="button" class="config-carrusel-nav config-carrusel-prev" id="carruselPrev"><i class="bx bx-chevron-left"></i></button>
+            <button type="button" class="config-carrusel-nav config-carrusel-next" id="carruselNext"><i class="bx bx-chevron-right"></i></button>
+            <div class="config-carrusel-dots" id="carruselDots"></div>
+          </div>
+          <label class="btn classbotones config-upload" for="carruselTienda"><i class="bx bx-images"></i> Subir imágenes</label>
+          <input id="carruselTienda" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden />
+        </div>
+      </article>
+      {% endif %}
+    </div>
+
+    <aside class="config-main">
+      <article class="config-card">
+        <div class="config-card__head">
+          <i class="bx bx-palette"></i>
+          <h2>Colores del sistema</h2>
+        </div>
+        <div class="config-fields config-fields--inline">
+          <label
+            >Color primario<input
+              id="tiendaColorPrimario"
+              type="color"
+              value="{{ configuracion.tienda_color_primario|default:'#32877F' }}" /></label
+          ><label
+            >Color secundario<input
+              id="tiendaColorSecundario"
+              type="color"
+              value="{{ configuracion.tienda_color_secundario|default:'#10463E' }}" /></label
+          ><label
+            >Color de botones<input
+              id="tiendaColorAcento"
+              type="color"
+              value="{{ configuracion.tienda_color_acento|default:'#F5A623' }}" /></label
+          ><label
+            >Subtítulo de portada<input
+              id="tiendaSubtitulo"
+              maxlength="180"
+              value="{{ configuracion.tienda_subtitulo|default:'' }}"
+          /></label>
+        </div>
+      </article>
+      <article class="config-card config-card--summary">
+        <div class="config-card__head">
+          <i class="bx bx-check-shield"></i>
+          <h2>Control</h2>
+        </div>
+        <div class="config-fields config-fields--cotizacion">
+          <label>Vigencia de cotizaciones (días)
+            <input id="cotizacionDiasValidez" type="text" inputmode="numeric" maxlength="3"
+                   value="{{ configuracion.cotizacion_dias_validez|default:7 }}"
+                   placeholder="7" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+          </label>
+        </div>
+        <div class="config-invoice-design">
+          <span>Diseño de factura</span>
+          <label>
+            <input type="radio" name="disenoFactura" value="RECIBO"
+                   {% if configuracion.diseno_factura != 'PAGINA' %}checked{% endif %}>
+            <i class="bx bx-receipt"></i> Recibo
+          </label>
+          <label>
+            <input type="radio" name="disenoFactura" value="PAGINA"
+                   {% if configuracion.diseno_factura == 'PAGINA' %}checked{% endif %}>
+            <i class="bx bx-file"></i> Página
+          </label>
+        </div>
+        <div class="config-summary">
+          <i class="bx bx-file"></i><strong>Documentos personalizados</strong
+          ><span
+            >El logo se aplica de forma segura y se mantiene el predeterminado
+            si no cargas uno.</span
+          >
+        </div>
+        <button
+          class="btn classbotones config-save"
+          type="submit"
+          id="guardarConfiguracion"
+        >
+          <i class="bx bx-save"></i> Guardar configuración
+        </button>
+      </article>
+    </aside>
+  </form>
+</section>
+
+<script>
+  const CONFIGURACION_URL = "{% url 'guardar_configuracion' %}";
+</script>
+<script src="{% static 'js/gestiones/configuracion.js' %}?v=20260918-02"></script>
+{% endblock %}

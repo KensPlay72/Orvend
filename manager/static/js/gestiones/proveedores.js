@@ -18,9 +18,7 @@ document.getElementById("postregistro").addEventListener("submit", async (e) => 
         { id: 'nlegal', name: 'Nombre Legal' },
         { id: 'ncomercial', name: 'Nombre Comercial' },
         { id: 'rtn', name: 'RTN' },
-        { id: 'dcreditos', name: 'Días de Crédito' },
-        { id: 'telefono', name: 'Teléfono' },
-        { id: 'email', name: 'Email' }
+        { id: 'dcreditos', name: 'Días de Crédito' }
     ];
 
     let missingFields = [];
@@ -121,7 +119,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("nlegaledit").value = proveedor.nombre_legal || '';
                 document.getElementById("ncomercialedit").value = proveedor.nombre_comercial || '';
                 document.getElementById("rtnedit").value = proveedor.rtn || '';
-                document.getElementById("dcreditosedit").value = proveedor.dias_credito || '';
+                document.getElementById("dcreditosedit").value = proveedor.dias_credito ?? '';
                 document.getElementById("emailedit").value = proveedor.email || '';
 
                 // Teléfono completo
@@ -164,9 +162,7 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
         { id: 'nlegaledit', name: 'Nombre Legal' },
         { id: 'ncomercialedit', name: 'Nombre Comercial' },
         { id: 'rtnedit', name: 'RTN' },
-        { id: 'dcreditosedit', name: 'Días de Crédito' },
-        { id: 'telefonoedit', name: 'Teléfono' },
-        { id: 'emailedit', name: 'Email' }
+        { id: 'dcreditosedit', name: 'Días de Crédito' }
     ];
 
     let missingFields = [];

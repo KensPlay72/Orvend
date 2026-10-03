@@ -1,17 +1,33 @@
 import requests
 from requests.auth import HTTPBasicAuth
 from django.conf import settings
+from urllib.parse import quote
 
 
-def subir_archivo(archivo, nombre_archivo):
+def _carpeta_nextcloud(carpeta=None):
+    """Obtiene la carpeta remota evitando mezclar archivos por módulo."""
+    carpeta = carpeta or settings.NEXTCLOUD_FOLDER_PRODUCTOS
+    if not carpeta:
+        raise ValueError("La carpeta de Nextcloud no está configurada")
+    return carpeta
 
-    url = (
-        f"{settings.NEXTCLOUD_URL}"
-        f"/remote.php/dav/files/"
-        f"{settings.NEXTCLOUD_USER}/"
-        f"{settings.NEXTCLOUD_FOLDER}/"
-        f"/{nombre_archivo}"
+
+def url_archivo(nombre_archivo, carpeta=None):
+    """Construye la URL WebDAV únicamente con la configuración actual."""
+    if not nombre_archivo:
+        raise ValueError("El nombre remoto del archivo es obligatorio")
+
+    return (
+        f"{settings.NEXTCLOUD_URL.rstrip('/')}"
+        f"/remote.php/dav/files/{quote(settings.NEXTCLOUD_USER, safe='')}"
+        f"/{quote(_carpeta_nextcloud(carpeta), safe='/')}"
+        f"/{quote(str(nombre_archivo), safe='')}"
     )
+
+
+def subir_archivo(archivo, nombre_archivo, carpeta=None):
+
+    url = url_archivo(nombre_archivo, carpeta)
 
     response = requests.put(
         url,
@@ -31,10 +47,10 @@ def subir_archivo(archivo, nombre_archivo):
     return url
 
 
-def obtener_archivo(url):
+def obtener_archivo(nombre_archivo, carpeta=None):
 
     response = requests.get(
-        url,
+        url_archivo(nombre_archivo, carpeta),
         auth=HTTPBasicAuth(
             settings.NEXTCLOUD_USER,
             settings.NEXTCLOUD_PASSWORD,
@@ -50,10 +66,9 @@ def obtener_archivo(url):
     return response
 
 
-def eliminar_archivo(url):
-
+def eliminar_archivo(nombre_archivo, carpeta=None):
     response = requests.delete(
-        url,
+        url_archivo(nombre_archivo, carpeta),
         auth=HTTPBasicAuth(
             settings.NEXTCLOUD_USER,
             settings.NEXTCLOUD_PASSWORD,

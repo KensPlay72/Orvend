@@ -22,7 +22,7 @@ function initDropdown(hiddenInputId, remoteSearchFn = null) {
 
   // Seleccionar opción
   optionsContainer.addEventListener("click", (e) => {
-    const item = e.target.closest(".list-group-item");
+    const item = e.target.closest(".list-group-item-action");
     if (item) {
       hiddenInput.value = item.dataset.value;
       selectBtn.textContent = item.dataset.label;
@@ -34,14 +34,23 @@ function initDropdown(hiddenInputId, remoteSearchFn = null) {
   // Abrir dropdown y cargar sugerencias
   selectBtn.addEventListener("click", async (e) => {
     e.stopPropagation();
-    dropdown.classList.toggle("show");
-    searchInput.focus();
+    const estabaAbierto = dropdown.classList.contains("show");
+
+    // Solo un selector puede quedar abierto. Así el padre nunca queda
+    // visualmente por debajo del selector de productos hijos.
+    document
+      .querySelectorAll(".producto-rel-select .dropdown-menu.show")
+      .forEach((menu) => menu.classList.remove("show"));
+
+    dropdown.classList.toggle("show", !estabaAbierto);
 
     if (dropdown.classList.contains("show") && remoteSearchFn) {
       optionsContainer.innerHTML = `
+                <div class="list-group-item select-suggestions-title fw-bold">Más utilizadas</div>
                 <div class="list-group-item text-muted">Cargando sugerencias...</div>
             `;
       await remoteSearchFn("", optionsContainer);
+      searchInput.focus();
     }
   });
 
@@ -77,7 +86,7 @@ async function fetchProductosPadre(term, optionsContainer) {
     try {
 
         const response = await fetch(
-            "/manager/api/proxy/productos/padre/"
+            `/manager/api/proxy/productos/padre/?search=${encodeURIComponent(term)}`
         );
 
         if (!response.ok) {
@@ -114,31 +123,7 @@ async function fetchProductosPadre(term, optionsContainer) {
         }
 
 
-        // =====================================================
-        // FILTRAR
-        // =====================================================
-
-        const termino = term
-            .toLowerCase()
-            .trim();
-
-
-        const productos = data.productos.filter((producto) => {
-
-            const nombre = (
-                producto.nombre || ""
-            ).toLowerCase();
-
-            const sku = (
-                producto.codigoSKU || ""
-            ).toLowerCase();
-
-            return (
-                nombre.includes(termino) ||
-                sku.includes(termino)
-            );
-
-        });
+        const productos = data.productos;
 
 
         // =====================================================
@@ -160,6 +145,11 @@ async function fetchProductosPadre(term, optionsContainer) {
         // =====================================================
         // OPCIONES
         // =====================================================
+
+        optionsContainer.innerHTML = `
+            <div class="list-group-item select-suggestions-title fw-bold">
+                ${term ? "Resultados encontrados" : "Más utilizadas"}
+            </div>`;
 
         productos.forEach((producto) => {
 
@@ -216,7 +206,7 @@ async function fetchProductosHijos(term, optionsContainer) {
     try {
 
         const response = await fetch(
-            "/manager/api/proxy/productos/hijos/"
+            `/manager/api/proxy/productos/hijos/?search=${encodeURIComponent(term)}`
         );
 
         if (!response.ok) {
@@ -253,31 +243,7 @@ async function fetchProductosHijos(term, optionsContainer) {
         }
 
 
-        // =====================================================
-        // FILTRAR
-        // =====================================================
-
-        const termino = term
-            .toLowerCase()
-            .trim();
-
-
-        const productos = data.productos.filter((producto) => {
-
-            const nombre = (
-                producto.nombre || ""
-            ).toLowerCase();
-
-            const sku = (
-                producto.codigoSKU || ""
-            ).toLowerCase();
-
-            return (
-                nombre.includes(termino) ||
-                sku.includes(termino)
-            );
-
-        });
+        const productos = data.productos;
 
 
         // =====================================================
@@ -300,6 +266,11 @@ async function fetchProductosHijos(term, optionsContainer) {
         // =====================================================
         // OPCIONES
         // =====================================================
+
+        optionsContainer.innerHTML = `
+            <div class="list-group-item select-suggestions-title fw-bold">
+                ${term ? "Resultados encontrados" : "Más utilizadas"}
+            </div>`;
 
         productos.forEach((producto) => {
 

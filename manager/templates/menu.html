@@ -13,12 +13,57 @@
         <link rel="stylesheet" href="{% static 'plugins/css/boxicons.min.css' %}">
         <!--========== CSS ==========-->
         <link rel="stylesheet" href="{% static 'css/menu.css' %}">
+        <link rel="stylesheet" href="{% static 'css/carga_manager.css' %}?v=20260920">
+        <link rel="stylesheet" href="{% static 'css/tema_sistema.css' %}">
         <title>
             {% block title %}
             {% endblock title %}
         </title>
     </head>
-    <body>
+    <body data-notificaciones-habilitadas="{{ request.user.is_authenticated|yesno:'true,false' }}" style="--system-primary: {{ tema_principal }}; --system-secondary: {{ tema_secundario }}; --system-button: {{ tema_botones }};">
+        <script>
+            window.MONEDA_SISTEMA = "{{ moneda_simbolo|escapejs }}";
+            window.formatearMoneda = (valor, decimales = 2) =>
+                `${window.MONEDA_SISTEMA} ${Number(valor || 0).toFixed(decimales)}`;
+
+            // Se aplica también a campos agregados posteriormente dentro de modales o tablas.
+            (function () {
+                const aplicarMoneda = (contenedor) => {
+                    if (window.MONEDA_SISTEMA === "L." || !contenedor) return;
+                    const walker = document.createTreeWalker(contenedor, NodeFilter.SHOW_TEXT);
+                    let nodo;
+                    while ((nodo = walker.nextNode())) {
+                        if (nodo.parentElement?.closest("script, style")) continue;
+                        nodo.nodeValue = nodo.nodeValue.replace(/L\.(?=\s*-?\d)/g, window.MONEDA_SISTEMA);
+                    }
+                };
+                const desactivarAutocompletado = (contenedor) => {
+                    if (!contenedor || !contenedor.querySelectorAll) return;
+                    contenedor.querySelectorAll('input[type="text"], input[type="number"]').forEach((input) => {
+                        input.setAttribute('autocomplete', 'off');
+                    });
+                };
+
+                desactivarAutocompletado(document);
+                aplicarMoneda(document);
+                new MutationObserver((mutaciones) => {
+                    mutaciones.forEach((mutacion) => {
+                        mutacion.addedNodes.forEach((nodo) => {
+                            if (nodo.nodeType === Node.TEXT_NODE) {
+                                aplicarMoneda(nodo.parentElement);
+                                return;
+                            }
+                            if (nodo.nodeType !== Node.ELEMENT_NODE) return;
+                            if (nodo.matches && nodo.matches('input[type="text"], input[type="number"]')) {
+                                nodo.setAttribute('autocomplete', 'off');
+                            }
+                            desactivarAutocompletado(nodo);
+                            aplicarMoneda(nodo);
+                        });
+                    });
+                }).observe(document.documentElement, { childList: true, subtree: true });
+            }());
+        </script>
         <!--========== HEADER ========-->
         <header class="header">
             <div class="header__container">
@@ -28,6 +73,27 @@
                     <i class="bx bx-menu" id="header-toggle"></i>
                 </div>
                 <div class="header__search-group">
+                    {% if mostrar_buscar_factura %}
+                        <form id="buscarFacturaForm" class="header__search header__search--wide dv-header-search">
+                            <input type="search"
+                                   id="numeroFactura"
+                                   class="header__input"
+                                   inputmode="numeric"
+                                   pattern="[0-9]*"
+                                   min="1"
+                                   placeholder="Buscar factura"
+                                   autocomplete="off"
+                                   required>
+                            <button type="submit" class="dv-header-search__button" aria-label="Buscar factura">
+                                <i class="bx bx-search" aria-hidden="true"></i>
+                            </button>
+                        </form>
+                    {% if perms.manager.view_devolucionventa %}
+                        <a href="{% url 'devoluciones_venta_list' %}" class="dv-header-list-link" title="Ver devoluciones generadas" aria-label="Ver devoluciones generadas">
+                            <i class="bx bx-list-ul"></i>
+                        </a>
+                    {% endif %}
+                    {% endif %}
                     {% if mostrar_codigo %}
                         <!-- Campo de bÃºsqueda -->
                         <form id="codigo_form" class="header__search header__search--wide codigo">
@@ -39,19 +105,14 @@
                                    autocomplete="off" />
                             <i class="bx bx-search header__icon" id="buscarIcono"></i>
                         </form>
-                        <div class="filtro-container">
-                            <div class="search-box header__search">
-                                <input type="search"
-                                       name="search"
-                                       class="header__input"
-                                       id="busqueda"
-                                       placeholder="{% if mostrar_codigo %}Buscar Producto{% else %}Buscar{% endif %}"
-                                       value="{{ search }}"
-                                       autocomplete="off" />
-                                <i class="bx bx-search header__icon" id="buscarIcono"></i>
-                            </div>
-                            <div id="resultadoBusquda" class="resultados-busqueda"></div>
-                        </div>
+                        <button type="button"
+                                class="header__product-picker"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalProductosMovil"
+                                aria-label="Buscar y seleccionar productos">
+                            <i class="bx bx-search" aria-hidden="true"></i>
+                            <span>Buscar productos</span>
+                        </button>
                     {% endif %}
                     <!-- Campo de busqueda -->
                     {% if mostrar_buscador %}
@@ -66,6 +127,45 @@
                             <i class="bx bx-search header__icon" id="buscarIcono"></i>
                         </form>
                     {% endif %}
+                    {% if mostrar_exportar_inventario %}
+                        <a href="{% url 'exportar_inventario_excel' %}?search={{ search|urlencode }}"
+                           id="exportarInventarioExcel"
+                           class="header__export-btn"
+                           title="Exportar inventario a Excel"
+                           aria-label="Exportar inventario a Excel">
+                            <i class="bx bx-spreadsheet" aria-hidden="true"></i>
+                        </a>
+                    {% endif %}
+                    {% if mostrar_buscador_cotizaciones %}
+                        <form method="get" class="header__search header__search--wide dv-header-search">
+                            <input type="search"
+                                   name="buscar"
+                                   placeholder="Buscar cotización, cliente o RTN"
+                                   class="header__input"
+                                   value="{{ busqueda }}"
+                                   autocomplete="off" />
+                            <button type="submit" class="dv-header-search__button" aria-label="Buscar cotizaciones">
+                                <i class="bx bx-search" aria-hidden="true"></i>
+                            </button>
+                        </form>
+                    {% endif %}
+                    {% if mostrar_buscador_retiros %}
+                        <div class="header__search header__search--wide dv-header-search">
+                            <input type="search" id="{% if buscador_retiros_listado %}buscarRetiros{% else %}buscarCajero{% endif %}" class="header__input" placeholder="{% if buscador_retiros_listado %}Buscar retiros{% else %}Buscar por usuario{% endif %}" autocomplete="off" />
+                            <button type="button" class="dv-header-search__button" aria-label="Buscar"><i class="bx bx-search" aria-hidden="true"></i></button>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="header-notifications">
+                    <button type="button" id="notifications-toggle" class="notifications-toggle" aria-label="Notificaciones">
+                        <i class="bx bx-bell"></i>
+                    </button>
+                    <div id="notifications-panel" class="notifications-panel">
+                        <div class="notifications-panel__header"><strong>Notificaciones</strong></div>
+                        <div class="notifications-panel__list">
+                            <p class="notifications-empty">No tienes notificaciones.</p>
+                        </div>
+                    </div>
                 </div>
                 <div class="initials-circle" id="profile-img">
                     {{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}
@@ -76,7 +176,7 @@
                     <!-- Header: Logo left, Logout right -->
                     <div class="encabezado">
                         <img class="logoencabezado"
-                             src="{% static 'img/LH.png' %}"
+                             src="{% static 'img/LH.webp' %}"
                              alt="logo"
                              width="0"
                              height="0">
@@ -97,202 +197,193 @@
         <!--========== NAV ==========-->
         <div class="nav" id="navbar">
             <nav class="nav__container">
+                <button type="button" class="nav__mobile-close" id="navbar-close" aria-label="Cerrar menú">
+                    <i class="bx bx-x" aria-hidden="true"></i>
+                </button>
                 <div>
-                        {% for group in request.user.groups.all %}
-                        {% if group.name == "cajeros" %}
+                        {% if perms.manager.operar_caja or perms.manager.generar_cotizaciones or perms.manager.view_cotizacion or perms.manager.add_devolucionventa or perms.manager.gestionar_retiros_caja %}
                             <div class="nav__items">
                                 <h3 class="nav__subtitle">Caja</h3>
+                                {% if perms.manager.operar_caja or perms.manager.generar_cotizaciones %}
                                 <a href="{% url 'caja' %}"
                                 class="nav__link {% if request.path == '/manager/caja/' %}active{% endif %}">
                                     <i class="bx bx-store nav__icon"></i>
                                     <span class="nav__name">Caja</span>
                                 </a>
+                                {% endif %}
+                                {% if perms.manager.view_cotizacion %}
+                                <a href="{% url 'cotizaciones' %}"
+                                class="nav__link {% if request.resolver_match.url_name == 'cotizaciones' %}active{% endif %}">
+                                    <i class="bx bx-file nav__icon"></i>
+                                    <span class="nav__name">Cotizaciones</span>
+                                </a>
+                                {% endif %}
+                                {% if perms.manager.add_devolucionventa %}
+                                <a href="{% url 'devoluciones_venta' %}"
+                                class="nav__link {% if request.resolver_match.url_name == 'devoluciones_venta' or request.resolver_match.url_name == 'devoluciones_venta_list' %}active{% endif %}">
+                                    <i class="bx bx-revision nav__icon"></i>
+                                    <span class="nav__name">Devoluciones</span>
+                                </a>
+                                {% endif %}
+                                {% if perms.manager.gestionar_retiros_caja %}
+                                <a href="{% url 'retiros_caja' %}" class="nav__link {% if request.resolver_match.url_name == 'retiros_caja' or request.resolver_match.url_name == 'retiros_caja_list' %}active{% endif %}"><i class="bx bx-money-withdraw nav__icon"></i><span class="nav__name">Retiro de caja</span></a>
+                                {% endif %}
                             </div>
                             <br>
                         {% endif %}
-                        {% endfor %}
+                        {% if request.user.is_superuser or perms.manager.ver_dashboard or perms.manager.view_inventarios or perms.manager.view_ventas or perms.manager.view_descuento or perms.manager.view_cajaac or perms.manager.view_productos or perms.manager.view_combos or perms.manager.view_proveedores or perms.manager.view_marcas or perms.manager.view_umedidas or perms.manager.view_categorias or perms.manager.view_compras or perms.manager.view_ubicaciones or perms.manager.view_cuentasporpagar or perms.manager.view_cuentasporcobrar or perms.manager.view_traslados or perms.manager.view_clientes or perms.manager.view_datos_sat or perms.manager.gestionar_configuracion %}
                             <div class="nav__items">
-
-{% if request.user.groups.count == 0 or request.user.is_superuser  %}
-
-    <h3 class="nav__subtitle">Gestiones</h3>
-
-    <div class="nav__items">
-        <a href="{% url 'dashboard' %}"
-           class="nav__link {% if request.path == '/manager/dashboard/' %}active{% endif %}">
-            <i class="bx bx-home nav__icon"></i>
-            <span class="nav__name">Dashboard</span>
-        </a>
-    </div>
-
-{% else %}
-
-    {% for group in request.user.groups.all %}
-        {% if group.name == "cajeros" %}
-
-            {% for group2 in request.user.groups.all %}
-                {% if group2.name == "Bodega" %}
-
-                    <h3 class="nav__subtitle">Gestiones</h3>
-
-                    <div class="nav__items">
-                        <a href="{% url 'dashboard' %}"
-                           class="nav__link {% if request.path == '/manager/dashboard/' %}active{% endif %}">
-                            <i class="bx bx-home nav__icon"></i>
-                            <span class="nav__name">Dashboard</span>
-                        </a>
-                    </div>
-
-                {% endif %}
-            {% endfor %}
-
-        {% endif %}
-    {% endfor %}
-
-{% endif %}
-
-
-
-
+                                <h3 class="nav__subtitle">Gestiones</h3>
+                                {% if request.user.is_superuser or perms.manager.ver_dashboard %}
+            <a href="{% url 'dashboard' %}"
+               class="nav__link {% if request.resolver_match.url_name  == 'dashboard' %}active{% endif %}">
+                <i class="bx bx-home nav__icon"></i>
+                <span class="nav__name">Dashboard</span>
+            </a>
+                                {% endif %}
                                 {% if perms.manager.view_inventarios %}
                                     <a href="{% url 'inventario' %}"
-                                       class="nav__link {% if request.path == '/manager/inventario/' %}active{% endif %}">
+                                       class="nav__link {% if request.resolver_match.url_name == 'inventario' %}active{% endif %}">
                                         <i class="bx bx-list-ul nav__icon"></i>
                                         <span class="nav__name">Inventario</span>
                                     </a>
                                 {% endif %}
                                 {% if perms.manager.view_ventas %}
                                     <a href="{% url 'ventas' %}"
-                                       class="nav__link {% if request.path == '/manager/ventas/' %}active{% endif %}">
+                                       class="nav__link {% if request.resolver_match.url_name == 'ventas' %}active{% endif %}">
                                         <i class="bx bx-cart nav__icon"></i>
                                         <span class="nav__name">Ventas</span>
                                     </a>
                                 {% endif %}
                                 {% if perms.manager.view_descuento %}
                                     <a href="{% url 'descuentos' %}"
-                                    class="nav__link {% if request.path == '/manager/descuentos/' %}active{% endif %}">
+                                    class="nav__link {% if request.resolver_match.url_name == 'descuentos' %}active{% endif %}">
                                         <i class="bx bx-purchase-tag nav__icon"></i>
                                         <span class="nav__name">Descuentos</span>
                                     </a>
                                 {% endif %}
                                 {% if perms.manager.view_cajaac %}
                                 <a href="{% url 'cajas_manager' %}"
-                                    class="nav__link {% if request.path == '/manager/cajas_manager/' %}active{% endif %}">
+                                    class="nav__link {% if request.resolver_match.url_name == 'cajas_manager' %}active{% endif %}">
                                     <i class="bx bx-wallet nav__icon"></i>
                                     <span class="nav__name">Cierre de caja</span>
                                 </a>
                                 {% endif %}
                             {% if perms.manager.view_productos %}
                                 <a href="{% url 'productos' %}"
-                                   class="nav__link {% if request.path == '/manager/productos/' %}active{% endif %}">
+                                class="nav__link {% if request.resolver_match.url_name == 'productos' or request.resolver_match.url_name == 'productos_rel' %}active{% endif %}">
                                     <i class="bx bx-box nav__icon"></i>
                                     <span class="nav__name">Productos</span>
                                 </a>
                             {% endif %}
+                            {% if perms.manager.view_combos %}
+                                <a href="{% url 'combos' %}"
+                                class="nav__link {% if request.resolver_match.url_name == 'combos' or request.resolver_match.url_name == 'combos_list' %}active{% endif %}">
+
+                                    <i class="bx bx-package nav__icon"></i>
+                                    <span class="nav__name">Combos</span>
+                                </a>
+                            {% endif %}
                             {% if perms.manager.view_proveedores %}
                                 <a href="{% url 'proveedores' %}"
-                                   class="nav__link {% if request.path == '/manager/proveedores/' %}active{% endif %}">
+                                class="nav__link {% if request.resolver_match.url_name == 'proveedores' or request.resolver_match.url_name == 'proveedores_contactos' %}active{% endif %}">
                                     <i class="bx bx-group nav__icon"></i>
                                     <span class="nav__name">Proveedores</span>
                                 </a>
                             {% endif %}
                             {% if perms.manager.view_marcas %}
                                 <a href="{% url 'marcas' %}"
-                                   class="nav__link {% if request.path == '/manager/marcas/' %}active{% endif %}">
+                                   class="nav__link {% if request.resolver_match.url_name == 'marcas' %}active{% endif %}">
                                     <i class="bx bx-tag nav__icon"></i>
                                     <span class="nav__name">Marcas</span>
                                 </a>
                             {% endif %}
                             {% if perms.manager.view_umedidas %}
                                 <a href="{% url 'presentaciones' %}"
-                                   class="nav__link {% if request.path == '/manager/presentaciones/' %}active{% endif %}">
+                                   class="nav__link {% if request.resolver_match.url_name == 'presentaciones' %}active{% endif %}">
                                     <i class="bx bx-package nav__icon"></i>
                                     <span class="nav__name">Presentaciones</span>
                                 </a>
                             {% endif %}
                             {% if perms.manager.view_categorias %}
                                 <a href="{% url 'categorias' %}"
-                                   class="nav__link {% if request.path == '/manager/categorias/' %}active{% endif %}">
-                                    <i class="bx bx-category nav__icon"></i>
+                                   class="nav__link {% if request.resolver_match.url_name == 'categorias' %}active{% endif %}">
+                                    <i class="bx bx-grid-alt nav__icon"></i>
                                     <span class="nav__name">Categorías</span>
                                 </a>
                             {% endif %}
                             {% if perms.manager.view_compras %}
                                 <a href="{% url 'compras' %}"
-                                   class="nav__link {% if request.path == '/manager/compras/' %}active{% endif %}">
+                                class="nav__link {% if request.resolver_match.url_name == 'compras' or request.resolver_match.url_name == 'realizarcompra' or request.resolver_match.url_name == 'editar_compra' or request.resolver_match.url_name == 'detalle_compra' or request.resolver_match.url_name == 'devoluciones_view' or request.resolver_match.url_name == 'detalle_devolucion_view' %}active{% endif %}">
+
                                     <i class="bx bx-cart-alt nav__icon"></i>
                                     <span class="nav__name">Compras</span>
+
                                 </a>
                             {% endif %}
                             {% if perms.manager.view_ubicaciones %}
                                 <a href="{% url 'ubicaciones' %}"
-                                   class="nav__link {% if request.path == '/manager/ubicaciones/' %}active{% endif %}">
+                                   class="nav__link {% if request.resolver_match.url_name == 'ubicaciones' %}active{% endif %}">
                                     <i class="bx bx-map nav__icon"></i>
                                     <span class="nav__name">Ubicaciones</span>
                                 </a>
                             {% endif %}
                             {% if perms.manager.view_cuentasporpagar %}
                                 <a href="{% url 'cppagar' %}"
-                                   class="nav__link {% if request.path == '/manager/cppagar/' %}active{% endif %}">
+                                   class="nav__link {% if request.resolver_match.url_name == 'cppagar' %}active{% endif %}">
                                     <i class="bx bx-money nav__icon"></i>
                                     <span class="nav__name">Cuentas x Pagar</span>
                                 </a>
                             {% endif %}
                             {% if perms.manager.view_cuentasporcobrar %}
                                 <a href="{% url 'cxcobrar' %}"
-                                   class="nav__link {% if request.path == '/manager/cxcobrar/' %}active{% endif %}">
+                                   class="nav__link {% if request.resolver_match.url_name == 'cxcobrar' %}active{% endif %}">
                                     <i class="bx bx-receipt nav__icon"></i>
                                     <span class="nav__name">Cuentas x Cobrar</span>
                                 </a>
                             {% endif %}
                             {% if perms.manager.view_traslados %}
                                 <a href="{% url 'traslados_list' %}"
-                                   class="nav__link {% if request.path == '/manager/traslados/' %}active{% endif %}">
+                                   class="nav__link {% if request.resolver_match.url_name == 'traslados_list' or request.resolver_match.url_name == 'detalle_traslado' %}active{% endif %}">
                                     <i class="bx bx-transfer-alt nav__icon"></i>
                                     <span class="nav__name">Traslados</span>
                                 </a>
                             {% endif %}
                             {% if perms.manager.view_clientes %}
                                 <a href="{% url 'clientes' %}"
-                                   class="nav__link {% if request.path == '/manager/clientes/' %}active{% endif %}">
+                                   class="nav__link {% if request.resolver_match.url_name == 'clientes' %}active{% endif %}">
                                     <i class="bx bx-group nav__icon"></i>
                                     <span class="nav__name">Clientes</span>
                                 </a>
                             {% endif %}
                             {% if perms.manager.view_datos_sat %}
                                 <a href="{% url 'datos_sat' %}"
-                                   class="nav__link {% if request.path == '/manager/datos_sat/' %}active{% endif %}">
+                                   class="nav__link {% if request.resolver_match.url_name == 'datos_sat' %}active{% endif %}">
                                     <i class="bx bx-receipt nav__icon"></i>
-                                    <span class="nav__name">Datos SAT</span>
+                                    <span class="nav__name">Datos SAP</span>
+                                </a>
+                            {% endif %}
+                            {% if perms.manager.gestionar_configuracion %}
+                                <a href="{% url 'configuracion' %}"
+                                   class="nav__link {% if request.resolver_match.url_name == 'configuracion' %}active{% endif %}">
+                                    <i class="bx bx-cog nav__icon"></i>
+                                    <span class="nav__name">Configuración</span>
                                 </a>
                             {% endif %}
                         </div>
+                        {% endif %}
 
-{% if request.user.is_superuser %}
+{% if perms.manager.gestionar_recepcion_inventario %}
         <br>
     <div class="nav__items">
         <h3 class="nav__subtitle">Bodega</h3>
 
         <a href="{% url 'recepcion_inventario' %}"
-            class="nav__link {% if request.path == '/manager/bodega/recepcion_inventario/' %}active{% endif %}">
+            class="nav__link {% if request.resolver_match.url_name == 'recepcion_inventario' %}active{% endif %}">
             <i class="bx bx-package nav__icon"></i>
             <span class="nav__name">Recepción</span>
         </a>
     </div>
-{% else %}
-    {% for group in request.user.groups.all %}
-        {% if group.name == "Bodega" %}
-            <br>
-            <div class="nav__items">
-                <h3 class="nav__subtitle">Bodega</h3>
-
-                <a href="{% url 'recepcion_inventario' %}" class="nav__link {% if request.path == '/manager/bodega/recepcion_inventario/' %}active{% endif %}">
-                    <i class="bx bx-package nav__icon"></i>
-                    <span class="nav__name">Recepción</span>
-                </a>
-            </div>
-        {% endif %}
-    {% endfor %}
 {% endif %}
                         {% comment %} <div class="nav__items">
                                 <h3 class="nav__subtitle">GESTIONES</h3>
@@ -384,11 +475,20 @@
             {% block main_content %}
             {% endblock main_content %}
         </main>
+        <div id="managerGlobalLoader" class="manager-loader-overlay" hidden role="status" aria-live="polite">
+            <div class="manager-loader-boxes" aria-hidden="true">
+                <div class="box"><div></div><div></div><div></div><div></div></div>
+                <div class="box"><div></div><div></div><div></div><div></div></div>
+                <div class="box"><div></div><div></div><div></div><div></div></div>
+                <div class="box"><div></div><div></div><div></div><div></div></div>
+            </div>
+        </div>
         <!--========== MAIN JS ==========-->
-        <script src="{% static 'js/menu.js' %}"></script>
+        <script src="{% static 'js/menu.js' %}?v=20261003-auth-ws"></script>
         <script src="{% static 'plugins/jwt-decode.min.js' %}"></script>
         <script src="{% static 'plugins/jquery.min.js' %}"></script>
         <script src="{% static 'plugins/bootstrap.min.js' %}"></script>
         <script src="{% static 'plugins/sweetalert2.min.js' %}"></script>
+        <script src="{% static 'js/carga_manager.js' %}?v=20260924"></script>
     </body>
 {% endblock content %}

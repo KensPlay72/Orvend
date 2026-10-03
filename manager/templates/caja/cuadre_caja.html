@@ -11,7 +11,7 @@
 
     {% block titulo_content %} <div class="tituloscont"> <img
             class="logop"
-            src="{% static 'img/LH.png' %}"
+            src="{% static 'img/LH.webp' %}"
             alt="logo"
             width="0"
             height="0"
@@ -47,7 +47,7 @@
 
         <div class="row g-3 mb-4">
 
-            <div class="col-lg-4 col-md-6">
+            <div class="col-lg-3 col-md-6">
                 <div class="card summary-card summary-card--sales">
                     <div class="summary-card__icon">
                         <i class='bx bx-dollar-circle'></i>
@@ -59,7 +59,7 @@
                 </div>
             </div>
 
-            <div class="col-lg-4 col-md-6">
+            <div class="col-lg-3 col-md-6">
                 <div class="card summary-card summary-card--opening">
                     <div class="summary-card__icon">
                         <i class='bx bx-wallet-alt'></i>
@@ -71,16 +71,28 @@
                 </div>
             </div>
 
-            <div class="col-lg-4 col-md-12">
+            <div class="col-lg-3 col-md-6">
                 <div class="card summary-card summary-card--expected">
                     <div class="summary-card__icon">
                         <i class='bx bx-briefcase-alt-2'></i>
                     </div>
                     <div>
-                        <p class="summary-card__label">Total esperado</p>
+                        <p class="summary-card__label">Efectivo esperado</p>
                         <h3 id="totalEsperado" data-total="{{ total_esperado }}">
                             L. {{ total_esperado|floatformat:2 }}
                         </h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+                <div class="card summary-card summary-card--withdrawals">
+                    <div class="summary-card__icon">
+                        <i class='bx bx-money-withdraw'></i>
+                    </div>
+                    <div>
+                        <p class="summary-card__label">Retiros de caja</p>
+                        <h3>L. {{ total_retiros|floatformat:2 }}</h3>
                     </div>
                 </div>
             </div>
@@ -90,16 +102,17 @@
         <!-- ========================= -->
         <!-- DIFERENCIA -->
         <!-- ========================= -->
-
+        <br>
         <div class="difference-card mb-4">
             <div class="difference-card__content">
                 <div>
                     <p class="difference-card__label">Diferencia</p>
                     <h2 id="diferencia">L. 0.00</h2>
                 </div>
-                <span class="difference-card__caption">Dinero contado - Total esperado</span>
+                <span class="difference-card__caption">Efectivo contado - Efectivo esperado</span>
             </div>
         </div>
+        <br>
 
         <!-- ========================= -->
         <!-- TABLA DE DENOMINACIONES -->
@@ -109,8 +122,8 @@
 
             <div class="count-card__header">
                 <div>
-                    <h5 class="mb-0">Conteo de efectivo</h5>
-                    <p>Ingresa la cantidad de billetes por denominación</p>
+                    <h5 class="mb-0">Conteo de efectivo (contado)</h5>
+                    <p>{{ descripcion_denominaciones }}</p>
                 </div>
                 <span class="count-card__hint">Se actualiza en tiempo real</span>
             </div>
@@ -119,7 +132,7 @@
 
                 <div class="table-responsive">
 
-                    <table class="table table-bordered align-middle text-center cuadre-table">
+                    <table class="table table-bordered align-middle text-center cuadre-table" data-denominaciones="{{ denominaciones_efectivo|join:',' }}">
 
                         <thead>
                             <tr>
@@ -130,85 +143,19 @@
                         </thead>
 
                         <tbody>
-
+                            {% for denominacion in denominaciones_efectivo %}
                             <tr>
-                                <td>L. 1.00</td>
-                                <td>
-                                    <input type="text" class="form-control cantidad-billete" oninput="validateNumber(this)">
-                                </td>
-                                <td class="subtotal">L. 0.00</td>
+                                <td>{{ moneda_simbolo }} {{ denominacion|floatformat:2 }}</td>
+                                <td><input type="text" class="form-control cantidad-billete" oninput="validateNumber(this)"></td>
+                                <td class="subtotal">{{ moneda_simbolo }} 0.00</td>
                             </tr>
-
-                            <tr>
-                                <td>L. 2.00</td>
-                                <td>
-                                    <input type="text" class="form-control cantidad-billete" oninput="validateNumber(this)">
-                                </td>
-                                <td class="subtotal">L. 0.00</td>
-                            </tr>
-
-                            <tr>
-                                <td>L. 5.00</td>
-                                <td>
-                                    <input type="text" class="form-control cantidad-billete" oninput="validateNumber(this)">
-                                </td>
-                                <td class="subtotal">L. 0.00</td>
-                            </tr>
-
-                            <tr>
-                                <td>L. 10.00</td>
-                                <td>
-                                    <input type="text" class="form-control cantidad-billete" oninput="validateNumber(this)">
-                                </td>
-                                <td class="subtotal">L. 0.00</td>
-                            </tr>
-
-                            <tr>
-                                <td>L. 20.00</td>
-                                <td>
-                                    <input type="text" class="form-control cantidad-billete" oninput="validateNumber(this)">
-                                </td>
-                                <td class="subtotal">L. 0.00</td>
-                            </tr>
-
-                            <tr>
-                                <td>L. 50.00</td>
-                                <td>
-                                    <input type="text" class="form-control cantidad-billete" oninput="validateNumber(this)">
-                                </td>
-                                <td class="subtotal">L. 0.00</td>
-                            </tr>
-
-                            <tr>
-                                <td>L. 100.00</td>
-                                <td>
-                                    <input type="text" class="form-control cantidad-billete" oninput="validateNumber(this)">
-                                </td>
-                                <td class="subtotal">L. 0.00</td>
-                            </tr>
-
-                            <tr>
-                                <td>L. 200.00</td>
-                                <td>
-                                    <input type="text" class="form-control cantidad-billete" oninput="validateNumber(this)">
-                                </td>
-                                <td class="subtotal">L. 0.00</td>
-                            </tr>
-
-                            <tr>
-                                <td>L. 500.00</td>
-                                <td>
-                                    <input type="text" class="form-control cantidad-billete" oninput="validateNumber(this)">
-                                </td>
-                                <td class="subtotal">L. 0.00</td>
-                            </tr>
-
+                            {% endfor %}
                         </tbody>
 
                         <tfoot>
                             <tr>
                                 <th colspan="2" class="text-end">Total contado:</th>
-                                <th id="totalContado">L. 0.00</th>
+                                <th id="totalContado">{{ moneda_simbolo }} 0.00</th>
                             </tr>
                         </tfoot>
 
@@ -219,6 +166,93 @@
             </div>
 
         </div>
+
+        {% if ventas_deposito > 0 or ventas_tarjeta > 0 or ventas_cheque > 0 %}
+        <!-- ========================= -->
+        <!-- CUADRE DE OTROS PAGOS -->
+        <!-- ========================= -->
+        <section class="payment-reconciliation mt-4">
+            <div class="payment-reconciliation__heading">
+                <span class="payment-reconciliation__heading-icon"><i class="bx bx-transfer-alt"></i></span>
+                <div>
+                    <span class="payment-reconciliation__eyebrow">Conciliación</span>
+                    <h5>Otros métodos de pago</h5>
+                    <p>Estos montos se calculan con las ventas registradas durante el día.</p>
+                </div>
+            </div>
+
+            <div class="payment-reconciliation__grid">
+                {% if ventas_deposito > 0 %}
+                <article class="payment-reconciliation__card" data-payment-type="deposito" data-expected="{{ ventas_deposito }}">
+                    <span class="payment-reconciliation__icon"><i class="bx bx-building-house"></i></span>
+                    <div class="payment-reconciliation__content">
+                        <p class="payment-reconciliation__label">Depósitos bancarios</p>
+                        <span class="payment-reconciliation__expected-label">Monto esperado</span>
+                        <strong>L. {{ ventas_deposito|floatformat:2 }}</strong>
+                        <label for="monto_deposito">Monto recibido</label>
+                        <input
+                            id="monto_deposito"
+                            name="monto_deposito"
+                            type="text"
+                            inputmode="decimal"
+                            autocomplete="off"
+                            class="form-control monto-otro-pago"
+                            placeholder="0.00"
+                            aria-label="Monto recibido por depósitos bancarios"
+                        >
+                        <small>Diferencia: <span class="payment-difference">L. 0.00</span></small>
+                    </div>
+                </article>
+                {% endif %}
+
+                {% if ventas_tarjeta > 0 %}
+                <article class="payment-reconciliation__card" data-payment-type="tarjeta" data-expected="{{ ventas_tarjeta }}">
+                    <span class="payment-reconciliation__icon"><i class="bx bx-credit-card"></i></span>
+                    <div class="payment-reconciliation__content">
+                        <p class="payment-reconciliation__label">Pagos con tarjeta</p>
+                        <span class="payment-reconciliation__expected-label">Monto esperado</span>
+                        <strong>L. {{ ventas_tarjeta|floatformat:2 }}</strong>
+                        <label for="monto_tarjeta">Monto recibido</label>
+                        <input
+                            id="monto_tarjeta"
+                            name="monto_tarjeta"
+                            type="text"
+                            inputmode="decimal"
+                            autocomplete="off"
+                            class="form-control monto-otro-pago"
+                            placeholder="0.00"
+                            aria-label="Monto recibido por tarjeta"
+                        >
+                        <small>Diferencia: <span class="payment-difference">L. 0.00</span></small>
+                    </div>
+                </article>
+                {% endif %}
+
+                {% if ventas_cheque > 0 %}
+                <article class="payment-reconciliation__card" data-payment-type="cheque" data-expected="{{ ventas_cheque }}">
+                    <span class="payment-reconciliation__icon"><i class="bx bx-receipt"></i></span>
+                    <div class="payment-reconciliation__content">
+                        <p class="payment-reconciliation__label">Pagos con cheque</p>
+                        <span class="payment-reconciliation__expected-label">Monto esperado</span>
+                        <strong>L. {{ ventas_cheque|floatformat:2 }}</strong>
+                        <label for="monto_cheque">Monto recibido</label>
+                        <input
+                            id="monto_cheque"
+                            name="monto_cheque"
+                            type="text"
+                            inputmode="decimal"
+                            autocomplete="off"
+                            class="form-control monto-otro-pago"
+                            placeholder="0.00"
+                            aria-label="Monto recibido por cheque"
+                        >
+                        <small>Diferencia: <span class="payment-difference">L. 0.00</span></small>
+                    </div>
+                </article>
+                {% endif %}
+            </div>
+        </section>
+        {% endif %}
 
         <!-- ========================= -->
         <!-- BOTÓN FINALIZAR -->

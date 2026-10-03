@@ -1,0 +1,252 @@
+{% extends "menu.html" %} 
+{% load static %} 
+{% block title %}Combos{% endblock%} 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+<link rel="stylesheet" href="{% static 'css/combos.css' %}?v=20260918-06" />
+{% endblock %} 
+{% block titulo_content %}
+<div class="tituloscont">
+  <img
+    class="logop"
+    src="{% static 'img/LH.webp' %}"
+    alt=""
+    width="0"
+    height="0"
+  />
+  <p class="header__logo">| Combos</p>
+</div>
+{% endblock %} 
+{% block main_content %}
+<section class="combos-page" id="combosApp">
+  <div class="combos-intro">
+    <div class="combos-intro__icon"><i class="bx bx-package"></i></div>
+    <div>
+      <p class="combos-intro__eyebrow">Constructor de paquetes</p>
+      <h1>Arma un combo con tu inventario</h1>
+      <p>
+        Agrega productos disponibles y define un precio de venta para el
+        paquete.
+      </p>
+    </div>
+    <div class="combos-intro__counter">
+      <strong>{{ total_combos }}</strong><span>combos creados</span>
+    </div>
+    {% if perms.manager.view_combos %}
+    <a
+      href="{% url 'combos_list' %}"
+      class="dv-header-search__button combos-list-trigger"
+      aria-label="Ver combos registrados"
+      title="Ver combos registrados"
+      ><i class="bx bx-list-ul" aria-hidden="true"></i
+    ></a>
+    {% endif %}
+  </div>
+
+  <form class="combos-form" id="formCombo" novalidate>
+    {% csrf_token %}
+    <div class="combos-workspace">
+      <article class="combos-card combos-card--datos">
+        <div class="combos-card__head">
+          <i class="bx bx-edit-alt"></i>
+          <h2>Datos del combo</h2>
+        </div>
+        <div class="combos-fields">
+          <label
+            >Nombre del combo<input
+              id="comboNombre"
+              type="text"
+              maxlength="120"
+              placeholder="Ej. Mochila escolar completa"
+              required
+          /></label>
+          <label
+            >SKU del combo<input
+              id="comboSku"
+              type="text"
+              maxlength="50"
+              placeholder="Ej. COM-MOCH-001"
+              required
+          /></label>
+          <label class="combos-image-upload" for="comboImagen">
+            <span>Imagen del combo <em>Opcional</em></span>
+            <input
+              id="comboImagen"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              hidden
+            />
+            <span class="combos-image-upload__box" id="comboImagenSelector">
+              <img
+                id="comboImagenPreview"
+                src="{% static 'img/default.webp' %}"
+                alt="Vista previa de imagen del combo"
+              />
+              <span><i class="bx bx-image-add"></i> Subir imagen</span>
+            </span>
+          </label>
+        </div>
+      </article>
+
+      <article class="combos-card combos-card--productos">
+        <div class="combos-card__head combos-card__head--between">
+          <div>
+            <i class="bx bx-box"></i>
+            <h2>Productos incluidos</h2>
+          </div>
+          <button
+            type="button"
+            class="btn classbotones combos-add"
+            id="abrirProductos"
+            data-bs-toggle="modal"
+            data-bs-target="#modalProductosCombo"
+          >
+            <i class="bx bx-plus"></i> Agregar producto
+          </button>
+        </div>
+        <div class="tabla-container combos-table-wrap">
+          <table class="tablas-todo combos-table">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Disponible</th>
+                <th>Cantidad</th>
+                <th>Costo unit.</th>
+                <th>Subtotal</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="detalleCombo">
+              <tr class="combos-empty">
+                <td colspan="6">
+                  <i class="bx bx-package"></i
+                  ><span>Aún no has agregado productos al combo.</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </div>
+
+    <aside class="combos-card combos-card--resumen">
+      <div class="combos-card__head">
+        <i class="bx bx-calculator"></i>
+        <h2>Precio y rentabilidad</h2>
+      </div>
+      <div class="combos-cost">
+        <span>Costo del combo</span><strong id="costoTotal">{{ moneda_simbolo }} 0.00</strong
+        ><small>Calculado a partir de los productos seleccionados.</small>
+      </div>
+      <div class="combos-prices">
+        <label
+          >Precio venta<input
+            id="precioVenta"
+            type="text"
+            inputmode="decimal"
+            oninput="validateNumber(this)"
+            placeholder="0.00"
+            required
+        /></label>
+        <label
+          >Precio mínimo<input
+            id="precioMinimo"
+            type="text"
+            inputmode="decimal"
+            oninput="validateNumber(this)"
+            placeholder="0.00"
+            required
+        /></label>
+        <label
+          >Precio máximo<input
+            id="precioMaximo"
+            type="text"
+            inputmode="decimal"
+            oninput="validateNumber(this)"
+            placeholder="0.00"
+            required
+        /></label>
+      </div>
+      <div class="combos-margin">
+        <span>Utilidad estimada</span><strong id="utilidadTotal">{{ moneda_simbolo }} 0.00</strong>
+      </div>
+      {% if puede_registrar_combo %}
+      <button
+        type="button"
+        class="btn classbotones combos-save"
+        id="guardarCombo"
+      >
+        <i class="bx bx-save"></i> Guardar combo
+      </button>
+      {% endif %}
+      <p class="combos-note">
+        <i class="bx bx-info-circle"></i> El descuento de inventario se
+        configurará al integrar el combo con caja.
+      </p>
+    </aside>
+  </form>
+</section>
+
+<div
+  class="modal fade"
+  id="modalProductosCombo"
+  tabindex="-1"
+  aria-labelledby="modalProductosComboTitulo"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content combos-modal">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalProductosComboTitulo">
+          Agregar productos disponibles
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Cerrar"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <form class="combos-search" id="formBuscarProductoCombo">
+          <input
+            id="buscarProductoCombo"
+            type="search"
+            placeholder="Buscar por nombre o SKU"
+            aria-label="Buscar producto"
+          />
+          <button
+            type="submit"
+            class="dv-header-search__button"
+            aria-label="Buscar productos"
+          >
+            <i class="bx bx-search" aria-hidden="true"></i>
+          </button>
+        </form>
+        <div class="combos-product-list" id="listaProductosCombo"></div>
+        <nav
+          class="combos-pagination"
+          id="paginadorProductosCombo"
+          aria-label="Páginas de productos"
+        ></nav>
+      </div>
+      <div class="modal-footer combos-modal__footer">
+        <span id="productosSeleccionadosTexto">0 productos seleccionados</span
+        ><button
+          type="button"
+          class="btn classbotones"
+          id="agregarSeleccionados"
+        >
+          <i class="bx bx-plus"></i> Agregar seleccionados
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{ productos_catalogo|json_script:"combos-productos" }}
+<script>
+  const COMBOS_URLS = { guardar: "{% url 'guardar_combo' %}" };
+</script>
+<script src="{% static 'js/gestiones/combos.js' %}?v=20260929-01"></script>
+{% endblock %}

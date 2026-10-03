@@ -3,6 +3,38 @@ window.validateNumber = function (input) {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
+    const modalHistorialElement = document.getElementById("modalHistorialCobrar");
+    const historialBody = document.getElementById("historialCobrarBody");
+    const historialCuenta = document.getElementById("historialCobrarCuenta");
+
+    if (modalHistorialElement && historialBody && historialCuenta) {
+        const modalHistorial = new bootstrap.Modal(modalHistorialElement);
+        const escaparHtml = (valor) => String(valor).replace(/[&<>"']/g, (caracter) => ({
+            "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;",
+        }[caracter]));
+        document.querySelectorAll(".fila-cuenta[data-abonos-url]").forEach((fila) => {
+            fila.addEventListener("click", async (event) => {
+                if (event.target.closest("button, a, input, select, label")) return;
+
+                historialCuenta.textContent = `Cuenta por cobrar #${fila.dataset.id}`;
+                historialBody.innerHTML = '<tr><td colspan="3" class="text-center">Cargando abonos...</td></tr>';
+                modalHistorial.show();
+
+                try {
+                    const response = await fetch(fila.dataset.abonosUrl);
+                    const data = await response.json();
+                    if (!response.ok || !data.success) throw new Error(data.message || "No se pudo obtener el historial");
+
+                    historialBody.innerHTML = data.abonos.length
+                        ? data.abonos.map((abono) => `<tr><td>${escaparHtml(abono.usuario)}</td><td>${escaparHtml(abono.fecha)}</td><td>L. ${escaparHtml(abono.monto)}</td></tr>`).join("")
+                        : '<tr><td colspan="3" class="text-center table-empty-state">No hay abonos registrados.</td></tr>';
+                } catch (error) {
+                    historialBody.innerHTML = `<tr><td colspan="3" class="text-center text-danger">${error.message}</td></tr>`;
+                }
+            });
+        });
+    }
+
     const modalElement = document.getElementById("modalAbonoCobrar");
     const form = document.getElementById("formAbonoCobrar");
     const montoPendiente = document.getElementById("montoPendienteCobrar");

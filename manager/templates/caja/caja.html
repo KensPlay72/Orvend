@@ -1,1008 +1,842 @@
-{% extends "menu.html" %}
-
-{% load static %}
-
-{% block title %}
-    Caja
-{% endblock title %}
-
-
+{% extends "menu.html" %} 
+{% load static %} 
+{% block title %} Caja {% endblock title %} 
 {% block extra_css %}
 
-    <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
-    <link rel="stylesheet" href="{% static 'css/caja.css' %}" />
+<link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+<link rel="stylesheet" href="{% static 'css/caja.css' %}?v=selector-animado-20260929" />
 
-{% endblock extra_css %}
-
-
+{% endblock extra_css %} 
 {% block titulo_content %}
 
-    <div class="tituloscont">
+<div class="tituloscont">
+  <img
+    class="logop"
+    src="{% static 'img/LH.webp' %}"
+    alt="logo"
+    width="0"
+    height="0"
+  />
 
-        <img
-            class="logop"
-            src="{% static 'img/LH.png' %}"
-            alt="logo"
-            width="0"
-            height="0"
-        />
+  <p class="header__logo">| Caja</p>
+</div>
 
-        <p class="header__logo">| Caja</p>
-
-    </div>
-
-{% endblock titulo_content %}
-
-
+{% endblock titulo_content %} 
 {% block main_content %}
-
 
 <!-- ========================================================= -->
 <!-- TABLA PRINCIPAL DE PRODUCTOS -->
 <!-- ========================================================= -->
 
 <div class="tabla">
+  <button type="button" class="caja-mobile-add" id="abrirProductosMovil" data-bs-toggle="modal" data-bs-target="#modalProductosMovil">
+    <i class="bx bx-plus-circle"></i><span>Agregar productos</span>
+  </button>
+  <div class="tabla-container">
+    <table
+      class="tablas-todo"
+      id="tablaProductos"
+      data-puede-modificar-precio="{{ perms.manager.modificar_precio_caja|yesno:'true,false' }}"
+    >
+      <thead>
+        <tr>
+          <th>Codigo</th>
+          <th>Producto</th>
+          <th>Cantidad</th>
+          <th>P/U</th>
+          <th>Descuento</th>
+          <th>Total</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
 
-    <div class="tabla-container">
+      <tbody id="body"></tbody>
+    </table>
+  </div>
 
-        <table class="tablas-todo" id="tablaProductos">
+  <!-- ===================================================== -->
+  <!-- DETALLE TOTAL -->
+  <!-- ===================================================== -->
 
-            <thead>
+  <div class="contenido">
+    <div class="detalle">
+      <table id="detalle-total">
+        <tbody>
+          <tr>
+            <td>Subtotal</td>
+            <td>L. 0.00</td>
+          </tr>
 
-                <tr>
-                    <th>Codigo</th>
-                    <th>Producto</th>
-                    <th>Cantidad</th>
-                    <th>Precio</th>
-                    <th>Descuento</th>
-                    <th>Subtotal</th>
-                    <th>Acciones</th>
-                </tr>
+          <tr>
+            <td>Descuento</td>
+            <td>L. 0.00</td>
+          </tr>
 
-            </thead>
+          <tr class="nota-credito-row" style="display: none">
+            <td>Devolución</td>
+            <td>L. 0.00</td>
+          </tr>
 
-            <tbody id="body">
-            </tbody>
+          <tr>
+            <td>isv 15%</td>
+            <td>L. 0.00</td>
+          </tr>
 
-        </table>
+          <tr>
+            <td>isv 18%</td>
+            <td>L. 0.00</td>
+          </tr>
 
+          <tr class="total_pagar">
+            <td class="a">Total</td>
+
+            <td class="b">L. 0.00</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
+    <!-- ================================================= -->
+    <!-- BOTON PAGAR -->
+    <!-- ================================================= -->
 
-    <!-- ===================================================== -->
-    <!-- DETALLE TOTAL -->
-    <!-- ===================================================== -->
-
-    <div class="contenido">
-
-        <div class="detalle">
-
-            <table id="detalle-total">
-
-                <tbody>
-
-                    <tr>
-                        <td>Subtotal</td>
-                        <td>L. 0.00</td>
-                    </tr>
-
-                    <tr>
-                        <td>Descuento</td>
-                        <td>L. 0.00</td>
-                    </tr>
-
-                    <tr>
-                        <td>isv 15%</td>
-                        <td>L. 0.00</td>
-                    </tr>
-
-                    <tr>
-                        <td>isv 18%</td>
-                        <td>L. 0.00</td>
-                    </tr>
-
-                    <tr class="total_pagar">
-
-                        <td class="a">
-                            Total
-                        </td>
-
-                        <td class="b">
-                            L. 0.00
-                        </td>
-
-                    </tr>
-
-                </tbody>
-
-            </table>
-
+    <div class="container_abajo">
+      <div class="button" id="accionesCaja" data-caja-abierta="{{ caja_abierta|yesno:'true,false' }}">
+        {% if puede_operar_caja %}
+        <div class="caja-primary-action">
+          <button
+            type="button"
+            id="Pagar"
+            data-requiere-caja-abierta
+            {% if not caja_abierta %}
+            disabled
+            title="La caja debe estar abierta para realizar pagos"
+            {% endif %}
+            {% if caja_cerrada_hoy %}
+            disabled
+            title="La caja ya está cerrada"
+            {% endif %}
+          >
+            <i class="bx bx-wallet" aria-hidden="true"></i>
+            <span>Pagar</span>
+          </button>
         </div>
+        {% endif %}
 
-
-        <!-- ================================================= -->
-        <!-- BOTON PAGAR -->
-        <!-- ================================================= -->
-
-        <div class="container_abajo">
-
-            <div class="button">
-
-                <button
-                    type="button"
-                    id="Pagar"
-
-                    {% if not caja_abierta %}
-                        disabled
-                        title="La caja debe estar abierta para realizar pagos"
-                    {% endif %}
-
-                    {% if caja_cerrada_hoy %}
-                        disabled
-                        title="La caja ya está cerrada"
-                    {% endif %}
-                >
-
-                    Pagar
-
+        <div class="caja-secondary-actions">
+          <p class="caja-secondary-title">Otras gestiones</p>
+          {% if puede_operar_caja %}
+                <button type="button" id="btnCuponGlobal" class="btn-cupon-global" data-requiere-caja-abierta {% if not caja_abierta %}disabled title="La caja debe estar abierta para aplicar cupones"{% endif %}>
+                    <i class="bx bx-purchase-tag-alt" aria-hidden="true"></i>
+                    <span>Aplicar cupón</span>
                 </button>
+                {% endif %}
 
-            </div>
+                {% if puede_generar_cotizaciones %}
+                <button type="button" id="btnGenerarCotizacion" class="btn-cotizacion" data-url="{% url 'crear_cotizacion' %}">
+                    <i class="bx bx-file-blank" aria-hidden="true"></i>
+                    <span>Generar cotización</span>
+                </button>
+                {% endif %}
 
+        {% if puede_operar_caja %}
+        <button
+          type="button"
+          id="btnNotasCredito"
+          class="btn-notas-credito"
+          data-requiere-caja-abierta
+          data-notas-url="{% url 'notas_credito_disponibles' %}"
+          {% if not caja_abierta %}disabled title="La caja debe estar abierta para usar devoluciones"{% endif %}
+        >
+          <i class="bx bx-credit-card"></i>
+          Devoluciones
+        </button>
+        {% endif %}
+
+        {% if puede_operar_caja %}
+        <button
+          type="button"
+          id="btnCierreCaja"
+          class="cierre-caja-btn"
+          data-requiere-caja-abierta
+          data-url="{% url 'iniciar_cuadre' %}"
+          {%
+          if
+          not
+          caja_abierta
+          %}
+          disabled
+          title="La caja debe estar abierta para cerrarla"
+          {%
+          endif
+          %}
+          {%
+          if
+          caja_cerrada_hoy
+          %}
+          disabled
+          title="La caja ya está cerrada"
+          {%
+          endif
+          %}
+        >
+          <i class="bx bx-lock-alt"></i>
+          <span>Cierre de Caja</span>
+        </button>
+        {% endif %}
         </div>
-
+      </div>
     </div>
-
+  </div>
 </div>
 
+<div class="modal fade" id="modalProductosMovil" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal600 caja-product-modal">
+    <div class="modal-content caja-product-modal__content">
+      <div class="modal-header">
+        <h5 class="modal-title">Seleccionar productos</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body caja-product-modal__body">
+        <form class="caja-product-search" id="buscarProductosMovilForm">
+          <input id="buscarProductosMovil" type="search" placeholder="Buscar producto o SKU" aria-label="Buscar productos" autocomplete="off"><button type="submit" class="btn classbotones" aria-label="Buscar productos"><i class="bx bx-search" aria-hidden="true"></i></button>
+        </form>
+        <div id="listaProductosMovil" class="caja-product-list-wrap"></div>
+        <nav class="caja-product-pagination" aria-label="Páginas de productos"><ul id="paginacionProductosMovil" class="pagination justify-content-center"></ul></nav>
+      </div>
+      <div class="modal-footer caja-product-modal__footer"><span><i class="bx bx-check-circle"></i> Selecciona los productos para agregarlos a la venta</span><button type="button" id="agregarProductosMovil" class="btn classbotones"><i class="bx bx-plus"></i> Agregar selección</button></div>
+    </div>
+  </div>
+</div>
 
+<!-- ========================================================= -->
+<!-- MODAL NOTAS DE CREDITO -->
+<!-- ========================================================= -->
+
+<div class="modal fade" id="modalNotasCredito" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Devoluciones disponibles</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Cerrar"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted mb-3">
+          Busca por número de nota de devolución o por número de factura.
+        </p>
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <input
+            type="search"
+            id="buscarNotaCredito"
+            class="form-control"
+            placeholder="Nota de devolución o factura"
+            autocomplete="off"
+          />
+          <button
+            type="button"
+            id="btnBuscarNotaCredito"
+            class="btn btn-outline-secondary"
+            title="Buscar"
+          >
+            <i class="bx bx-search"></i>
+          </button>
+        </div>
+        <div class="tabla-container notas-credito-container">
+          <table class="tablas-todo notas-credito-tabla">
+            <thead>
+              <tr>
+                <th>Nota devolución</th>
+                <th>Factura</th>
+                <th>Cliente</th>
+                <th>Valor</th>
+                <th class="text-end">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="notasCreditoBody">
+              <tr>
+                <td colspan="5" class="text-center text-muted">
+                  Ingrese una referencia y presione buscar.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ========================================================= -->
 <!-- MODAL AGREGAR PRODUCTO -->
 <!-- ========================================================= -->
 
 <div
-    class="modal fade"
-    id="modalagregar"
-    tabindex="-1"
-    aria-labelledby="modalAgregarProductoLabel"
-    aria-hidden="true"
+  class="modal fade"
+  id="modalagregar"
+  tabindex="-1"
+  aria-labelledby="modalAgregarProductoLabel"
+  aria-hidden="true"
 >
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <!-- HEADER -->
 
-    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalAgregarProductoLabel">
+          Agregar producto
+        </h5>
 
-        <div class="modal-content">
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
 
+      <!-- BODY -->
 
-            <!-- HEADER -->
+      <div class="modal-body">
+        <form id="postregistro" enctype="multipart/form-data">
+          <!-- CODIGO -->
 
-            <div class="modal-header">
+          <div class="form-group">
+            <label for="nCodigo"> Código </label>
 
-                <h5
-                    class="modal-title"
-                    id="modalAgregarProductoLabel"
-                >
-                    Agregar producto
-                </h5>
+            <input
+              type="text"
+              name="codigo"
+              id="nCodigo"
+              class="form-control"
+              placeholder="Código"
+              required
+              readonly
+            />
+          </div>
 
-                <button
-                    type="button"
-                    class="btn-close"
-                    data-bs-dismiss="modal"
-                    aria-label="Close"
-                ></button>
+          <br />
 
-            </div>
+          <!-- NOMBRE -->
 
+          <div class="form-group">
+            <label for="nNombre"> Nombre </label>
 
-            <!-- BODY -->
+            <input
+              type="text"
+              name="nombre"
+              id="nNombre"
+              class="form-control"
+              placeholder="Nombre"
+              required
+              readonly
+            />
+          </div>
 
-            <div class="modal-body">
+          <br />
 
-                <form
-                    id="postregistro"
-                    enctype="multipart/form-data"
-                >
+          <!-- PRECIO -->
 
+          <div class="form-group">
+            <label for="nPrecio"> Precio </label>
 
-                    <!-- CODIGO -->
+            <input
+              type="text"
+              name="precio"
+              id="nPrecio"
+              class="form-control"
+              placeholder="Precio"
+              required
+              readonly
+            />
+          </div>
 
-                    <div class="form-group">
+          <br />
 
-                        <label for="nCodigo">
-                            Código
-                        </label>
+          <!-- CANTIDAD -->
 
-                        <input
-                            type="text"
-                            name="codigo"
-                            id="nCodigo"
-                            class="form-control"
-                            placeholder="Código"
-                            required
-                            readonly
-                        >
+          <div class="form-group">
+            <label for="nCanitdad"> Cantidad </label>
 
-                    </div>
+            <input
+              type="text"
+              inputmode="numeric"
+              oninput="validarEnteroCaja(this)"
+              name="cantidad"
+              id="nCanitdad"
+              class="form-control"
+              placeholder="Cantidad"
+              min="1"
+              step="1"
+              value="1"
+              required
+            />
+          </div>
 
+          <br />
 
-                    <br>
+          <!-- ================================================= -->
+          <!-- EXISTENCIA -->
+          <!-- ================================================= -->
 
+          <div class="form-group">
+            <label for="existenciaProducto"> Existencia disponible </label>
 
-                    <!-- NOMBRE -->
+            <input
+              type="text"
+              id="existenciaProducto"
+              class="form-control"
+              value="0 / 0"
+              readonly
+            />
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cerrar
+        </button>
 
-                    <div class="form-group">
-
-                        <label for="nNombre">
-                            Nombre
-                        </label>
-
-                        <input
-                            type="text"
-                            name="nombre"
-                            id="nNombre"
-                            class="form-control"
-                            placeholder="Nombre"
-                            required
-                            readonly
-                        >
-
-                    </div>
-
-
-                    <br>
-
-
-                    <!-- PRECIO -->
-
-                    <div class="form-group">
-
-                        <label for="nPrecio">
-                            Precio
-                        </label>
-
-                        <input
-                            type="text"
-                            name="precio"
-                            id="nPrecio"
-                            class="form-control"
-                            placeholder="Precio"
-                            required
-                            readonly
-                        >
-
-                    </div>
-
-
-                    <br>
-
-
-                    <!-- CANTIDAD -->
-
-                    <div class="form-group">
-
-                        <label for="nCanitdad">
-                            Cantidad
-                        </label>
-
-                        <input
-                            type="number"
-                            name="cantidad"
-                            id="nCanitdad"
-                            class="form-control"
-                            placeholder="Cantidad"
-                            min="1"
-                            step="1"
-                            value="1"
-                            required
-                        >
-
-                    </div>
-
-
-                    <br>
-
-
-                    <!-- ================================================= -->
-                    <!-- EXISTENCIA -->
-                    <!-- ================================================= -->
-
-                    <div class="form-group">
-
-                        <label for="existenciaProducto">
-                            Existencia disponible
-                        </label>
-
-                        <input
-                            type="text"
-                            id="existenciaProducto"
-                            class="form-control"
-                            value="0 / 0"
-                            readonly
-                        >
-
-                    </div>
-
-
-                    <br>
-
-
-                    <!-- FOOTER -->
-
-
-
-                </form>
-
-            </div>
-                    <div class="modal-footer">
-
-                        <button
-                            type="button"
-                            class="btn btn-secondary"
-                            data-bs-dismiss="modal"
-                        >
-                            Cerrar
-                        </button>
-
-                        <button
-                            type="submit"
-                            id="btnregis"
-                            class="btn classbotones"
-                            form="postregistro"
-                        >
-                            Agregar
-                        </button>
-
-                    </div>
-
-        </div>
-
+        <button
+          type="submit"
+          id="btnregis"
+          class="btn classbotones"
+          form="postregistro"
+        >
+          Agregar
+        </button>
+      </div>
     </div>
-
+  </div>
 </div>
-
-
 
 <!-- ========================================================= -->
 <!-- MODAL DESCUENTO -->
 <!-- ========================================================= -->
 
 <div
-    class="modal fade"
-    id="modalDescuento"
-    tabindex="-1"
-    aria-labelledby="modalDescuentoLabel"
-    aria-hidden="true"
+  class="modal fade"
+  id="modalDescuento"
+  tabindex="-1"
+  aria-labelledby="modalDescuentoLabel"
+  aria-hidden="true"
 >
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <!-- HEADER -->
 
-    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalDescuentoLabel">
+          Agregar cupón de descuento
+        </h5>
 
-        <div class="modal-content">
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
 
+      <!-- BODY -->
 
-            <!-- HEADER -->
+      <div class="modal-body">
+        <form id="formDescuento">
+          <div class="form-group">
+            <label for="Ddescuento"> Cupón de descuento </label>
 
-            <div class="modal-header">
+            <input
+              type="text"
+              name="Ddescuento"
+              id="Ddescuento"
+              class="form-control"
+              placeholder="Cupón de descuento"
+              required
+            />
+          </div>
 
-                <h5
-                    class="modal-title"
-                    id="modalDescuentoLabel"
-                >
-                    Agregar cupón de descuento
-                </h5>
+        </form>
+      </div>
+                <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cerrar
+            </button>
 
-                <button
-                    type="button"
-                    class="btn-close"
-                    data-bs-dismiss="modal"
-                    aria-label="Close"
-                ></button>
-
-            </div>
-
-
-            <!-- BODY -->
-
-            <div class="modal-body">
-
-                <form
-                    id="formDescuento"
-                >
-
-                    <div class="form-group">
-
-                        <label for="Ddescuento">
-                            Cupón de descuento
-                        </label>
-
-                        <input
-                            type="text"
-                            name="Ddescuento"
-                            id="Ddescuento"
-                            class="form-control"
-                            placeholder="Cupón de descuento"
-                            required
-                        >
-
-                    </div>
-
-
-                    <div class="modal-footer">
-
-                        <button
-                            type="button"
-                            class="btn btn-secondary"
-                            data-bs-dismiss="modal"
-                        >
-                            Cerrar
-                        </button>
-
-                        <button
-                            type="submit"
-                            id="btndescuento"
-                            class="btn classbotones"
-                        >
-                            Descuento
-                        </button>
-
-                    </div>
-
-                </form>
-
-            </div>
-
-        </div>
-
+            <button type="submit" form="formDescuento" id="btndescuento" class="btn classbotones">
+              Descuento
+            </button>
+          </div>
     </div>
-
+  </div>
 </div>
-
-
 
 <!-- ========================================================= -->
 <!-- MODAL PAGO -->
 <!-- ========================================================= -->
 
 <div
-    class="modal fade"
-    id="modalPago"
-    tabindex="-1"
-    aria-labelledby="modalPagoLabel"
-    aria-hidden="true"
+  class="modal fade"
+  id="modalPago"
+  tabindex="-1"
+  aria-labelledby="modalPagoLabel"
+  aria-hidden="true"
 >
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <!-- HEADER -->
 
-    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalPagoLabel">Pago</h5>
 
-        <div class="modal-content">
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
 
+      <!-- BODY -->
 
-            <!-- HEADER -->
+      <div class="modal-body">
+        <form id="postpagar">
+          {% csrf_token %}
 
-            <div class="modal-header">
+          <!-- ================================================= -->
+          <!-- CLIENTE -->
+          <!-- ================================================= -->
 
-                <h5
-                    class="modal-title"
-                    id="modalPagoLabel"
-                >
-                    Pago
-                </h5>
+          <div class="form-group">
+            <label for="clienteSeleccionado"> Cliente </label>
 
-                <button
-                    type="button"
-                    class="btn-close"
-                    data-bs-dismiss="modal"
-                    aria-label="Close"
-                ></button>
+            <div class="d-flex gap-2">
+              <input
+                type="text"
+                id="clienteSeleccionado"
+                class="form-control"
+                placeholder="Sin cliente seleccionado"
+                readonly
+              />
 
+              <button
+                type="button"
+                id="btnSeleccionarCliente"
+                class="btn btn-outline-secondary"
+              >
+                Buscar
+              </button>
             </div>
 
-
-            <!-- BODY -->
-
-            <div class="modal-body">
-
-                <form
-                    id="postpagar"
-                >
-
-                    {% csrf_token %}
-
-
-                    <!-- ================================================= -->
-                    <!-- CLIENTE -->
-                    <!-- ================================================= -->
-
-                    <div class="form-group">
-
-                        <label for="clienteSeleccionado">
-                            Cliente
-                        </label>
-
-
-                        <div class="d-flex gap-2">
-
-                            <input
-                                type="text"
-                                id="clienteSeleccionado"
-                                class="form-control"
-                                placeholder="Sin cliente seleccionado"
-                                readonly
-                            >
-
-
-                            <button
-                                type="button"
-                                id="btnSeleccionarCliente"
-                                class="btn btn-outline-secondary"
-                            >
-                                Buscar
-                            </button>
-
-                        </div>
-
-
-                        <input
-                            type="hidden"
-                            id="cliente_id"
-                            name="cliente_id"
-                            value=""
-                        >
-
-
-                        <input
-                            type="hidden"
-                            id="cliente_nombre"
-                            name="cliente_nombre"
-                            value=""
-                        >
-
-
-                        <small
-                            id="detalleClienteSeleccionado"
-                            class="text-muted d-block mt-2"
-                        ></small>
-
-                        <br>
-
-                    </div>
-
-
-
-                    <!-- ================================================= -->
-                    <!-- TIPO DE PAGO -->
-                    <!-- ================================================= -->
-
-                    <div class="form-group">
-
-                        <label for="tipo_pago">
-                            Tipo de pago
-                        </label>
-
-                        <br>
-
-                        <select
-                            name="tipo"
-                            id="tipo_pago"
-                            class="mi-select"
-                        >
-
-                            <option value="0">
-                                Seleccionar método de pago
-                            </option>
-
-                            <option value="pago_contado">
-                                Pago al contado
-                            </option>
-
-                            <option value="pago_tarjeta">
-                                Pago con tarjeta
-                            </option>
-
-                            {% if perms.manager.view_cuentasporcobrar %}
-                                <option value="pago_credito">
-                                    Pago a crédito
-                                </option>
-                            {% endif %}
-
-                        </select>
-
-                    </div>
-
-
-
-
-
-                    <!-- ================================================= -->
-                    <!-- DINERO RECIBIDO -->
-                    <!-- ================================================= -->
-
-                    <div
-                        class="form-group"
-                        style="display: none;"
-                        id="div_dinero"
-                    >
-                    <br>
-
-                        <label for="Pdinero">
-                            Dinero recibido
-                        </label>
-
-                        <input
-                            type="number"
-                            name="Ddinero"
-                            id="Pdinero"
-                            class="form-control"
-                            value="0.00"
-                            min="0"
-                            step="0.01"
-                            placeholder="Dinero del cliente"
-                        >
-
-                    </div>
-
-
-
-                    <!-- ================================================= -->
-                    <!-- AUTORIZACIÓN -->
-                    <!-- ================================================= -->
-
-                    <div
-                        class="form-group"
-                        style="display: none;"
-                        id="div_nuemro"
-                    >
-                        <br>
-                        <label for="Pautorizacion">
-                            Número de autorización
-                        </label>
-
-                        <input
-                            type="text"
-                            name="Pautorizacion"
-                            id="Pautorizacion"
-                            class="form-control"
-                            placeholder="Número de autorización"
-                        >
-
-                        <br>
-
-                    </div>
-
-
-
-                    <!-- ================================================= -->
-                    <!-- ÚLTIMOS 4 DIGITOS -->
-                    <!-- ================================================= -->
-
-                    <div
-                        class="form-group"
-                        style="display: none;"
-                        id="div_digito"
-                    >
-
-                        <label for="Pdigitos">
-                            Últimos 4 dígitos
-                        </label>
-
-                        <input
-                            type="text"
-                            name="Pdigitos"
-                            id="Pdigitos"
-                            class="form-control"
-                            placeholder="Últimos 4 dígitos"
-                            maxlength="4"
-                        >
-
-                        <br>
-
-                    </div>
-
-
-
-                    <!-- ================================================= -->
-                    <!-- BANCO -->
-                    <!-- ================================================= -->
-
-                    <div
-                        class="form-group"
-                        style="display: none;"
-                        id="div_banco"
-                    >
-
-                        <label for="Pbanco">
-                            Banco
-                        </label>
-
-                        <input
-                            type="text"
-                            name="Pbanco"
-                            id="Pbanco"
-                            class="form-control"
-                            placeholder="Banco"
-                        >
-
-                        <br>
-
-                    </div>
-
-
-
-                    <!-- ================================================= -->
-                    <!-- RED -->
-                    <!-- ================================================= -->
-
-                    <div
-                        class="form-group"
-                        style="display: none;"
-                        id="div_red"
-                    >
-
-                        <label for="Pred">
-                            Red
-                        </label>
-
-                        <input
-                            type="text"
-                            name="Pred"
-                            id="Pred"
-                            class="form-control"
-                            placeholder="Red"
-                        >
-
-                        <br>
-
-                    </div>
-
-
-
-                    <!-- ================================================= -->
-                    <!-- FOOTER -->
-                    <!-- ================================================= -->
-
-
-                </form>
-
-            </div>
-
-                                <div class="modal-footer">
-
-                        <button
-                            type="button"
-                            class="btn btn-secondary"
-                            data-bs-dismiss="modal"
-                        >
-                            Cerrar
-                        </button>
-
-                        <button
-                            type="submit"
-                            id="btnPagar"
-                            class="btn classbotones"
-                            form="postpagar"
-                        >
-                            Realizar compra
-                        </button>
-
-                    </div>
-        </div>
-
+            <input type="hidden" id="cliente_id" name="cliente_id" value="" />
+
+            <input
+              type="hidden"
+              id="cliente_nombre"
+              name="cliente_nombre"
+              value=""
+            />
+
+            <small
+              id="detalleClienteSeleccionado"
+              class="text-muted d-block mt-2"
+            ></small>
+
+            <br />
+          </div>
+
+          <!-- ================================================= -->
+          <!-- TIPO DE PAGO -->
+          <!-- ================================================= -->
+
+          <div class="form-group">
+            <label for="tipo_pago"> Tipo de pago </label>
+
+
+            <select name="tipo" id="tipo_pago" class="mi-select">
+              <option value="0">Seleccionar método de pago</option>
+
+              <option value="pago_contado">Pago al contado</option>
+
+              <option value="pago_deposito">Pago con depósito bancario</option>
+
+              <option value="pago_tarjeta">Pago con tarjeta</option>
+
+              <option value="pago_cheque">Pago con cheque</option>
+
+              {% if perms.manager.view_cuentasporcobrar %}
+              <option value="pago_credito">Pago a crédito</option>
+              {% endif %}
+            </select>
+          </div>
+
+          <!-- ================================================= -->
+          <!-- DINERO RECIBIDO -->
+          <!-- ================================================= -->
+
+          <div class="form-group" style="display: none" id="div_dinero">
+            <br />
+
+            <label for="Pdinero"> Dinero recibido </label>
+
+            <input
+              type="text"
+              inputmode="decimal"
+              oninput="validarNumeroCaja(this)"
+              name="Ddinero"
+              id="Pdinero"
+              class="form-control"
+              value="0.00"
+              min="0"
+              step="0.01"
+              placeholder="Dinero del cliente"
+              autocomplete="off"
+            />
+          </div>
+
+          <!-- ================================================= -->
+          <!-- AUTORIZACIÓN -->
+          <!-- ================================================= -->
+
+          <div class="form-group" style="display: none" id="div_nuemro">
+            <br />
+            <label for="Pautorizacion"> Número de autorización </label>
+
+            <input
+              type="text"
+              name="Pautorizacion"
+              id="Pautorizacion"
+              class="form-control"
+              placeholder="Número de autorización"
+            />
+
+          </div>
+          <br>
+
+          <!-- ================================================= -->
+          <!-- ÚLTIMOS 4 DIGITOS -->
+          <!-- ================================================= -->
+
+          <div class="form-group" style="display: none" id="div_digito">
+            <label for="Pdigitos"> Últimos 4 dígitos </label>
+
+            <input
+              type="text"
+              name="Pdigitos"
+              id="Pdigitos"
+              class="form-control"
+              placeholder="Últimos 4 dígitos"
+              maxlength="4"
+            />
+
+          </div>
+
+          <!-- ================================================= -->
+          <!-- BANCO -->
+          <!-- ================================================= -->
+
+          <div class="form-group" style="display: none" id="div_banco">
+            <label for="Pbanco"> Banco </label>
+
+            <input
+              type="text"
+              name="Pbanco"
+              id="Pbanco"
+              class="form-control"
+              placeholder="Banco"
+            />
+
+            <br />
+          </div>
+
+          <!-- ================================================= -->
+          <!-- RED -->
+          <!-- ================================================= -->
+
+          <div class="form-group" style="display: none" id="div_red">
+            <label for="Pred"> Red </label>
+
+            <input
+              type="text"
+              name="Pred"
+              id="Pred"
+              class="form-control"
+              placeholder="Red"
+            />
+
+            <br />
+          </div>
+
+          <!-- ================================================= -->
+          <!-- FOOTER -->
+          <!-- ================================================= -->
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cerrar
+        </button>
+
+        <button
+          type="submit"
+          id="btnPagar"
+          class="btn classbotones"
+          form="postpagar"
+        >
+          Realizar compra
+        </button>
+      </div>
     </div>
-
+  </div>
 </div>
-
-
 
 <!-- ========================================================= -->
 <!-- MODAL SELECCIONAR CLIENTE -->
 <!-- ========================================================= -->
 
 <div
-    class="modal fade"
-    id="modalSeleccionarCliente"
-    tabindex="-1"
-    aria-labelledby="modalSeleccionarClienteLabel"
-    aria-hidden="true"
+  class="modal fade"
+  id="modalSeleccionarCliente"
+  tabindex="-1"
+  aria-labelledby="modalSeleccionarClienteLabel"
+  aria-hidden="true"
 >
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <!-- HEADER -->
 
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalSeleccionarClienteLabel">
+          Seleccionar cliente
+        </h5>
 
-        <div class="modal-content">
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
 
+      <!-- BODY -->
 
-            <!-- HEADER -->
+      <div class="modal-body">
+        <!-- BUSQUEDA -->
 
-            <div class="modal-header">
+        <div class="form-group">
+          <label for="buscarClienteInput"> Buscar cliente </label>
 
-                <h5
-                    class="modal-title"
-                    id="modalSeleccionarClienteLabel"
-                >
-                    Seleccionar cliente
-                </h5>
-
-                <button
-                    type="button"
-                    class="btn-close"
-                    data-bs-dismiss="modal"
-                    aria-label="Close"
-                ></button>
-
+          <div class="d-flex align-items-center gap-2">
+            <input
+              type="text"
+              id="buscarClienteInput"
+              class="form-control"
+              placeholder="Buscar por nombre, DNI o empresa"
+              autocomplete="off"
+            />
+            <div class="form-check text-nowrap mb-0">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="clienteConRtn"
+              />
+              <label class="form-check-label" for="clienteConRtn"
+                >Con RTN</label
+              >
             </div>
-
-
-            <!-- BODY -->
-
-            <div class="modal-body">
-
-
-                <!-- BUSQUEDA -->
-
-                <div class="form-group">
-
-                    <label for="buscarClienteInput">
-                        Buscar cliente
-                    </label>
-
-                    <input
-                        type="text"
-                        id="buscarClienteInput"
-                        class="form-control"
-                        placeholder="Buscar por nombre, DNI o empresa"
-                    >
-
-                </div>
-
-
-
-                <!-- TABLA -->
-
-                <div class="table-responsive mt-3">
-
-                    <table class="table-picker-cliente table-sm">
-
-                        <thead>
-
-                            <tr>
-
-                                <th>ID</th>
-                                <th>Nombre</th>
-                                <th>DNI</th>
-                                <th>Empresa</th>
-                                <th>Teléfono</th>
-
-                            </tr>
-
-                        </thead>
-
-
-                        <tbody id="tablaClientesResultados">
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </div>
-
+            <button
+              type="button"
+              id="btnBuscarCliente"
+              class="btn btn-outline-secondary"
+              title="Buscar cliente"
+            >
+              <i class="bx bx-search"></i>
+            </button>
+          </div>
         </div>
 
+        <!-- TABLA -->
+
+        <div class="table-responsive mt-3">
+          <table class="table-picker-cliente table-sm">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>DNI</th>
+                <th>Empresa</th>
+                <th>Teléfono</th>
+              </tr>
+            </thead>
+
+            <tbody id="tablaClientesResultados"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
-
+  </div>
 </div>
-
-
-
-<!-- ========================================================= -->
-<!-- BOTON CIERRE DE CAJA -->
-<!-- ========================================================= -->
-
-<div class="fixed-button-container">
-
-    <button
-        type="button"
-        id="btnCierreCaja"
-        class="btn cierre-caja-btn"
-        data-url="{% url 'iniciar_cuadre' %}"
-
-        {% if not caja_abierta %}
-            disabled
-            title="La caja debe estar abierta para cerrarla"
-        {% endif %}
-
-        {% if caja_cerrada_hoy %}
-            disabled
-            title="La caja ya está cerrada"
-        {% endif %}
-    >
-
-        Cierre de Caja
-
-    </button>
-
-</div>
-
-
 
 <!-- ========================================================= -->
 <!-- MODAL APERTURA DE CAJA -->
 <!-- ========================================================= -->
 
-<div
-    class="modal fade"
-    id="modalAperturaCaja"
-    tabindex="-1"
-    aria-hidden="true"
->
+<div class="modal fade" id="modalAperturaCaja" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <!-- HEADER -->
 
-    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-header">
+        <h5 class="modal-title">Apertura de Caja</h5>
 
-        <div class="modal-content">
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Cerrar"
+        ></button>
+      </div>
 
+      <!-- BODY -->
 
-            <!-- HEADER -->
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="monto_apertura"> Monto inicial en caja </label>
 
-            <div class="modal-header">
-
-                <h5 class="modal-title">
-                    Apertura de Caja
-                </h5>
-
-                <button
-                    type="button"
-                    class="btn-close"
-                    data-bs-dismiss="modal"
-                    aria-label="Cerrar"
-                ></button>
-
-            </div>
-
-
-            <!-- BODY -->
-
-            <div class="modal-body">
-
-                <div class="form-group">
-
-                    <label for="monto_apertura">
-                        Monto inicial en caja
-                    </label>
-
-                    <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        id="monto_apertura"
-                        class="form-control"
-                        placeholder="0.00"
-                    >
-
-                </div>
-
-            </div>
-
-
-            <!-- FOOTER -->
-
-            <div class="modal-footer">
-
-                <button
-                    type="button"
-                    id="btnAbrirCaja"
-                    class="btn btn-primary"
-                    data-url="{% url 'abrir_caja' %}"
-                >
-                    Abrir Caja
-                </button>
-
-            </div>
-
+          <input
+            type="text"
+            inputmode="decimal"
+            oninput="validarNumeroCaja(this)"
+            id="monto_apertura"
+            class="form-control"
+            placeholder="0.00"
+          />
         </div>
+      </div>
 
+      <!-- FOOTER -->
+
+      <div class="modal-footer">
+        <button
+          type="button"
+          id="btnAbrirCaja"
+          class="btn btn-primary"
+          data-url="{% url 'abrir_caja' %}"
+        >
+          Abrir Caja
+        </button>
+      </div>
     </div>
-
+  </div>
 </div>
-
-
 
 <!-- ========================================================= -->
 <!-- MENSAJE CAJA CERRADA -->
@@ -1011,45 +845,44 @@
 {% if caja_cerrada_hoy %}
 
 <div class="alert alert-warning m-3">
-
-    Esta caja ya fue cerrada el día de hoy.
-
+  Esta caja ya fue cerrada el día de hoy.
 </div>
 
 <script>
-
-document.addEventListener("DOMContentLoaded", function () {
-
+  document.addEventListener("DOMContentLoaded", function () {
     Swal.fire({
+      icon: "warning",
 
-        icon: "warning",
+      title: "Caja cerrada",
 
-        title: "Caja cerrada",
+      text: "Esta caja ya fue cerrada el día de hoy.",
 
-        text: "Esta caja ya fue cerrada el día de hoy.",
-
-        confirmButtonText: "Aceptar"
-
+      confirmButtonText: "Aceptar",
+      customClass: {
+        confirmButton: "classbotones",
+      },
     });
-
-});
-
+  });
 </script>
 
 {% endif %}
 
+{% if caja_pendiente_anterior %}
 
+<div class="alert caja-alerta-pendiente m-3">
+  Tienes una caja pendiente de un día anterior. Debes realizar su cierre antes de abrir una nueva.
+</div>
+
+{% endif %}
 
 <!-- ========================================================= -->
 <!-- JAVASCRIPT PRINCIPAL -->
 <!-- ========================================================= -->
 
 <script
-    type="module"
-    src="{% static 'js/caja/caja.js' %}?v=credito-20260907"
+  type="module"
+  src="{% static 'js/caja/caja.js' %}?v=isv-incluido-20260930"
 ></script>
-
-
 
 <!-- ========================================================= -->
 <!-- MOSTRAR MODAL APERTURA -->
@@ -1058,32 +891,21 @@ document.addEventListener("DOMContentLoaded", function () {
 {% if mostrar_modal_apertura %}
 
 <script>
-
-document.addEventListener("DOMContentLoaded", function () {
-
-    const modalElement =
-        document.getElementById("modalAperturaCaja");
+  document.addEventListener("DOMContentLoaded", function () {
+    const modalElement = document.getElementById("modalAperturaCaja");
 
     if (!modalElement) {
-        return;
+      return;
     }
 
-    const modal =
-        new bootstrap.Modal(
-            modalElement,
-            {
-                backdrop: "static",
-                keyboard: false
-            }
-        );
+    const modal = new bootstrap.Modal(modalElement, {
+      backdrop: "static",
+      keyboard: false,
+    });
 
     modal.show();
-
-});
-
+  });
 </script>
 
-{% endif %}
-
-
+{% endif %} 
 {% endblock main_content %}

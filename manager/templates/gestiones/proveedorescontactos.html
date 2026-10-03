@@ -1,12 +1,12 @@
 {% extends "menu.html" %}
-{% load static %}
+{% load static pagination_tags %}
 {% block title %}Contactos de Proveedores{% endblock %}
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 {% endblock %}
 {% block titulo_content %}
     <div class="tituloscont">
-        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+        <img class="logop" src="{% static 'img/LH.webp' %}" alt="">
         <p class="header__logo">| Contactos de Proveedores</p>
     </div>
 {% endblock %}
@@ -260,11 +260,11 @@
                 <td>{{ contacto.email }}</td>
                 <td>{{ contacto.observaciones }}</td>
 
-                <td>
+                <td class="estado-centrado">
                     {% if contacto.is_active %}
-                        <span class="estado-circulo estado-activo"></span>
+                        <span class="badge bg-success">Activo</span>
                     {% else %}
-                        <span class="estado-circulo estado-inactivo"></span>
+                        <span class="badge bg-danger">Inactivo</span>
                     {% endif %}
                 </td>
 
@@ -293,6 +293,8 @@
                 </td>
 
             </tr>
+            {% empty %}
+            <tr><td colspan="9" class="text-center table-empty-state">No hay contactos de proveedores registrados.</td></tr>
             {% endfor %}
         </tbody>
     </table>
@@ -314,7 +316,8 @@
         </li>
 
         <!--PÁGINAS -->
-        {% for p in page_obj.paginator.page_range %}
+        {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
+        {% for p in paginas_visibles %}
             <li class="page-item {% if p == page_obj.number %}active{% endif %}">
                 <a class="page-link"
                    href="?page={{ p }}&search={{ search }}">

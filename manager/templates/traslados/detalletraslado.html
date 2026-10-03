@@ -1,0 +1,111 @@
+{% extends "menu.html" %}
+{% load static %}
+{% block title %}Detalle Traslado{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/traslados.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+{% endblock %}
+{% block titulo_content %}
+  <div class="tituloscont">
+    <img class="logop" src="{% static 'img/LH.webp' %}" alt="logo" width="0" height="0" />
+    <p class="header__logo">| Detalle Traslado</p>
+  </div>
+{% endblock %}
+{% block main_content %}
+  <section class="compra-resumen" aria-label="Información del traslado">
+    <div class="compra-resumen__encabezado">
+      <span class="compra-resumen__titulo">
+        <i class="bx bx-transfer-alt" aria-hidden="true"></i>
+        <span>Información del traslado</span>
+      </span>
+      <label class="compra-detalle__buscador" for="buscarProductoTraslado">
+        <i class="bx bx-search" aria-hidden="true"></i>
+        <input type="text" id="buscarProductoTraslado" placeholder="Buscar producto, presentación o SKU..." autocomplete="off" />
+      </label>
+    </div>
+    <div class="compra-resumen__datos traslado-resumen__datos">
+      <div class="compra-resumen__dato">
+        <span class="compra-resumen__icono"><i class="bx bx-store" aria-hidden="true"></i></span>
+        <div><span class="compra-resumen__etiqueta">Origen</span><strong>{{ traslado.origen }}</strong></div>
+      </div>
+      <div class="compra-resumen__dato">
+        <span class="compra-resumen__icono"><i class="bx bx-map-pin" aria-hidden="true"></i></span>
+        <div><span class="compra-resumen__etiqueta">Destino</span><strong>{{ traslado.destino }}</strong></div>
+      </div>
+      <div class="compra-resumen__dato">
+        <span class="compra-resumen__icono"><i class="bx bx-user" aria-hidden="true"></i></span>
+        <div><span class="compra-resumen__etiqueta">Solicitado por</span><strong>{{ traslado.solicitado_por }}</strong></div>
+      </div>
+      <div class="compra-resumen__dato">
+        <span class="compra-resumen__icono"><i class="bx bx-check-shield" aria-hidden="true"></i></span>
+        <div><span class="compra-resumen__etiqueta">Autorizado por</span><strong>{{ traslado.autorizado_por }}</strong></div>
+      </div>
+    </div>
+    {% if traslado.observaciones %}
+      <p class="traslado-detalle__observaciones"><i class="bx bx-message-detail" aria-hidden="true"></i> {{ traslado.observaciones }}</p>
+    {% endif %}
+  </section>
+
+  <div class="divbuttons3 compra-detalle-layout">
+    <div class="tablaencompras">
+      <table class="tablas-todo" id="tablaDetalleTraslado">
+        <thead>
+          <tr><th>#</th><th>Nombre</th><th>Presentación</th><th>Marca</th><th>SKU</th><th>Solicitado</th><th>Trasladado</th></tr>
+        </thead>
+        <tbody>
+          {% for detalle in traslado.detalles %}
+            <tr>
+              <td>{{ forloop.counter }}</td><td>{{ detalle.nombre }}</td><td>{{ detalle.presentacion }}</td><td>{{ detalle.marca }}</td><td>{{ detalle.sku }}</td>
+              <td>{{ detalle.cantidad_solicitada|floatformat:2 }}</td><td>{{ detalle.cantidad_trasladada|floatformat:2 }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="7" class="text-center table-empty-state">No hay productos registrados en este traslado.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <nav id="paginadorDetalleTraslado" class="d-flex justify-content-center mt-4"></nav>
+    </div>
+    <aside class="compra-detalle__totales" aria-label="Resumen del traslado">
+      <div class="compra-detalle__tarjeta"><span class="compra-detalle__tarjeta-icono"><i class="bx bx-package" aria-hidden="true"></i></span><span>Total solicitado</span><strong>{{ traslado.total_solicitado|floatformat:0 }}</strong></div>
+      <div class="compra-detalle__tarjeta compra-detalle__tarjeta--total"><span class="compra-detalle__tarjeta-icono"><i class="bx bx-transfer" aria-hidden="true"></i></span><span>Total trasladado</span><strong>{{ traslado.total_trasladado|floatformat:0 }}</strong></div>
+      <div class="compra-detalle__tarjeta"><span class="compra-detalle__tarjeta-icono"><i class="bx bx-calendar" aria-hidden="true"></i></span><span>Fecha solicitud</span><strong>{{ traslado.fecha_solicitud|date:"d/m/Y H:i" }}</strong></div>
+      <div class="compra-detalle__tarjeta"><span class="compra-detalle__tarjeta-icono"><i class="bx bx-check-circle" aria-hidden="true"></i></span><span>Estado</span><strong>{{ traslado.estado }}</strong></div>
+    </aside>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const filasPorPagina = 10;
+      let paginaActual = 1;
+      const buscador = document.getElementById("buscarProductoTraslado");
+      const cuerpo = document.querySelector("#tablaDetalleTraslado tbody");
+      const paginador = document.getElementById("paginadorDetalleTraslado");
+      const filas = () => Array.from(cuerpo.querySelectorAll("tr")).filter((fila) => !fila.querySelector(".table-empty-state"));
+      const filtradas = () => {
+        const termino = buscador.value.trim().toLowerCase();
+        return filas().filter((fila) => !termino || fila.textContent.toLowerCase().includes(termino));
+      };
+      function mostrarPagina(pagina) {
+        const todas = filas(); const visibles = filtradas();
+        const total = Math.max(1, Math.ceil(visibles.length / filasPorPagina));
+        paginaActual = Math.min(Math.max(1, pagina), total);
+        todas.forEach((fila) => { fila.hidden = true; });
+        visibles.slice((paginaActual - 1) * filasPorPagina, paginaActual * filasPorPagina).forEach((fila) => { fila.hidden = false; });
+        paginador.innerHTML = "";
+        if (total <= 1) return;
+        const lista = document.createElement("ul"); lista.className = "pagination";
+        const inicioPagina = Math.max(1, paginaActual - 2);
+        const finPagina = Math.min(total, paginaActual + 2);
+        for (let paginaItem = inicioPagina; paginaItem <= finPagina; paginaItem += 1) {
+          const item = document.createElement("li"); item.className = `page-item ${paginaItem === paginaActual ? "active" : ""}`;
+          const boton = document.createElement("button"); boton.type = "button"; boton.className = "page-link"; boton.textContent = paginaItem;
+          boton.addEventListener("click", () => mostrarPagina(paginaItem)); item.appendChild(boton); lista.appendChild(item);
+        }
+        paginador.appendChild(lista);
+      }
+      buscador.addEventListener("input", () => mostrarPagina(1));
+      mostrarPagina(1);
+    });
+  </script>
+{% endblock %}

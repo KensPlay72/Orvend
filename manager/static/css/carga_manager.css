@@ -1,0 +1,134 @@
+/* Cargador global reutilizable para operaciones que modifican datos. */
+.manager-loader-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20000;
+  background: rgba(247, 251, 250, 0.92);
+}
+
+.manager-loader-overlay[hidden] {
+  display: none;
+}
+
+.manager-loader-boxes {
+  --size: 46px;
+  --duration: 900ms;
+  height: calc(var(--size) * 2);
+  width: calc(var(--size) * 3);
+  position: relative;
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+  margin-top: calc(var(--size) * 1.5 * -1);
+  transform: rotateX(60deg) rotateZ(45deg) rotateY(0deg) translateZ(0);
+}
+
+.manager-loader-boxes .box {
+  width: var(--size);
+  height: var(--size);
+  top: 0;
+  left: 0;
+  position: absolute;
+  transform-style: preserve-3d;
+}
+
+.manager-loader-boxes .box:nth-child(1) {
+  transform: translate(100%, 0);
+  animation: manager-box-1 var(--duration) linear infinite;
+}
+.manager-loader-boxes .box:nth-child(2) {
+  transform: translate(0, 100%);
+  animation: manager-box-2 var(--duration) linear infinite;
+}
+.manager-loader-boxes .box:nth-child(3) {
+  transform: translate(100%, 100%);
+  animation: manager-box-3 var(--duration) linear infinite;
+}
+.manager-loader-boxes .box:nth-child(4) {
+  transform: translate(200%, 0);
+  animation: manager-box-4 var(--duration) linear infinite;
+}
+
+.manager-loader-boxes .box > div {
+  --background: #32877f;
+  --top: auto;
+  --right: auto;
+  --bottom: auto;
+  --left: auto;
+  --translateZ: calc(var(--size) / 2);
+  --rotateY: 0deg;
+  --rotateX: 0deg;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: var(--background);
+  top: var(--top);
+  right: var(--right);
+  bottom: var(--bottom);
+  left: var(--left);
+  transform: rotateY(var(--rotateY)) rotateX(var(--rotateX))
+    translateZ(var(--translateZ));
+}
+
+.manager-loader-boxes .box > div:nth-child(1) {
+  --top: 0;
+  --left: 0;
+}
+.manager-loader-boxes .box > div:nth-child(2) {
+  --background: #175e57;
+  --right: 0;
+  --rotateY: 90deg;
+}
+.manager-loader-boxes .box > div:nth-child(3) {
+  --background: #54a89c;
+  --rotateX: -90deg;
+}
+.manager-loader-boxes .box > div:nth-child(4) {
+  --background: #d7ebe7;
+  --top: 0;
+  --left: 0;
+  --translateZ: calc(var(--size) * 3 * -1);
+}
+
+@keyframes manager-box-1 {
+  0%,
+  50% {
+    transform: translate(100%, 0);
+  }
+  100% {
+    transform: translate(200%, 0);
+  }
+}
+@keyframes manager-box-2 {
+  0% {
+    transform: translate(0, 100%);
+  }
+  50% {
+    transform: translate(0, 0);
+  }
+  100% {
+    transform: translate(100%, 0);
+  }
+}
+@keyframes manager-box-3 {
+  0%,
+  50% {
+    transform: translate(100%, 100%);
+  }
+  100% {
+    transform: translate(0, 100%);
+  }
+}
+@keyframes manager-box-4 {
+  0% {
+    transform: translate(200%, 0);
+  }
+  50% {
+    transform: translate(200%, 100%);
+  }
+  100% {
+    transform: translate(100%, 100%);
+  }
+}

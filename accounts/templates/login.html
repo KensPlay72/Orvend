@@ -5,11 +5,12 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <!-- ===== CSS ===== -->
         <link rel="stylesheet" href="{% static 'css/login.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/carga.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/tema_sistema.css' %}" />
         <link rel="stylesheet" href="{% static 'plugins/bootstrap.min.css' %}">
         <link rel="icon" href="{% static 'img/logo-card.ico' %}" type="image/x-icon">
         <!-- ===== BOX ICONS ===== -->
-        <link href='https://cdn.jsdelivr.net/npm/boxicons@2.0.5/css/boxicons.min.css'
-              rel='stylesheet'>
+        <link rel="stylesheet" href="{% static 'plugins/css/boxicons.min.css' %}">
         <title>Iniciar Sesión</title>
         <style>
             .form-control {
@@ -24,16 +25,16 @@
             }
         </style>
     </head>
-    <body>
+    <body style="--system-primary: {{ tema_principal }}; --system-secondary: {{ tema_secundario }}; --system-button: {{ tema_botones }};">
         <div class="l-form">
             <div class="shape1"></div>
             <div class="shape2"></div>
             <div class="form">
-                <img src="{% static 'img/imagenalta.webp' %}" />
+                <img class="form__image-side" src="{% static 'img/imagenalta.webp' %}" alt="">
                 <form class="form__content" method="POST">
                     {% csrf_token %}
                     <div class="imgtitle">
-                        <img src="{% static 'img/LV.png' %}" />
+                        <img src="{% static 'img/LV.webp' %}" />
                         <h1 class="form__title">Bienvenido</h1>
                     </div>
                     <br><br>
@@ -71,15 +72,20 @@
             </div>
         </div>
 
-        <!-- Loader -->
-        <div id="loader" class="loader-overlay" style="display: none;">
-            <div class="loader"></div>
+        <!-- Carga al validar el acceso -->
+        <div id="loader" class="loader-overlay" style="display: none;" role="status" aria-live="polite">
+            <div class="boxes" aria-hidden="true">
+                <div class="box"><div></div><div></div><div></div><div></div></div>
+                <div class="box"><div></div><div></div><div></div><div></div></div>
+                <div class="box"><div></div><div></div><div></div><div></div></div>
+                <div class="box"><div></div><div></div><div></div><div></div></div>
+            </div>
         </div>
         
         <script src="{% static 'plugins/jquery.min.js' %}"></script>
         <script src="{% static 'plugins/bootstrap.min.js' %}"></script>
         <script src="{% static 'plugins/sweetalert2.min.js' %}"></script>
         <script src="{% static 'plugins/jwt-decode.min.js' %}"></script>
-        <script type="module" src="{% static 'js/login.js' %}"></script>
+        <script type="module" src="{% static 'js/login.js' %}?v=20261003-suscripcion"></script>
     </body>
 </html>

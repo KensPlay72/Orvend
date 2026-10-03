@@ -1,607 +1,470 @@
-
-
 //----------------
 // REGISTRAR
 //----------------
 function valueOrNull(value) {
-    if (value === undefined || value === null) return null;
-    const v = value.trim();
-    return v === "" ? null : v;
+  if (value === undefined || value === null) return null;
+  const v = value.trim();
+  return v === "" ? null : v;
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  const boton = document.getElementById("exportarClientesExcel");
+  if (!boton) return;
 
-    const form = document.getElementById("postregis");
-    const btn = document.getElementById("btnregis");
-    const modalElement = document.getElementById("modalregis");
+  const icono = boton.querySelector("i");
+  const iconoOriginal = "bx bx-spreadsheet";
 
-    const modal = new bootstrap.Modal(modalElement);
+  boton.addEventListener("click", async () => {
+    const busqueda = document.getElementById("busqueda")?.value || "";
+    boton.disabled = true;
+    icono.className = "bx bx-loader-alt bx-spin";
 
+    try {
+      const parametros = new URLSearchParams({ search: busqueda });
+      const respuesta = await fetch(`${boton.dataset.exportUrl}?${parametros}`);
+      if (!respuesta.ok) throw new Error("No se pudo generar el archivo");
+
+      const archivo = await respuesta.blob();
+      const enlace = document.createElement("a");
+      enlace.href = URL.createObjectURL(archivo);
+      enlace.download = "clientes.xlsx";
+      document.body.appendChild(enlace);
+      enlace.click();
+      enlace.remove();
+      URL.revokeObjectURL(enlace.href);
+    } catch (error) {
+      Swal.fire("Error", "No se pudo exportar el listado de clientes", "error");
+    } finally {
+      boton.disabled = false;
+      icono.className = iconoOriginal;
+    }
+  });
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("postregis");
+  const btn = document.getElementById("btnregis");
+  const modalElement = document.getElementById("modalregis");
+
+  const modal = new bootstrap.Modal(modalElement);
+
+  // ==========================================================
+  // REGISTRAR CLIENTE
+  // ==========================================================
+
+  btn.addEventListener("click", async () => {
+    if (form.dataset.submitting === "true") {
+      return;
+    }
+
+    form.dataset.submitting = "true";
 
     // ==========================================================
-    // REGISTRAR CLIENTE
+    // DATOS
     // ==========================================================
 
-    btn.addEventListener("click", async () => {
+    const phoneNumber = document.getElementById("telefono").value;
 
-        if (form.dataset.submitting === "true") {
-            return;
-        }
+    const fullPhone = valueOrNull(phoneNumber.trim());
 
-        form.dataset.submitting = "true";
+    const payload = {
+      dni: valueOrNull(document.getElementById("dni").value),
 
+      nombre: valueOrNull(document.getElementById("pnombre").value),
 
-        // ==========================================================
-        // DATOS
-        // ==========================================================
+      nombre2: valueOrNull(document.getElementById("snombre").value),
 
-        const phoneNumber =
-            document.getElementById("telefono").value;
+      apellido: valueOrNull(document.getElementById("papellido").value),
 
-        const fullPhone =
-            valueOrNull(phoneNumber.trim());
+      apellido2: valueOrNull(document.getElementById("sapellido").value),
 
+      empresa: valueOrNull(document.getElementById("nempresa").value),
 
-        const payload = {
+      direccion: valueOrNull(document.getElementById("direccion").value),
 
-            dni: valueOrNull(
-                document.getElementById("dni").value
-            ),
+      email: valueOrNull(document.getElementById("email").value),
 
-            nombre: valueOrNull(
-                document.getElementById("pnombre").value
-            ),
+      telefono: fullPhone,
 
-            nombre2: valueOrNull(
-                document.getElementById("snombre").value
-            ),
+      enviar_factura_whatsapp: Boolean(
+        document.getElementById("enviarFacturaWhatsapp")?.checked,
+      ),
 
-            apellido: valueOrNull(
-                document.getElementById("papellido").value
-            ),
+      pais: valueOrNull(document.getElementById("pais").value),
 
-            apellido2: valueOrNull(
-                document.getElementById("sapellido").value
-            ),
+      departamento: valueOrNull(document.getElementById("departamento").value),
 
-            empresa: valueOrNull(
-                document.getElementById("nempresa").value
-            ),
+      municipio: valueOrNull(document.getElementById("municipio").value),
 
-            direccion: valueOrNull(
-                document.getElementById("direccion").value
-            ),
+      d_credito: valueOrNull(document.getElementById("d_credito")?.value),
 
-            email: valueOrNull(
-                document.getElementById("email").value
-            ),
+      max_credito: valueOrNull(document.getElementById("max_credito")?.value),
+    };
 
-            telefono: fullPhone,
+    // ==========================================================
+    // VALIDACION
+    // ==========================================================
 
-            pais: valueOrNull(
-                document.getElementById("pais").value
-            ),
+    if (!payload.dni) {
+      Swal.fire({
+        title: "Error",
+        text: "El DNI es obligatorio",
+        icon: "warning",
+        confirmButtonText: "Aceptar",
+        customClass: {
+          confirmButton: "classbotones",
+        },
+      });
 
-            departamento: valueOrNull(
-                document.getElementById("departamento").value
-            ),
+      form.dataset.submitting = "false";
 
-            municipio: valueOrNull(
-                document.getElementById("municipio").value
-            ),
+      return;
+    }
 
-            d_credito: valueOrNull(
-                document.getElementById("d_credito")?.value
-            ),
+    // ==========================================================
+    // ENVIO
+    // ==========================================================
 
-            max_credito: valueOrNull(
-                document.getElementById("max_credito")?.value
-            )
-        };
+    try {
+      const response = await fetch("/manager/clientes/post/", {
+        method: "POST",
 
+        headers: {
+          "Content-Type": "application/json",
 
-        // ==========================================================
-        // VALIDACION
-        // ==========================================================
+          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+            .value,
+        },
 
-        if (!payload.dni) {
+        body: JSON.stringify(payload),
+      });
 
-            Swal.fire({
-                title: "Error",
-                text: "El DNI es obligatorio",
-                icon: "warning",
-                confirmButtonText: "Aceptar",
-                customClass: {
-                    confirmButton: "classbotones"
-                }
-            });
+      const data = await response.json();
 
-            form.dataset.submitting = "false";
+      // ======================================================
+      // RESPUESTA EXITOSA
+      // ======================================================
 
-            return;
-        }
+      if (data.success) {
+        modal.hide();
 
+        form.reset();
 
-        // ==========================================================
-        // ENVIO
-        // ==========================================================
+        Swal.fire({
+          title: "Éxito",
+          text: data.message,
+          icon: "success",
+          confirmButtonText: "Aceptar",
+          customClass: {
+            confirmButton: "classbotones",
+          },
+        }).then(() => {
+          window.location.reload();
+        });
+      } else {
+        // ==================================================
+        // ERROR DEL SERVIDOR
+        // ==================================================
 
-        try {
+        Swal.fire({
+          title: "Error",
+          text: data.message,
+          icon: "error",
+          confirmButtonText: "Aceptar",
+          customClass: {
+            confirmButton: "classbotones",
+          },
+        });
+      }
+    } catch (error) {
+      console.error(error);
 
-            const response = await fetch(
-                "/manager/clientes/post/",
-                {
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type": "application/json",
-
-                        "X-CSRFToken":
-                            document.querySelector(
-                                "[name=csrfmiddlewaretoken]"
-                            ).value
-                    },
-
-                    body: JSON.stringify(payload)
-                }
-            );
-
-
-            const data = await response.json();
-
-
-            // ======================================================
-            // RESPUESTA EXITOSA
-            // ======================================================
-
-            if (data.success) {
-
-                modal.hide();
-
-                form.reset();
-
-
-                Swal.fire({
-                    title: "Éxito",
-                    text: data.message,
-                    icon: "success",
-                    confirmButtonText: "Aceptar",
-                    customClass: {
-                        confirmButton: "classbotones"
-                    }
-                }).then(() => {
-
-                    window.location.reload();
-
-                });
-
-
-            } else {
-
-                // ==================================================
-                // ERROR DEL SERVIDOR
-                // ==================================================
-
-                Swal.fire({
-                    title: "Error",
-                    text: data.message,
-                    icon: "error",
-                    confirmButtonText: "Aceptar",
-                    customClass: {
-                        confirmButton: "classbotones"
-                    }
-                });
-
-            }
-
-
-        } catch (error) {
-
-            console.error(error);
-
-            Swal.fire({
-                title: "Error",
-                text: "No se pudo registrar el cliente",
-                icon: "error",
-                confirmButtonText: "Aceptar",
-                customClass: {
-                    confirmButton: "classbotones"
-                }
-            });
-
-        } finally {
-
-            form.dataset.submitting = "false";
-
-        }
-
-    });
-
+      Swal.fire({
+        title: "Error",
+        text: "No se pudo registrar el cliente",
+        icon: "error",
+        confirmButtonText: "Aceptar",
+        customClass: {
+          confirmButton: "classbotones",
+        },
+      });
+    } finally {
+      form.dataset.submitting = "false";
+    }
+  });
 });
 //----------------
 // VALIDAR NUMERO EN INPUT
 //----------------
 function validateNumber(input) {
-  input.value = input.value.replace(/[^0-9.+]/g, '');
+  input.value = input.value.replace(/[^0-9.+]/g, "");
 }
-
-
 
 // ==========================================================
 // LLENAR FORMULARIO DE EDICION
 // ==========================================================
 
 document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("click", async (e) => {
+    const button = e.target.closest(".btn-edit");
 
-    document.addEventListener("click", async (e) => {
+    if (!button) {
+      return;
+    }
 
-        const button = e.target.closest(".btn-edit");
+    const clienteId = button.dataset.id;
 
-        if (!button) {
-            return;
-        }
+    try {
+      const response = await fetch(`/manager/clientes/get/${clienteId}/`);
 
-        const clienteId = button.dataset.id;
+      const data = await response.json();
 
+      if (!data.success) {
+        Swal.fire(
+          "Error",
+          data.message || "No se pudo obtener la información",
+          "error",
+        );
 
-        try {
+        return;
+      }
 
-            const response = await fetch(
-                `/manager/clientes/get/${clienteId}/`
-            );
+      const cliente = data.cliente;
 
-            const data = await response.json();
+      // ======================================================
+      // ID
+      // ======================================================
 
+      document.getElementById("idedit").value = cliente.id || "";
 
-            if (!data.success) {
+      // ======================================================
+      // DATOS PERSONALES
+      // ======================================================
 
-                Swal.fire(
-                    "Error",
-                    data.message || "No se pudo obtener la información",
-                    "error"
-                );
+      document.getElementById("pnombreedit").value = cliente.nombre || "";
 
-                return;
-            }
+      document.getElementById("snombreedit").value = cliente.nombre2 || "";
 
+      document.getElementById("papellidoedit").value = cliente.apellido || "";
 
-            const cliente = data.cliente;
+      document.getElementById("sapellidoedit").value = cliente.apellido2 || "";
 
+      // ======================================================
+      // EMPRESA
+      // ======================================================
 
-            // ======================================================
-            // ID
-            // ======================================================
+      document.getElementById("nempresaedit").value = cliente.empresa || "";
 
-            document.getElementById("idedit").value =
-                cliente.id || "";
+      // ======================================================
+      // IDENTIFICACION
+      // ======================================================
 
+      document.getElementById("dniedit").value = cliente.dni || "";
 
-            // ======================================================
-            // DATOS PERSONALES
-            // ======================================================
+      // ======================================================
+      // CONTACTO
+      // ======================================================
 
-            document.getElementById("pnombreedit").value =
-                cliente.nombre || "";
+      document.getElementById("emailedit").value = cliente.email || "";
 
-            document.getElementById("snombreedit").value =
-                cliente.nombre2 || "";
+      document.getElementById("telefonoedit").value = cliente.telefono || "";
 
-            document.getElementById("papellidoedit").value =
-                cliente.apellido || "";
+      const enviarFacturaWhatsappEdit = document.getElementById(
+        "enviarFacturaWhatsappedit",
+      );
 
-            document.getElementById("sapellidoedit").value =
-                cliente.apellido2 || "";
+      if (enviarFacturaWhatsappEdit) {
+        enviarFacturaWhatsappEdit.checked = Boolean(
+          cliente.enviar_factura_whatsapp,
+        );
+      }
 
+      // ======================================================
+      // DIRECCION
+      // ======================================================
 
-            // ======================================================
-            // EMPRESA
-            // ======================================================
+      document.getElementById("direccionedit").value = cliente.direccion || "";
 
-            document.getElementById("nempresaedit").value =
-                cliente.empresa || "";
+      // ======================================================
+      // UBICACION
+      // ======================================================
 
+      document.getElementById("paisedit").value = cliente.pais || "";
 
-            // ======================================================
-            // IDENTIFICACION
-            // ======================================================
+      document.getElementById("departamentoedit").value =
+        cliente.departamento || "";
 
-            document.getElementById("dniedit").value =
-                cliente.dni || "";
+      document.getElementById("municipioedit").value = cliente.municipio || "";
 
+      // ======================================================
+      // CREDITO
+      // ======================================================
 
-            // ======================================================
-            // CONTACTO
-            // ======================================================
+      const dCreditoEdit = document.getElementById("d_creditoedit");
+      const maxCreditoEdit = document.getElementById("max_creditoedit");
 
-            document.getElementById("emailedit").value =
-                cliente.email || "";
+      if (dCreditoEdit) {
+        dCreditoEdit.value = cliente.d_credito ?? "";
+      }
 
-            document.getElementById("telefonoedit").value =
-                cliente.telefono || "";
+      if (maxCreditoEdit) {
+        maxCreditoEdit.value = cliente.max_credito ?? "";
+      }
 
+      // ======================================================
+      // ESTADO
+      // ======================================================
 
-            // ======================================================
-            // DIRECCION
-            // ======================================================
+      const activeCheckbox = document.getElementById("isActiveedit");
 
-            document.getElementById("direccionedit").value =
-                cliente.direccion || "";
+      const activeText = document.getElementById("activeTextedit");
 
+      if (cliente.isActive) {
+        activeCheckbox.checked = true;
 
-            // ======================================================
-            // UBICACION
-            // ======================================================
+        activeText.textContent = "Activo";
 
-            document.getElementById("paisedit").value =
-                cliente.pais || "";
+        activeText.classList.remove("text-danger");
 
-            document.getElementById("departamentoedit").value =
-                cliente.departamento || "";
+        activeText.classList.add("text-success");
+      } else {
+        activeCheckbox.checked = false;
 
-            document.getElementById("municipioedit").value =
-                cliente.municipio || "";
+        activeText.textContent = "Inactivo";
 
+        activeText.classList.remove("text-success");
 
-            // ======================================================
-            // CREDITO
-            // ======================================================
+        activeText.classList.add("text-danger");
+      }
+    } catch (err) {
+      console.error(err);
 
-            const dCreditoEdit = document.getElementById("d_creditoedit");
-            const maxCreditoEdit = document.getElementById("max_creditoedit");
-
-            if (dCreditoEdit) {
-                dCreditoEdit.value = cliente.d_credito ?? "";
-            }
-
-            if (maxCreditoEdit) {
-                maxCreditoEdit.value = cliente.max_credito ?? "";
-            }
-
-
-            // ======================================================
-            // ESTADO
-            // ======================================================
-
-            const activeCheckbox =
-                document.getElementById("isActiveedit");
-
-            const activeText =
-                document.getElementById("activeTextedit");
-
-
-            if (cliente.isActive) {
-
-                activeCheckbox.checked = true;
-
-                activeText.textContent = "Activo";
-
-                activeText.classList.remove("text-danger");
-
-                activeText.classList.add("text-success");
-
-            } else {
-
-                activeCheckbox.checked = false;
-
-                activeText.textContent = "Inactivo";
-
-                activeText.classList.remove("text-success");
-
-                activeText.classList.add("text-danger");
-            }
-
-
-        } catch (err) {
-
-            console.error(err);
-
-            Swal.fire(
-                "Error",
-                "Error de conexión",
-                "error"
-            );
-
-        }
-
-    });
-
+      Swal.fire("Error", "Error de conexión", "error");
+    }
+  });
 });
-
 
 // ==========================================================
 // ACTUALIZAR CLIENTE
 // ==========================================================
 
-document.getElementById("btnput").addEventListener(
-    "click",
-    async (e) => {
+document.getElementById("btnput").addEventListener("click", async (e) => {
+  e.preventDefault();
 
-        e.preventDefault();
+  // ======================================================
+  // ID
+  // ======================================================
 
+  const clienteId = document.getElementById("idedit").value;
 
-        // ======================================================
-        // ID
-        // ======================================================
+  // ======================================================
+  // DNI
+  // ======================================================
 
-        const clienteId =
-            document.getElementById("idedit").value;
+  const dni = document.getElementById("dniedit").value.trim();
 
+  if (!dni) {
+    Swal.fire("Error", "El DNI es obligatorio", "error");
 
-        // ======================================================
-        // DNI
-        // ======================================================
+    return;
+  }
 
-        const dni =
-            document.getElementById("dniedit").value.trim();
+  // ======================================================
+  // TELEFONO
+  // ======================================================
 
+  const phoneNumber = document.getElementById("telefonoedit").value;
 
-        if (!dni) {
+  const fullPhone = valueOrNull(phoneNumber.trim());
 
-            Swal.fire(
-                "Error",
-                "El DNI es obligatorio",
-                "error"
-            );
+  // ======================================================
+  // DATOS
+  // ======================================================
 
-            return;
-        }
+  const payload = {
+    dni: dni,
 
+    nombre: valueOrNull(document.getElementById("pnombreedit").value),
 
-        // ======================================================
-        // TELEFONO
-        // ======================================================
+    nombre2: valueOrNull(document.getElementById("snombreedit").value),
 
-        const phoneNumber =
-            document.getElementById("telefonoedit").value;
+    apellido: valueOrNull(document.getElementById("papellidoedit").value),
 
-        const fullPhone =
-            valueOrNull(phoneNumber.trim());
+    apellido2: valueOrNull(document.getElementById("sapellidoedit").value),
 
+    empresa: valueOrNull(document.getElementById("nempresaedit").value),
 
-        // ======================================================
-        // DATOS
-        // ======================================================
+    direccion: valueOrNull(document.getElementById("direccionedit").value),
 
-        const payload = {
+    email: valueOrNull(document.getElementById("emailedit").value),
 
-            dni: dni,
+    telefono: fullPhone,
 
-            nombre: valueOrNull(
-                document.getElementById("pnombreedit").value
-            ),
+    enviar_factura_whatsapp: Boolean(
+      document.getElementById("enviarFacturaWhatsappedit")?.checked,
+    ),
 
-            nombre2: valueOrNull(
-                document.getElementById("snombreedit").value
-            ),
+    pais: valueOrNull(document.getElementById("paisedit").value),
 
-            apellido: valueOrNull(
-                document.getElementById("papellidoedit").value
-            ),
+    departamento: valueOrNull(
+      document.getElementById("departamentoedit").value,
+    ),
 
-            apellido2: valueOrNull(
-                document.getElementById("sapellidoedit").value
-            ),
+    municipio: valueOrNull(document.getElementById("municipioedit").value),
 
-            empresa: valueOrNull(
-                document.getElementById("nempresaedit").value
-            ),
+    d_credito: valueOrNull(document.getElementById("d_creditoedit")?.value),
 
-            direccion: valueOrNull(
-                document.getElementById("direccionedit").value
-            ),
+    max_credito: valueOrNull(document.getElementById("max_creditoedit")?.value),
 
-            email: valueOrNull(
-                document.getElementById("emailedit").value
-            ),
+    isActive: document.getElementById("isActiveedit").checked,
+  };
 
-            telefono: fullPhone,
+  // ======================================================
+  // ENVIAR
+  // ======================================================
 
-            pais: valueOrNull(
-                document.getElementById("paisedit").value
-            ),
+  try {
+    const response = await fetch(`/manager/clientes/put/${clienteId}/`, {
+      method: "PUT",
 
-            departamento: valueOrNull(
-                document.getElementById("departamentoedit").value
-            ),
+      headers: {
+        "Content-Type": "application/json",
 
-            municipio: valueOrNull(
-                document.getElementById("municipioedit").value
-            ),
+        "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+          .value,
+      },
 
-            d_credito: valueOrNull(
-                document.getElementById("d_creditoedit")?.value
-            ),
+      body: JSON.stringify(payload),
+    });
 
-            max_credito: valueOrNull(
-                document.getElementById("max_creditoedit")?.value
-            ),
+    const data = await response.json();
 
-            isActive:
-                document.getElementById(
-                    "isActiveedit"
-                ).checked
-        };
+    // ==================================================
+    // RESPUESTA
+    // ==================================================
 
+    if (data.success) {
+      Swal.fire({
+        title: "¡Éxito!",
 
-        // ======================================================
-        // ENVIAR
-        // ======================================================
+        text: data.message,
 
-        try {
-
-            const response = await fetch(
-                `/manager/clientes/put/${clienteId}/`,
-                {
-                    method: "PUT",
-
-                    headers: {
-
-                        "Content-Type":
-                            "application/json",
-
-                        "X-CSRFToken":
-                            document.querySelector(
-                                "[name=csrfmiddlewaretoken]"
-                            ).value
-                    },
-
-                    body: JSON.stringify(payload)
-                }
-            );
-
-
-            const data = await response.json();
-
-
-            // ==================================================
-            // RESPUESTA
-            // ==================================================
-
-            if (data.success) {
-
-                Swal.fire({
-
-                    title: "¡Éxito!",
-
-                    text: data.message,
-
-                    icon: "success",
-
-                    confirmButtonText: "Aceptar",
-
-                    customClass: {
-                        confirmButton: "classbotones"
-                    }
-
-                }).then(() => {
-
-                    window.location.reload();
-
-                });
-
-
-            } else {
-
-                Swal.fire(
-                    "Error",
-                    data.message,
-                    "error"
-                );
-
-            }
-
-
-        } catch (err) {
-
-            console.error(err);
-
-            Swal.fire(
-                "Error",
-                "Error de conexión",
-                "error"
-            );
-
-        }
-
+        icon: "success",
+
+        confirmButtonText: "Aceptar",
+
+        customClass: {
+          confirmButton: "classbotones",
+        },
+      }).then(() => {
+        window.location.reload();
+      });
+    } else {
+      Swal.fire("Error", data.message, "error");
     }
-);
+  } catch (err) {
+    console.error(err);
+
+    Swal.fire("Error", "Error de conexión", "error");
+  }
+});

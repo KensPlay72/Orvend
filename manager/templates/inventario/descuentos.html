@@ -1,15 +1,16 @@
 {% extends "menu.html" %}
-{% load static %}
+{% load static pagination_tags %}
 {% block title %}
   Descuentos
 {% endblock title %}
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/descuentos.css' %}" />
 {% endblock extra_css %}
 {% block titulo_content %}
   <div class="tituloscont">
     <img class="logop"
-         src="{% static 'img/LH.png' %}"
+         src="{% static 'img/LH.webp' %}"
          alt="logo"
          width="0"
          height="0" />
@@ -30,10 +31,13 @@
        tabindex="-1"
        aria-labelledby="modalRegistroDescuento"
        aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="modalRegistroDescuento">Registrar Descuento</h5>
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable descuento-modal">
+      <div class="modal-content descuento-modal__content">
+        <div class="modal-header descuento-modal__header">
+          <div>
+            <span class="descuento-modal__eyebrow">GESTIÓN DE PRECIOS</span>
+            <h5 class="modal-title" id="modalRegistroDescuento"><i class="bx bx-purchase-tag-alt"></i> Registrar descuento</h5>
+          </div>
           <button type="button"
                   class="btn-close"
                   data-bs-dismiss="modal"
@@ -42,7 +46,7 @@
         <div class="modal-body">
           <form id="postregistro" enctype="multipart/form-data">
             {% csrf_token %}
-            <div class="row">
+            <div class="row g-3 descuento-modal__grid">
               <!-- ========================= -->
               <!-- INFORMACION GENERAL -->
               <!-- ========================= -->
@@ -121,7 +125,6 @@
                       Si es porcentaje ingresa:
                       10 = 10%
                     </small>
-                    <br id="br_texto2">
                     <div class="form-check form-switch">
                       <input class="form-check-input"
                              type="checkbox"
@@ -141,21 +144,24 @@
                     <div id="contenedor_cantidad" class="displaynone">
                       <div class="form-group">
                         <label for="cantidad_lleva">Cantidad que lleva</label>
-                        <input type="number"
-                               min="1"
+                        <input type="text"
                                name="cantidad_lleva"
                                id="cantidad_lleva"
                                class="form-control"
+                               autocomplete="off"
+                               inputmode="numeric"
+                               data-integer-only
                                placeholder="Ej: 3">
                       </div>
-                      <br>
                       <div class="form-group">
                         <label for="cantidad_paga">Cantidad que paga</label>
-                        <input type="number"
-                               min="1"
+                        <input type="text"
                                name="cantidad_paga"
                                id="cantidad_paga"
                                class="form-control"
+                               autocomplete="off"
+                               inputmode="numeric"
+                               data-integer-only
                                placeholder="Ej: 2">
                       </div>
                     </div>
@@ -163,8 +169,7 @@
                 </div>
               </div>
             </div>
-            <br>
-            <div class="row">
+            <div class="row g-3 descuento-modal__grid mt-0">
               <!-- ========================= -->
               <!-- APLICACION -->
               <!-- ========================= -->
@@ -227,11 +232,13 @@
                   <div class="card-body">
                     <div class="form-group">
                       <label for="limite_uso">Límite de usos</label>
-                      <input type="number"
-                             min="1"
+                      <input type="text"
                              name="limite_uso"
                              id="limite_uso"
                              class="form-control"
+                             autocomplete="off"
+                             inputmode="numeric"
+                             data-integer-only
                              placeholder="Ej: 50">
                     </div>
                     <small class="text-muted">Déjalo vacío para ilimitado</small>
@@ -273,10 +280,13 @@
        tabindex="-1"
        aria-labelledby="modalEditarDescuento"
        aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="modalEditarDescuento">Editar Descuento</h5>
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable descuento-modal">
+      <div class="modal-content descuento-modal__content">
+        <div class="modal-header descuento-modal__header">
+          <div>
+            <span class="descuento-modal__eyebrow">GESTIÓN DE PRECIOS</span>
+            <h5 class="modal-title" id="modalEditarDescuento"><i class="bx bx-edit-alt"></i> Editar descuento</h5>
+          </div>
           <button type="button"
                   class="btn-close"
                   data-bs-dismiss="modal"
@@ -286,7 +296,7 @@
           <form id="putregistro">
             {% csrf_token %}
             <input type="hidden" id="idedit">
-            <div class="row">
+            <div class="row g-3 descuento-modal__grid">
               <!-- ========================= -->
               <!-- INFORMACION GENERAL -->
               <!-- ========================= -->
@@ -362,21 +372,25 @@
                     <div id="contenedor_cantidadedit" class="displaynone">
                       <div class="form-group">
                         <label for="cantidad_llevaedit">Cantidad que lleva</label>
-                        <input type="number"
-                               min="1"
+                        <input type="text"
                                name="cantidad_llevaedit"
                                id="cantidad_llevaedit"
                                class="form-control"
+                               autocomplete="off"
+                               inputmode="numeric"
+                               data-integer-only
                                placeholder="Ej: 3">
                       </div>
                       <br>
                       <div class="form-group">
                         <label for="cantidad_pagaedit">Cantidad que paga</label>
-                        <input type="number"
-                               min="1"
+                        <input type="text"
                                name="cantidad_pagaedit"
                                id="cantidad_pagaedit"
                                class="form-control"
+                               autocomplete="off"
+                               inputmode="numeric"
+                               data-integer-only
                                placeholder="Ej: 2">
                       </div>
                     </div>
@@ -384,11 +398,10 @@
                 </div>
               </div>
             </div>
-            <br>
             <!-- ========================= -->
             <!-- APLICACION -->
             <!-- ========================= -->
-            <div class="row">
+            <div class="row g-3 descuento-modal__grid mt-0">
               <div class="col-md-6">
                 <div class="card">
                   <div class="card-header">Aplicación</div>
@@ -442,7 +455,7 @@
                   <div class="card-body">
                     <div class="form-group">
                       <label>Límite de uso</label>
-                      <input type="number" id="limite_usoedit" class="form-control">
+                      <input type="text" id="limite_usoedit" class="form-control" autocomplete="off" inputmode="numeric" data-integer-only>
                     </div>
                     <br>
                     <div class="form-group">
@@ -521,7 +534,7 @@
               {% elif descuento.es_porcentaje %}
                 <span>{{ descuento.valor }}%</span>
               {% else %}
-                <span>L {{ descuento.valor }}</span>
+                <span>{{ moneda_simbolo }} {{ descuento.valor }}</span>
               {% endif %}
             </td>
             <!-- APLICA -->
@@ -570,7 +583,7 @@
           </tr>
         {% empty %}
           <tr>
-            <td colspan="8" class="text-center">No hay descuentos registrados</td>
+            <td colspan="9" class="text-center table-empty-state">No hay descuentos registrados</td>
           </tr>
         {% endfor %}
       </tbody>
@@ -588,7 +601,8 @@
         {% endif %}
       </li>
       <!-- NUMEROS -->
-      {% for p in page_obj.paginator.page_range %}
+      {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
+      {% for p in paginas_visibles %}
         <li class="page-item {% if p == page_obj.number %}active{% endif %}">
           <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
         </li>

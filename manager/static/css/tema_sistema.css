@@ -1,0 +1,1080 @@
+/* Tema central administrado desde Configuración de empresa. */
+:root {
+  --system-primary: #32877f;
+  --system-secondary: #10463e;
+  --system-button: #3f8886;
+}
+
+body {
+  --first-color: var(--system-primary);
+  --first-color-light: color-mix(in srgb, var(--system-primary) 10%, #fff);
+}
+
+/* Navegación, encabezados, selección y paginación. */
+.header__toggle,
+.initials-circle,
+.pagination .page-item.active .page-link,
+.page-item.active .page-link {
+  background-color: var(--system-primary) !important;
+  border-color: var(--system-primary) !important;
+  color: #fff !important;
+}
+
+/* El shorthand background reemplaza degradados definidos por cada vista. */
+.tablas-todo thead,
+.table-picker-cliente thead,
+.tabla-container table thead,
+table.tablas-todo thead {
+  background: var(--system-primary) !important;
+  border-color: var(--system-primary) !important;
+  color: #fff !important;
+}
+
+.tablas-todo thead th,
+.table-picker-cliente thead th,
+.tabla-container table thead th {
+  background: var(--system-primary) !important;
+  border-color: var(--system-primary) !important;
+  color: #fff !important;
+}
+
+.nav__link.active .nav__icon,
+.nav__link:hover .nav__icon,
+.nav__link.active,
+.nav__link:hover,
+.pagination .page-link,
+.page-link,
+.header__icon,
+.header__search-group .header__search > .header__icon {
+  color: var(--system-primary);
+}
+
+.header__search-group .dv-header-search__button,
+.header__search-group .header__search > .header__icon,
+.header__input:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--system-primary) !important;
+}
+
+.header__search-group .dv-header-search__button,
+.header__search-group .header__search > .header__icon {
+  background-color: var(--system-primary) !important;
+  color: #fff !important;
+}
+
+.pagination .page-item .page-link:hover,
+.page-item .page-link:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--system-primary) 12%,
+    #fff
+  ) !important;
+}
+
+/* El menú marca la opción con texto e icono, sin pintar su fondo. */
+.nav__link.active,
+.nav__link:hover {
+  background: transparent !important;
+  color: var(--system-primary) !important;
+}
+
+/* Botones generales; acciones dentro de tablas y exportaciones conservan su color. */
+.classbotones:not(.btn-success):not(.btn-danger):not(.btn-warning):not(
+    .btn-info
+  ),
+.form__button,
+.config-upload,
+.btn-add,
+.btn-agregar,
+.btn-nuevo,
+.btn-dropdown {
+  background: var(--system-button) !important;
+}
+
+.classbotones:not(.btn-success):not(.btn-danger):not(.btn-warning):not(
+    .btn-info
+  ):hover,
+.form__button:hover,
+.config-upload:hover,
+.btn-add:hover,
+.btn-agregar:hover,
+.btn-nuevo:hover,
+.btn-dropdown:hover {
+  background: var(--system-secondary) !important;
+}
+
+/* Las acciones de tabla, exportaciones y accesos a listados no usan
+   .classbotones y conservan sus colores propios. */
+
+/* Color secundario: superficies de apoyo y estados suaves. */
+.config-hero,
+.filters-card {
+  border-color: color-mix(in srgb, var(--system-secondary) 28%, #fff);
+}
+
+.config-hero {
+  background: linear-gradient(
+    120deg,
+    var(--system-secondary),
+    var(--system-primary)
+  ) !important;
+}
+
+.config-card__head,
+.config-card__head i,
+.capsula i {
+  color: var(--system-primary) !important;
+}
+
+.form__div.focus,
+.form__div.focus .form__icon,
+.form__div.focus .form__label,
+.form__input {
+  border-color: var(--system-primary) !important;
+  color: var(--system-primary) !important;
+}
+
+.shape1,
+.shape2 {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--system-primary) 28%, #fff),
+    var(--system-secondary)
+  ) !important;
+}
+
+.boxes .box > div {
+  --background: var(--system-primary) !important;
+}
+.boxes .box > div:nth-child(2) {
+  --background: var(--system-secondary) !important;
+}
+.boxes .box > div:nth-child(3) {
+  --background: var(--system-button) !important;
+}
+
+/* Vistas de Ventas: búsqueda, tarjetas de resumen e íconos. */
+.ventas-filter-form,
+.ventas-resumen-card {
+  box-shadow: 0 10px 24px
+    color-mix(in srgb, var(--system-secondary) 16%, transparent) !important;
+}
+.ventas-search-btn {
+  background: var(--system-button) !important;
+  box-shadow: 0 8px 16px
+    color-mix(in srgb, var(--system-secondary) 25%, transparent) !important;
+}
+.ventas-search-btn:hover {
+  background: var(--system-secondary) !important;
+}
+.ventas-resumen-card .ventas-resumen-icon {
+  color: var(--system-primary) !important;
+  background: color-mix(in srgb, var(--system-primary) 12%, #fff) !important;
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--system-secondary) 20%, transparent) !important;
+}
+
+/* Selección y hover de filas. */
+.fila-producto:hover,
+.fila-producto.selected td {
+  background-color: var(--system-primary) !important;
+  color: #fff !important;
+}
+.tablas-todo tbody tr:hover td {
+  background-color: color-mix(
+    in srgb,
+    var(--system-primary) 10%,
+    #fff
+  ) !important;
+}
+.table-empty-state {
+  min-height: 54px;
+  padding: 0.85rem 1rem !important;
+  vertical-align: middle !important;
+  color: #71817d !important;
+  text-align: center !important;
+}
+.fila-producto.selected:hover td {
+  background-color: var(--system-primary) !important;
+  color: #fff !important;
+}
+
+/* Paginadores: prevalece sobre los estilos locales de cada listado, incluidos
+   Productos, modales de compra y el selector móvil de Caja. */
+.pagination .page-item .page-link,
+.pagination .page-item > .page-link,
+.compras-product-pagination .pagination .page-item .page-link,
+.caja-mobile-pagination .pagination .page-item .page-link {
+  color: var(--system-primary) !important;
+  border-color: color-mix(in srgb, var(--system-primary) 22%, #fff) !important;
+  background-color: #fff !important;
+}
+
+.pagination .page-item:not(.active):not(.disabled) .page-link:hover,
+.compras-product-pagination
+  .pagination
+  .page-item:not(.active):not(.disabled)
+  .page-link:hover,
+.caja-mobile-pagination
+  .pagination
+  .page-item:not(.active):not(.disabled)
+  .page-link:hover {
+  color: var(--system-primary) !important;
+  border-color: var(--system-primary) !important;
+  background-color: color-mix(
+    in srgb,
+    var(--system-primary) 11%,
+    #fff
+  ) !important;
+}
+
+.pagination .page-item.active .page-link,
+.compras-product-pagination .pagination .page-item.active .page-link,
+.caja-mobile-pagination .pagination .page-item.active .page-link {
+  color: #fff !important;
+  border-color: var(--system-primary) !important;
+  background-color: var(--system-primary) !important;
+}
+
+.pagination .page-item.disabled .page-link {
+  color: color-mix(in srgb, var(--system-secondary) 40%, #fff) !important;
+  border-color: color-mix(
+    in srgb,
+    var(--system-secondary) 13%,
+    #fff
+  ) !important;
+  background-color: color-mix(
+    in srgb,
+    var(--system-secondary) 4%,
+    #fff
+  ) !important;
+}
+
+/* Compras: selectores de recepción/proveedor y celdas numéricas alineadas. */
+.provselect > p {
+  margin: 0 0 0.42rem;
+  color: var(--system-primary);
+  font-weight: 700;
+}
+.provselect .select-container > .btn.form-control {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid color-mix(in srgb, var(--system-primary) 28%, #fff) !important;
+  border-radius: 9px !important;
+  color: #344640 !important;
+  background: color-mix(in srgb, var(--system-primary) 4%, #fff) !important;
+  box-shadow: inset 0 1px 1px
+    color-mix(in srgb, var(--system-secondary) 8%, transparent) !important;
+}
+.provselect .select-container > .btn.form-control:focus,
+.provselect .select-container > .btn.form-control:hover {
+  border-color: var(--system-primary) !important;
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--system-secondary) 16%, transparent) !important;
+}
+.provselect .select-container .dropdown-menu {
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--system-primary) 25%, #fff) !important;
+  border-radius: 9px !important;
+  box-shadow: 0 10px 24px
+    color-mix(in srgb, var(--system-secondary) 18%, transparent) !important;
+}
+.provselect .select-container .search-box {
+  border-bottom-color: color-mix(
+    in srgb,
+    var(--system-primary) 18%,
+    #fff
+  ) !important;
+}
+.provselect .select-container .search-box input:focus {
+  border-color: var(--system-primary) !important;
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--system-secondary) 14%, transparent) !important;
+}
+.provselect .select-container .options button:hover,
+.provselect .select-container .options button:focus {
+  background-color: color-mix(
+    in srgb,
+    var(--system-primary) 9%,
+    #fff
+  ) !important;
+  color: var(--system-primary) !important;
+}
+.ubicacionselect {
+  display: grid !important;
+  grid-template-columns: max-content minmax(250px, 330px);
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+.ubicacionselect > p {
+  margin: 0 !important;
+  align-self: center;
+  color: var(--system-primary);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.ubicacionselect .form-group {
+  width: 100%;
+  margin: 0 !important;
+}
+.ubicacionselect .select-container {
+  z-index: 20;
+}
+.ubicacionselect .select-container > .btn.form-control {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid color-mix(in srgb, var(--system-primary) 28%, #fff) !important;
+  border-radius: 9px !important;
+  color: #344640 !important;
+  background: color-mix(in srgb, var(--system-primary) 4%, #fff) !important;
+  box-shadow: inset 0 1px 1px
+    color-mix(in srgb, var(--system-secondary) 8%, transparent) !important;
+}
+.ubicacionselect .select-container > .btn.form-control:hover,
+.ubicacionselect .select-container > .btn.form-control:focus {
+  border-color: var(--system-primary) !important;
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--system-secondary) 16%, transparent) !important;
+}
+.ubicacionselect .select-container .dropdown-menu {
+  z-index: 30;
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--system-primary) 25%, #fff) !important;
+  border-radius: 9px !important;
+  box-shadow: 0 10px 24px
+    color-mix(in srgb, var(--system-secondary) 18%, transparent) !important;
+}
+.ubicacionselect .select-container .search-box {
+  border-bottom-color: color-mix(
+    in srgb,
+    var(--system-primary) 18%,
+    #fff
+  ) !important;
+}
+.ubicacionselect .select-container .search-box input:focus {
+  border-color: var(--system-primary) !important;
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--system-secondary) 14%, transparent) !important;
+}
+.ubicacionselect .select-container .options button:hover,
+.ubicacionselect .select-container .options button:focus {
+  background-color: color-mix(
+    in srgb,
+    var(--system-primary) 9%,
+    #fff
+  ) !important;
+  color: var(--system-primary) !important;
+}
+.tablas-todo td:has(.precio-input),
+.tablas-todo td:has(.cantidad-input) {
+  vertical-align: middle !important;
+  text-align: center !important;
+}
+.tablas-todo .precio-input,
+.tablas-todo .cantidad-input {
+  display: inline-block;
+  margin: 0 auto;
+}
+
+/* Caja de escritorio: las búsquedas y el total también usan el tema. */
+#codigo_busqueda,
+#busqueda {
+  border-color: color-mix(in srgb, var(--system-primary) 28%, #fff) !important;
+  box-shadow: 0 3px 10px
+    color-mix(in srgb, var(--system-secondary) 13%, transparent) !important;
+}
+#codigo_busqueda:focus,
+#busqueda:focus {
+  border-color: var(--system-primary) !important;
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--system-secondary) 17%, transparent) !important;
+}
+.detalle .total_pagar {
+  background-color: color-mix(
+    in srgb,
+    var(--system-primary) 15%,
+    #fff
+  ) !important;
+}
+
+/* Caja móvil: botón principal y tarjetas seleccionadas como el selector de compras. */
+.caja-mobile-add {
+  background: var(--system-button) !important;
+  box-shadow: 0 5px 14px
+    color-mix(in srgb, var(--system-secondary) 24%, transparent) !important;
+}
+.caja-mobile-add:hover {
+  background: var(--system-secondary) !important;
+}
+.caja-mobile-product.selected {
+  border-color: var(--system-primary) !important;
+  background: color-mix(in srgb, var(--system-primary) 12%, #fff) !important;
+  box-shadow: inset 3px 0 var(--system-primary) !important;
+}
+.caja-mobile-product > i,
+.caja-mobile-product strong::before,
+.caja-mobile-product__price,
+.caja-mobile-modal-footer span i {
+  color: var(--system-primary) !important;
+}
+.caja-mobile-product.selected > i {
+  color: var(--system-primary) !important;
+  background: color-mix(in srgb, var(--system-primary) 14%, #fff) !important;
+}
+
+/* Detalles de devolución: cantidad compacta y legible, sin el cuadro rígido. */
+.dv-cantidad-input {
+  width: 118px !important;
+  min-height: 40px;
+  padding: 0.45rem 0.8rem !important;
+  border: 1px solid color-mix(in srgb, var(--system-primary) 36%, #fff) !important;
+  border-radius: 999px !important;
+  color: var(--system-primary) !important;
+  background: color-mix(in srgb, var(--system-primary) 6%, #fff) !important;
+  box-shadow: inset 0 1px 1px
+    color-mix(in srgb, var(--system-secondary) 9%, transparent) !important;
+}
+.dv-cantidad-input:focus {
+  border-color: var(--system-primary) !important;
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--system-secondary) 18%, transparent) !important;
+}
+
+/* Devoluciones listadas y administración de caja: sombra secundaria e iconos. */
+#tablaDevolucionesVenta,
+#tablaDevolucionesVenta + * {
+  box-shadow: 0 6px 18px
+    color-mix(in srgb, var(--system-secondary) 14%, transparent) !important;
+}
+.tabla-container:has(#tablaDevolucionesVenta) {
+  box-shadow: 0 6px 18px
+    color-mix(in srgb, var(--system-secondary) 14%, transparent) !important;
+}
+.cajas-manager-filters,
+.cajas-manager-filters .filter-input {
+  box-shadow: 0 5px 16px
+    color-mix(in srgb, var(--system-secondary) 13%, transparent) !important;
+}
+.cajas-manager-filters .filter-label i {
+  color: var(--system-primary) !important;
+}
+.cajas-manager-filters.filters-card {
+  border: 0 !important;
+  background: #fff !important;
+}
+.cajas-manager-filters .filter-label {
+  color: var(--system-primary) !important;
+}
+.cajas-manager-filters .filter-input:focus {
+  border-color: var(--system-primary) !important;
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--system-secondary) 17%, transparent) !important;
+}
+
+/* Resumen de compra. */
+.compra-resumen {
+  border-color: color-mix(in srgb, var(--system-primary) 22%, #fff) !important;
+  box-shadow: 0 5px 16px
+    color-mix(in srgb, var(--system-secondary) 15%, transparent) !important;
+}
+.compra-resumen__encabezado {
+  background: var(--system-primary) !important;
+}
+.compra-resumen__icono {
+  color: var(--system-primary) !important;
+  background: color-mix(in srgb, var(--system-primary) 11%, #fff) !important;
+}
+
+/* Precio y cantidad de compras: control táctil y solo contenido numérico. */
+.tablas-todo .precio-input,
+.tablas-todo .cantidad-input {
+  width: 112px !important;
+  min-height: 39px;
+  padding: 0.45rem 0.6rem !important;
+  border: 1px solid color-mix(in srgb, var(--system-primary) 30%, #fff) !important;
+  border-radius: 9px !important;
+  background: color-mix(in srgb, var(--system-primary) 4%, #fff) !important;
+  color: #263b36 !important;
+  font-weight: 650;
+  text-align: center;
+  box-shadow: inset 0 1px 1px
+    color-mix(in srgb, var(--system-secondary) 8%, transparent) !important;
+}
+.tablas-todo .precio-input:focus,
+.tablas-todo .cantidad-input:focus {
+  border-color: var(--system-primary) !important;
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--system-secondary) 18%, transparent) !important;
+}
+
+/* Inventario mantiene sus textos legibles al pasar el cursor. */
+.fila-producto:hover,
+.fila-producto:hover td,
+.fila-producto:hover .precio-descuento,
+.fila-producto:hover small,
+.fila-producto:hover .text-decoration-line-through {
+  color: inherit !important;
+}
+.fila-producto:hover td {
+  background-color: color-mix(
+    in srgb,
+    var(--system-primary) 10%,
+    #fff
+  ) !important;
+}
+.fila-producto.selected td,
+.fila-producto.selected:hover td {
+  background-color: var(--system-primary) !important;
+  color: #fff !important;
+}
+
+/* Caja: los controles de cantidad y el selector del cupón siguen el tema elegido. */
+.btn_add,
+.btn_quantity-minus {
+  background-color: var(--system-button) !important;
+  border-color: var(--system-button) !important;
+  box-shadow: 0 3px 8px
+    color-mix(in srgb, var(--system-secondary) 18%, transparent) !important;
+}
+.btn-primary#btnAbrirCaja {
+  border-color: var(--system-button) !important;
+  background: var(--system-button) !important;
+  color: #fff !important;
+}
+.btn-primary#btnAbrirCaja:hover,
+.btn-primary#btnAbrirCaja:focus {
+  border-color: var(--system-secondary) !important;
+  background: var(--system-secondary) !important;
+}
+.cliente-whatsapp-option {
+  padding: 0.75rem 0.9rem 0.75rem 3rem !important;
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, var(--system-primary) 5%, #fff);
+}
+.cliente-whatsapp-option .form-check-input {
+  border-color: var(--system-primary) !important;
+  accent-color: var(--system-primary);
+}
+.cliente-whatsapp-option .form-check-input:checked {
+  border-color: var(--system-primary) !important;
+  background-color: var(--system-primary) !important;
+}
+.cliente-whatsapp-option .form-check-input:focus {
+  border-color: var(--system-primary) !important;
+  box-shadow: 0 0 0 0.2rem
+    color-mix(in srgb, var(--system-primary) 18%, transparent) !important;
+  outline: 0 !important;
+}
+.cliente-whatsapp-option .form-check-label {
+  color: var(--system-secondary);
+  font-weight: 700;
+}
+.cliente-whatsapp-option .form-check-label i {
+  color: var(--system-primary);
+  font-size: 1.08rem;
+}
+.cliente-whatsapp-option .form-check-label small {
+  display: block;
+  margin-top: 0.18rem;
+  color: var(--text-color-light);
+  font-weight: 400;
+}
+.btn_add:hover,
+.btn_quantity-minus:hover {
+  background-color: var(--system-secondary) !important;
+  border-color: var(--system-secondary) !important;
+}
+.swal2-select.caja-descuento-select {
+  width: min(100%, 28rem) !important;
+  min-height: 3rem !important;
+  margin: 1.15rem auto 0.4rem !important;
+  padding: 0.65rem 2.6rem 0.65rem 0.85rem !important;
+  border: 1px solid color-mix(in srgb, var(--system-primary) 42%, #fff) !important;
+  border-radius: 0.75rem !important;
+  background-color: color-mix(
+    in srgb,
+    var(--system-primary) 5%,
+    #fff
+  ) !important;
+  color: var(--system-secondary) !important;
+  font-weight: 600 !important;
+  box-shadow: 0 3px 12px
+    color-mix(in srgb, var(--system-secondary) 12%, transparent) !important;
+}
+.swal2-select.caja-descuento-select:focus {
+  border-color: var(--system-primary) !important;
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--system-secondary) 18%, transparent) !important;
+}
+
+/* Cuadre de caja: conserva la misma jerarquía cromática que Configuración. */
+.cuadre-caja-kicker,
+.cuadre-caja-title,
+.summary-card__icon,
+.summary-card h3,
+.count-card__header h5,
+.count-card__hint,
+.cuadre-table .subtotal {
+  color: var(--system-primary) !important;
+}
+.cuadre-caja-kicker,
+.count-card__hint {
+  background: color-mix(in srgb, var(--system-primary) 12%, #fff) !important;
+}
+.status-pill {
+  background: var(--system-primary) !important;
+  color: #fff !important;
+}
+.cuadre-caja-header {
+  background: #fff !important;
+  border: 0 !important;
+  box-shadow: 0 4px 14px
+    color-mix(in srgb, var(--system-secondary) 8%, transparent) !important;
+}
+.summary-card,
+.count-card,
+.count-card__header {
+  border: 0 !important;
+}
+.summary-card,
+.count-card,
+.difference-card {
+  box-shadow: 0 4px 14px
+    color-mix(in srgb, var(--system-secondary) 8%, transparent) !important;
+}
+.summary-card:hover {
+  box-shadow: 0 5px 16px
+    color-mix(in srgb, var(--system-secondary) 10%, transparent) !important;
+}
+.summary-card__icon {
+  background: #f2f4f5 !important;
+}
+.difference-card {
+  background: var(--system-primary) !important;
+}
+.cuadre-table thead th {
+  background: var(--system-primary) !important;
+  border-color: var(--system-primary) !important;
+  color: #fff !important;
+}
+.cuadre-table tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--system-primary) 5%, #fff) !important;
+}
+.cuadre-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--system-primary) 10%, #fff) !important;
+}
+.count-card .card-body {
+  padding: 1rem 1.15rem 1.15rem !important;
+}
+.count-card .table-responsive {
+  overflow: hidden;
+  border: 0 !important;
+  border-radius: 0.9rem;
+}
+.cuadre-table {
+  margin-bottom: 0 !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+.cuadre-table thead th {
+  border-top: 0 !important;
+}
+.cuadre-table thead th:first-child {
+  border-top-left-radius: 0.8rem;
+}
+.cuadre-table thead th:last-child {
+  border-top-right-radius: 0.8rem;
+}
+.cuadre-table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 0.8rem;
+}
+.cuadre-table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 0.8rem;
+}
+.cuadre-table td,
+.cuadre-table th {
+  border: 0 !important;
+  padding: 0.8rem 0.9rem !important;
+  vertical-align: middle !important;
+}
+#btnCerrarCuadre {
+  background: var(--system-button) !important;
+  color: #fff !important;
+  box-shadow: 0 3px 8px
+    color-mix(in srgb, var(--system-secondary) 10%, transparent) !important;
+}
+#btnCerrarCuadre:hover {
+  background: var(--system-secondary) !important;
+}
+
+/* Inventario: el estado seleccionado debe prevalecer sobre las franjas y hover. */
+#tablaProductos tbody tr.fila-producto.selected > td,
+#tablaProductos tbody tr.fila-producto.selected:hover > td {
+  background: var(--system-primary) !important;
+  color: #fff !important;
+}
+
+/* Selector de proveedor/recepción: etiqueta y campo conservan una composición limpia. */
+.provselect {
+  display: grid !important;
+  grid-template-columns: max-content minmax(250px, 330px);
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+.provselect > p {
+  margin: 0 !important;
+  align-self: center;
+  white-space: nowrap;
+}
+.provselect .form-group {
+  width: 100%;
+  margin: 0 !important;
+}
+.provselect .select-container {
+  z-index: 20;
+}
+.provselect .select-container .dropdown-menu {
+  z-index: 30;
+}
+@media (max-width: 1032px) {
+  .provselect {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
+  .ubicacionselect {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
+}
+
+/* Selector de cliente: filas claras, seleccionables y coherentes con el resto de tablas. */
+.table-picker-cliente {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--system-primary) 20%, #fff) !important;
+  border-radius: 12px;
+  box-shadow: 0 5px 16px
+    color-mix(in srgb, var(--system-secondary) 13%, transparent) !important;
+}
+.table-picker-cliente tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--system-primary) 5%, #fff) !important;
+}
+.table-picker-cliente tbody tr:hover td {
+  background: color-mix(in srgb, var(--system-primary) 11%, #fff) !important;
+  color: #263b36 !important;
+}
+.table-picker-cliente tbody tr {
+  cursor: pointer;
+}
+
+/* Cierre del menú móvil. */
+.nav__mobile-close {
+  color: var(--system-primary) !important;
+  background: color-mix(in srgb, var(--system-primary) 11%, #fff) !important;
+  box-shadow: 0 3px 10px
+    color-mix(in srgb, var(--system-secondary) 16%, transparent) !important;
+}
+.nav__mobile-close:hover {
+  color: #fff !important;
+  background: var(--system-button) !important;
+}
+
+/* Cargador global del Manager, equivalente al de inicio de sesión. */
+.manager-loader-overlay {
+  background: color-mix(in srgb, #fff 88%, var(--system-secondary)) !important;
+}
+.manager-loader-boxes .box > div {
+  --background: var(--system-primary) !important;
+}
+.manager-loader-boxes .box > div:nth-child(2) {
+  --background: var(--system-secondary) !important;
+}
+.manager-loader-boxes .box > div:nth-child(3) {
+  --background: var(--system-button) !important;
+}
+.manager-loader-boxes .box > div:nth-child(4) {
+  --background: color-mix(in srgb, var(--system-primary) 16%, #fff) !important;
+}
+
+/* Combo: encabezado, tarjetas, campos, carga de imagen y selección. */
+.combos-intro {
+  background: linear-gradient(
+    120deg,
+    var(--system-secondary),
+    var(--system-primary)
+  ) !important;
+  box-shadow: 0 10px 24px
+    color-mix(in srgb, var(--system-secondary) 28%, transparent) !important;
+}
+.combos-card,
+.combos-list-card {
+  box-shadow: 0 5px 16px
+    color-mix(in srgb, var(--system-secondary) 16%, transparent) !important;
+}
+.combos-card__head,
+.combos-card__head > i,
+.combos-stock,
+.combos-subtotal,
+.combos-cost strong,
+.combos-note i,
+.combos-image-upload__box,
+.combos-image-upload__box i {
+  color: var(--system-primary) !important;
+}
+.combos-cost {
+  background: color-mix(in srgb, var(--system-primary) 10%, #fff) !important;
+}
+.combos-fields input:focus,
+.combos-prices input:focus,
+.combos-search:focus-within {
+  border-color: var(--system-primary) !important;
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--system-secondary) 18%, transparent) !important;
+}
+.combos-product-option:hover,
+.combos-image-upload:hover .combos-image-upload__box {
+  border-color: var(--system-primary) !important;
+  background: color-mix(in srgb, var(--system-primary) 8%, #fff) !important;
+}
+.combos-product-option.is-selected {
+  border-color: var(--system-primary) !important;
+  background: color-mix(in srgb, var(--system-primary) 13%, #fff) !important;
+  box-shadow: inset 3px 0 var(--system-primary) !important;
+}
+.combos-product-option.is-selected b,
+.combos-product-option b,
+.combos-pagination button {
+  color: var(--system-primary) !important;
+}
+.combos-pagination button.is-current {
+  border-color: var(--system-primary) !important;
+  background: var(--system-primary) !important;
+  color: #fff !important;
+}
+.combos-pagination button:not(.is-current):not(:disabled) {
+  border-color: color-mix(in srgb, var(--system-primary) 22%, #fff) !important;
+  background: #fff !important;
+}
+.combos-pagination button:not(.is-current):not(:disabled):hover {
+  border-color: var(--system-primary) !important;
+  background: color-mix(in srgb, var(--system-primary) 11%, #fff) !important;
+}
+.combos-pagination button:disabled {
+  color: color-mix(in srgb, var(--system-secondary) 40%, #fff) !important;
+}
+.combos-qty {
+  border-color: color-mix(in srgb, var(--system-primary) 34%, #fff) !important;
+  background: color-mix(in srgb, var(--system-primary) 5%, #fff) !important;
+  color: var(--system-primary) !important;
+  box-shadow: inset 0 1px 1px
+    color-mix(in srgb, var(--system-secondary) 8%, transparent) !important;
+}
+.combos-qty:focus {
+  border-color: var(--system-primary) !important;
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--system-secondary) 17%, transparent) !important;
+}
+.combos-image-upload__box {
+  border-color: color-mix(in srgb, var(--system-primary) 46%, #fff) !important;
+  background: color-mix(in srgb, var(--system-primary) 5%, #fff) !important;
+  box-shadow: inset 0 1px 1px
+    color-mix(in srgb, var(--system-secondary) 8%, transparent) !important;
+}
+.combos-image-upload__box img {
+  border-color: color-mix(in srgb, var(--system-primary) 24%, #fff) !important;
+}
+.combos-empty:hover td {
+  background: color-mix(in srgb, var(--system-primary) 10%, #fff) !important;
+  color: inherit !important;
+}
+
+/* Filas alternas: conserva el blanco y usa una variante suave del color principal. */
+.tablas-todo tbody tr:nth-child(even) td {
+  background-color: color-mix(
+    in srgb,
+    var(--system-primary) 5%,
+    #fff
+  ) !important;
+}
+.tablas-todo tbody tr:nth-child(odd) td {
+  background-color: #fff !important;
+}
+.fila-producto:hover,
+.fila-producto.selected td {
+  background-color: var(--system-primary) !important;
+  color: #fff !important;
+}
+.tablas-todo tbody tr:hover td {
+  background-color: color-mix(
+    in srgb,
+    var(--system-primary) 10%,
+    #fff
+  ) !important;
+}
+
+/* Las lupas son botones del sistema, tanto en el encabezado como en modales. */
+.header__search-group .dv-header-search__button,
+.header__search-group .header__search > .header__icon,
+.dv-header-search__button {
+  border-color: var(--system-button) !important;
+  background-color: var(--system-button) !important;
+  color: #fff !important;
+}
+.dv-header-search__button:hover {
+  background-color: var(--system-secondary) !important;
+}
+
+/* Devoluciones de venta: resultado de la búsqueda, mensajes y campos. */
+.dv-header-search .header__input,
+.dv-cantidad-input {
+  border-color: color-mix(in srgb, var(--system-primary) 28%, #fff) !important;
+  box-shadow: 0 2px 8px
+    color-mix(in srgb, var(--system-secondary) 12%, transparent) !important;
+}
+.dv-card {
+  border-color: color-mix(in srgb, var(--system-primary) 18%, #fff) !important;
+  box-shadow: 0 6px 18px
+    color-mix(in srgb, var(--system-secondary) 14%, transparent) !important;
+}
+.dv-factura-card {
+  border-left-color: var(--system-primary) !important;
+}
+.dv-factura-title > i,
+.dv-section-head h5 {
+  color: var(--system-primary) !important;
+}
+
+/* Configuración: previsualizaciones, cargas de archivos y diseño de factura. */
+.config-card {
+  border-color: color-mix(in srgb, var(--system-primary) 18%, #fff) !important;
+  box-shadow: 0 4px 14px
+    color-mix(in srgb, var(--system-secondary) 14%, transparent) !important;
+}
+.config-logo-preview,
+.config-banner-preview,
+.config-carrusel-preview {
+  border-color: color-mix(in srgb, var(--system-primary) 46%, #fff) !important;
+  background: color-mix(in srgb, var(--system-primary) 5%, #fff) !important;
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--system-secondary) 8%, transparent) !important;
+}
+.config-banner-default,
+.config-logo-content strong,
+.config-summary > i,
+.config-invoice-design i {
+  color: var(--system-primary) !important;
+}
+.config-banner-default {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--system-primary) 10%, #fff),
+    color-mix(in srgb, var(--system-primary) 24%, #fff)
+  ) !important;
+}
+.config-carrusel-nav {
+  background: color-mix(
+    in srgb,
+    var(--system-secondary) 82%,
+    transparent
+  ) !important;
+}
+.config-carrusel-nav:hover {
+  background: var(--system-button) !important;
+}
+.config-carrusel-dots button.active {
+  background: var(--system-primary) !important;
+}
+.config-invoice-design label {
+  border-color: color-mix(in srgb, var(--system-primary) 24%, #fff) !important;
+  color: var(--system-primary) !important;
+}
+.config-invoice-design label:has(input:checked) {
+  border-color: var(--system-primary) !important;
+  background: color-mix(in srgb, var(--system-primary) 10%, #fff) !important;
+  box-shadow: 0 3px 10px
+    color-mix(in srgb, var(--system-secondary) 14%, transparent) !important;
+}
+.config-invoice-design input {
+  accent-color: var(--system-primary) !important;
+}
+
+/* Selector de productos reutilizado por Compras, edición y Traslados. */
+.compras-product-modal__content {
+  border-color: color-mix(in srgb, var(--system-primary) 22%, #fff) !important;
+  box-shadow: 0 12px 32px
+    color-mix(in srgb, var(--system-secondary) 20%, transparent) !important;
+}
+.compras-product-search input:focus {
+  border-color: var(--system-primary) !important;
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--system-secondary) 18%, transparent) !important;
+}
+.compras-product-search .dv-header-search__button,
+.combos-search .dv-header-search__button {
+  border-color: var(--system-button) !important;
+  background: var(--system-button) !important;
+  box-shadow: 0 4px 10px
+    color-mix(in srgb, var(--system-secondary) 20%, transparent) !important;
+}
+.compras-product-search .dv-header-search__button:hover,
+.combos-search .dv-header-search__button:hover {
+  background: var(--system-secondary) !important;
+}
+.compras-product-option.productosstyle:hover {
+  border-color: var(--system-primary) !important;
+  background: color-mix(in srgb, var(--system-primary) 6%, #fff) !important;
+}
+.compras-product-option.seleccionado {
+  border-color: var(--system-primary) !important;
+  background: color-mix(in srgb, var(--system-primary) 12%, #fff) !important;
+  box-shadow: inset 3px 0 var(--system-primary) !important;
+}
+.compras-product-option.seleccionado small,
+.compras-product-option.seleccionado .compras-product-option__action,
+.compras-product-option__action,
+.compras-product-modal__footer span i {
+  color: var(--system-primary) !important;
+}
+.compras-product-pagination .page-item.active .page-link {
+  border-color: var(--system-primary) !important;
+  background: var(--system-primary) !important;
+}
+.fila-producto.selected:hover td {
+  background-color: var(--system-primary) !important;
+  color: #fff !important;
+}
+
+/* Ajustes finales sobre reglas heredadas de Inventario y Devoluciones. */
+.dv-cantidad-input {
+  width: 118px !important;
+  min-height: 40px;
+  padding: 0.45rem 0.8rem !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--system-primary) 6%, #fff) !important;
+}
+.fila-producto:hover,
+.fila-producto:hover td,
+.fila-producto:hover .precio-descuento,
+.fila-producto:hover small,
+.fila-producto:hover .text-decoration-line-through {
+  color: inherit !important;
+}
+.fila-producto:hover td {
+  background-color: color-mix(
+    in srgb,
+    var(--system-primary) 10%,
+    #fff
+  ) !important;
+}
+.fila-producto.selected td,
+.fila-producto.selected:hover td {
+  background-color: var(--system-primary) !important;
+  color: #fff !important;
+}

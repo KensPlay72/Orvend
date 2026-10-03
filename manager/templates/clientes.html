@@ -1,12 +1,12 @@
 {% extends "menu.html" %}
-{% load static %}
+{% load static pagination_tags %}
 {% block title %}Clientes{% endblock %}
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 {% endblock %}
 {% block titulo_content %}
     <div class="tituloscont">
-        <img class="logop" src="{% static 'img/LH.png' %}" alt="">
+        <img class="logop" src="{% static 'img/LH.webp' %}" alt="">
         <p class="header__logo">| Clientes</p>
     </div>
 {% endblock %}
@@ -49,10 +49,20 @@
             </div>
         </div>
     </div>
-        <button id="toggleDropdownPanel" class="btn-dropdown" data-bs-toggle="modal"
-            data-bs-target="#modalregis">
-            <i class="bx bx-plus-circle"></i> Agregar
-        </button>
+        <div class="clientes-actions">
+            <button id="toggleDropdownPanel" class="btn-dropdown" data-bs-toggle="modal"
+                data-bs-target="#modalregis">
+                <i class="bx bx-plus-circle"></i> Agregar
+            </button>
+            <button type="button"
+                    id="exportarClientesExcel"
+                    class="clientes-export-btn"
+                    data-export-url="{% url 'exportar_clientes_excel' %}"
+                    aria-label="Exportar clientes a Excel"
+                    title="Exportar a Excel">
+                <i class="bx bx-spreadsheet" aria-hidden="true"></i> Exportar
+            </button>
+        </div>
 </div>
 
         {% comment %} MODAL REGISTRAR {% endcomment %}
@@ -238,6 +248,19 @@
                                 >
 
                             </div>
+
+                            {% if perms.manager.enviar_facturas_whatsapp %}
+                            <div class="form-check form-switch mt-3 cliente-whatsapp-option">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       role="switch"
+                                       id="enviarFacturaWhatsapp">
+                                <label class="form-check-label" for="enviarFacturaWhatsapp">
+                                    <i class="bx bxl-whatsapp" aria-hidden="true"></i>
+                                    Enviar facturas por WhatsApp
+                                </label>
+                            </div>
+                            {% endif %}
 
                             <br>
 
@@ -593,6 +616,19 @@
 
                             </div>
 
+                            {% if perms.manager.enviar_facturas_whatsapp %}
+                            <div class="form-check form-switch mt-3 cliente-whatsapp-option">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       role="switch"
+                                       id="enviarFacturaWhatsappedit">
+                                <label class="form-check-label" for="enviarFacturaWhatsappedit">
+                                    <i class="bx bxl-whatsapp" aria-hidden="true"></i>
+                                    Enviar facturas por WhatsApp
+                                </label>
+                            </div>
+                            {% endif %}
+
                             <br>
 
 
@@ -808,11 +844,11 @@
                 <td>{{ cliente.empresa|default:"--" }}</td>
                 <td>{{ cliente.telefono|default:"--" }}</td>
 
-                <td>
+                <td class="estado-centrado">
                     {% if cliente.is_active %}
-                        <span class="estado-circulo estado-activo" title="Activo"></span>
+                        <span class="badge bg-success">Activo</span>
                     {% else %}
-                        <span class="estado-circulo estado-inactivo" title="Inactivo"></span>
+                        <span class="badge bg-danger">Inactivo</span>
                     {% endif %}
                 </td>
 
@@ -829,10 +865,30 @@
                     {% endif %}
                 </td>
             </tr>
+            {% empty %}
+            <tr><td colspan="8" class="text-center table-empty-state">No hay clientes registrados.</td></tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+        <nav class="d-flex justify-content-center mt-4" aria-label="Páginas de clientes">
+            <ul class="pagination">
+                <li class="page-item {% if not clientes.has_previous %}disabled{% endif %}">
+                    {% if clientes.has_previous %}
+                        <a class="page-link" href="?page={{ clientes.previous_page_number }}&search={{ search|urlencode }}">«</a>
+                    {% else %}<span class="page-link">«</span>{% endif %}
+                </li>
+                {% paginas_cercanas clientes.number clientes.paginator.num_pages as paginas_visibles %}
+                {% for p in paginas_visibles %}
+                    <li class="page-item {% if p == clientes.number %}active{% endif %}"><a class="page-link" href="?page={{ p }}&search={{ search|urlencode }}">{{ p }}</a></li>
+                {% endfor %}
+                <li class="page-item {% if not clientes.has_next %}disabled{% endif %}">
+                    {% if clientes.has_next %}
+                        <a class="page-link" href="?page={{ clientes.next_page_number }}&search={{ search|urlencode }}">»</a>
+                    {% else %}<span class="page-link">»</span>{% endif %}
+                </li>
+            </ul>
+        </nav>
         <br>
         <script src="{% static 'js/clientes.js' %}?v=credito-permisos-20260907"></script>
         <script src="{% static 'js/chektext.js' %}"></script>

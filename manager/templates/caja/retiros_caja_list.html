@@ -1,0 +1,103 @@
+{% extends "menu.html" %} 
+{% load static pagination_tags %} 
+{% block title %}Listado de retiros de caja{% endblock %} 
+{% block extra_css %}
+<link
+  rel="stylesheet"
+  href="{% static 'css/manager.css' %}"
+/>
+{% endblock %} 
+{% block titulo_content %}
+<div class="tituloscont">
+  <img
+    class="logop"
+    src="{% static 'img/LH.webp' %}"
+    alt="logo"
+    width="0"
+    height="0"
+  />
+  <p class="header__logo">| Listado de retiros de caja</p>
+</div>
+{% endblock %} 
+{% block main_content %}
+<div class="tabla">
+  <div class="tabla-container">
+    <table class="tablas-todo" id="tablaRetirosCaja">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Cajero</th>
+          <th>Monto</th>
+          <th>Estado</th>
+          <th>Observación</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for retiro in retiros %}
+        <tr>
+          <td>{{ retiro.f_creacion|date:"d/m/Y h:i A" }}</td>
+          <td>{{ retiro.cajero_nombre }}</td>
+          <td>L. {{ retiro.monto|floatformat:2 }}</td>
+          <td>
+            {% if retiro.estado == "PENDIENTE" %}
+            <span class="badge bg-warning text-dark">Pendiente</span>
+            {% elif retiro.estado == "COMPLETADO" %}
+            <span class="badge bg-success">Completado</span>
+            {% else %}
+            <span class="badge bg-danger">Cancelado</span>
+            {% endif %}
+          </td>
+          <td>{{ retiro.observaciones|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center table-empty-state">
+            Aún no hay retiros registrados.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<nav class="d-flex justify-content-center mt-4">
+  <ul class="pagination">
+    <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+      {% if page_obj.has_previous %}
+        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&search={{ search }}">«</a>
+      {% else %}
+        <span class="page-link">«</span>
+      {% endif %}
+    </li>
+    {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
+    {% for p in paginas_visibles %}
+      <li class="page-item {% if p == page_obj.number %}active{% endif %}">
+        <a class="page-link" href="?page={{ p }}&search={{ search }}">{{ p }}</a>
+      </li>
+    {% endfor %}
+    <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+      {% if page_obj.has_next %}
+        <a class="page-link" href="?page={{ page_obj.next_page_number }}&search={{ search }}">»</a>
+      {% else %}
+        <span class="page-link">»</span>
+      {% endif %}
+    </li>
+  </ul>
+</nav>
+<script>
+  document
+    .getElementById("buscarRetiros")
+    .addEventListener("input", (event) => {
+      const query = event.target.value.toLocaleLowerCase().trim();
+      document
+        .querySelectorAll("#tablaRetirosCaja tbody tr")
+        .forEach((fila) => {
+          fila.style.display = fila.textContent
+            .toLocaleLowerCase()
+            .includes(query)
+            ? ""
+            : "none";
+        });
+    });
+</script>
+{% endblock %}

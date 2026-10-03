@@ -1,0 +1,311 @@
+.retiros-shell {
+  padding: 1.25rem;
+}
+
+.retiros-header,
+.retiro-caja-card {
+  border: 1px solid color-mix(in srgb, var(--system-primary) 18%, #fff);
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 8px 20px
+    color-mix(in srgb, var(--system-secondary) 9%, transparent);
+}
+
+.retiros-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.retiros-header__icon,
+.retiro-caja-card__icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 0.85rem;
+  background: color-mix(in srgb, var(--system-primary) 12%, #fff);
+  color: var(--system-primary);
+  font-size: 1.4rem;
+}
+
+.retiros-header span,
+.retiros-header h2 {
+  color: var(--system-primary);
+  font-weight: 800;
+}
+
+.retiros-header span {
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.retiros-header h2 {
+  margin: 0.2rem 0;
+}
+
+.retiros-header p {
+  margin: 0;
+  color: var(--text-color);
+}
+
+.retiros-list-link {
+  margin-left: auto;
+  border-radius: 0.65rem;
+  padding: 0.65rem 0.8rem;
+  background: var(--system-button);
+  color: #fff;
+  font-weight: 700;
+}
+
+.retiros-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 320px));
+  justify-content: start;
+  gap: 1rem;
+}
+
+.retiros-grid:has(.retiros-empty) {
+  display: block;
+}
+
+.retiro-caja-card {
+  padding: 1rem;
+}
+
+.retiro-caja-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.retiro-caja-card small,
+.retiro-caja-card__amount span {
+  color: var(--text-color-light);
+  font-size: 0.78rem;
+}
+
+.retiro-caja-card h4 {
+  margin: 0.3rem 0;
+  color: var(--system-secondary);
+}
+
+.retiro-caja-card p {
+  margin: 0;
+  color: var(--text-color-light);
+  font-size: 0.8rem;
+}
+
+.retiro-caja-card__amount {
+  margin: 1rem 0;
+  padding: 0.8rem;
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, var(--system-primary) 6%, #fff);
+}
+
+.retiro-caja-card__amount strong {
+  display: block;
+  color: var(--system-primary);
+  font-size: 1.35rem;
+}
+
+.btn-retiro {
+  border: 0;
+  border-radius: 0.7rem;
+  padding: 0.7rem;
+  background: var(--system-button);
+  color: #fff;
+  font-weight: 700;
+}
+
+.retiro-status {
+  padding: 0.28rem 0.55rem;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--system-primary) 12%, #fff);
+  color: var(--system-primary);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.retiros-empty {
+  display: flex;
+  width: 100%;
+  min-height: 220px;
+  justify-self: stretch;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 2rem;
+  border: 1px dashed color-mix(in srgb, var(--system-primary) 34%, #fff);
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #fff, color-mix(in srgb, var(--system-primary) 5%, #fff));
+  color: var(--text-color);
+  text-align: center;
+}
+
+.retiros-empty__icon {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  margin-bottom: .75rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--system-primary) 12%, #fff);
+  color: var(--system-primary);
+  font-size: 1.7rem;
+}
+
+.retiros-empty h3 {
+  margin: 0;
+  color: var(--system-secondary);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.retiros-empty p {
+  max-width: 360px;
+  margin: .35rem 0 0;
+  color: var(--text-color-light);
+}
+
+/* El modal conserva el componente estándar que usan Marcas y Clientes. */
+.retiro-modal textarea.form-control {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.retiro-modal__summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.8rem;
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, var(--system-primary) 7%, #fff);
+}
+
+.retiro-modal__summary > i {
+  color: var(--system-primary);
+  font-size: 1.35rem;
+}
+
+.retiro-modal__summary div:last-child {
+  margin-left: auto;
+}
+
+.retiro-modal__summary small,
+.retiro-modal__summary strong {
+  display: block;
+}
+
+.retiro-modal__summary small {
+  color: var(--text-color-light);
+  font-size: 0.72rem;
+}
+
+.retiro-modal__summary strong {
+  color: var(--system-secondary);
+}
+
+.retiro-modal #guardarRetiro {
+  margin: 0;
+}
+
+.retiros-hero {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.15rem 1.35rem;
+  border-radius: 13px;
+  color: #fff;
+  background: linear-gradient(
+    120deg,
+    var(--system-secondary),
+    var(--system-primary)
+  );
+  box-shadow: 0 10px 24px
+    color-mix(in srgb, var(--system-secondary) 18%, transparent);
+}
+
+.retiros-hero__icon {
+  display: grid;
+  width: 50px;
+  height: 50px;
+  place-items: center;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 16%);
+  font-size: 1.6rem;
+}
+
+.retiros-hero p {
+  margin: 0 0 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  opacity: 0.8;
+  text-transform: uppercase;
+}
+
+.retiros-hero h1 {
+  margin: 0;
+  font-size: 1.28rem;
+}
+
+.retiros-hero span {
+  display: block;
+  margin-top: 0.22rem;
+  font-size: 0.86rem;
+  opacity: 0.88;
+}
+
+.retiros-hero .retiros-list-link {
+  background: rgb(255 255 255 / 16%);
+  color: #fff;
+}
+
+.retiros-table-container {
+  margin-top: 1rem;
+}
+
+@media (max-width: 1032px) {
+  .retiros-shell {
+    padding: 0.8rem;
+  }
+
+  .retiros-header,
+  .retiros-hero {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .retiros-list-link {
+    margin-left: 0;
+  }
+
+  .retiros-hero {
+    align-items: center;
+    flex-wrap: nowrap;
+  }
+
+  .retiros-hero > div:nth-child(2) {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .retiros-hero .retiros-list-link {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    margin-left: auto;
+    padding: 0;
+    place-items: center;
+  }
+
+  .retiros-grid {
+    grid-template-columns: 1fr;
+  }
+}

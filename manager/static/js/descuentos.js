@@ -22,6 +22,7 @@ function initDropdown(hiddenInputId, remoteSearchFn = null) {
   const container = hiddenInput.nextElementSibling;
 
   const selectBtn = container.querySelector("button");
+  selectBtn.dataset.placeholder = selectBtn.textContent.trim();
 
   const dropdown = container.querySelector(".dropdown-menu");
 
@@ -54,6 +55,9 @@ function initDropdown(hiddenInputId, remoteSearchFn = null) {
   selectBtn.addEventListener("click", async (e) => {
     e.stopPropagation();
 
+    document.querySelectorAll(".descuento-modal .dropdown-menu.show").forEach((menu) => {
+      if (menu !== dropdown) menu.classList.remove("show");
+    });
     dropdown.classList.toggle("show");
 
     searchInput.focus();
@@ -125,7 +129,7 @@ async function fetchProductos(term, optionsContainer) {
 
     optionsContainer.innerHTML += `
             <div class="list-group-item active bg-light text-dark fw-bold">
-                ${term ? "Resultados encontrados" : "Sugerencias recientes"}
+                ${term ? "Resultados encontrados" : "Más utilizadas"}
             </div>
         `;
 
@@ -183,7 +187,7 @@ async function fetchCategorias(term, optionsContainer) {
 
     optionsContainer.innerHTML += `
             <div class="list-group-item active bg-light text-dark fw-bold">
-                ${term ? "Resultados encontrados" : "Sugerencias recientes"}
+                ${term ? "Resultados encontrados" : "Más utilizadas"}
             </div>
         `;
 
@@ -223,6 +227,23 @@ initDropdown("productoidedit", fetchProductos);
 
 initDropdown("categoriaid", fetchCategorias);
 initDropdown("categoriaidedit", fetchCategorias);
+
+document.querySelectorAll("[data-integer-only]").forEach((input) => {
+  input.addEventListener("input", () => {
+    input.value = input.value.replace(/[^0-9]/g, "");
+  });
+});
+
+function limpiarSelector(hiddenInputId) {
+  const hiddenInput = document.getElementById(hiddenInputId);
+  if (!hiddenInput) return;
+
+  hiddenInput.value = "";
+  const boton = hiddenInput.nextElementSibling?.querySelector("button");
+  if (boton) {
+    boton.textContent = boton.dataset.placeholder || "Seleccionar";
+  }
+}
 
 //----------------
 // LOGICA EXCLUSIVA
@@ -269,9 +290,9 @@ function toggleAplicarProductos(checked) {
   if (checked) {
     aplicarCategorias.checked = false;
     contenedorCategorias.style.display = "none";
-    document.getElementById("categoriaid").value = "";
+    limpiarSelector("categoriaid");
   } else {
-    document.getElementById("productoid").value = "";
+    limpiarSelector("productoid");
   }
 }
 
@@ -282,9 +303,9 @@ function toggleAplicarProductosEdit(checked) {
   if (checked) {
     aplicarCategoriasEdit.checked = false;
     contenedorCategoriasEdit.style.display = "none";
-    document.getElementById("categoriaidedit").value = "";
+    limpiarSelector("categoriaidedit");
   } else {
-    document.getElementById("productoidedit").value = "";
+    limpiarSelector("productoidedit");
   }
 }
 
@@ -295,9 +316,9 @@ function toggleAplicarCategorias(checked) {
   if (checked) {
     aplicarProductos.checked = false;
     contenedorProductos.style.display = "none";
-    document.getElementById("productoid").value = "";
+    limpiarSelector("productoid");
   } else {
-    document.getElementById("categoriaid").value = "";
+    limpiarSelector("categoriaid");
   }
 }
 
@@ -308,9 +329,9 @@ function toggleAplicarCategoriasEdit(checked) {
   if (checked) {
     aplicarProductosEdit.checked = false;
     contenedorProductosEdit.style.display = "none";
-    document.getElementById("productoidedit").value = "";
+    limpiarSelector("productoidedit");
   } else {
-    document.getElementById("categoriaidedit").value = "";
+    limpiarSelector("categoriaidedit");
   }
 }
 

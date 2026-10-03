@@ -1,7 +1,7 @@
 
 {% extends "menu.html" %}
 
-{% load static %}
+{% load static pagination_tags %}
 
 {% block title %}
 Cajas Manager
@@ -24,7 +24,7 @@ Cajas Manager
 
     <img
         class="logop"
-        src="{% static 'img/LH.png' %}"
+        src="{% static 'img/LH.webp' %}"
         alt=""
     >
 
@@ -47,7 +47,7 @@ Cajas Manager
 
 <form
     method="GET"
-    class="mb-4 filters-card"
+    class="mb-4 filters-card cajas-manager-filters"
 >
 
     <div class="row g-3 align-items-end">
@@ -106,7 +106,7 @@ Cajas Manager
 
         <!-- BOTONES -->
 
-        <div class="col-md-3 d-flex align-items-end gap-2">
+        <div class="col-md-3 cajas-manager-filters__actions">
 
             <button
                 type="submit"
@@ -166,11 +166,19 @@ Cajas Manager
                 </th>
 
                 <th>
-                    Total cierre
+                    Total vendido
                 </th>
 
                 <th>
-                    Cierre
+                    Retiros
+                </th>
+
+                <th>
+                    Total 
+                </th>
+
+                <th>
+                    Cerró con
                 </th>
 
                 <th>
@@ -219,6 +227,39 @@ Cajas Manager
 
                 </td>
 
+                <!-- TOTAL VENDIDO: no se descuenta por los retiros -->
+                <td>
+
+                    {% if caja.estado == "cerrada" %}
+
+                        L.
+                        {{ caja.ventas|floatformat:2 }}
+
+                    {% else %}
+
+                        <span class="text-muted">—</span>
+
+                    {% endif %}
+
+                </td>
+
+
+                <!-- RETIROS COMPLETADOS EN EL CIERRE -->
+                <td>
+
+                    {% if caja.estado == "cerrada" %}
+
+                        L.
+                        {{ caja.retiros_total|floatformat:2 }}
+
+                    {% else %}
+
+                        <span class="text-muted">—</span>
+
+                    {% endif %}
+
+                </td>
+
 
                 <!-- TOTAL CIERRE -->
 
@@ -247,7 +288,7 @@ Cajas Manager
                     {% if caja.estado == "cerrada" %}
 
                         L.
-                        {{ caja.monto_cierre|floatformat:2 }}
+                        {{ caja.cerro_con|floatformat:2 }}
 
                     {% else %}
 
@@ -266,21 +307,21 @@ Cajas Manager
 
                     {% if caja.estado == "cerrada" %}
 
-                        {% if caja.diferencia > 0 %}
+                        {% if caja.diferencia_general > 0 %}
 
                             <span class="text-success fw-bold">
 
                                 + L.
-                                {{ caja.diferencia|floatformat:2 }}
+                                {{ caja.diferencia_general|floatformat:2 }}
 
                             </span>
 
-                        {% elif caja.diferencia < 0 %}
+                        {% elif caja.diferencia_general < 0 %}
 
                             <span class="text-danger fw-bold">
 
                                 - L.
-                                {{ caja.diferencia|stringformat:"s"|slice:"1:" }}
+                                {{ caja.diferencia_general|stringformat:"s"|slice:"1:" }}
 
                             </span>
 
@@ -342,7 +383,7 @@ Cajas Manager
             <tr>
 
                 <td
-                    colspan="7"
+                    colspan="9"
                     class="text-center py-4"
                 >
 
@@ -445,7 +486,8 @@ Cajas Manager
 
         <!-- PÁGINAS -->
 
-        {% for p in page_obj.paginator.page_range %}
+        {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
+        {% for p in paginas_visibles %}
 
             <li
                 class="page-item

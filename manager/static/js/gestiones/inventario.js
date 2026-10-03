@@ -1,86 +1,90 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const tbody = document.querySelector(".tablas-todo tbody");
+  const tbody = document.querySelector("#tablaProductos tbody");
+  const img = document.getElementById("imgProducto");
+  const cargando = document.getElementById("imagenCargando");
+  const sinImagen = document.getElementById("sinImagenProducto");
+  let solicitudActual = 0;
 
-  tbody.addEventListener("click", (e) => {
-    const fila = e.target.closest("tr.fila-producto");
-    if (!fila) return;
+  const ocultarEstadosImagen = () => {
+    cargando.classList.add("d-none");
+    sinImagen.classList.add("d-none");
+  };
 
-    // quitar selección de TODAS las filas visibles
-    document
-      .querySelectorAll(".fila-producto.selected")
-      .forEach((f) => f.classList.remove("selected"));
+  const mostrarCargandoImagen = () => {
+    ocultarEstadosImagen();
+    img.removeAttribute("src");
+    img.classList.add("d-none");
+    cargando.classList.remove("d-none");
+  };
 
-    // activar seleccionada
-    fila.classList.add("selected");
-  });
-});
-
-document.addEventListener("DOMContentLoaded", () => {
-  const tbody = document.querySelector(".tablas-todo tbody");
-  const loader = document.getElementById("loader");
+  const mostrarSinImagen = (mensaje = "El producto no tiene una imagen cargada") => {
+    ocultarEstadosImagen();
+    img.removeAttribute("src");
+    img.classList.add("d-none");
+    sinImagen.querySelector("span").textContent = mensaje;
+    sinImagen.classList.remove("d-none");
+  };
 
   tbody.addEventListener("click", async (e) => {
     const fila = e.target.closest("tr.fila-producto");
     if (!fila) return;
 
     const idProducto = fila.dataset.id;
+    const solicitud = ++solicitudActual;
 
-    // selección visual
     document
       .querySelectorAll(".fila-producto.selected")
-      .forEach((f) => f.classList.remove("selected"));
-
+      .forEach((item) => item.classList.remove("selected"));
     fila.classList.add("selected");
-
-    // loader
-    if (loader) loader.style.display = "flex";
+    mostrarCargandoImagen();
 
     try {
       const response = await fetch(`/manager/inventario/${idProducto}/`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { Accept: "application/json" },
       });
 
-      const data = await response.json();
+      if (!response.ok) throw new Error("No se pudo obtener el producto");
 
-      //aquí luego pintamos imagen + tabla
+      const data = await response.json();
+      if (solicitud !== solicitudActual) return;
+
       renderInventario(data);
-    } catch (err) {
-    } finally {
-      if (loader) loader.style.display = "none";
+
+      if (!data.producto.tieneImagen) {
+        mostrarSinImagen();
+        return;
+      }
+
+      img.onload = () => {
+        if (solicitud !== solicitudActual) return;
+        ocultarEstadosImagen();
+        img.classList.remove("d-none");
+      };
+
+      img.onerror = () => {
+        if (solicitud !== solicitudActual) return;
+        mostrarSinImagen("No fue posible cargar la imagen del producto");
+      };
+
+      img.src = data.producto.imagenUrl;
+    } catch (error) {
+      if (solicitud === solicitudActual) {
+        mostrarSinImagen("No fue posible cargar la información del producto");
+      }
     }
   });
 });
 
 function renderInventario(data) {
-  const producto = data.producto;
-
-  // imagen
-  const img = document.getElementById("imgProducto");
-  img.src = producto.imagenUrl;
-  img.style.display = "block";
-
-  // =========================
-  // RESET: poner todo en 0
-  // =========================
   document.querySelectorAll("#tablaInventarioBody tr").forEach((tr) => {
     tr.querySelector(".cantidad").textContent = "0";
   });
 
-  // =========================
-  // ACTUALIZAR SOLO EXISTENTES
-  // =========================
   data.inventario.forEach((item) => {
-    // buscar fila por ubicación
     const fila = document.querySelector(
       `#tablaInventarioBody tr[data-id="${item.ubicacion}"]`,
     );
-    if (fila) {
-      const tdCantidad = fila.querySelector(".cantidad");
 
-      tdCantidad.textContent = item.cantidad;
-    }
+    if (fila) fila.querySelector(".cantidad").textContent = item.cantidad;
   });
 }
