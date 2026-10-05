@@ -4,9 +4,11 @@
     Inventario
 {% endblock title %}
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/inventario.css' %}?v=20261005-tabla-inventario-07" />
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 {% endblock extra_css %}
+{% block page_css_overrides %}
+<link rel="stylesheet" href="{% static 'css/inventario.css' %}?v=20261005-css-unificado-10" />
+{% endblock page_css_overrides %}
 {% block titulo_content %}
     <div class="tituloscont">
         <img class="logop"

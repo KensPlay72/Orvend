@@ -379,7 +379,7 @@
     border: 1px solid #dce4e8;
     border-radius: 1rem;
     background: #fff;
-    transition: border-color .25s ease, box-shadow .25s ease;
+    transition: border-color .6s ease, box-shadow .6s ease;
   }
   .inventario-mobile-card.is-open {
     border-color: color-mix(in srgb, var(--system-primary) 38%, #dce4e8);
@@ -427,15 +427,15 @@
     background: #f2f4f8;
     font-size: 1.45rem;
     justify-self: center;
-    transition: background-color .25s ease, color .25s ease;
+    transition: background-color .6s ease, color .6s ease;
   }
-  .inventario-mobile-card__chevron i { transition: transform .35s ease; }
+  .inventario-mobile-card__chevron i { transition: transform .6s cubic-bezier(.22,1,.36,1); }
   .inventario-mobile-card.is-open .inventario-mobile-card__chevron { color: #fff; background: var(--system-primary); }
   .inventario-mobile-card.is-open .inventario-mobile-card__chevron i { transform: rotate(180deg); }
-  .inventario-mobile-card__detail { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .42s cubic-bezier(.2,.8,.2,1); }
-  .inventario-mobile-card.is-open .inventario-mobile-card__detail { grid-template-rows: 1fr; }
-  .inventario-mobile-card__detail-inner { min-height: 0; overflow: hidden; }
-  .inventario-mobile-card.is-open .inventario-mobile-card__detail-inner { padding: 0 1rem 1rem; }
+  /* Al cerrar se recorta el detalle completo, sin recalcular ni desplazar sus títulos. */
+  .inventario-mobile-card__detail { display: block; max-height: 0; overflow: hidden; transition: max-height .65s cubic-bezier(.22,1,.36,1); }
+  .inventario-mobile-card.is-open .inventario-mobile-card__detail { max-height: 12rem; }
+  .inventario-mobile-card__detail-inner { min-height: 0; overflow: hidden; padding: 0 1rem 1rem; }
   .inventario-mobile-card__detail-inner > section { min-width: 0; }
   .inventario-mobile-card__detail-inner { display: grid; grid-template-columns: minmax(8.5rem, .75fr) minmax(0, 1.25fr); gap: .75rem; }
   .inventario-mobile-card__detail-inner > section > span { display: block; margin: 0 0 .48rem; color: var(--system-secondary); font-size: .68rem; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
@@ -505,6 +505,10 @@
     border-color: #edf2f1;
   }
 
+  /* Presentación, marca, código y precio nunca se dividen en dos renglones. */
+  .tabl .tablas-todo th:nth-child(n + 2),
+  .tabl .tablas-todo td:nth-child(n + 2) { white-space: nowrap; }
+
   .inventario-desktop-producto {
     display: flex;
     align-items: center;
@@ -524,8 +528,9 @@
      primera celda. Aquí el estado visual vive siempre en todas las celdas. */
   .tabl .fila-producto { transition: background-color .2s ease, box-shadow .2s ease; }
   .tabl .fila-producto:hover { background-color: transparent !important; color: inherit !important; }
-  .tabl .fila-producto:hover td { background: color-mix(in srgb, var(--system-primary, #32877f) 5%, #fff) !important; color: inherit !important; }
-  .tabl .fila-producto.selected td { color: #263b36 !important; background: color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff) !important; }
+  .tabl .fila-producto:hover > td { background: color-mix(in srgb, var(--system-primary, #32877f) 5%, #fff) !important; color: inherit !important; }
+  .tabl .fila-producto.selected > td,
+  .tabl .fila-producto.selected:hover > td { color: #fff !important; background: var(--system-primary, #32877f) !important; }
   .tabl .fila-producto.selected td:first-child { box-shadow: inset 3px 0 0 var(--system-primary, #32877f); }
   .tabl .fila-producto.selected .inventario-desktop-producto strong { color: #fff; }
   .tabl .fila-producto.selected .inventario-desktop-producto__icon { color: #fff; background: var(--system-primary, #32877f); }

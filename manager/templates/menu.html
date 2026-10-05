@@ -16,6 +16,8 @@
         <link rel="stylesheet" href="{% static 'css/menu.css' %}?v=20261004-notificaciones-altura">
         <link rel="stylesheet" href="{% static 'css/carga_manager.css' %}?v=20260920">
         <link rel="stylesheet" href="{% static 'css/tema_sistema.css' %}">
+        {% block page_css_overrides %}
+        {% endblock page_css_overrides %}
         <title>
             {% block title %}
             {% endblock title %}
