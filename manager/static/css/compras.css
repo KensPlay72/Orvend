@@ -258,7 +258,7 @@
 .compras-modal-summary {
   width: min(100%, 420px);
   margin: 1rem 0 0 auto;
-  border: 1px solid var(--color-principal, #6f2c91);
+  border: 1px solid var(--system-primary, #32877f);
   border-radius: 10px;
   overflow: hidden;
   background: #fff;
@@ -277,8 +277,26 @@
 }
 
 .compras-modal-summary__item--total {
-  color: var(--color-principal, #6f2c91);
-  background: color-mix(in srgb, var(--color-principal, #6f2c91) 7%, white);
+  color: var(--system-primary, #32877f);
+  background: color-mix(in srgb, var(--system-primary, #32877f) 7%, white);
+}
+
+/* Los dos flujos de compra comparten el mismo modal y respetan el tema activo. */
+#completarcompra .modal-title {
+  color: var(--system-primary, #32877f);
+}
+
+#completarcompra #tablacomprar thead th {
+  border-color: color-mix(in srgb, var(--system-primary, #32877f) 76%, #fff);
+  background: var(--system-primary, #32877f);
+  color: #fff;
+}
+
+#completarcompra .form-control:focus,
+#completarcompra .form-select:focus {
+  border-color: var(--system-primary, #32877f);
+  box-shadow: 0 0 0 0.2rem
+    color-mix(in srgb, var(--system-primary, #32877f) 16%, transparent);
 }
 .divbuttons3 {
   width: 100%;

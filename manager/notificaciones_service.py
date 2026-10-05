@@ -15,7 +15,7 @@ def estado_notificaciones_usuario(usuario):
         leida=False,
     )
     notificaciones = list(
-        pendientes.select_related("retiro_caja").order_by("-f_creacion")[:8]
+        pendientes.select_related("retiro_caja").order_by("-f_creacion")
     )
 
     def serializar(notificacion):

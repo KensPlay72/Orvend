@@ -4,8 +4,8 @@
     Realizar Compra
 {% endblock title %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/compras.css' %}?v=20261004-inputs-compactos" />
-    <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261003-mobile-sheet" />
+    <link rel="stylesheet" href="{% static 'css/compras.css' %}?v=20261004-modal-tema" />
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261004-sheet-max" />
 {% endblock extra_css %}
 {% block titulo_content %}
     <div class="tituloscont">
@@ -182,5 +182,5 @@
             <div class="totalcompleto" id="contador-productos">Productos: 0</div>
         </div>
     </div>
-    <script type="module" src="{% static 'js/compras/realcompra.js' %}?v=20261004-presentacion-abrev"></script>
+    <script type="module" src="{% static 'js/compras/realcompra.js' %}?v=20261004-paginacion-modal"></script>
 {% endblock main_content %}

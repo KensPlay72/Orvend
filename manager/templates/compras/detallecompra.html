@@ -3,7 +3,7 @@
 {% block title %}Detalle Compra{% endblock %}
 {% block extra_css %}
         <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
-        <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20260928-tracker" />
+        <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261004-tracker-space" />
         <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}?v=20261003-mobile-cards" />
 {% endblock %}
 {% block titulo_content %}
@@ -317,6 +317,6 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 
 {% include "bodega/_tracking_compra.html" with tracking=compra.tracking %}
-<script src="{% static 'js/bodega/tracking_compra.js' %}?v=20260928-01"></script>
+<script src="{% static 'js/bodega/tracking_compra.js' %}?v=20261004-space"></script>
 
 {% endblock %}

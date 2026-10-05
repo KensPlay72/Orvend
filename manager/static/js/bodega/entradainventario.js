@@ -258,6 +258,71 @@ document.addEventListener(
 );
 
 document.addEventListener("DOMContentLoaded", () => {
+  const entradaIdActual = document.getElementById("entrada-id")?.value || "";
+  const tipoEntradaActual = document.getElementById("tipo-entrada")?.value || "";
+  const claveBorrador = `orvend:recepcion:${tipoEntradaActual}:${entradaIdActual}`;
+
+  const leerBorrador = () => {
+    try {
+      return JSON.parse(sessionStorage.getItem(claveBorrador)) || {};
+    } catch (_) {
+      return {};
+    }
+  };
+
+  const escribirBorrador = (borrador) => {
+    try {
+      sessionStorage.setItem(claveBorrador, JSON.stringify(borrador));
+    } catch (_) {
+      // La recepción sigue funcionando aunque el navegador bloquee el almacenamiento.
+    }
+  };
+
+  const filasProducto = (productoId) =>
+    Array.from(document.querySelectorAll(".recepcion-product-row")).filter(
+      (fila) => fila.querySelector(".producto-id")?.value === String(productoId),
+    );
+
+  const guardarProducto = (fila) => {
+    const productoId = fila.querySelector(".producto-id")?.value;
+    if (!productoId) return;
+    const cantidad = Number(fila.querySelector(".cantidad-recepcion")?.value || 0);
+    const borrador = leerBorrador();
+
+    if (cantidad <= 0) {
+      delete borrador[productoId];
+      escribirBorrador(borrador);
+      return;
+    }
+
+    borrador[productoId] = {
+      ProductoId: Number(productoId),
+      Nombre: fila.dataset.productoNombre || "",
+      Presentacion: fila.dataset.presentacion || "",
+      Sku: fila.dataset.sku || "",
+      CantidadComprada: Number(fila.dataset.cantidadSolicitada) || 0,
+      CantidadRecibida: cantidad,
+      FvencimientoISO: fila.querySelector(".fecha-vencimiento")?.value || null,
+    };
+    escribirBorrador(borrador);
+  };
+
+  const restaurarBorrador = () => {
+    const borrador = leerBorrador();
+    Object.values(borrador).forEach((producto) => {
+      filasProducto(producto.ProductoId).forEach((fila) => {
+        const maximo = Number(fila.dataset.cantidadSolicitada) || 0;
+        const cantidad = Math.min(Number(producto.CantidadRecibida) || 0, maximo);
+        producto.CantidadRecibida = cantidad;
+        const input = fila.querySelector(".cantidad-recepcion");
+        const fecha = fila.querySelector(".fecha-vencimiento");
+        if (input) input.value = cantidad > 0 ? cantidad : "";
+        if (fecha && producto.FvencimientoISO) fecha.value = producto.FvencimientoISO;
+      });
+    });
+    escribirBorrador(borrador);
+  };
+
   // =====================================================
   // VALIDAR CANTIDADES
   // =====================================================
@@ -272,7 +337,15 @@ document.addEventListener("DOMContentLoaded", () => {
         const cantidadMaxima = Number(row.dataset.cantidadSolicitada) || 0;
         let valorIngresado = parseFloat(this.value);
 
-        if (this.value === "") return;
+        if (this.value === "") {
+          const productoId = row.querySelector(".producto-id")?.value;
+          filasProducto(productoId).forEach((otraFila) => {
+            const otroInput = otraFila.querySelector(".cantidad-recepcion");
+            if (otroInput && otroInput !== this) otroInput.value = "";
+          });
+          guardarProducto(row);
+          return;
+        }
 
         if (valorIngresado > cantidadMaxima) {
           this.value = cantidadMaxima;
@@ -281,11 +354,28 @@ document.addEventListener("DOMContentLoaded", () => {
         if (valorIngresado < 0) {
           this.value = 0;
         }
+
+        const productoId = row.querySelector(".producto-id")?.value;
+        filasProducto(productoId).forEach((otraFila) => {
+          const otroInput = otraFila.querySelector(".cantidad-recepcion");
+          if (otroInput && otroInput !== this) otroInput.value = this.value;
+        });
+        guardarProducto(row);
+      });
+
+      row.querySelector(".fecha-vencimiento")?.addEventListener("change", (event) => {
+        const productoId = row.querySelector(".producto-id")?.value;
+        filasProducto(productoId).forEach((otraFila) => {
+          const otraFecha = otraFila.querySelector(".fecha-vencimiento");
+          if (otraFecha && otraFecha !== event.target) otraFecha.value = event.target.value;
+        });
+        guardarProducto(row);
       });
     });
   }
 
   validarCantidades();
+  restaurarBorrador();
 
   // =====================================================
   // ABRIR MODAL PREVIEW
@@ -293,44 +383,16 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("toggleDropdownPanel32")
     .addEventListener("click", function () {
-      const rows = Array.from(document.querySelectorAll(".recepcion-product-row"))
-        .filter((row) => row.offsetParent !== null);
-      const productos = [];
-
-      rows.forEach((row) => {
-        const cantidadInput = row.querySelector(".cantidad-recepcion");
-
-        const cantidadRecibida =
-          cantidadInput && cantidadInput.value !== ""
-            ? parseFloat(cantidadInput.value)
-            : 0;
-
-        if (cantidadRecibida > 0) {
-          const productoId = row.querySelector(".producto-id").value;
-          const nombre = row.dataset.productoNombre || "";
-          const presentacion = row.dataset.presentacion || "";
-          const sku = row.dataset.sku || "";
-          const cantidadSolicitada = Number(row.dataset.cantidadSolicitada) || 0;
-
-          const fvencimientoInput = row.querySelector(".fecha-vencimiento");
-          let fvencimiento = null;
-
-          if (fvencimientoInput && fvencimientoInput.value) {
-            const partes = fvencimientoInput.value.split("-");
-            fvencimiento = `${partes[2]}/${partes[1]}/${partes[0]}`;
+      const productos = Object.values(leerBorrador())
+        .filter((producto) => Number(producto.CantidadRecibida) > 0)
+        .map((producto) => {
+          let vencimiento = null;
+          if (producto.FvencimientoISO) {
+            const partes = producto.FvencimientoISO.split("-");
+            vencimiento = `${partes[2]}/${partes[1]}/${partes[0]}`;
           }
-
-          productos.push({
-            ProductoId: parseInt(productoId),
-            Nombre: nombre,
-            Presentacion: presentacion,
-            Sku: sku,
-            CantidadComprada: cantidadSolicitada,
-            CantidadRecibida: cantidadRecibida,
-            Fvencimiento: fvencimiento,
-          });
-        }
-      });
+          return { ...producto, Fvencimiento: vencimiento };
+        });
 
       if (productos.length === 0) {
         Swal.fire({
@@ -482,6 +544,7 @@ document.addEventListener("DOMContentLoaded", () => {
         Swal.close();
 
         if (data.success) {
+          sessionStorage.removeItem(claveBorrador);
           if (modalInstance) modalInstance.hide();
 
           Swal.fire({

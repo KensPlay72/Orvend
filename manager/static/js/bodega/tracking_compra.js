@@ -8,17 +8,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const storageKey = `orvend:purchase-tracker:${tracker.dataset.trackerKey}`;
     let previous = null;
 
-    const reservarEspacioParaPaginador = () => {
+    const reservarEspacioParaContenido = () => {
       const paginador = document.getElementById("paginadordecom");
-      if (!paginador) return;
       const alturaTracker = Math.ceil(tracker.getBoundingClientRect().height);
-      paginador.style.marginBottom = `${alturaTracker + 28}px`;
+      document.body.classList.add("purchase-tracker-visible");
+      document.documentElement.style.setProperty(
+        "--purchase-tracker-space",
+        `${alturaTracker + 36}px`,
+      );
+      if (paginador) paginador.style.marginBottom = "0";
     };
 
-    reservarEspacioParaPaginador();
-    window.addEventListener("resize", reservarEspacioParaPaginador);
+    reservarEspacioParaContenido();
+    window.addEventListener("resize", reservarEspacioParaContenido);
     if ("ResizeObserver" in window) {
-      new ResizeObserver(reservarEspacioParaPaginador).observe(tracker);
+      new ResizeObserver(reservarEspacioParaContenido).observe(tracker);
     }
 
     try {
@@ -50,7 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
           step.classList.toggle("is-complete", index <= currentStep);
           step.classList.toggle("is-current", index === currentStep);
         });
-        reservarEspacioParaPaginador();
+        reservarEspacioParaContenido();
       }, 120);
     });
 

@@ -203,6 +203,10 @@
   z-index: 1041;
 }
 
+body.purchase-tracker-visible .main {
+  padding-bottom: var(--purchase-tracker-space, 110px) !important;
+}
+
 @media (max-width: 1032px) {
   .purchase-tracker {
     bottom: 0.65rem;
@@ -700,13 +704,13 @@
   .modal-sheet-mobile--auto.fade .modal-dialog {
     min-height: 0;
     height: auto;
-    max-height: min(82dvh, 620px);
+    max-height: min(88dvh, 720px);
     justify-content: flex-end;
   }
 
   .modal-sheet-mobile.modal-sheet-mobile--auto .modal-content {
     height: auto;
-    max-height: min(82dvh, 620px);
+    max-height: min(88dvh, 720px);
   }
 
   .modal-sheet-mobile.modal-sheet-mobile--auto .modal-body {

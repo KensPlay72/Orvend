@@ -589,7 +589,7 @@
   #completarcompra.modal-sheet-mobile .modal-content,
   #devo.modal-sheet-mobile .modal-content {
     height: auto;
-    max-height: min(82dvh, 620px);
+    max-height: min(88dvh, 720px);
     border-radius: 22px 22px 0 0;
   }
 
@@ -625,7 +625,7 @@
      contenido se desplaza dentro de ella sin llevarse el encabezado ni acciones. */
   #completarcompra.modal-sheet-mobile--auto .modal-body,
   #devo.modal-sheet-mobile--auto .modal-body {
-    max-height: calc(82dvh - 7.5rem);
+    max-height: calc(88dvh - 7.5rem);
     overflow-y: auto;
   }
 

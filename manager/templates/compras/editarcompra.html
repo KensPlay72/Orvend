@@ -2,8 +2,8 @@
 {% load static %}
 {% block title %}Editar Compra{% endblock %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
-    <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261003-mobile-sheet" />
+    <link rel="stylesheet" href="{% static 'css/compras.css' %}?v=20261004-modal-tema" />
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261004-sheet-max" />
 {% endblock %}
 {% block titulo_content %}
     <div class="tituloscont">
@@ -203,5 +203,5 @@
     </div>
     {{ compra|json_script:"compraData" }}
     <script>const compra = JSON.parse(document.getElementById("compraData").textContent);</script>
-    <script type="module" src="{% static 'js/compras/editcompras.js' %}?v=20261003-default-webp"></script>
+    <script type="module" src="{% static 'js/compras/editcompras.js' %}?v=20261004-paginacion-modal"></script>
 {% endblock %}

@@ -279,7 +279,7 @@ function renderPaginacion(currentPage, totalPages, search) {
   const liPrev = document.createElement("li");
   liPrev.classList.add("page-item");
   if (currentPage === 1) liPrev.classList.add("disabled");
-  liPrev.innerHTML = `<a class="page-link" href="#">«</a>`;
+  liPrev.innerHTML = `<button type="button" class="page-link">«</button>`;
   liPrev.addEventListener("click", (e) => {
     e.preventDefault();
     if (currentPage > 1) cargarProductos(currentPage - 1, search);
@@ -290,7 +290,7 @@ function renderPaginacion(currentPage, totalPages, search) {
     const li = document.createElement("li");
     li.classList.add("page-item");
     if (p === currentPage) li.classList.add("active");
-    li.innerHTML = `<a class="page-link" href="#">${p}</a>`;
+    li.innerHTML = `<button type="button" class="page-link">${p}</button>`;
     li.addEventListener("click", (e) => {
       e.preventDefault();
       if (p !== currentPage) cargarProductos(p, search);
@@ -301,7 +301,7 @@ function renderPaginacion(currentPage, totalPages, search) {
   const liNext = document.createElement("li");
   liNext.classList.add("page-item");
   if (currentPage === totalPages) liNext.classList.add("disabled");
-  liNext.innerHTML = `<a class="page-link" href="#">»</a>`;
+  liNext.innerHTML = `<button type="button" class="page-link">»</button>`;
   liNext.addEventListener("click", (e) => {
     e.preventDefault();
     if (currentPage < totalPages) cargarProductos(currentPage + 1, search);
@@ -347,6 +347,10 @@ function agregarProductosSeleccionados() {
   if (agregados) paginaTablaCompra = 1;
   actualizarPaginacionTablaCompra();
   actualizarTotales();
+
+  const buscador = document.getElementById("buscadorProductos");
+  if (buscador) buscador.value = "";
+  cargarProductos(1, "");
 
   const modal = bootstrap.Modal.getInstance(
     document.getElementById("modalregis"),
@@ -702,7 +706,7 @@ function mostrarPaginaComprar(page = 1) {
   const crearLi = (text, disabled, onclick) => {
     const li = document.createElement("li");
     li.className = "page-item" + (disabled ? " disabled" : "");
-    li.innerHTML = `<a class="page-link" href="#">${text}</a>`;
+    li.innerHTML = `<button type="button" class="page-link">${text}</button>`;
     if (!disabled) {
       li.addEventListener("click", (e) => {
         e.preventDefault();
@@ -720,7 +724,7 @@ function mostrarPaginaComprar(page = 1) {
   for (let p = inicioPagina; p <= finPagina; p++) {
     const li = document.createElement("li");
     li.className = "page-item" + (p === page ? " active" : "");
-    li.innerHTML = `<a class="page-link" href="#">${p}</a>`;
+    li.innerHTML = `<button type="button" class="page-link">${p}</button>`;
     li.addEventListener("click", (e) => {
       e.preventDefault();
       mostrarPaginaComprar(p);
@@ -818,7 +822,7 @@ async function fetchProveedores(term, optionsContainer) {
   data.forEach((p) => {
     optionsContainer.innerHTML += `
             <button type="button" class="list-group-item list-group-item-action" data-value="${p.id}">
-                ${p.nombreLegal} ${p.nombreComercial ? "| " + p.nombreComercial : ""}
+                ${p.nombreLegal}
             </button>
         `;
   });

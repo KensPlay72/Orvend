@@ -5,8 +5,8 @@
 {% endblock title %}
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
-  <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261004-confirmar-sheet" />
-  <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}?v=20261004-modal-footer-mobile" />
+  <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261004-tracker-space" />
+  <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}?v=20261004-sheet-max" />
 {% endblock extra_css %}
 {% block titulo_content %}
   <div class="tituloscont">
@@ -22,7 +22,8 @@
   <div class="divbuttons2 recepcion-confirm-actions">
     <button id="toggleDropdownPanel"
             class="btn-dropdown"
-            onclick="location.href='{% url 'recepcion_inventario' %}'">
+            data-default-url="{% url 'recepcion_inventario' %}"
+            onclick="location.href=sessionStorage.getItem('orvend:recepcion:return-url') || this.dataset.defaultUrl">
       <i class="bx bx-arrow-back"></i> Regresar
     </button>
     <div class="display-flex">
@@ -51,7 +52,7 @@
   <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
   {% if compra.tipo == "Compra" %}
     {% include "bodega/_tracking_compra.html" with tracking=compra.tracking %}
-    <script src="{% static 'js/bodega/tracking_compra.js' %}?v=20260928-01"></script>
+    <script src="{% static 'js/bodega/tracking_compra.js' %}?v=20261004-space"></script>
   {% endif %}
   <!-- ===================================================== -->
   <!-- MODAL CONFIRMACION -->
@@ -414,5 +415,5 @@
     </nav>
   {% endif %}
   <br>
-  <script type="module" src="{% static 'js/bodega/entradainventario.js' %}?v=20261004-recepcion-cards-02"></script>
+  <script type="module" src="{% static 'js/bodega/entradainventario.js' %}?v=20261004-borrador-paginas"></script>
 {% endblock main_content %}

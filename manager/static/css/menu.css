@@ -120,7 +120,9 @@ img {
   z-index: 10001;
 }
 .notifications-panel.show {
-  display: block;
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
 }
 .notifications-panel__header {
   padding: 0.8rem;
@@ -179,11 +181,13 @@ img {
 }
 .notifications-panel {
   width: 350px;
+  max-height: min(72dvh, 620px);
   padding: 0 0.35rem 0.35rem;
   /* Mantiene accesibles las notificaciones cuando se acumulan. */
   overflow: hidden;
 }
 .notifications-panel__header {
+  flex: 0 0 auto;
   width: calc(100% + 0.7rem);
   margin: 0 -0.35rem;
   display: flex;
@@ -197,9 +201,13 @@ img {
   font-size: 0.92rem;
 }
 .notifications-panel__list {
-  max-height: 330px;
+  min-height: 0;
+  flex: 1 1 auto;
+  max-height: min(calc(72dvh - 45px), 575px);
   overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--system-primary) 45%, #fff) transparent;
 }
@@ -814,10 +822,10 @@ Modal Inner Content
     top: 4.55rem;
     right: 0.75rem;
     width: min(350px, calc(100vw - 1.5rem));
-    max-height: min(380px, calc(100vh - 5.5rem));
+    max-height: calc(100dvh - 5.3rem);
   }
   .header__container > .header-notifications .notifications-panel__list {
-    max-height: calc(100vh - 8.55rem);
+    max-height: calc(100dvh - 8.4rem);
   }
   .header__container > .initials-circle {
     display: flex;

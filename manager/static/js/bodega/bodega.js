@@ -2,6 +2,10 @@ document.addEventListener("DOMContentLoaded", function () {
   document.querySelectorAll("[data-detail-url]").forEach((fila) => {
     fila.addEventListener("click", (event) => {
       if (event.target.closest("button, a, input, select, textarea")) return;
+      sessionStorage.setItem(
+        "orvend:recepcion:return-url",
+        `${window.location.pathname}${window.location.search}`,
+      );
       window.location.href = fila.dataset.detailUrl;
     });
   });
@@ -11,6 +15,10 @@ document.addEventListener("DOMContentLoaded", function () {
       const token = this.dataset.token;
       const tipo = this.dataset.tipo;
 
+      sessionStorage.setItem(
+        "orvend:recepcion:return-url",
+        `${window.location.pathname}${window.location.search}`,
+      );
       window.location.href = `/manager/bodega/autorizar/${tipo}/${token}/`;
     });
   });

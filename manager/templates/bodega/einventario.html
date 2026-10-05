@@ -5,13 +5,14 @@
 {% endblock title %}
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
-    <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}?v=20261003-mobile-cards" />
+    <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}?v=20261004-sheet-max" />
 {% endblock extra_css %}
 {% block search_content %}
     <div class="header__search">
         <input type="search"
                placeholder="Buscar"
                class="header__input"
+               value="{{ search }}"
                autocomplete="off" />
         <i class="bx bx-search header__icon"></i>
     </div>
@@ -254,5 +255,5 @@
         </ul>
     </nav>
     <br>
-    <script type="module" src="{% static 'js/bodega/bodega.js' %}?v=20261003-mobile-cards"></script>
+    <script type="module" src="{% static 'js/bodega/bodega.js' %}?v=20261004-pagina-retorno"></script>
 {% endblock main_content %}
