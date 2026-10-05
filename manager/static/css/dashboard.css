@@ -447,7 +447,7 @@
 .alerts-panel {
     grid-column: 2;
     grid-row: 1 / span 2;
-    height: 620px;
+    height: 640px;
     display: flex;
     flex-direction: column;
 }
@@ -455,9 +455,7 @@
 .alerts-panel .panel-body {
     flex: 1 1 auto;
     min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-gutter: stable;
+    overflow: hidden;
 }
 
 .alert-header-icon {
@@ -560,6 +558,13 @@
     flex-direction: column;
 
     gap: 8px;
+
+    /* Espacio para tres alertas; el resto se consulta sin desplazar el panel. */
+    height: 190px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    padding-right: 4px;
 }
 
 
@@ -880,7 +885,7 @@
     .alerts-panel {
         grid-column: auto;
         grid-row: auto;
-        height: 440px;
+        height: 640px;
         min-height: 0;
     }
 

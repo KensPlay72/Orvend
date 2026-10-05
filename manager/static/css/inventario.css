@@ -483,7 +483,11 @@
     box-shadow: 0 .5rem 1.35rem rgba(16, 70, 62, .08);
   }
 
-  .tabl .tablas-todo { margin: 0; }
+  .tabl .tablas-todo {
+    width: 100%;
+    margin: 0;
+    table-layout: auto;
+  }
   .tabl .tablas-todo thead th {
     padding: .95rem .85rem;
     color: #fff;
@@ -507,17 +511,20 @@
     gap: .55rem;
     text-align: left;
   }
-  .inventario-desktop-producto > span:last-child { display: block; min-width: 0; max-width: calc(100% - 3rem); }
+  .inventario-desktop-producto > span:last-child { display: block; min-width: 0; }
   .inventario-desktop-producto strong,
-  .inventario-desktop-producto small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .inventario-desktop-producto small { display: block; }
   .inventario-desktop-producto strong { color: #263b36; font-size: .86rem; }
   .inventario-desktop-producto__icon { display: grid; width: 2.25rem; height: 2.25rem; flex: 0 0 2.25rem; place-items: center; border-radius: .65rem; color: var(--system-secondary, #10463e); background: color-mix(in srgb, var(--system-primary) 10%, #fff); font-size: 1.18rem; }
   .inventario-desktop-precio > span { display: inline-block; padding: .42rem .55rem; border-radius: .55rem; color: var(--system-secondary, #10463e); background: color-mix(in srgb, var(--system-primary) 8%, #fff); font-weight: 700; white-space: nowrap; }
   .inventario-desktop-precio .precio-descuento { padding: .42rem .55rem; border-radius: .55rem; color: var(--system-secondary, #10463e) !important; background: color-mix(in srgb, var(--system-primary) 8%, #fff); }
   .inventario-desktop-precio .text-decoration-line-through { margin-left: .15rem; font-size: .7rem; }
 
+  /* El tema global pinta el <tr>; en una tabla eso deja una franja debajo de la
+     primera celda. Aquí el estado visual vive siempre en todas las celdas. */
   .tabl .fila-producto { transition: background-color .2s ease, box-shadow .2s ease; }
-  .tabl .fila-producto:hover td { background: color-mix(in srgb, var(--system-primary, #32877f) 5%, #fff); }
+  .tabl .fila-producto:hover { background-color: transparent !important; color: inherit !important; }
+  .tabl .fila-producto:hover td { background: color-mix(in srgb, var(--system-primary, #32877f) 5%, #fff) !important; color: inherit !important; }
   .tabl .fila-producto.selected td { color: #263b36 !important; background: color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff) !important; }
   .tabl .fila-producto.selected td:first-child { box-shadow: inset 3px 0 0 var(--system-primary, #32877f); }
   .tabl .fila-producto.selected .inventario-desktop-producto strong { color: #fff; }
@@ -530,7 +537,8 @@
     display: flex;
     gap: .8rem;
     min-height: 27rem;
-    margin-top: .65rem;
+    /* La tabla principal hereda este margen de .tabla-container. */
+    margin-top: 1rem;
     flex-direction: column;
     padding: 0;
     border: 0;
