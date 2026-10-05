@@ -138,3 +138,1230 @@
     min-width: 175px;
   }
 }
+
+/* Detalle de compra y confirmación: las tablas se transforman en fichas
+   operativas para que cada producto tenga todo el ancho disponible. */
+.detalle-compra-mobile-list,
+.confirmar-inventario-mobile-list {
+  display: none;
+}
+
+.confirmar-entrada-mobile {
+  display: none;
+}
+
+@media (max-width: 1032px) {
+  .detalle-compra-table-desktop,
+  .confirmar-inventario-table-desktop {
+    display: none;
+  }
+
+  .detalle-compra-mobile-list,
+  .confirmar-inventario-mobile-list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.85rem;
+    width: 100%;
+  }
+
+  .detalle-compra-mobile-card,
+  .confirmar-inventario-mobile-card {
+    overflow: hidden;
+    width: 100%;
+    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff);
+    border-radius: 15px;
+    background: #fff;
+    box-shadow: 0 8px 22px color-mix(in srgb, var(--system-secondary, #708984) 10%, transparent);
+  }
+
+  .detalle-compra-mobile-card__header,
+  .confirmar-inventario-mobile-card__header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 54px;
+    padding: 0.68rem 0.8rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+    background: linear-gradient(105deg, color-mix(in srgb, var(--system-primary, #32877f) 9%, #fff), #fff 65%);
+  }
+
+  .detalle-compra-mobile-card__icono,
+  .confirmar-inventario-mobile-card__icono {
+    display: grid;
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border-radius: 9px;
+    color: #fff;
+    background: var(--system-primary, #32877f);
+    font-size: 1.1rem;
+  }
+
+  .detalle-compra-mobile-card__registro,
+  .confirmar-inventario-mobile-card__header small {
+    color: var(--system-primary, #32877f);
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.045em;
+    text-transform: uppercase;
+  }
+
+  .detalle-compra-mobile-card__cantidad,
+  .confirmar-inventario-mobile-card__cantidad {
+    margin-left: auto;
+    padding: 0.3rem 0.5rem;
+    border-radius: 999px;
+    color: var(--system-primary, #32877f);
+    background: color-mix(in srgb, var(--system-primary, #32877f) 10%, #fff);
+    font-size: 0.72rem;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .detalle-compra-mobile-card__producto {
+    padding: 0.76rem 0.85rem 0.32rem;
+    color: var(--system-secondary, #243531);
+    font-size: 0.98rem;
+    font-weight: 800;
+    line-height: 1.3;
+  }
+
+  .detalle-compra-mobile-card__datos,
+  .confirmar-inventario-mobile-card__datos {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    padding: 0.6rem 0.85rem 0.85rem;
+  }
+
+  .detalle-compra-mobile-card__datos > div,
+  .confirmar-inventario-mobile-card__datos > div {
+    display: grid;
+    gap: 0.18rem;
+    min-width: 0;
+    padding: 0.5rem 0.56rem;
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 5%, #fff);
+  }
+
+  .detalle-compra-mobile-card__datos span,
+  .confirmar-inventario-mobile-card__datos span {
+    color: color-mix(in srgb, var(--system-secondary, #708984) 65%, #fff);
+    font-size: 0.62rem;
+    font-weight: 750;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+  }
+
+  .detalle-compra-mobile-card__datos strong,
+  .confirmar-inventario-mobile-card__datos strong {
+    overflow: hidden;
+    color: var(--system-secondary, #243531);
+    font-size: 0.81rem;
+    font-weight: 750;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .confirmar-inventario-mobile-card__header > div {
+    display: grid;
+    min-width: 0;
+    gap: 0.1rem;
+  }
+
+  .confirmar-inventario-mobile-card__header > div strong {
+    overflow: hidden;
+    color: var(--system-secondary, #243531);
+    font-size: 0.9rem;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .confirmar-inventario-mobile-card__datos span i {
+    color: var(--system-primary, #32877f);
+    font-size: 0.78rem;
+  }
+
+  .confirmar-inventario-mobile-card__datos .confirmar-inventario-mobile-card__sku {
+    grid-column: 1 / -1;
+  }
+
+  .confirmar-inventario-mobile-card__recepcion,
+  .confirmar-inventario-mobile-card__vencimiento {
+    display: grid;
+    gap: 0.38rem;
+    padding: 0.72rem 0.85rem 0.85rem;
+    border-top: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+  }
+
+  .confirmar-inventario-mobile-card__vencimiento {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .confirmar-inventario-mobile-card__recepcion label,
+  .confirmar-inventario-mobile-card__vencimiento label {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    color: var(--system-secondary, #243531);
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .confirmar-inventario-mobile-card__recepcion label small {
+    color: var(--system-primary, #32877f);
+    font-size: 0.7rem;
+    font-weight: 750;
+  }
+
+  .confirmar-inventario-mobile-card .cantidad-recepcion,
+  .confirmar-inventario-mobile-card .fecha-vencimiento {
+    width: 100% !important;
+    min-height: 42px;
+    padding: 0.45rem 0.65rem;
+    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 28%, #fff);
+    border-radius: 9px;
+    outline: none;
+    color: var(--system-secondary, #243531);
+    background: #fff;
+  }
+
+  .confirmar-inventario-mobile-card .cantidad-recepcion:focus,
+  .confirmar-inventario-mobile-card .fecha-vencimiento:focus {
+    border-color: var(--system-primary, #32877f);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--system-primary, #32877f) 12%, transparent);
+  }
+}
+
+/* Recepción de inventario en bodega: las tablas pasan a tarjetas táctiles
+   para evitar desplazamientos horizontales en tablet y móvil. */
+@media (max-width: 1032px) {
+  .full2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    height: auto;
+    gap: 0.7rem;
+    margin: 0.2rem 0 1rem;
+  }
+
+  .full2 .ventanas {
+    width: auto;
+    min-height: 76px;
+    margin: 0;
+    padding: 0.65rem 0.75rem;
+    gap: 0.55rem;
+    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 16%, #fff);
+    box-shadow: 0 4px 12px
+      color-mix(in srgb, var(--system-secondary, #708984) 9%, transparent);
+  }
+
+  .full2 .ventana-titulo {
+    color: color-mix(in srgb, var(--system-secondary, #708984) 60%, #fff);
+    font-size: 0.72rem;
+  }
+
+  .full2 .ventana-numero {
+    color: var(--system-primary, #32877f);
+    background: color-mix(in srgb, var(--system-primary, #32877f) 8%, #fff);
+    padding: 1px 8px;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .full2 .capsula {
+    width: 36px;
+    height: 36px;
+  }
+
+  .full2 .capsula i {
+    font-size: 22px;
+  }
+
+  #tablacont.tablas-todo,
+  #tabladecom.tablas-todo,
+  #tablacomprar.tablas-todo,
+  #tablaDevolucion.tablas-todo {
+    display: block;
+    width: 100%;
+    background: transparent;
+  }
+
+  #tablacont.tablas-todo thead,
+  #tabladecom.tablas-todo thead,
+  #tablacomprar.tablas-todo thead,
+  #tablaDevolucion.tablas-todo thead {
+    display: none;
+  }
+
+  #tablacont.tablas-todo tbody,
+  #tabladecom.tablas-todo tbody,
+  #tablacomprar.tablas-todo tbody,
+  #tablaDevolucion.tablas-todo tbody {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  #tablacont.tablas-todo tbody tr,
+  #tabladecom.tablas-todo tbody tr,
+  #tablacomprar.tablas-todo tbody tr,
+  #tablaDevolucion.tablas-todo tbody tr {
+    display: block;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 20%, #fff);
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 4px 12px
+      color-mix(in srgb, var(--system-secondary, #708984) 10%, transparent);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  #tablacont.tablas-todo tbody tr {
+    border-left: 4px solid var(--system-primary, #32877f);
+  }
+
+  #tabladecom.tablas-todo tbody tr {
+    border-left: 4px solid color-mix(in srgb, var(--system-primary, #32877f) 68%, #fff);
+  }
+
+  #tablacont.tablas-todo tbody tr:active,
+  #tabladecom.tablas-todo tbody tr:active {
+    border-color: var(--system-primary, #32877f);
+    box-shadow: 0 7px 16px
+      color-mix(in srgb, var(--system-secondary, #708984) 16%, transparent);
+  }
+
+  #tablacont.tablas-todo tbody td,
+  #tabladecom.tablas-todo tbody td,
+  #tablacomprar.tablas-todo tbody td,
+  #tablaDevolucion.tablas-todo tbody td {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.22rem;
+    min-height: 58px;
+    padding: 0.62rem 0.75rem !important;
+    border: 0 !important;
+    border-bottom: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff) !important;
+    color: #263b36;
+    text-align: left !important;
+  }
+
+  #tablacont.tablas-todo tbody td:nth-last-child(-n + 2),
+  #tabladecom.tablas-todo tbody td:nth-last-child(-n + 2),
+  #tablacomprar.tablas-todo tbody td:nth-last-child(-n + 2),
+  #tablaDevolucion.tablas-todo tbody td:nth-last-child(-n + 2) {
+    border-bottom: 0 !important;
+  }
+
+  #tablacont.tablas-todo tbody td::before,
+  #tabladecom.tablas-todo tbody td::before,
+  #tablacomprar.tablas-todo tbody td::before,
+  #tablaDevolucion.tablas-todo tbody td::before {
+    content: attr(data-label);
+    overflow: hidden;
+    color: var(--system-primary, #32877f);
+    font-size: 0.73rem;
+    font-weight: 750;
+    letter-spacing: 0.025em;
+    text-align: left;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  #tablacont.tablas-todo tbody td[data-label="Proveedor / origen"],
+  #tabladecom.tablas-todo tbody td[data-label="Producto"] {
+    grid-column: 1 / -1;
+    min-height: 58px;
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+    border-bottom-color: color-mix(in srgb, var(--system-primary, #32877f) 18%, #fff) !important;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 6%, #fff);
+  }
+
+  #tablacont.tablas-todo tbody td[data-label="Proveedor / origen"]::before,
+  #tabladecom.tablas-todo tbody td[data-label="Producto"]::before {
+    color: color-mix(in srgb, var(--system-secondary, #708984) 62%, #fff);
+  }
+
+  #tablacont.tablas-todo tbody td[data-label="Proveedor / origen"],
+  #tabladecom.tablas-todo tbody td[data-label="Producto"] {
+    font-weight: 700;
+  }
+
+  #tablacont.tablas-todo tbody .table-empty-state {
+    display: block;
+    min-height: auto;
+    color: color-mix(in srgb, var(--system-secondary, #708984) 62%, #fff);
+    text-align: center !important;
+  }
+
+  #tablacont.tablas-todo tbody .table-empty-state::before {
+    display: none;
+  }
+
+  #tablacont.tablas-todo tbody td .badge,
+  #tablacont.tablas-todo tbody td .btn,
+  #tabladecom.tablas-todo tbody td .badge,
+  #tabladecom.tablas-todo tbody td .btn {
+    align-self: flex-start;
+  }
+
+  #tablacont.tablas-todo .btn-marcar-llegada,
+  #tablacont.tablas-todo .btn-edit {
+    min-height: 38px;
+    padding: 0.45rem 0.7rem;
+  }
+
+  #tabladecom.tablas-todo .cantidad-recepcion,
+  #tabladecom.tablas-todo .fecha-vencimiento {
+    width: min(100%, 178px) !important;
+    min-height: 42px;
+    align-self: stretch;
+    font-size: 1rem;
+    text-align: center;
+  }
+
+  #tablaDevolucion.tablas-todo .check-devolucion,
+  #tablaDevolucion.tablas-todo .motivo-select,
+  #tablaDevolucion.tablas-todo .cantidad-hijo,
+  #tablaDevolucion.tablas-todo .convertir-hijo-btn {
+    align-self: flex-start;
+  }
+
+  #tablaDevolucion.tablas-todo .motivo-select,
+  #tablaDevolucion.tablas-todo .cantidad-hijo {
+    width: min(100%, 190px);
+    min-height: 42px;
+  }
+
+  .recepcion-confirm-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+    margin: 0.15rem 0 0.8rem;
+    padding: 0.7rem;
+    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 18%, #fff);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 5%, #fff);
+    box-shadow: 0 4px 12px
+      color-mix(in srgb, var(--system-secondary, #708984) 8%, transparent);
+  }
+
+  .recepcion-confirm-actions .display-flex {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .recepcion-confirm-actions .btn-dropdown {
+    display: inline-flex;
+    min-height: 46px;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    border-radius: 9px;
+    font-weight: 700;
+  }
+
+  .confirmar-entrada-mobile {
+    display: inline;
+  }
+
+  .confirmar-entrada-desktop {
+    display: none;
+  }
+
+  /* Los modales de esta pantalla se integran al patrón de hoja inferior. */
+  #completarcompra.modal-sheet-mobile .modal-dialog,
+  #devo.modal-sheet-mobile .modal-dialog {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+
+  #completarcompra.modal-sheet-mobile .modal-content,
+  #devo.modal-sheet-mobile .modal-content {
+    height: auto;
+    max-height: min(82dvh, 620px);
+    border-radius: 22px 22px 0 0;
+  }
+
+  #completarcompra.modal-sheet-mobile .modal-header,
+  #devo.modal-sheet-mobile .modal-header {
+    padding-top: 1.15rem;
+  }
+
+  #completarcompra .modal-dialog,
+  #devo .modal-dialog {
+    width: calc(100% - 1.25rem);
+    max-width: none;
+    margin: 0.625rem auto;
+  }
+
+  #completarcompra .modal-content,
+  #devo .modal-content {
+    max-height: calc(100dvh - 1.25rem);
+    border-radius: 14px;
+  }
+
+  #completarcompra .modal-header,
+  #devo .modal-header {
+    padding: 0.9rem 1rem;
+  }
+
+  #completarcompra .modal-body,
+  #devo .modal-body {
+    padding: 0.85rem;
+  }
+
+  /* Con pocos productos la hoja ocupa solo lo necesario; con muchos, el
+     contenido se desplaza dentro de ella sin llevarse el encabezado ni acciones. */
+  #completarcompra.modal-sheet-mobile--auto .modal-body,
+  #devo.modal-sheet-mobile--auto .modal-body {
+    max-height: calc(82dvh - 7.5rem);
+    overflow-y: auto;
+  }
+
+  #completarcompra .modal-footer,
+  #devo .modal-footer {
+    gap: 0.55rem;
+    padding: 0.75rem 0.9rem;
+    box-shadow: 0 -5px 14px
+      color-mix(in srgb, var(--system-secondary, #708984) 8%, transparent);
+  }
+
+  #completarcompra .modal-footer .btn,
+  #devo .modal-footer .btn {
+    min-height: 43px;
+    flex: 1 1 140px;
+  }
+
+  #completarcompra .modal-footer,
+  #devo .modal-footer {
+    display: block;
+  }
+
+  #completarcompra .modal-footer > .btn-secondary[data-bs-dismiss="modal"],
+  #devo .modal-footer > .btn-secondary[data-bs-dismiss="modal"] {
+    display: none;
+  }
+
+  #completarcompra .modal-footer > .btn:not(.btn-secondary),
+  #devo .modal-footer > .btn:not(.btn-secondary) {
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
+  }
+
+  .compra-detalle-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .compra-detalle__totales {
+    order: -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .compra-detalle__tarjeta {
+    min-height: 76px;
+    border-left: 3px solid color-mix(in srgb, var(--system-primary, #32877f) 62%, #fff);
+  }
+}
+
+/* Bandeja móvil de recepción: tarjetas operativas en lugar de la tabla. */
+.recepcion-mobile-list {
+  display: none;
+}
+
+@media (max-width: 1032px) {
+  .recepcion-table-desktop {
+    display: none;
+  }
+
+  .recepcion-mobile-list {
+    display: grid;
+    gap: 0.8rem;
+    width: 100%;
+    margin: 0.25rem 0 1rem;
+  }
+
+  .recepcion-mobile-card {
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff);
+    border-radius: 15px;
+    background: #fff;
+    box-shadow: 0 7px 18px
+      color-mix(in srgb, var(--system-secondary, #708984) 11%, transparent);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .recepcion-mobile-card.recepcion-row--detail {
+    cursor: pointer;
+  }
+
+  .recepcion-mobile-card.recepcion-row--detail:active {
+    transform: scale(0.99);
+    box-shadow: 0 4px 12px
+      color-mix(in srgb, var(--system-secondary, #708984) 14%, transparent);
+  }
+
+  .recepcion-mobile-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.7rem;
+    padding: 0.72rem 0.85rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+    background: linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--system-primary, #32877f) 9%, #fff),
+      #fff 66%
+    );
+  }
+
+  .recepcion-mobile-card__registro,
+  .recepcion-mobile-card__origen,
+  .recepcion-mobile-card__meta > div {
+    display: flex;
+    align-items: center;
+  }
+
+  .recepcion-mobile-card__registro {
+    gap: 0.52rem;
+  }
+
+  .recepcion-mobile-card__icon,
+  .recepcion-mobile-card__origen-icon {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 10px;
+    color: var(--system-primary, #32877f);
+    background: color-mix(in srgb, var(--system-primary, #32877f) 13%, #fff);
+  }
+
+  .recepcion-mobile-card__icon {
+    width: 34px;
+    height: 34px;
+    font-size: 1.12rem;
+  }
+
+  .recepcion-mobile-card__registro small,
+  .recepcion-mobile-card__origen small,
+  .recepcion-mobile-card__meta small {
+    display: block;
+    color: color-mix(in srgb, var(--system-secondary, #708984) 55%, #fff);
+    font-size: 0.61rem;
+    font-weight: 750;
+    letter-spacing: 0.045em;
+    text-transform: uppercase;
+  }
+
+  .recepcion-mobile-card__registro strong {
+    display: block;
+    margin-top: 0.06rem;
+    color: var(--system-secondary, #243531);
+    font-size: 0.98rem;
+  }
+
+  .recepcion-mobile-card__estado .badge,
+  .recepcion-mobile-card__tipo .badge {
+    padding: 0.34rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 750;
+    white-space: nowrap;
+  }
+
+  .recepcion-mobile-card__origen {
+    gap: 0.6rem;
+    padding: 0.82rem 0.9rem;
+  }
+
+  .recepcion-mobile-card__origen-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1.15rem;
+  }
+
+  .recepcion-mobile-card__origen > div {
+    min-width: 0;
+  }
+
+  .recepcion-mobile-card__origen strong {
+    display: block;
+    overflow: hidden;
+    margin-top: 0.14rem;
+    color: var(--system-secondary, #243531);
+    font-size: 0.9rem;
+    font-weight: 750;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .recepcion-mobile-card__tipo {
+    margin-left: auto;
+  }
+
+  .recepcion-mobile-card__meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+    padding: 0 0.9rem 0.85rem;
+  }
+
+  .recepcion-mobile-card__meta > div {
+    gap: 0.42rem;
+    min-width: 0;
+    padding: 0.58rem;
+    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 11%, #fff);
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 4%, #fff);
+  }
+
+  .recepcion-mobile-card__meta > div > i {
+    color: var(--system-primary, #32877f);
+    font-size: 1rem;
+  }
+
+  .recepcion-mobile-card__meta span {
+    min-width: 0;
+  }
+
+  .recepcion-mobile-card__meta strong {
+    display: block;
+    overflow: hidden;
+    margin-top: 0.1rem;
+    color: var(--system-secondary, #243531);
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .recepcion-mobile-card__acciones {
+    display: flex;
+    gap: 0.55rem;
+    padding: 0.7rem 0.9rem;
+    border-top: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+    background: color-mix(in srgb, var(--system-primary, #32877f) 3%, #fff);
+  }
+
+  .recepcion-mobile-card__acciones > * {
+    flex: 1 1 0;
+  }
+
+  .recepcion-mobile-card__acciones .btn {
+    min-height: 42px;
+    border-radius: 9px;
+    font-size: 0.78rem;
+    font-weight: 750;
+  }
+
+  .recepcion-mobile-card__acciones .llegada-bodega-registro {
+    justify-content: center;
+    min-height: 42px;
+    padding: 0.5rem;
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 9%, #fff);
+    text-align: center;
+  }
+
+  .recepcion-mobile-empty {
+    display: grid;
+    justify-items: center;
+    gap: 0.3rem;
+    padding: 2rem 1rem;
+    border: 1px dashed color-mix(in srgb, var(--system-primary, #32877f) 30%, #fff);
+    border-radius: 14px;
+    color: color-mix(in srgb, var(--system-secondary, #708984) 62%, #fff);
+    background: #fff;
+    text-align: center;
+  }
+
+  .recepcion-mobile-empty > i {
+    color: var(--system-primary, #32877f);
+    font-size: 2rem;
+  }
+
+  .recepcion-mobile-empty strong {
+    color: var(--system-secondary, #243531);
+  }
+
+  .recepcion-mobile-empty span {
+    font-size: 0.8rem;
+  }
+}
+
+@media (min-width: 681px) and (max-width: 1032px) {
+  #tablacont.tablas-todo tbody tr,
+  #tabladecom.tablas-todo tbody tr,
+  #tablacomprar.tablas-todo tbody tr,
+  #tablaDevolucion.tablas-todo tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #tablacont.tablas-todo tbody td[data-label="Proveedor / origen"],
+  #tabladecom.tablas-todo tbody td[data-label="Producto"] {
+    grid-column: 1 / -1;
+  }
+
+  #tablacont.tablas-todo tbody td:nth-last-child(-n + 2),
+  #tabladecom.tablas-todo tbody td:nth-last-child(-n + 2),
+  #tablacomprar.tablas-todo tbody td:nth-last-child(-n + 2),
+  #tablaDevolucion.tablas-todo tbody td:nth-last-child(-n + 2) {
+    border-bottom: 0 !important;
+  }
+}
+
+@media (max-width: 680px) {
+  #tablacont.tablas-todo tbody td,
+  #tabladecom.tablas-todo tbody td,
+  #tablacomprar.tablas-todo tbody td,
+  #tablaDevolucion.tablas-todo tbody td {
+    padding: 0.6rem 0.7rem !important;
+  }
+
+  .compra-detalle__tarjeta:hover {
+    transform: none;
+  }
+}
+
+/* Distribución tipo ficha: un registro completo por tarjeta, con una
+   cabecera breve y datos secundarios en bloques fáciles de escanear. */
+@media (max-width: 1032px) {
+  .modal-confirmacion-table-desktop {
+    display: none;
+  }
+
+  .modal-devolucion-table-desktop {
+    display: none;
+  }
+
+  .modal-confirmacion-mobile-list {
+    margin: 0;
+  }
+
+  .modal-confirmacion-mobile-card {
+    margin: 0;
+    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff) !important;
+    box-shadow: 0 8px 22px
+      color-mix(in srgb, var(--system-secondary, #708984) 10%, transparent);
+  }
+
+  .modal-confirmacion-mobile-card__vencimiento {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.32rem 0.48rem;
+    align-items: center;
+    padding: 0 0.85rem 0.85rem;
+    color: var(--system-secondary, #243531);
+  }
+
+  .modal-confirmacion-mobile-card__vencimiento i {
+    grid-row: span 2;
+    color: var(--system-primary, #32877f);
+    font-size: 1rem;
+  }
+
+  .modal-confirmacion-mobile-card__vencimiento span {
+    color: color-mix(in srgb, var(--system-secondary, #708984) 65%, #fff);
+    font-size: 0.62rem;
+    font-weight: 750;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+  }
+
+  .modal-confirmacion-mobile-card__vencimiento strong {
+    color: var(--system-secondary, #243531);
+    font-size: 0.8rem;
+  }
+
+  .modal-devolucion-mobile-list {
+    margin: 0;
+  }
+
+  .modal-devolucion-mobile-card {
+    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff);
+    box-shadow: 0 8px 22px
+      color-mix(in srgb, var(--system-secondary, #708984) 10%, transparent);
+  }
+
+  .modal-devolucion-mobile-card__controles {
+    display: grid;
+    gap: 0.55rem;
+    padding: 0.72rem 0.9rem 0.85rem;
+    border-top: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+    background: color-mix(in srgb, var(--system-primary, #32877f) 3%, #fff);
+  }
+
+  .modal-devolucion-mobile-card__seleccion {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--system-secondary, #243531);
+    font-size: 0.79rem;
+    font-weight: 750;
+  }
+
+  .modal-devolucion-mobile-card__seleccion input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--system-primary, #32877f);
+  }
+
+  .modal-devolucion-mobile-card__motivo,
+  .modal-devolucion-mobile-card__cantidad-hijo,
+  .modal-devolucion-mobile-card__convertir {
+    min-height: 42px;
+    border-radius: 9px;
+  }
+
+  #tablacont.tablas-todo tbody,
+  #tabladecom.tablas-todo tbody,
+  #tablacomprar.tablas-todo tbody,
+  #tablaDevolucion.tablas-todo tbody {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  #tablacont.tablas-todo tbody tr,
+  #tabladecom.tablas-todo tbody tr,
+  #tablacomprar.tablas-todo tbody tr,
+  #tablaDevolucion.tablas-todo tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.48rem;
+    padding: 0.65rem;
+    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff);
+    border-left: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff);
+    border-radius: 13px;
+    background: #fff;
+  }
+
+  #tablacont.tablas-todo tbody td,
+  #tabladecom.tablas-todo tbody td,
+  #tablacomprar.tablas-todo tbody td,
+  #tablaDevolucion.tablas-todo tbody td {
+    min-height: 54px;
+    padding: 0.52rem 0.58rem !important;
+    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff) !important;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 5%, #fff);
+  }
+
+  #tablacont.tablas-todo tbody td::before,
+  #tabladecom.tablas-todo tbody td::before,
+  #tablacomprar.tablas-todo tbody td::before,
+  #tablaDevolucion.tablas-todo tbody td::before {
+    color: color-mix(in srgb, var(--system-secondary, #708984) 58%, #fff);
+    font-size: 0.61rem;
+    letter-spacing: 0.04em;
+  }
+
+  #tablacont.tablas-todo tbody td[data-label="Registro"],
+  #tablacont.tablas-todo tbody td[data-label="Tipo"] {
+    min-height: 39px;
+    padding-top: 0.28rem !important;
+    padding-bottom: 0.28rem !important;
+    background: transparent;
+  }
+
+  #tablacont.tablas-todo tbody td[data-label="Tipo"] {
+    align-items: flex-end;
+  }
+
+  #tablacont.tablas-todo tbody td[data-label="Proveedor / origen"],
+  #tabladecom.tablas-todo tbody td[data-label="Producto"] {
+    grid-column: 1 / -1;
+    min-height: 62px;
+    padding: 0.6rem 0.65rem !important;
+    background: #fff;
+  }
+
+  #tablacont.tablas-todo tbody td[data-label="Proveedor / origen"]::before,
+  #tabladecom.tablas-todo tbody td[data-label="Producto"]::before {
+    color: var(--system-primary, #32877f);
+  }
+
+  #tablacont.tablas-todo tbody td[data-label="Acción"],
+  #tabladecom.tablas-todo tbody td:has(.cantidad-recepcion) {
+    grid-column: 1 / -1;
+  }
+
+  #tablacont.tablas-todo .btn-marcar-llegada,
+  #tablacont.tablas-todo .btn-edit {
+    min-width: 100%;
+    min-height: 42px;
+  }
+
+  #tabladecom.tablas-todo .cantidad-recepcion,
+  #tabladecom.tablas-todo .fecha-vencimiento {
+    width: 100% !important;
+  }
+
+  /* Bandeja de recepción: una sola superficie blanca por registro. */
+  #tablacont.tablas-todo tbody tr {
+    position: relative;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0;
+    padding: 0.82rem 0.9rem 0.88rem;
+    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 16%, #fff);
+    border-left: 4px solid var(--system-primary, #32877f);
+    background: #fff;
+    box-shadow: 0 7px 18px
+      color-mix(in srgb, var(--system-secondary, #708984) 10%, transparent);
+  }
+
+  #tablacont.tablas-todo tbody tr::after {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 3px;
+    content: "";
+    background: linear-gradient(
+      90deg,
+      var(--system-primary, #32877f),
+      color-mix(in srgb, var(--system-primary, #32877f) 8%, #fff)
+    );
+  }
+
+  #tablacont.tablas-todo tbody td {
+    min-height: 0;
+    padding: 0.55rem 0 !important;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  #tablacont.tablas-todo tbody td[data-label="Registro"] {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  #tablacont.tablas-todo tbody td[data-label="Registro"]::before {
+    color: color-mix(in srgb, var(--system-secondary, #708984) 55%, #fff);
+  }
+
+  #tablacont.tablas-todo tbody td[data-label="Registro"] {
+    color: var(--system-secondary, #243531);
+    font-size: 1.02rem;
+    font-weight: 800;
+  }
+
+  #tablacont.tablas-todo tbody td[data-label="Tipo"] {
+    grid-column: 1;
+    grid-row: 2;
+    align-items: flex-start;
+    min-height: 0;
+    padding-top: 0.2rem !important;
+  }
+
+  #tablacont.tablas-todo tbody td[data-label="Tipo"]::before {
+    display: none;
+  }
+
+  #tablacont.tablas-todo tbody td[data-label="Estado"] {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-items: flex-end;
+    justify-content: flex-start;
+    padding-top: 0 !important;
+  }
+
+  #tablacont.tablas-todo tbody td[data-label="Estado"]::before,
+  #tablacont.tablas-todo tbody tr:has(.btn-marcar-llegada) .recepcion-accion::before {
+    display: none;
+  }
+
+  #tablacont.tablas-todo tbody td[data-label="Proveedor / origen"] {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    min-height: 0;
+    padding-top: 0.75rem !important;
+    border-top: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+    background: transparent;
+    color: var(--system-secondary, #243531);
+    font-size: 0.98rem;
+    font-weight: 750;
+  }
+
+  #tablacont.tablas-todo tbody td[data-label="Fecha"] {
+    grid-column: 1;
+    grid-row: 4;
+  }
+
+  #tablacont.tablas-todo tbody td[data-label="Fecha"],
+  #tablacont.tablas-todo tbody td[data-label="Cantidad"] {
+    color: var(--system-secondary, #243531);
+    font-size: 0.88rem;
+    font-weight: 650;
+  }
+
+  #tablacont.tablas-todo tbody td[data-label="Cantidad"] {
+    grid-column: 2;
+    grid-row: 4;
+    align-items: flex-end;
+  }
+
+  #tablacont.tablas-todo tbody td[data-label="Llegada"] {
+    grid-column: 1 / -1;
+    grid-row: 5;
+    padding-top: 0.7rem !important;
+    border-top: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+  }
+
+  #tablacont.tablas-todo .llegada-bodega-registro {
+    padding: 0.35rem 0.55rem;
+    border-radius: 999px;
+    color: var(--system-primary, #32877f);
+    background: color-mix(in srgb, var(--system-primary, #32877f) 8%, #fff);
+    font-size: 0.74rem;
+    font-weight: 700;
+  }
+
+  #tablacont.tablas-todo tbody .recepcion-accion {
+    grid-column: 1 / -1;
+    grid-row: 6;
+    align-items: stretch;
+    padding-top: 0.55rem !important;
+  }
+
+  #tablacont.tablas-todo tbody .recepcion-accion:not(:has(.btn)) {
+    display: none;
+  }
+
+  #tablacont.tablas-todo tbody .recepcion-accion .btn {
+    width: 100%;
+    min-height: 43px;
+    border-radius: 9px;
+    font-weight: 750;
+  }
+
+  /* Confirmaciones: las filas siguen la lectura de Detalle Compra, con el
+     producto como foco y los datos secundarios en bloques compactos. */
+  #completarcompra .tabla-container,
+  #devo .table-responsive {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  #completarcompra #tablacomprar.tablas-todo tbody tr.modal-recepcion-card,
+  #devo #tablaDevolucion.tablas-todo tbody tr.modal-devolucion-card {
+    position: relative;
+    gap: 0.5rem;
+    padding: 0.8rem;
+    border: 0 !important;
+    border-radius: 15px;
+    background: #fff;
+    box-shadow: 0 7px 18px
+      color-mix(in srgb, var(--system-secondary, #708984) 10%, transparent);
+  }
+
+  #completarcompra #tablacomprar.tablas-todo tbody tr.modal-recepcion-card td,
+  #devo #tablaDevolucion.tablas-todo tbody tr.modal-devolucion-card td {
+    min-height: 0;
+    padding: 0.55rem 0.62rem !important;
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 5%, #fff);
+  }
+
+  /* Cabecera equivalente a las tarjetas de Recepción de Inventario. */
+  #completarcompra #tablacomprar.tablas-todo tbody tr.modal-recepcion-card td:nth-child(1),
+  #devo #tablaDevolucion.tablas-todo tbody tr.modal-devolucion-card td:nth-child(1) {
+    grid-column: 1;
+    grid-row: 2;
+    min-height: 48px;
+    padding: 0.15rem 0 !important;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  #completarcompra #tablacomprar.tablas-todo tbody tr.modal-recepcion-card td:nth-child(2) {
+    grid-column: 2;
+    grid-row: 2;
+    align-items: flex-end;
+    min-height: 48px;
+    padding: 0.15rem 0 !important;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  #completarcompra #tablacomprar.tablas-todo tbody tr.modal-recepcion-card td:nth-child(3),
+  #devo #tablaDevolucion.tablas-todo tbody tr.modal-devolucion-card td:nth-child(2) {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    min-height: 62px;
+    padding: 0.72rem 0.78rem !important;
+    border-bottom: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 13%, #fff);
+    background: linear-gradient(
+      105deg,
+      color-mix(in srgb, var(--system-primary, #32877f) 10%, #fff),
+      #fff 72%
+    );
+    color: var(--system-secondary, #243531);
+    font-size: 0.98rem;
+    font-weight: 800;
+  }
+
+  #completarcompra #tablacomprar.tablas-todo tbody tr.modal-recepcion-card td:nth-child(3)::before,
+  #devo #tablaDevolucion.tablas-todo tbody tr.modal-devolucion-card td:nth-child(2)::before {
+    color: var(--system-primary, #32877f);
+  }
+
+  #devo #tablaDevolucion.tablas-todo .modal-devolucion-producto {
+    display: grid !important;
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 0.48rem;
+    align-items: center;
+  }
+
+  #devo #tablaDevolucion.tablas-todo .modal-devolucion-producto::before {
+    grid-column: 1 / -1;
+  }
+
+  #devo #tablaDevolucion.tablas-todo .modal-devolucion-producto__icon {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border-radius: 9px;
+    color: var(--system-primary, #32877f);
+    background: color-mix(in srgb, var(--system-primary, #32877f) 13%, #fff);
+    font-size: 1.08rem;
+  }
+
+  #devo #tablaDevolucion.tablas-todo .nombre-devolucion {
+    min-width: 0;
+  }
+
+  #completarcompra #tablacomprar.tablas-todo tbody tr.modal-recepcion-card td:nth-child(6),
+  #devo #tablaDevolucion.tablas-todo tbody tr.modal-devolucion-card td:last-child {
+    grid-column: 1 / -1;
+  }
+
+  #devo #tablaDevolucion.tablas-todo .motivo-select {
+    width: 100%;
+    min-height: 42px;
+  }
+
+  #devo #tablaDevolucion.tablas-todo .check-devolucion {
+    width: 19px;
+    height: 19px;
+    margin: 0.25rem 0;
+    accent-color: var(--system-primary, #32877f);
+  }
+}

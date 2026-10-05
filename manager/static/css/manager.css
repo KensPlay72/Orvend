@@ -675,6 +675,141 @@
   padding: 0.75rem;
 }
 
+/* Modal reutilizable: escritorio conserva el diálogo centrado de Bootstrap;
+   en móvil y tablet se convierte en una hoja que emerge desde abajo. */
+@media (max-width: 1032px) {
+  .modal-sheet-mobile.fade .modal-dialog {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: none;
+    height: min(88dvh, 720px);
+    margin: 0;
+    transform: translateY(100%) !important;
+    transition: transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.2s ease !important;
+  }
+
+  .modal-sheet-mobile.fade.show .modal-dialog {
+    transform: translateY(0) !important;
+  }
+
+  .modal-sheet-mobile--auto.fade .modal-dialog {
+    min-height: 0;
+    height: auto;
+    max-height: min(82dvh, 620px);
+    justify-content: flex-end;
+  }
+
+  .modal-sheet-mobile.modal-sheet-mobile--auto .modal-content {
+    height: auto;
+    max-height: min(82dvh, 620px);
+  }
+
+  .modal-sheet-mobile.modal-sheet-mobile--auto .modal-body {
+    flex: 0 1 auto;
+  }
+
+  .modal-sheet-mobile .modal-dialog.modal-sheet-mobile--dragging {
+    transition: none !important;
+  }
+
+  .modal-sheet-mobile .modal-content {
+    display: flex;
+    min-height: 0;
+    height: 100%;
+    flex-direction: column;
+    overflow: hidden;
+    border: 0;
+    border-radius: 22px 22px 0 0;
+    box-shadow: 0 -12px 35px color-mix(in srgb, var(--system-secondary, #243531) 20%, transparent);
+  }
+
+  .modal-sheet-mobile .modal-header {
+    position: relative;
+    flex: 0 0 auto;
+    padding-top: 1.15rem;
+  }
+
+  .modal-sheet-mobile .modal-header::before {
+    position: absolute;
+    top: 0.42rem;
+    left: 50%;
+    width: 38px;
+    height: 4px;
+    border-radius: 999px;
+    content: "";
+    background: color-mix(in srgb, var(--system-secondary, #243531) 22%, #fff);
+    transform: translateX(-50%);
+  }
+
+  .modal-sheet-handle {
+    position: absolute;
+    top: 0.42rem;
+    left: 50%;
+    width: 44px;
+    height: 10px;
+    cursor: grab;
+    transform: translateX(-50%);
+  }
+
+  .modal-sheet-mobile .modal-body {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .modal-sheet-mobile .modal-footer {
+    flex: 0 0 auto;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  }
+
+  .modal-sheet-mobile .modal-header {
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .modal-sheet-mobile .modal-header:active {
+    cursor: grabbing;
+  }
+
+  .modal-sheet-mobile .compras-product-modal__body,
+  .modal-sheet-mobile .caja-product-modal__body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-sheet-mobile .compras-product-list-wrap,
+  .modal-sheet-mobile .compras-product-list-wrap #productos-lista,
+  .modal-sheet-mobile .caja-product-list-wrap {
+    min-height: 0;
+    max-height: none !important;
+    flex: 1 1 auto;
+  }
+
+  .modal-sheet-mobile .compras-product-pagination,
+  .modal-sheet-mobile .caja-product-pagination {
+    flex: 0 0 auto;
+    margin: 0.65rem 0 0;
+  }
+
+  .modal-sheet-mobile .compras-product-modal__footer,
+  .modal-sheet-mobile .caja-product-modal__footer {
+    display: block;
+    min-height: 0;
+  }
+
+  .modal-sheet-mobile .compras-product-modal__footer .btn,
+  .modal-sheet-mobile .caja-product-modal__footer .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+
 /* Modales de Ubicaciones: misma composición limpia de los formularios de
    Productos, sin saltos de línea que desalineen los campos. */
 .ubicaciones-modal-dialog {
@@ -834,6 +969,8 @@
 .compras-header__actions .btn-dropdown {
   grid-column: 1;
   margin: 0;
+  min-width: 170px;
+  white-space: nowrap;
 }
 
 .compras-header__actions .productos-export-btn {

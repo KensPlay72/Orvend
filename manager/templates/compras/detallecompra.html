@@ -4,6 +4,7 @@
 {% block extra_css %}
         <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
         <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20260928-tracker" />
+        <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}?v=20261003-mobile-cards" />
 {% endblock %}
 {% block titulo_content %}
     <div class="tituloscont">
@@ -60,6 +61,7 @@
         </section>
         <div class="divbuttons3 compra-detalle-layout">
             <div class="tablaencompras">
+                <div class="detalle-compra-table-desktop">
                 <table class="tablas-todo" id="tabladecom">
                     <thead>
                         <tr>
@@ -83,25 +85,53 @@
                     <tbody>
                         {% for detalle in compra.detalles %}
                         <tr>
-                            <td>{{ forloop.counter }}</td>
-                            <td>{{ detalle.productoNombre }}</td>
+                            <td data-label="#">{{ forloop.counter }}</td>
+                            <td data-label="Producto">{{ detalle.productoNombre }}</td>
                             {% if compra.mostrar_importes %}
-                            <td>{{detalle.presentacion}}</td> 
-                            <td>{{detalle.sku}}</td>
+                            <td data-label="Presentación">{{detalle.presentacion}}</td>
+                            <td data-label="SKU">{{detalle.sku}}</td>
                             {% endif %}
-                            <td>{{ detalle.cantidad }}</td>
+                            <td data-label="Cantidad">{{ detalle.cantidad }}</td>
                             {% if compra.mostrar_importes %}
-                            <td>{{ moneda_simbolo }} {{ detalle.precioCompra|floatformat:2 }}</td>
-                            <td>{{ detalle.impuesto|floatformat:2 }}%</td>
-                            <td>{{ moneda_simbolo }} {{ detalle.impuestoUnitario|floatformat:2 }}</td>
-                            <td>{{ moneda_simbolo }} {{ detalle.subtotal|floatformat:2 }}</td>
-                            <td>{{ moneda_simbolo }} {{ detalle.total|floatformat:2 }}</td>
-                            {% if compra.saldoUtilizado %}<td></td>{% endif %}
+                            <td data-label="Precio">{{ moneda_simbolo }} {{ detalle.precioCompra|floatformat:2 }}</td>
+                            <td data-label="Impuesto">{{ detalle.impuesto|floatformat:2 }}%</td>
+                            <td data-label="Imp. unit.">{{ moneda_simbolo }} {{ detalle.impuestoUnitario|floatformat:2 }}</td>
+                            <td data-label="Antes de impuesto">{{ moneda_simbolo }} {{ detalle.subtotal|floatformat:2 }}</td>
+                            <td data-label="Total">{{ moneda_simbolo }} {{ detalle.total|floatformat:2 }}</td>
+                            {% if compra.saldoUtilizado %}<td data-label="Saldo usado"></td>{% endif %}
                             {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
+                </div>
+
+                <section class="detalle-compra-mobile-list" aria-label="Productos de la compra">
+                    {% for detalle in compra.detalles %}
+                    <article class="detalle-compra-mobile-card">
+                        <header class="detalle-compra-mobile-card__header">
+                            <span class="detalle-compra-mobile-card__icono"><i class="bx bx-package" aria-hidden="true"></i></span>
+                            <span class="detalle-compra-mobile-card__registro">Producto {{ forloop.counter }}</span>
+                            <span class="detalle-compra-mobile-card__cantidad">{{ detalle.cantidad }} unidades</span>
+                        </header>
+                        <div class="detalle-compra-mobile-card__producto">{{ detalle.productoNombre }}</div>
+                        <div class="detalle-compra-mobile-card__datos">
+                            {% if compra.mostrar_importes %}
+                            <div><span>Presentación</span><strong>{{ detalle.presentacion|default:"Sin presentación" }}</strong></div>
+                            <div><span>SKU</span><strong>{{ detalle.sku|default:"Sin SKU" }}</strong></div>
+                            {% endif %}
+                            <div><span>Cantidad</span><strong>{{ detalle.cantidad }}</strong></div>
+                            {% if compra.mostrar_importes %}
+                            <div><span>Precio unitario</span><strong>{{ moneda_simbolo }} {{ detalle.precioCompra|floatformat:2 }}</strong></div>
+                            <div><span>Impuesto</span><strong>{{ detalle.impuesto|floatformat:2 }}%</strong></div>
+                            <div><span>Total</span><strong>{{ moneda_simbolo }} {{ detalle.total|floatformat:2 }}</strong></div>
+                            {% endif %}
+                        </div>
+                    </article>
+                    {% empty %}
+                    <div class="recepcion-mobile-empty"><i class="bx bx-package"></i><strong>Sin productos</strong><span>Esta compra no tiene productos registrados.</span></div>
+                    {% endfor %}
+                </section>
 
                 <nav id="paginadordecom" class="d-flex justify-content-center mt-4"></nav>
             </div>
@@ -144,7 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (botonLlegada) {
         botonLlegada.addEventListener("click", async () => {
             const confirmacion = await Swal.fire({
-                title: "¿Registrar llegada a bodega?",
+                title: "¿Marcar compra como en bodega?",
                 text: "La compra quedará disponible para recepción, pero no ingresará inventario todavía.",
                 icon: "question",
                 showCancelButton: true,
@@ -163,7 +193,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const data = await response.json();
                 if (!response.ok || !data.ok) throw new Error(data.mensaje || "No se pudo registrar la llegada.");
                 await Swal.fire({
-                    title: "Llegada registrada",
+                    title: "Compra en bodega",
                     text: data.mensaje,
                     icon: "success",
                     confirmButtonText: "Aceptar",
@@ -189,6 +219,10 @@ document.addEventListener("DOMContentLoaded", () => {
         return Array.from(document.querySelectorAll("#tabladecom tbody tr"));
     }
 
+    function obtenerTarjetasMoviles() {
+        return Array.from(document.querySelectorAll(".detalle-compra-mobile-card"));
+    }
+
     function obtenerFilasFiltradas() {
         const termino = document.getElementById("buscarProductoCompra").value.trim().toLowerCase();
         return obtenerFilas().filter(fila => !termino || fila.textContent.toLowerCase().includes(termino));
@@ -197,6 +231,9 @@ document.addEventListener("DOMContentLoaded", () => {
     function mostrarPagina(pagina) {
         const todasLasFilas = obtenerFilas();
         const filas = obtenerFilasFiltradas();
+        const termino = document.getElementById("buscarProductoCompra").value.trim().toLowerCase();
+        const todasLasTarjetas = obtenerTarjetasMoviles();
+        const tarjetas = todasLasTarjetas.filter(tarjeta => !termino || tarjeta.textContent.toLowerCase().includes(termino));
         const totalPaginas = Math.ceil(filas.length / filasPorPagina);
         if (pagina < 1) pagina = 1;
         if (pagina > totalPaginas) pagina = totalPaginas || 1;
@@ -206,6 +243,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         todasLasFilas.forEach(fila => fila.style.display = "none");
         filas.slice(inicio, fin).forEach(fila => fila.style.display = "");
+        todasLasTarjetas.forEach(tarjeta => tarjeta.style.display = "none");
+        tarjetas.slice(inicio, fin).forEach(tarjeta => tarjeta.style.display = "");
 
         paginaActual = pagina;
         renderPaginador(filas.length, pagina);

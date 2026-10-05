@@ -3,7 +3,7 @@
 {% block title %}Editar Compra{% endblock %}
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
-    <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261003-mobile-sheet" />
 {% endblock %}
 {% block titulo_content %}
     <div class="tituloscont">
@@ -88,39 +88,8 @@
             </button>
         </div>
     </div>
-    <!-- Modal Productos -->
-    <div class="modal fade" id="modalregis" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal600 compras-product-modal">
-            <div class="modal-content compras-product-modal__content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Agregar Productos</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body compras-product-modal__body">
-                    <form class="compras-product-search" id="formBuscarProductosCompra">
-                    <input type="text"
-                           id="buscadorProductos"
-                           placeholder="Buscar por nombre o SKU..."
-                           aria-label="Buscar productos">
-                    <button type="submit" class="dv-header-search__button" aria-label="Buscar productos"><i class="bx bx-search" aria-hidden="true"></i></button>
-                    </form>
-                    <div id="contenedorProductosAjax" class="compras-product-list-wrap">
-                        <div id="loadingProductos" class="text-center py-4">Cargando productos...</div>
-                    </div>
-                    <nav class="compras-product-pagination" aria-label="Páginas de productos">
-                        <ul class="pagination" id="paginacionProductos">
-                        </ul>
-                    </nav>
-                </div>
-                <div class="modal-footer compras-product-modal__footer">
-                    <span><i class="bx bx-check-circle"></i> Selecciona los productos para agregarlos a la compra</span>
-                    <button type="button"
-                            class="btn classbotones"
-                            id="guardarProductosSeleccionados"><i class="bx bx-plus"></i> Agregar selección</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Selector reutilizable de productos -->
+    {% include "components/_selector_productos_movil.html" %}
     <!-- Modal Completar compra -->
     <div class="modal fade"
          id="completarcompra"
@@ -234,5 +203,5 @@
     </div>
     {{ compra|json_script:"compraData" }}
     <script>const compra = JSON.parse(document.getElementById("compraData").textContent);</script>
-    <script type="module" src="{% static 'js/compras/editcompras.js' %}?v=20260929-impuestos"></script>
+    <script type="module" src="{% static 'js/compras/editcompras.js' %}?v=20261003-default-webp"></script>
 {% endblock %}

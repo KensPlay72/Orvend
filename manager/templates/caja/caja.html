@@ -3,8 +3,8 @@
 {% block title %} Caja {% endblock title %} 
 {% block extra_css %}
 
-<link rel="stylesheet" href="{% static 'css/manager.css' %}" />
-<link rel="stylesheet" href="{% static 'css/caja.css' %}?v=selector-animado-20260929" />
+<link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261004-caja-sheet" />
+<link rel="stylesheet" href="{% static 'css/caja.css' %}?v=20261004-modal-footer-mobile" />
 
 {% endblock extra_css %} 
 {% block titulo_content %}
@@ -190,33 +190,17 @@
   </div>
 </div>
 
-<div class="modal fade" id="modalProductosMovil" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal600 caja-product-modal">
-    <div class="modal-content caja-product-modal__content">
-      <div class="modal-header">
-        <h5 class="modal-title">Seleccionar productos</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-      </div>
-      <div class="modal-body caja-product-modal__body">
-        <form class="caja-product-search" id="buscarProductosMovilForm">
-          <input id="buscarProductosMovil" type="search" placeholder="Buscar producto o SKU" aria-label="Buscar productos" autocomplete="off"><button type="submit" class="btn classbotones" aria-label="Buscar productos"><i class="bx bx-search" aria-hidden="true"></i></button>
-        </form>
-        <div id="listaProductosMovil" class="caja-product-list-wrap"></div>
-        <nav class="caja-product-pagination" aria-label="Páginas de productos"><ul id="paginacionProductosMovil" class="pagination justify-content-center"></ul></nav>
-      </div>
-      <div class="modal-footer caja-product-modal__footer"><span><i class="bx bx-check-circle"></i> Selecciona los productos para agregarlos a la venta</span><button type="button" id="agregarProductosMovil" class="btn classbotones"><i class="bx bx-plus"></i> Agregar selección</button></div>
-    </div>
-  </div>
-</div>
+{% include "components/_selector_productos_movil.html" with selector_productos_caja=True %}
 
 <!-- ========================================================= -->
 <!-- MODAL NOTAS DE CREDITO -->
 <!-- ========================================================= -->
 
-<div class="modal fade" id="modalNotasCredito" tabindex="-1" aria-hidden="true">
+<div class="modal fade modal-sheet-mobile modal-sheet-mobile--auto" id="modalNotasCredito" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
       <div class="modal-header">
+        <span class="modal-sheet-handle" aria-hidden="true"></span>
         <h5 class="modal-title">Devoluciones disponibles</h5>
         <button
           type="button"
@@ -226,9 +210,6 @@
         ></button>
       </div>
       <div class="modal-body">
-        <p class="text-muted mb-3">
-          Busca por número de nota de devolución o por número de factura.
-        </p>
         <div class="d-flex align-items-center gap-2 mb-3">
           <input
             type="search"
@@ -240,7 +221,7 @@
           <button
             type="button"
             id="btnBuscarNotaCredito"
-            class="btn btn-outline-secondary"
+            class="btn classbotones modal-search-button"
             title="Buscar"
           >
             <i class="bx bx-search"></i>
@@ -257,13 +238,7 @@
                 <th class="text-end">Acción</th>
               </tr>
             </thead>
-            <tbody id="notasCreditoBody">
-              <tr>
-                <td colspan="5" class="text-center text-muted">
-                  Ingrese una referencia y presione buscar.
-                </td>
-              </tr>
-            </tbody>
+            <tbody id="notasCreditoBody"></tbody>
           </table>
         </div>
       </div>
@@ -276,7 +251,7 @@
 <!-- ========================================================= -->
 
 <div
-  class="modal fade"
+  class="modal fade modal-sheet-mobile modal-sheet-mobile--auto"
   id="modalagregar"
   tabindex="-1"
   aria-labelledby="modalAgregarProductoLabel"
@@ -419,7 +394,7 @@
 <!-- ========================================================= -->
 
 <div
-  class="modal fade"
+  class="modal fade modal-sheet-mobile modal-sheet-mobile--auto"
   id="modalDescuento"
   tabindex="-1"
   aria-labelledby="modalDescuentoLabel"
@@ -430,6 +405,7 @@
       <!-- HEADER -->
 
       <div class="modal-header">
+        <span class="modal-sheet-handle" aria-hidden="true"></span>
         <h5 class="modal-title" id="modalDescuentoLabel">
           Agregar cupón de descuento
         </h5>
@@ -483,7 +459,7 @@
 <!-- ========================================================= -->
 
 <div
-  class="modal fade"
+  class="modal fade modal-sheet-mobile modal-sheet-mobile--auto"
   id="modalPago"
   tabindex="-1"
   aria-labelledby="modalPagoLabel"
@@ -494,6 +470,7 @@
       <!-- HEADER -->
 
       <div class="modal-header">
+        <span class="modal-sheet-handle" aria-hidden="true"></span>
         <h5 class="modal-title" id="modalPagoLabel">Pago</h5>
 
         <button
@@ -533,6 +510,17 @@
               >
                 Buscar
               </button>
+              {% if user.is_superuser or perms.manager.add_clientes %}
+              <button
+                type="button"
+                id="btnRegistrarClienteCaja"
+                class="btn classbotones btn-registrar-cliente-caja"
+                title="Registrar cliente"
+              >
+                <i class="bx bx-user-plus" aria-hidden="true"></i>
+                <span>Registrar</span>
+              </button>
+              {% endif %}
             </div>
 
             <input type="hidden" id="cliente_id" name="cliente_id" value="" />
@@ -581,7 +569,7 @@
           <!-- DINERO RECIBIDO -->
           <!-- ================================================= -->
 
-          <div class="form-group" style="display: none" id="div_dinero">
+          <div class="form-group pago-campo-animado" style="display: none" id="div_dinero">
             <br />
 
             <label for="Pdinero"> Dinero recibido </label>
@@ -593,10 +581,9 @@
               name="Ddinero"
               id="Pdinero"
               class="form-control"
-              value="0.00"
               min="0"
               step="0.01"
-              placeholder="Dinero del cliente"
+              placeholder="0.00"
               autocomplete="off"
             />
           </div>
@@ -605,7 +592,7 @@
           <!-- AUTORIZACIÓN -->
           <!-- ================================================= -->
 
-          <div class="form-group" style="display: none" id="div_nuemro">
+          <div class="form-group pago-campo-animado" style="display: none" id="div_nuemro">
             <br />
             <label for="Pautorizacion"> Número de autorización </label>
 
@@ -624,7 +611,7 @@
           <!-- ÚLTIMOS 4 DIGITOS -->
           <!-- ================================================= -->
 
-          <div class="form-group" style="display: none" id="div_digito">
+          <div class="form-group pago-campo-animado" style="display: none" id="div_digito">
             <label for="Pdigitos"> Últimos 4 dígitos </label>
 
             <input
@@ -642,7 +629,7 @@
           <!-- BANCO -->
           <!-- ================================================= -->
 
-          <div class="form-group" style="display: none" id="div_banco">
+          <div class="form-group pago-campo-animado" style="display: none" id="div_banco">
             <label for="Pbanco"> Banco </label>
 
             <input
@@ -660,7 +647,7 @@
           <!-- RED -->
           <!-- ================================================= -->
 
-          <div class="form-group" style="display: none" id="div_red">
+          <div class="form-group pago-campo-animado" style="display: none" id="div_red">
             <label for="Pred"> Red </label>
 
             <input
@@ -703,7 +690,7 @@
 <!-- ========================================================= -->
 
 <div
-  class="modal fade"
+  class="modal fade modal-sheet-mobile modal-sheet-mobile--auto"
   id="modalSeleccionarCliente"
   tabindex="-1"
   aria-labelledby="modalSeleccionarClienteLabel"
@@ -714,6 +701,7 @@
       <!-- HEADER -->
 
       <div class="modal-header">
+        <span class="modal-sheet-handle" aria-hidden="true"></span>
         <h5 class="modal-title" id="modalSeleccionarClienteLabel">
           Seleccionar cliente
         </h5>
@@ -755,7 +743,7 @@
             <button
               type="button"
               id="btnBuscarCliente"
-              class="btn btn-outline-secondary"
+              class="btn classbotones modal-search-button"
               title="Buscar cliente"
             >
               <i class="bx bx-search"></i>
@@ -765,7 +753,7 @@
 
         <!-- TABLA -->
 
-        <div class="table-responsive mt-3">
+        <div class="table-responsive mt-3 cliente-selector-results" id="clientesResultadosWrap">
           <table class="table-picker-cliente table-sm">
             <thead>
               <tr>
@@ -784,6 +772,102 @@
     </div>
   </div>
 </div>
+
+{% if user.is_superuser or perms.manager.add_clientes %}
+<!-- Registro rápido para Caja. En móvil/tablet se reutiliza la hoja inferior. -->
+<div
+  class="modal fade modal-sheet-mobile modal-sheet-mobile--auto"
+  id="modalRegistrarClienteCaja"
+  tabindex="-1"
+  aria-labelledby="modalRegistrarClienteCajaLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-sheet-handle" aria-hidden="true"></span>
+        <h5 class="modal-title" id="modalRegistrarClienteCajaLabel">Registrar cliente</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formRegistrarClienteCaja" novalidate>
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-6 form-group">
+              <label for="cajaClienteNombre">Primer nombre</label>
+              <input type="text" id="cajaClienteNombre" class="form-control" placeholder="Primer nombre" maxlength="100" autocomplete="off">
+            </div>
+            <div class="col-md-6 form-group">
+              <label for="cajaClienteNombre2">Segundo nombre</label>
+              <input type="text" id="cajaClienteNombre2" class="form-control" placeholder="Segundo nombre" maxlength="100" autocomplete="off">
+            </div>
+            <div class="col-md-6 form-group">
+              <label for="cajaClienteApellido">Primer apellido</label>
+              <input type="text" id="cajaClienteApellido" class="form-control" placeholder="Primer apellido" maxlength="100" autocomplete="off">
+            </div>
+            <div class="col-md-6 form-group">
+              <label for="cajaClienteApellido2">Segundo apellido</label>
+              <input type="text" id="cajaClienteApellido2" class="form-control" placeholder="Segundo apellido" maxlength="100" autocomplete="off">
+            </div>
+            <div class="col-12 form-group">
+              <label for="cajaClienteEmpresa">Nombre de la empresa</label>
+              <input type="text" id="cajaClienteEmpresa" class="form-control" placeholder="Nombre de la empresa" maxlength="100" autocomplete="off">
+            </div>
+            <div class="col-md-6 form-group">
+              <label for="cajaClienteDni">DNI/RTN <span class="text-danger">*</span></label>
+              <input type="text" id="cajaClienteDni" class="form-control" placeholder="DNI/RTN" maxlength="14" inputmode="numeric" autocomplete="off" required>
+            </div>
+            <div class="col-md-6 form-group">
+              <label for="cajaClienteTelefono">Número de teléfono</label>
+              <input type="text" id="cajaClienteTelefono" class="form-control" placeholder="Número de teléfono" maxlength="12" inputmode="tel" autocomplete="off">
+            </div>
+            <div class="col-12 form-group">
+              <label for="cajaClienteEmail">Email</label>
+              <input type="email" id="cajaClienteEmail" class="form-control" placeholder="Email" maxlength="100" autocomplete="off">
+            </div>
+            {% if perms.manager.enviar_facturas_whatsapp %}
+            <div class="col-12 form-check form-switch cliente-whatsapp-option">
+              <input class="form-check-input" type="checkbox" role="switch" id="cajaClienteWhatsapp">
+              <label class="form-check-label" for="cajaClienteWhatsapp"><i class="bx bxl-whatsapp" aria-hidden="true"></i> Enviar facturas por WhatsApp</label>
+            </div>
+            {% endif %}
+            <div class="col-md-6 form-group">
+              <label for="cajaClientePais">País</label>
+              <input type="text" id="cajaClientePais" class="form-control" placeholder="País" maxlength="100" autocomplete="off">
+            </div>
+            <div class="col-md-6 form-group">
+              <label for="cajaClienteDepartamento">Departamento</label>
+              <input type="text" id="cajaClienteDepartamento" class="form-control" placeholder="Departamento" maxlength="100" autocomplete="off">
+            </div>
+            <div class="col-12 form-group">
+              <label for="cajaClienteMunicipio">Municipio</label>
+              <input type="text" id="cajaClienteMunicipio" class="form-control" placeholder="Municipio" maxlength="100" autocomplete="off">
+            </div>
+            <div class="col-12 form-group">
+              <label for="cajaClienteDireccion">Dirección</label>
+              <textarea id="cajaClienteDireccion" rows="2" maxlength="100" class="form-control" placeholder="Dirección"></textarea>
+            </div>
+            {% if perms.manager.view_cuentasporcobrar %}
+            <div class="col-md-6 form-group">
+              <label for="cajaClienteDiasCredito">Días de crédito</label>
+              <input type="text" id="cajaClienteDiasCredito" class="form-control" placeholder="Días de crédito" inputmode="numeric" autocomplete="off">
+            </div>
+            <div class="col-md-6 form-group">
+              <label for="cajaClienteMaxCredito">Crédito máximo</label>
+              <input type="text" id="cajaClienteMaxCredito" class="form-control" placeholder="Crédito máximo" inputmode="decimal" autocomplete="off">
+            </div>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="submit" form="formRegistrarClienteCaja" id="btnGuardarClienteCaja" class="btn classbotones" data-url="{% url 'post_cliente' %}">Guardar cliente</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <!-- ========================================================= -->
 <!-- MODAL APERTURA DE CAJA -->
@@ -838,6 +922,44 @@
   </div>
 </div>
 
+<!-- Apertura exclusiva para móvil/tablet: conserva intacto el modal de escritorio. -->
+<div class="modal fade modal-sheet-mobile modal-sheet-mobile--auto" id="modalAperturaCajaMovil" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content caja-product-modal__content">
+      <div class="modal-header">
+        <span class="modal-sheet-handle" aria-hidden="true"></span>
+        <h5 class="modal-title">Apertura de Caja</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body caja-product-modal__body">
+        <div class="form-group">
+          <label for="monto_apertura_movil">Monto inicial en caja</label>
+          <input
+            type="text"
+            inputmode="decimal"
+            oninput="validarNumeroCaja(this)"
+            id="monto_apertura_movil"
+            class="form-control"
+            placeholder="0.00"
+          />
+        </div>
+      </div>
+      <div class="modal-footer caja-product-modal__footer">
+        <button
+          type="button"
+          id="btnAbrirCajaMovil"
+          class="btn classbotones"
+          data-url="{% url 'abrir_caja' %}"
+          data-input="monto_apertura_movil"
+          data-modal="modalAperturaCajaMovil"
+        >
+          Abrir Caja
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ========================================================= -->
 <!-- MENSAJE CAJA CERRADA -->
 <!-- ========================================================= -->
@@ -881,7 +1003,7 @@
 
 <script
   type="module"
-  src="{% static 'js/caja/caja.js' %}?v=isv-incluido-20260930"
+  src="{% static 'js/caja/caja.js' %}?v=20261004-registro-cliente"
 ></script>
 
 <!-- ========================================================= -->
@@ -892,7 +1014,10 @@
 
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    const modalElement = document.getElementById("modalAperturaCaja");
+    const esVistaMovil = window.matchMedia("(max-width: 1032px)").matches;
+    const modalElement = document.getElementById(
+      esVistaMovil ? "modalAperturaCajaMovil" : "modalAperturaCaja",
+    );
 
     if (!modalElement) {
       return;

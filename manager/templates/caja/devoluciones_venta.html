@@ -4,7 +4,11 @@
 {% block extra_css %}
 <link
   rel="stylesheet"
-  href="{% static 'css/devoluciones_venta.css' %}?v=20260928-05"
+  href="{% static 'css/manager.css' %}?v=20261004-devoluciones-sheet"
+/>
+<link
+  rel="stylesheet"
+  href="{% static 'css/devoluciones_venta.css' %}?v=20261004-listado-access"
 />
 {% endblock %} 
 {% block titulo_content %}
@@ -29,16 +33,37 @@
   data-crear-url="{% url 'crear_devolucion_venta' %}"
 >
   <section class="dv-mobile-search-card">
+    <div class="dv-mobile-search-card__intro">
+      <span class="dv-mobile-search-card__icon">
+        <i class="bx bx-revision" aria-hidden="true"></i>
+      </span>
+      <div>
+        <strong>Buscar una factura</strong>
+        <small>Ingresa el número para consultar sus productos.</small>
+      </div>
+    </div>
     <form id="buscarFacturaFormMovil" class="dv-mobile-search">
-      <i class="bx bx-receipt" aria-hidden="true"></i>
-      <input id="numeroFacturaMovil" type="search" inputmode="numeric" pattern="[0-9]*" placeholder="Buscar factura" autocomplete="off" required>
-      <button type="submit" aria-label="Buscar factura"><i class="bx bx-search" aria-hidden="true"></i></button>
+      <div class="dv-mobile-search__field">
+        <i class="bx bxs-receipt" aria-hidden="true"></i>
+        <input id="numeroFacturaMovil" type="search" inputmode="numeric" pattern="[0-9]*" placeholder="Número de factura" autocomplete="off" aria-label="Número de factura" required>
+      </div>
+      <button type="submit" aria-label="Buscar factura">
+        <i class="bx bx-search" aria-hidden="true"></i>
+        <span>Buscar</span>
+      </button>
     </form>
+    {% if perms.manager.view_devolucionventa %}
+    <a href="{% url 'devoluciones_venta_list' %}" class="dv-mobile-list-access">
+      <i class="bx bx-list-ul" aria-hidden="true"></i>
+      <span>Ver listado de devoluciones</span>
+      <i class="bx bx-chevron-right" aria-hidden="true"></i>
+    </a>
+    {% endif %}
   </section>
   <section id="resultadoFactura" class="d-none">
     <div class="dv-card dv-factura-card">
       <div class="dv-factura-title">
-        <i class="bx bx-receipt"></i>
+        <i class="bx bxs-receipt" aria-hidden="true"></i>
         <div>
           <span>Factura</span>
           <strong id="facturaNumero"></strong>
@@ -99,7 +124,7 @@
 </div>
 
 <div
-  class="modal fade"
+  class="modal fade modal-sheet-mobile modal-sheet-mobile--auto"
   id="modalDevolucionVenta"
   tabindex="-1"
   aria-hidden="true"
@@ -107,6 +132,7 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
+        <span class="modal-sheet-handle" aria-hidden="true"></span>
         <h5 class="modal-title">Generar devolución</h5>
         <button
           type="button"
@@ -164,7 +190,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        <button type="button" class="btn btn-secondary dv-modal-cancel" data-bs-dismiss="modal">
           Cancelar
         </button>
         <button type="button" id="crearDevolucion" class="btn classbotones">
@@ -174,5 +200,5 @@
     </div>
   </div>
 </div>
-<script src="{% static 'js/caja/devoluciones_venta.js' %}?v=20260928-05"></script>
+<script src="{% static 'js/caja/devoluciones_venta.js' %}?v=20261004-modal-movil"></script>
 {% endblock %}

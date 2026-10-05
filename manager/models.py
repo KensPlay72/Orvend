@@ -1720,6 +1720,7 @@ class Notificacion(Abstracto):
         VENCIMIENTO = "VENCIMIENTO", "Próximo vencimiento"
         CUENTA_COBRAR = "CUENTA_COBRAR", "Cuenta por cobrar"
         CUENTA_PAGAR = "CUENTA_PAGAR", "Cuenta por pagar"
+        SUSCRIPCION = "SUSCRIPCION", "Suscripción"
         SISTEMA = "SISTEMA", "Sistema"
 
     usuario = models.ForeignKey(

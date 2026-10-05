@@ -5,6 +5,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/manager.css' %}">
 <link rel="stylesheet" href="{% static 'css/devoluciones_venta.css' %}">
+<link rel="stylesheet" href="{% static 'css/cotizaciones.css' %}?v=20261004-recepcion-style">
 {% endblock extra_css %}
 
 {% block titulo_content %}
@@ -15,7 +16,64 @@
 {% endblock titulo_content %}
 
 {% block main_content %}
-<div class="tabla">
+<main class="cotizaciones-page">
+<section class="cotizaciones-mobile-tools" aria-label="Buscar cotizaciones">
+    <div class="cotizaciones-mobile-tools__heading">
+        <span><i class="bx bx-file-find" aria-hidden="true"></i></span>
+        <div>
+            <strong>Consultar cotizaciones</strong>
+            <small>Busca por número, cliente o RTN.</small>
+        </div>
+    </div>
+    <form method="get" class="cotizaciones-mobile-search">
+        <div>
+            <i class="bx bx-search" aria-hidden="true"></i>
+            <input type="search" name="buscar" value="{{ busqueda }}" placeholder="Buscar cotización" autocomplete="off" aria-label="Buscar cotización">
+        </div>
+        <button type="submit" aria-label="Buscar"><i class="bx bx-search" aria-hidden="true"></i><span>Buscar</span></button>
+    </form>
+</section>
+
+<section class="cotizaciones-mobile-list" aria-label="Listado de cotizaciones">
+    {% for cotizacion in cotizaciones %}
+    <article class="cotizacion-mobile-card">
+        <header class="cotizacion-mobile-card__header">
+            <span class="cotizacion-mobile-card__icon"><i class="bx bxs-file-pdf" aria-hidden="true"></i></span>
+            <div>
+                <small>Cotización</small>
+                <strong>{{ cotizacion.numero_cotizacion }}</strong>
+            </div>
+            <span class="cotizacion-mobile-card__total">{{ moneda_simbolo }} {{ cotizacion.total|floatformat:2 }}</span>
+        </header>
+        <div class="cotizacion-mobile-card__client">
+            <span class="cotizacion-mobile-card__client-icon"><i class="bx bx-user" aria-hidden="true"></i></span>
+            <div>
+                <small>Cliente</small>
+                <strong>{% if cotizacion.cliente_nombre %}{{ cotizacion.cliente_nombre }}{% elif cotizacion.cliente %}{{ cotizacion.cliente.nombre }}{% else %}Cliente final{% endif %}</strong>
+            </div>
+        </div>
+        <div class="cotizacion-mobile-card__details">
+            <div><i class="bx bx-calendar" aria-hidden="true"></i><span><small>Fecha</small><strong>{{ cotizacion.f_creacion|date:"d/m/Y h:i A" }}</strong></span></div>
+            <div><i class="bx bx-id-card" aria-hidden="true"></i><span><small>RTN / DNI</small><strong>{% if cotizacion.cliente and cotizacion.cliente.dni %}{{ cotizacion.cliente.dni }}{% else %}—{% endif %}</strong></span></div>
+            <div><i class="bx bx-store" aria-hidden="true"></i><span><small>Sucursal</small><strong>{{ cotizacion.sucursal }}</strong></span></div>
+            <div><i class="bx bx-package" aria-hidden="true"></i><span><small>Productos</small><strong>{{ cotizacion.cantidad_productos|floatformat:2 }}</strong></span></div>
+        </div>
+        <footer class="cotizacion-mobile-card__actions">
+            <a class="cotizacion-mobile-card__download" target="_blank" href="{% url 'imprimir_cotizacion' cotizacion.documento_token %}">
+                <i class="bx bx-download" aria-hidden="true"></i> Ver o descargar PDF
+            </a>
+        </footer>
+    </article>
+    {% empty %}
+    <div class="cotizaciones-mobile-empty">
+        <i class="bx bx-file-blank" aria-hidden="true"></i>
+        <strong>Sin cotizaciones</strong>
+        <span>Aún no hay cotizaciones generadas.</span>
+    </div>
+    {% endfor %}
+</section>
+
+<div class="tabla cotizaciones-desktop-table">
     <div class="tabla-container">
         <table class="tablas-todo">
             <thead>
@@ -63,4 +121,5 @@
         </li>
     </ul>
 </nav>
+</main>
 {% endblock main_content %}

@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic import RedirectView
 
 from OrvendMart import settings
 from django.conf.urls.static import static
@@ -11,6 +12,10 @@ handler500 = "pages.views.error_500"
 
 urlpatterns = [
     path('orvend-panel-2026/', admin.site.urls),
+    path(
+        'favicon.ico',
+        RedirectView.as_view(url=f'{settings.STATIC_URL}img/logo-card.ico', permanent=True),
+    ),
 
     # login/logout
     path('accounts/', include('accounts.urls')),

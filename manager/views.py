@@ -91,6 +91,7 @@ from .models import (
     ComboImagen,
     BannerTienda,
     ConfiguracionEmpresa,
+    SuscripcionSistema,
     DetalleCuadreCaja,
     RetiroCaja,
     Notificacion,
@@ -1809,11 +1810,21 @@ def configuracion_view(request):
     configuracion = ConfiguracionEmpresa.objects.filter(
         is_delete=False
     ).prefetch_related("banners_tienda").first()
+    suscripcion = SuscripcionSistema.objects.only(
+        "fecha_inicio", "fecha_fin", "activa"
+    ).first()
+    dias_suscripcion_restantes = None
+    if suscripcion:
+        dias_suscripcion_restantes = (
+            suscripcion.fecha_fin - timezone.localdate()
+        ).days
     return render(
         request,
         "gestiones/configuracion.html",
         {
             "configuracion": configuracion,
+            "suscripcion_sistema": suscripcion,
+            "dias_suscripcion_restantes": dias_suscripcion_restantes,
             "banner_principal": (
                 configuracion.banners_tienda.filter(tipo=BannerTienda.TIPO_BANNER).first()
                 if configuracion
@@ -2653,7 +2664,12 @@ def api_productos(request):
                         p.unidad_medida.nombre
                         if p.unidad_medida
                         else ""
-                    )
+                    ),
+                    "abreviatura": (
+                        p.unidad_medida.abreviatura
+                        if p.unidad_medida
+                        else ""
+                    ),
                 },
 
                 "categoria": {
@@ -2738,7 +2754,7 @@ def api_productos_caja(request):
     ).annotate(
         existencia_caja=Coalesce(Subquery(existencia), cero),
         reservado_caja=Coalesce(Subquery(reservado), cero),
-    ).filter(existencia_caja__gt=F("reservado_caja"))
+    )
     if busqueda:
         productos = productos.filter(Q(nombre__icontains=busqueda) | Q(codigo_sku__icontains=busqueda))
 
@@ -2746,10 +2762,13 @@ def api_productos_caja(request):
     results = []
     for producto in page_obj:
         imagen = producto.imagenes_producto.first()
+        stock_disponible = max(
+            Decimal("0"), producto.existencia_caja - producto.reservado_caja
+        )
         results.append({
             "codigoSKU": producto.codigo_sku,
             "nombre": producto.nombre,
-            "stock": str(producto.existencia_caja - producto.reservado_caja),
+            "stock": str(stock_disponible),
             "precioVenta": str(producto.precio_venta),
             "unidad": producto.unidad_medida.nombre if producto.unidad_medida else "",
             "imagenUrl": request.build_absolute_uri(reverse("producto_imagen", args=[imagen.id])) if imagen else "",
@@ -4783,7 +4802,7 @@ def _tracking_compra(compra):
 
     pasos = [
         {"nombre": "Compra", "icono": "bx-cart"},
-        {"nombre": "Llegada", "detalle": "Bodega", "icono": "bx-package"},
+        {"nombre": "En bodega", "icono": "bx-package"},
         {"nombre": "Recepción", "icono": "bx-clipboard"},
     ]
     paso_actual = 0
@@ -6702,7 +6721,7 @@ def marcar_llegada_compra(request, token):
 
     if compra.fecha_llegada_bodega:
         return JsonResponse(
-            {"ok": True, "mensaje": "La llegada ya estaba registrada."}
+            {"ok": True, "mensaje": "La compra ya está en bodega."}
         )
     if compra.estado != EstadoCompra.PENDIENTE:
         return JsonResponse(
@@ -6730,7 +6749,7 @@ def marcar_llegada_compra(request, token):
     return JsonResponse(
         {
             "ok": True,
-            "mensaje": "La llegada a bodega fue registrada. Aún no se ingresó inventario.",
+            "mensaje": "La compra está en bodega. Aún no se ingresó inventario.",
         }
     )
 
@@ -6760,7 +6779,7 @@ def autorizar_entrada_view(request, tipo, token):
             raise PermissionDenied("No puede recibir compras de esta ubicación")
         if not compra.fecha_llegada_bodega:
             raise PermissionDenied(
-                "Primero debe marcar la llegada de la compra a bodega"
+                "Primero debe marcar la compra como en bodega"
             )
 
         historial = HAutorizarCompra.objects.filter(compra_id=compra.id)
@@ -7138,7 +7157,7 @@ def post_autorizar_inventario(request):
                 raise PermissionDenied("No puede recibir compras de esta ubicación")
             if not entrada.fecha_llegada_bodega:
                 raise PermissionDenied(
-                    "Primero debe marcar la llegada de la compra a bodega"
+                    "Primero debe marcar la compra como en bodega"
                 )
 
             ubicacion_destino = entrada.ubicacion
@@ -10457,7 +10476,7 @@ def _nombre_cliente_devolucion(venta):
     return venta.id_cliente.nombre_completo
 
 
-def _consulta_devoluciones_venta(fecha_inicio, fecha_fin, sucursal):
+def _consulta_devoluciones_venta(fecha_inicio, fecha_fin, sucursal, estado=""):
     inicio_honduras, fin_honduras = _rango_fechas_honduras(fecha_inicio, fecha_fin)
     devoluciones = DevolucionVenta.objects.select_related(
         "venta__id_factura_cai", "venta__id_cliente", "venta__sucursal"
@@ -10470,6 +10489,9 @@ def _consulta_devoluciones_venta(fecha_inicio, fecha_fin, sucursal):
     if sucursal:
         devoluciones = devoluciones.filter(venta__sucursal_id=sucursal)
 
+    if estado in {DevolucionVenta.Estado.DISPONIBLE, DevolucionVenta.Estado.USADA}:
+        devoluciones = devoluciones.filter(estado=estado)
+
     return devoluciones
 
 
@@ -10480,9 +10502,26 @@ def devoluciones_venta_list(request):
     fecha_inicio = request.GET.get("fecha_inicio") or fecha_hoy
     fecha_fin = request.GET.get("fecha_fin") or fecha_hoy
     sucursal = request.GET.get("sucursal")
+    estado = request.GET.get("estado", "").strip().upper()
 
-    devoluciones = _consulta_devoluciones_venta(fecha_inicio, fecha_fin, sucursal)
+    devoluciones_base = _consulta_devoluciones_venta(fecha_inicio, fecha_fin, sucursal)
+    disponibles_count = devoluciones_base.filter(
+        estado=DevolucionVenta.Estado.DISPONIBLE
+    ).count()
+    usadas_count = devoluciones_base.filter(
+        estado=DevolucionVenta.Estado.USADA
+    ).count()
+    devoluciones = (
+        devoluciones_base.filter(estado=estado)
+        if estado in {DevolucionVenta.Estado.DISPONIBLE, DevolucionVenta.Estado.USADA}
+        else devoluciones_base
+    )
     page_obj = Paginator(devoluciones, 25).get_page(request.GET.get("page"))
+
+    sucursales_con_notas = DevolucionVenta.objects.filter(
+        is_delete=False,
+        venta__sucursal__is_delete=False,
+    ).values_list("venta__sucursal_id", flat=True).distinct()
 
     return render(
         request,
@@ -10491,8 +10530,15 @@ def devoluciones_venta_list(request):
             "page_obj": page_obj,
             "fecha_inicio": fecha_inicio,
             "fecha_fin": fecha_fin,
-            "sucursales": Ubicaciones.objects.filter(es_tienda=True, is_delete=False),
+            "sucursales": Ubicaciones.objects.filter(
+                id__in=sucursales_con_notas,
+                es_tienda=True,
+                is_delete=False,
+            ).order_by("nombre"),
             "sucursal_seleccionada": sucursal,
+            "estado_seleccionado": estado,
+            "disponibles_count": disponibles_count,
+            "usadas_count": usadas_count,
         },
     )
 
@@ -10504,8 +10550,11 @@ def exportar_devoluciones_venta_excel(request):
     fecha_inicio = request.GET.get("fecha_inicio") or fecha_hoy
     fecha_fin = request.GET.get("fecha_fin") or fecha_hoy
     sucursal = request.GET.get("sucursal")
+    estado = request.GET.get("estado", "").strip().upper()
 
-    devoluciones = _consulta_devoluciones_venta(fecha_inicio, fecha_fin, sucursal)
+    devoluciones = _consulta_devoluciones_venta(
+        fecha_inicio, fecha_fin, sucursal, estado
+    )
 
     libro = Workbook()
     hoja = libro.active

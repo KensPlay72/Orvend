@@ -1,0 +1,405 @@
+.caja-mobile-records,
+.caja-mobile-list-search {
+  display: none;
+}
+
+.devoluciones-filter-heading {
+  display: none;
+}
+
+.devoluciones-list-page .ventas-filter-form {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) 110px 48px;
+}
+
+.devoluciones-filter-export .ventas-excel-btn span {
+  display: none;
+}
+
+.devoluciones-status-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 220px));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.devoluciones-status-summary article {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--system-primary) 14%, #fff);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--system-secondary) 8%, transparent);
+}
+
+.devoluciones-status-summary article > span {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--system-primary);
+  background: color-mix(in srgb, var(--system-primary) 11%, #fff);
+  font-size: 1.1rem;
+}
+
+.devoluciones-status-summary small,
+.devoluciones-status-summary strong {
+  display: block;
+}
+
+.devoluciones-status-summary small {
+  color: color-mix(in srgb, var(--system-secondary) 55%, #fff);
+  font-size: 0.63rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.devoluciones-status-summary strong {
+  color: var(--system-secondary);
+  font-size: 1.05rem;
+}
+
+@media (max-width: 1032px) {
+  .devoluciones-list-page {
+    padding-right: 0.8rem;
+    padding-left: 0.8rem;
+  }
+
+  .devoluciones-list-page .ventas-filter-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+    padding: 0.85rem;
+    border-color: color-mix(in srgb, var(--system-primary) 15%, #fff);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 8px 22px color-mix(in srgb, var(--system-secondary) 10%, transparent);
+  }
+
+  .devoluciones-filter-heading {
+    display: flex;
+    grid-column: 1 / -1;
+    align-items: center;
+    gap: 0.65rem;
+    padding-bottom: 0.65rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--system-primary) 10%, #fff);
+  }
+
+  .devoluciones-filter-heading > span {
+    display: grid;
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    place-items: center;
+    border-radius: 11px;
+    color: var(--system-primary);
+    background: color-mix(in srgb, var(--system-primary) 11%, #fff);
+    font-size: 1.2rem;
+  }
+
+  .devoluciones-filter-heading strong,
+  .devoluciones-filter-heading small {
+    display: block;
+  }
+
+  .devoluciones-filter-heading strong {
+    color: var(--system-secondary);
+    font-size: 0.9rem;
+  }
+
+  .devoluciones-filter-heading small {
+    margin-top: 0.12rem;
+    color: color-mix(in srgb, var(--system-secondary) 55%, #fff);
+    font-size: 0.68rem;
+  }
+
+  .devoluciones-list-page .ventas-filter-label {
+    font-size: 0.7rem;
+  }
+
+  .devoluciones-list-page .ventas-filter-form .form-control {
+    width: 100%;
+    min-height: 44px;
+    padding: 0.6rem 0.68rem;
+    border-radius: 10px;
+  }
+
+  .devoluciones-list-page .filtro-sucursal,
+  .devoluciones-list-page .filtro-estado {
+    grid-column: 1 / -1;
+  }
+
+  .devoluciones-filter-search,
+  .devoluciones-filter-export {
+    margin-top: 0.15rem;
+  }
+
+  .devoluciones-filter-search .ventas-search-btn,
+  .devoluciones-filter-export .ventas-excel-btn {
+    width: 100%;
+    min-height: 44px;
+    border-radius: 10px;
+  }
+
+  .devoluciones-filter-export .ventas-excel-btn {
+    gap: 0.4rem;
+  }
+
+  .devoluciones-filter-export .ventas-excel-btn span {
+    display: inline;
+    font-size: 0.76rem;
+  }
+
+  .devoluciones-status-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .caja-desktop-records {
+    display: none;
+  }
+
+  .caja-mobile-records {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+  }
+
+  .caja-mobile-record-card {
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--system-primary) 17%, #fff);
+    border-radius: 15px;
+    background: #fff;
+    box-shadow: 0 7px 18px color-mix(in srgb, var(--system-secondary) 11%, transparent);
+  }
+
+  .caja-mobile-record-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.7rem;
+    padding: 0.72rem 0.85rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--system-primary) 12%, #fff);
+    background: linear-gradient(100deg, color-mix(in srgb, var(--system-primary) 9%, #fff), #fff 66%);
+  }
+
+  .caja-mobile-record-card__reference,
+  .caja-mobile-record-card__principal,
+  .caja-mobile-record-card__meta > div {
+    display: flex;
+    align-items: center;
+  }
+
+  .caja-mobile-record-card__reference {
+    min-width: 0;
+    gap: 0.52rem;
+  }
+
+  .caja-mobile-record-card__icon,
+  .caja-mobile-record-card__principal-icon {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 10px;
+    color: var(--system-primary);
+    background: color-mix(in srgb, var(--system-primary) 13%, #fff);
+  }
+
+  .caja-mobile-record-card__icon {
+    width: 34px;
+    height: 34px;
+    font-size: 1.12rem;
+  }
+
+  .caja-mobile-record-card small {
+    display: block;
+    color: color-mix(in srgb, var(--system-secondary) 55%, #fff);
+    font-size: 0.61rem;
+    font-weight: 750;
+    letter-spacing: 0.045em;
+    text-transform: uppercase;
+  }
+
+  .caja-mobile-record-card__reference strong {
+    display: block;
+    overflow: hidden;
+    margin-top: 0.06rem;
+    color: var(--system-secondary);
+    font-size: 0.9rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .caja-mobile-record-card__status,
+  .caja-mobile-record-card__amount {
+    flex: 0 0 auto;
+    padding: 0.34rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 750;
+    white-space: nowrap;
+  }
+
+  .caja-mobile-record-card__status,
+  .caja-mobile-record-card__status--disponible,
+  .caja-mobile-record-card__status.is-complete {
+    color: #087443;
+    background: #e7f8ef;
+  }
+
+  .caja-mobile-record-card__status--usada,
+  .caja-mobile-record-card__status.is-pending {
+    color: #8a5a00;
+    background: #fff4cf;
+  }
+
+  .caja-mobile-record-card__status--anulada,
+  .caja-mobile-record-card__status.is-cancelled {
+    color: #a52b32;
+    background: #fdebec;
+  }
+
+  .caja-mobile-record-card__principal {
+    gap: 0.6rem;
+    padding: 0.82rem 0.9rem;
+  }
+
+  .caja-mobile-record-card__principal-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1.15rem;
+  }
+
+  .caja-mobile-record-card__principal > div {
+    min-width: 0;
+  }
+
+  .caja-mobile-record-card__principal strong {
+    display: block;
+    overflow: hidden;
+    margin-top: 0.14rem;
+    color: var(--system-secondary);
+    font-size: 0.88rem;
+    font-weight: 750;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .caja-mobile-record-card__amount {
+    margin-left: auto;
+    color: var(--system-primary);
+    background: color-mix(in srgb, var(--system-primary) 9%, #fff);
+  }
+
+  .caja-mobile-record-card__meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+    padding: 0 0.9rem 0.85rem;
+  }
+
+  .caja-mobile-record-card__meta > div {
+    gap: 0.42rem;
+    min-width: 0;
+    padding: 0.58rem;
+    border: 1px solid color-mix(in srgb, var(--system-primary) 11%, #fff);
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--system-primary) 4%, #fff);
+  }
+
+  .caja-mobile-record-card__meta i {
+    color: var(--system-primary);
+    font-size: 1rem;
+  }
+
+  .caja-mobile-record-card__meta span {
+    min-width: 0;
+  }
+
+  .caja-mobile-record-card__meta strong {
+    display: block;
+    overflow: hidden;
+    margin-top: 0.1rem;
+    color: var(--system-secondary);
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .caja-mobile-record-card__products {
+    padding: 0.7rem 0.9rem;
+    border-top: 1px solid color-mix(in srgb, var(--system-primary) 12%, #fff);
+    background: color-mix(in srgb, var(--system-primary) 3%, #fff);
+  }
+
+  .caja-mobile-record-card__products p {
+    max-height: 4.4rem;
+    margin: 0.25rem 0 0;
+    overflow-y: auto;
+    color: var(--system-secondary);
+    font-size: 0.75rem;
+    line-height: 1.45;
+  }
+
+  .caja-mobile-list-search {
+    position: relative;
+    margin: 0 0.8rem 0.85rem;
+  }
+
+  .caja-mobile-list-search i {
+    position: absolute;
+    top: 50%;
+    left: 0.85rem;
+    color: var(--system-primary);
+    transform: translateY(-50%);
+  }
+
+  .caja-mobile-list-search input {
+    width: 100%;
+    height: 44px;
+    padding: 0.65rem 0.75rem 0.65rem 2.35rem;
+    border: 1px solid color-mix(in srgb, var(--system-primary) 18%, #dce7e5);
+    border-radius: 12px;
+    outline: 0;
+    background: #fff;
+    box-shadow: 0 5px 15px color-mix(in srgb, var(--system-secondary) 8%, transparent);
+  }
+
+  #retirosMobileList {
+    padding: 0 0.8rem;
+  }
+
+  .caja-mobile-records__empty {
+    display: grid;
+    grid-column: 1 / -1;
+    justify-items: center;
+    gap: 0.3rem;
+    padding: 2rem 1rem;
+    border: 1px dashed color-mix(in srgb, var(--system-primary) 30%, #fff);
+    border-radius: 14px;
+    color: color-mix(in srgb, var(--system-secondary) 62%, #fff);
+    background: #fff;
+    text-align: center;
+  }
+
+  .caja-mobile-records__empty i {
+    color: var(--system-primary);
+    font-size: 2rem;
+  }
+
+  .caja-mobile-records__empty strong {
+    color: var(--system-secondary);
+  }
+
+  .caja-mobile-records__empty span {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 700px) {
+  .caja-mobile-records {
+    grid-template-columns: 1fr;
+  }
+}

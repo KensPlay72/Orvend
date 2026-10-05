@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
-  document.querySelectorAll("tr[data-detail-url]").forEach((fila) => {
+  document.querySelectorAll("[data-detail-url]").forEach((fila) => {
     fila.addEventListener("click", (event) => {
       if (event.target.closest("button, a, input, select, textarea")) return;
       window.location.href = fila.dataset.detailUrl;
@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", function () {
   document.querySelectorAll(".btn-marcar-llegada").forEach((btn) => {
     btn.addEventListener("click", async function () {
       const confirmacion = await Swal.fire({
-        title: "¿Registrar llegada a bodega?",
+        title: "¿Marcar compra como en bodega?",
         text: "La compra quedará disponible para recepción, pero no ingresará inventario todavía.",
         icon: "question",
         showCancelButton: true,
@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", function () {
           throw new Error(data.mensaje || "No se pudo registrar la llegada.");
         }
         await Swal.fire({
-          title: "Llegada registrada",
+          title: "Compra en bodega",
           text: data.mensaje,
           icon: "success",
           confirmButtonText: "Aceptar",

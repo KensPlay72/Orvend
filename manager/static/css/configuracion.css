@@ -39,6 +39,50 @@
   font-size: 0.86rem;
   opacity: 0.88;
 }
+.config-hero__subscription {
+  display: flex;
+  align-items: center;
+  gap: 0.62rem;
+  margin-left: auto;
+  padding: 0.62rem 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 11px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(4px);
+}
+.config-hero__subscription > i {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--system-primary);
+  background: #fff;
+  font-size: 1.15rem;
+}
+.config-hero__subscription span,
+.config-hero__subscription strong {
+  display: block;
+  margin: 0;
+  color: #fff;
+}
+.config-hero__subscription span {
+  font-size: 0.69rem;
+  font-weight: 700;
+  letter-spacing: 0.045em;
+  opacity: 0.84;
+  text-transform: uppercase;
+}
+.config-hero__subscription strong {
+  margin-top: 0.08rem;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+.config-hero__subscription small {
+  font-size: 0.72rem;
+  font-weight: 700;
+}
 .config-layout {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr) 260px;
@@ -474,6 +518,9 @@
   .config-hero {
     align-items: flex-start;
   }
+  .config-hero__subscription {
+    margin-left: 0;
+  }
   .config-layout {
     grid-template-columns: 1fr;
   }
@@ -495,5 +542,14 @@
   .config-save {
     width: calc(100% - 2.2rem);
     margin: 0 1.1rem 1.1rem;
+  }
+}
+@media (max-width: 680px) {
+  .config-hero {
+    flex-wrap: wrap;
+  }
+  .config-hero__subscription {
+    width: 100%;
+    justify-content: center;
   }
 }

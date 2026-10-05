@@ -11,6 +11,7 @@ from .models import (
     RegistroAbonos,
     RegistroAbonosCobrar,
     RetiroCaja,
+    SuscripcionSistema,
 )
 from .context_processors import invalidar_tema_empresa_cache
 from .notificaciones_alertas import programar_sincronizacion_alertas
@@ -34,6 +35,8 @@ def _sincronizar_alertas_despues_de_commit():
 @receiver(post_delete, sender=RegistroAbonos)
 @receiver(post_save, sender=RegistroAbonosCobrar)
 @receiver(post_delete, sender=RegistroAbonosCobrar)
+@receiver(post_save, sender=SuscripcionSistema)
+@receiver(post_delete, sender=SuscripcionSistema)
 def sincronizar_alertas_operativas(sender, instance, **kwargs):
     if not kwargs.get("raw", False):
         _sincronizar_alertas_despues_de_commit()

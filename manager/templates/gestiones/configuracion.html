@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 <link
   rel="stylesheet"
-  href="{% static 'css/configuracion.css' %}?v=20260918-01"
+  href="{% static 'css/configuracion.css' %}?v=20261003-suscripcion"
 />
 {% endblock %} 
 {% block titulo_content %}
@@ -25,6 +25,23 @@
         integraciones.</span
       >
     </div>
+    {% if suscripcion_sistema %}
+    <div class="config-hero__subscription">
+      {% if suscripcion_sistema.activa and dias_suscripcion_restantes > 0 %}
+      <i class="bx bx-calendar-check"></i>
+      <div>
+        <span>Días de vigencia</span>
+        <strong>{{ dias_suscripcion_restantes }} <small>día{{ dias_suscripcion_restantes|pluralize:"s" }}</small></strong>
+      </div>
+      {% elif suscripcion_sistema.activa and dias_suscripcion_restantes == 0 %}
+      <i class="bx bx-time-five"></i>
+      <div><span>Vigencia de suscripción</span><strong>Vence hoy</strong></div>
+      {% else %}
+      <i class="bx bx-error-circle"></i>
+      <div><span>Vigencia de suscripción</span><strong>No vigente</strong></div>
+      {% endif %}
+    </div>
+    {% endif %}
   </header>
 
   <form id="formConfiguracion" class="config-layout" novalidate>

@@ -6,6 +6,7 @@
   rel="stylesheet"
   href="{% static 'css/manager.css' %}"
 />
+<link rel="stylesheet" href="{% static 'css/listados_caja_mobile.css' %}?v=20261004-mobile-cards" />
 {% endblock %} 
 {% block titulo_content %}
 <div class="tituloscont">
@@ -20,8 +21,36 @@
 </div>
 {% endblock %} 
 {% block main_content %}
+<div class="caja-mobile-list-search">
+  <i class="bx bx-search" aria-hidden="true"></i>
+  <input type="search" id="buscarRetirosMovil" placeholder="Buscar retiros" autocomplete="off" aria-label="Buscar retiros">
+</div>
+<section class="caja-mobile-records" id="retirosMobileList" aria-label="Retiros registrados">
+  {% for retiro in retiros %}
+  <article class="caja-mobile-record-card retiro-mobile-card">
+    <header class="caja-mobile-record-card__header">
+      <div class="caja-mobile-record-card__reference">
+        <span class="caja-mobile-record-card__icon"><i class="bx bx-money-withdraw"></i></span>
+        <span><small>Retiro de caja</small><strong>{{ retiro.f_creacion|date:"d/m/Y" }}</strong></span>
+      </div>
+      {% if retiro.estado == "PENDIENTE" %}<span class="caja-mobile-record-card__status is-pending">Pendiente</span>{% elif retiro.estado == "COMPLETADO" %}<span class="caja-mobile-record-card__status is-complete">Completado</span>{% else %}<span class="caja-mobile-record-card__status is-cancelled">Cancelado</span>{% endif %}
+    </header>
+    <div class="caja-mobile-record-card__principal">
+      <span class="caja-mobile-record-card__principal-icon"><i class="bx bx-user"></i></span>
+      <div><small>Cajero responsable</small><strong>{{ retiro.cajero_nombre }}</strong></div>
+      <span class="caja-mobile-record-card__amount">{{ moneda_simbolo }} {{ retiro.monto|floatformat:2 }}</span>
+    </div>
+    <div class="caja-mobile-record-card__meta">
+      <div><i class="bx bx-calendar"></i><span><small>Fecha y hora</small><strong>{{ retiro.f_creacion|date:"d/m/Y h:i A" }}</strong></span></div>
+      <div><i class="bx bx-message-square-detail"></i><span><small>Observación</small><strong>{{ retiro.observaciones|default:"—" }}</strong></span></div>
+    </div>
+  </article>
+  {% empty %}
+  <div class="caja-mobile-records__empty"><i class="bx bx-money-withdraw"></i><strong>Sin retiros</strong><span>Aún no hay retiros registrados.</span></div>
+  {% endfor %}
+</section>
 <div class="tabla">
-  <div class="tabla-container">
+  <div class="tabla-container caja-desktop-records">
     <table class="tablas-todo" id="tablaRetirosCaja">
       <thead>
         <tr>
@@ -85,12 +114,12 @@
   </ul>
 </nav>
 <script>
-  document
-    .getElementById("buscarRetiros")
-    .addEventListener("input", (event) => {
+  [document.getElementById("buscarRetiros"), document.getElementById("buscarRetirosMovil")]
+    .filter(Boolean)
+    .forEach((buscador) => buscador.addEventListener("input", (event) => {
       const query = event.target.value.toLocaleLowerCase().trim();
       document
-        .querySelectorAll("#tablaRetirosCaja tbody tr")
+        .querySelectorAll("#tablaRetirosCaja tbody tr, #retirosMobileList .retiro-mobile-card")
         .forEach((fila) => {
           fila.style.display = fila.textContent
             .toLocaleLowerCase()
@@ -98,6 +127,6 @@
             ? ""
             : "none";
         });
-    });
+    }));
 </script>
 {% endblock %}

@@ -625,6 +625,16 @@
   width: 100px;
 }
 
+/* Realizar compra: controles numéricos compactos sin alterar otros formularios. */
+.tablaencompras #tablacont .precio-input,
+.tablaencompras #tablacont .impuesto-input,
+.tablaencompras #tablacont .cantidad-input {
+  width: 72px !important;
+  min-width: 72px;
+  padding-right: 0.4rem !important;
+  padding-left: 0.4rem !important;
+}
+
 /*------------------------------Estados -------------------------------*/
 
 .tablas-todo input[type="text"].cantidad-recepcion,

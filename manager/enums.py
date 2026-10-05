@@ -3,7 +3,7 @@ from django.db import models
 
 class EstadoCompra(models.TextChoices):
     PENDIENTE = "Pendiente", "Pendiente"
-    LLEGADA_BODEGA = "Llegada Bodega", "Llegó a bodega"
+    LLEGADA_BODEGA = "Llegada Bodega", "En bodega"
     EN_RECEPCION = "En Recepcion", "En Recepción"
     RECEPCION_PARCIAL = "Recepcion Parcial", "Recepción Parcial"
     COMPLETADO = "Completado", "Completado"

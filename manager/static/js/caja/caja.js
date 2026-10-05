@@ -277,6 +277,16 @@ async function sin_codigo(codigo) {
       return;
     }
 
+    const stockReal = parseFloat(data.stock) || 0;
+    if (Math.floor(stockReal) < 1) {
+      mensaje(
+        `El producto ${data.nombre || "seleccionado"} no tiene unidades completas disponibles. Existencia: ${stockReal}.`,
+        "warning",
+        "",
+      );
+      return;
+    }
+
     let imp15 = 0;
     let imp18 = 0;
 
@@ -305,7 +315,7 @@ async function sin_codigo(codigo) {
 
       tipos_isv: parseFloat(data.tipos_isv) || 0,
 
-      stock: parseFloat(data.stock) || 0,
+      stock: stockReal,
 
       cantidad: 1,
 
@@ -651,6 +661,15 @@ if (btnRegis) {
     // ------------------------------------------------
     // VALIDAR STOCK DEL PRODUCTO
     // ------------------------------------------------
+
+    if (stockVendible < 1) {
+      mensaje(
+        `El producto ${productoSeleccionado.nombre} no tiene unidades completas disponibles. Existencia: ${stockReal}.`,
+        "warning",
+        "",
+      );
+      return;
+    }
 
     if (cantidad > stockVendible) {
       mensaje(
@@ -1096,6 +1115,105 @@ function aplicarPrecioCaja(indice, celda, valor) {
   tabla_detalle_total();
 }
 
+function recalcularDescuentoPorCantidad(producto) {
+  if (producto.estado !== 1) return;
+
+  producto.descuento = (Number(producto.valor_descuento) || 0) * producto.cantidad;
+  producto.restarlleva = 0;
+
+  if (producto.lleva > 0 && producto.cantidad >= producto.lleva) {
+    const grupos = Math.floor(producto.cantidad / producto.lleva);
+    producto.descuento +=
+      producto.precio_venta * (producto.lleva - producto.paga) * grupos;
+    producto.restarlleva = producto.cantidad % producto.lleva === 0 ? 1 : 0;
+  }
+}
+
+function actualizarCantidadDesdeEdicion(indice, fila, valor) {
+  const producto = datos[indice];
+  if (!producto) return null;
+
+  const stockVendible = Math.floor(Number(producto.stock) || 0);
+  let cantidad = Number.parseInt(String(valor).trim(), 10);
+
+  if (!Number.isInteger(cantidad) || cantidad < 1) {
+    mensaje("La cantidad debe ser un número entero mayor que cero", "warning", "");
+    return null;
+  }
+
+  if (cantidad > stockVendible) {
+    cantidad = stockVendible;
+    mensaje(
+      `La cantidad se ajustó a ${stockVendible}, que es el máximo disponible.`,
+      "warning",
+      "",
+    );
+  }
+
+  if (cantidad < 1) {
+    mensaje("Este producto ya no tiene unidades disponibles", "warning", "");
+    return null;
+  }
+
+  producto.cantidad = cantidad;
+  recalcularDescuentoPorCantidad(producto);
+  recalcularLineaConIsvIncluido(producto);
+
+  const cantidadVisible = fila.querySelector(".pre");
+  if (cantidadVisible) {
+    cantidadVisible.textContent = `${producto.cantidad} / ${producto.stock}`;
+  }
+  if (fila.cells[4]) fila.cells[4].textContent = "L. " + producto.descuento.toFixed(2);
+  if (fila.cells[5]) fila.cells[5].textContent = "L. " + totalLineaCaja(producto).toFixed(2);
+  tabla_detalle_total();
+  return producto.cantidad;
+}
+
+function editarCantidadCaja(indice, fila, etiqueta) {
+  if (etiqueta.parentElement?.querySelector(".cantidad-editable")) return;
+
+  const producto = datos[indice];
+  if (!producto) return;
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.inputMode = "numeric";
+  input.pattern = "[0-9]*";
+  input.autocomplete = "off";
+  input.className = "cantidad-editable";
+  input.value = producto.cantidad;
+  input.setAttribute("aria-label", `Cantidad de ${producto.nombre}`);
+
+  etiqueta.replaceWith(input);
+  input.focus();
+  input.select();
+
+  let confirmado = false;
+  const restaurar = (cantidad = producto.cantidad) => {
+    const nuevaEtiqueta = document.createElement("p");
+    nuevaEtiqueta.className = "pre";
+    nuevaEtiqueta.textContent = `${cantidad} / ${producto.stock}`;
+    input.replaceWith(nuevaEtiqueta);
+  };
+  const confirmar = () => {
+    if (confirmado) return;
+    confirmado = true;
+    const cantidad = actualizarCantidadDesdeEdicion(indice, fila, input.value);
+    restaurar(cantidad ?? producto.cantidad);
+  };
+
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      confirmar();
+    } else if (event.key === "Escape") {
+      confirmado = true;
+      restaurar();
+    }
+  });
+  input.addEventListener("blur", confirmar);
+}
+
 if (tbody) {
   tbody.addEventListener("click", function (e) {
     const fila = e.target.closest("tr");
@@ -1107,6 +1225,12 @@ if (tbody) {
     const indice = fila.sectionRowIndex;
 
     if (!datos[indice]) {
+      return;
+    }
+
+    const etiquetaCantidad = e.target.closest(".pre");
+    if (etiquetaCantidad) {
+      editarCantidadCaja(indice, fila, etiquetaCantidad);
       return;
     }
 
@@ -1780,6 +1904,47 @@ function dinero(valor) {
   return Number(valor || 0).toFixed(2);
 }
 
+function alturaNotasCredito() {
+  if (
+    !modalNotasCreditoElement?.classList.contains("show") ||
+    !window.matchMedia("(max-width: 1032px)").matches
+  ) {
+    return null;
+  }
+  return modalNotasCreditoElement.querySelector(".modal-dialog")?.getBoundingClientRect()
+    .height;
+}
+
+function animarAlturaNotasCredito(alturaInicial) {
+  if (!alturaInicial || !modalNotasCreditoElement) return;
+
+  const dialogo = modalNotasCreditoElement.querySelector(".modal-dialog");
+  const contenido = modalNotasCreditoElement.querySelector(".modal-content");
+  if (!dialogo || !contenido) return;
+
+  // Conserva el alto previo hasta el próximo frame para que la hoja crezca
+  // de forma suave al mostrar los resultados de la búsqueda.
+  dialogo.style.setProperty("height", `${alturaInicial}px`, "important");
+  requestAnimationFrame(() => {
+    const alturaFinal = Math.min(
+      contenido.scrollHeight,
+      window.innerHeight * 0.82,
+      620,
+    );
+    if (Math.abs(alturaFinal - alturaInicial) < 2) {
+      dialogo.style.removeProperty("height");
+      return;
+    }
+    dialogo.style.setProperty("height", `${alturaFinal}px`, "important");
+    const finalizar = (evento) => {
+      if (evento.propertyName !== "height") return;
+      dialogo.style.removeProperty("height");
+      dialogo.removeEventListener("transitionend", finalizar);
+    };
+    dialogo.addEventListener("transitionend", finalizar);
+  });
+}
+
 function renderNotasCredito(notas) {
   if (!notasCreditoBody) return;
 
@@ -1797,6 +1962,7 @@ function renderNotasCredito(notas) {
 
   notas.forEach((nota) => {
     const fila = document.createElement("tr");
+    fila.className = "nota-credito-card";
     const estaAplicada = notaCreditoSeleccionada?.id === nota.id;
     const textoBoton = estaAplicada
       ? '<i class="bx bx-x"></i> Quitar'
@@ -1812,9 +1978,14 @@ function renderNotasCredito(notas) {
             </td>`;
 
     fila.cells[0].textContent = nota.nota;
+    fila.cells[0].dataset.label = "Nota";
     fila.cells[1].textContent = `#${nota.factura}`;
+    fila.cells[1].dataset.label = "Factura";
     fila.cells[2].textContent = nota.cliente;
+    fila.cells[2].dataset.label = "Cliente";
     fila.cells[3].textContent = `L. ${dinero(nota.monto)}`;
+    fila.cells[3].dataset.label = "Valor";
+    fila.cells[4].dataset.label = "Acción";
 
     fila.querySelector(".btn-aplicar-nota").addEventListener("click", () => {
       if (estaAplicada) {
@@ -1851,10 +2022,7 @@ async function cargarNotasCredito() {
 
   const referencia = buscarNotaCredito?.value.trim() || "";
   if (!referencia) {
-    notasCreditoBody.innerHTML = `
-            <tr><td colspan="5" class="text-center text-muted py-4">
-                Ingrese una referencia y presione buscar.
-            </td></tr>`;
+    notasCreditoBody.replaceChildren();
     return;
   }
 
@@ -1876,7 +2044,9 @@ async function cargarNotasCredito() {
         data.message || "No se pudieron cargar las notas de crédito",
       );
     }
+    const alturaInicial = alturaNotasCredito();
     renderNotasCredito(data.notas);
+    animarAlturaNotasCredito(alturaInicial);
   } catch (error) {
     notasCreditoBody.innerHTML = `
             <tr><td colspan="5" class="text-center text-danger py-4"></td></tr>`;
@@ -1889,10 +2059,7 @@ if (btnNotasCredito) {
     if (modalNotasCredito) modalNotasCredito.show();
     if (buscarNotaCredito) buscarNotaCredito.value = "";
     if (notasCreditoBody) {
-      notasCreditoBody.innerHTML = `
-                <tr><td colspan="5" class="text-center text-muted py-4">
-                    Ingrese una referencia y presione buscar.
-                </td></tr>`;
+      notasCreditoBody.replaceChildren();
     }
   });
 }
@@ -1920,19 +2087,41 @@ if (buscarNotaCredito) {
 // ==========================================================
 
 const btnSeleccionarCliente = document.getElementById("btnSeleccionarCliente");
+let selectorClienteRetornaAPago = false;
+
+const esVistaMovilCaja = () =>
+  window.matchMedia("(max-width: 1032px)").matches;
 
 function abrirSelectorClienteParaCotizacion() {
   const buscar = document.getElementById("buscarClienteInput");
   const resultados = document.getElementById("tablaClientesResultados");
   const conRtn = document.getElementById("clienteConRtn");
   if (buscar) buscar.value = "";
-  if (resultados) resultados.innerHTML = "";
+  mostrarResultadosClientes([], false);
   if (conRtn) conRtn.checked = false;
 
   const modalElement = document.getElementById("modalSeleccionarCliente");
-  if (modalElement) {
+  if (!modalElement) return;
+
+  const mostrarSelector = () => {
     bootstrap.Modal.getOrCreateInstance(modalElement).show();
+  };
+  const modalPagoElement = document.getElementById("modalPago");
+  const pagoEstaAbierto = modalPagoElement?.classList.contains("show");
+
+  // En teléfono primero cerramos la hoja de pago hacia abajo. Cuando esa
+  // animación termina, aparece la hoja de clientes; así nunca se apilan.
+  if (pagoEstaAbierto) {
+    selectorClienteRetornaAPago = true;
+    modalPagoElement.addEventListener("hidden.bs.modal", mostrarSelector, {
+      once: true,
+    });
+    bootstrap.Modal.getInstance(modalPagoElement)?.hide();
+    return;
   }
+
+  selectorClienteRetornaAPago = false;
+  mostrarSelector();
 }
 
 if (btnSeleccionarCliente) {
@@ -1949,13 +2138,72 @@ const buscarClienteInput = document.getElementById("buscarClienteInput");
 
 const btnBuscarCliente = document.getElementById("btnBuscarCliente");
 
+function mostrarResultadosClientes(clientes, expandir = false) {
+  const resultados = document.getElementById("tablaClientesResultados");
+  const contenedor = document.getElementById("clientesResultadosWrap");
+  if (!resultados) return;
+
+  const alturaInicial = contenedor?.getBoundingClientRect().height || 0;
+  if (expandir && alturaInicial) {
+    // Fijamos el alto anterior antes de reemplazar filas para que la hoja y
+    // su tabla aumenten juntas, sin un salto visual.
+    contenedor.style.height = `${alturaInicial}px`;
+  }
+  contenedor?.classList.toggle("cliente-selector-results--expanded", expandir);
+  resultados.replaceChildren();
+
+  if (!clientes.length) {
+    resultados.innerHTML =
+      `<tr><td colspan="5" class="text-center text-muted">${
+        expandir ? "No se encontraron clientes" : "Busca un cliente para seleccionarlo"
+      }</td></tr>`;
+  } else {
+    clientes.forEach((cliente) => {
+      const fila = document.createElement("tr");
+      fila.style.cursor = "pointer";
+
+      [
+      cliente.id,
+        cliente.nombre_completo || "Sin nombre",
+        cliente.dni || "-",
+        cliente.empresa || "-",
+        cliente.telefono || "-",
+      ].forEach((valor) => {
+        const celda = document.createElement("td");
+        celda.textContent = valor;
+        fila.appendChild(celda);
+      });
+
+      fila.addEventListener("click", () => seleccionarCliente(cliente));
+      resultados.appendChild(fila);
+    });
+  }
+
+  if (!expandir || !contenedor || !alturaInicial) return;
+
+  contenedor.style.height = "auto";
+  const alturaMaxima = Math.min(
+    contenedor.scrollHeight,
+    window.matchMedia("(max-width: 1032px)").matches
+      ? window.innerHeight * 0.48
+      : window.innerHeight * 0.46,
+    390,
+  );
+  contenedor.style.height = `${alturaInicial}px`;
+
+  requestAnimationFrame(() => {
+    contenedor.style.height = `${alturaMaxima}px`;
+    const finalizar = (evento) => {
+      if (evento.propertyName !== "height") return;
+      contenedor.style.removeProperty("height");
+      contenedor.removeEventListener("transitionend", finalizar);
+    };
+    contenedor.addEventListener("transitionend", finalizar);
+  });
+}
+
 function buscarClientes() {
   const texto = buscarClienteInput?.value.trim() || "";
-  const resultados = document.getElementById("tablaClientesResultados");
-
-  if (!resultados) return;
-  resultados.innerHTML = "";
-
   if (texto.length < 2) {
     mensaje("Ingrese al menos 2 caracteres para buscar", "error", "");
     return;
@@ -1977,32 +2225,11 @@ function buscarClientes() {
     })
     .then((data) => {
       if (!data.length) {
-        resultados.innerHTML = `
-                    <tr><td colspan="5" class="text-center text-muted">
-                        No se encontraron clientes
-                    </td></tr>`;
+        mostrarResultadosClientes([], true);
         return;
       }
 
-      data.forEach((cliente) => {
-        const fila = document.createElement("tr");
-        fila.style.cursor = "pointer";
-
-        [
-          cliente.id,
-          cliente.nombre_completo || "Sin nombre",
-          cliente.dni || "-",
-          cliente.empresa || "-",
-          cliente.telefono || "-",
-        ].forEach((valor) => {
-          const celda = document.createElement("td");
-          celda.textContent = valor;
-          fila.appendChild(celda);
-        });
-
-        fila.addEventListener("click", () => seleccionarCliente(cliente));
-        resultados.appendChild(fila);
-      });
+      mostrarResultadosClientes(data, true);
     })
     .catch((error) => {
       if (error.name !== "AbortError") mensaje(error.message, "error", "");
@@ -2036,8 +2263,10 @@ function seleccionarCliente(cliente) {
     ? cliente.empresa || nombreCliente
     : nombreCliente;
 
+  const idCliente = cliente.id;
+
   clienteSeleccionado = {
-    id: cliente.id,
+    id: idCliente,
 
     nombre: nombreFactura,
 
@@ -2055,7 +2284,7 @@ function seleccionarCliente(cliente) {
   const detalle = document.getElementById("detalleClienteSeleccionado");
 
   if (clienteId) {
-    clienteId.value = cliente.id;
+    clienteId.value = idCliente || "";
   }
 
   if (clienteNombre) {
@@ -2082,6 +2311,19 @@ function seleccionarCliente(cliente) {
     const modal = bootstrap.Modal.getInstance(modalElement);
 
     if (modal) {
+      if (selectorClienteRetornaAPago) {
+        modalElement.addEventListener(
+          "hidden.bs.modal",
+          () => {
+            selectorClienteRetornaAPago = false;
+            const modalPagoElement = document.getElementById("modalPago");
+            if (modalPagoElement) {
+              bootstrap.Modal.getOrCreateInstance(modalPagoElement).show();
+            }
+          },
+          { once: true },
+        );
+      }
       modal.hide();
     }
   }
@@ -2100,12 +2342,162 @@ function seleccionarCliente(cliente) {
   // ------------------------------------------------------
 
   if (pagos.length > 0) {
-    pagos[0].cliente_id = cliente.id;
+    pagos[0].cliente_id = idCliente;
 
     pagos[0].cliente_nombre = clienteSeleccionado.nombre;
 
     pagos[0].con_rtn = clienteSeleccionado.con_rtn;
   }
+}
+
+// ==========================================================
+// REGISTRO RÁPIDO DE CLIENTE DESDE CAJA
+// ==========================================================
+
+const btnRegistrarClienteCaja = document.getElementById("btnRegistrarClienteCaja");
+const modalRegistrarClienteCajaElement = document.getElementById(
+  "modalRegistrarClienteCaja",
+);
+const formRegistrarClienteCaja = document.getElementById("formRegistrarClienteCaja");
+const btnGuardarClienteCaja = document.getElementById("btnGuardarClienteCaja");
+let registroClienteRetornaAPago = false;
+let clienteNuevoRegistroCaja = null;
+
+const valorCajaClienteONull = (id) => {
+  const valor = document.getElementById(id)?.value?.trim();
+  return valor || null;
+};
+
+function abrirRegistroClienteCaja() {
+  if (!modalRegistrarClienteCajaElement) return;
+
+  const mostrarRegistro = () => {
+    modalRegistrarClienteCajaElement.addEventListener(
+      "hidden.bs.modal",
+      () => {
+        const clienteNuevo = clienteNuevoRegistroCaja;
+        clienteNuevoRegistroCaja = null;
+
+        if (registroClienteRetornaAPago) {
+          registroClienteRetornaAPago = false;
+          const modalPagoElement = document.getElementById("modalPago");
+          if (modalPagoElement) {
+            if (clienteNuevo) {
+              modalPagoElement.addEventListener(
+                "shown.bs.modal",
+                () => seleccionarCliente(clienteNuevo),
+                { once: true },
+              );
+            }
+            bootstrap.Modal.getOrCreateInstance(modalPagoElement).show();
+          }
+          return;
+        }
+
+        if (clienteNuevo) seleccionarCliente(clienteNuevo);
+      },
+      { once: true },
+    );
+    bootstrap.Modal.getOrCreateInstance(modalRegistrarClienteCajaElement).show();
+  };
+  const modalPagoElement = document.getElementById("modalPago");
+
+  if (modalPagoElement?.classList.contains("show")) {
+    registroClienteRetornaAPago = true;
+    modalPagoElement.addEventListener("hidden.bs.modal", mostrarRegistro, {
+      once: true,
+    });
+    bootstrap.Modal.getInstance(modalPagoElement)?.hide();
+    return;
+  }
+
+  registroClienteRetornaAPago = false;
+  mostrarRegistro();
+}
+
+if (btnRegistrarClienteCaja) {
+  btnRegistrarClienteCaja.addEventListener("click", abrirRegistroClienteCaja);
+}
+
+if (formRegistrarClienteCaja && btnGuardarClienteCaja) {
+  formRegistrarClienteCaja.addEventListener("submit", async (evento) => {
+    evento.preventDefault();
+    if (formRegistrarClienteCaja.dataset.submitting === "true") return;
+
+    const dni = valorCajaClienteONull("cajaClienteDni");
+    if (!dni) {
+      mensaje("El DNI/RTN es obligatorio", "warning", "");
+      document.getElementById("cajaClienteDni")?.focus();
+      return;
+    }
+
+    const payload = {
+      dni,
+      nombre: valorCajaClienteONull("cajaClienteNombre"),
+      nombre2: valorCajaClienteONull("cajaClienteNombre2"),
+      apellido: valorCajaClienteONull("cajaClienteApellido"),
+      apellido2: valorCajaClienteONull("cajaClienteApellido2"),
+      empresa: valorCajaClienteONull("cajaClienteEmpresa"),
+      direccion: valorCajaClienteONull("cajaClienteDireccion"),
+      email: valorCajaClienteONull("cajaClienteEmail"),
+      telefono: valorCajaClienteONull("cajaClienteTelefono"),
+      enviar_factura_whatsapp: Boolean(
+        document.getElementById("cajaClienteWhatsapp")?.checked,
+      ),
+      pais: valorCajaClienteONull("cajaClientePais"),
+      departamento: valorCajaClienteONull("cajaClienteDepartamento"),
+      municipio: valorCajaClienteONull("cajaClienteMunicipio"),
+      d_credito: valorCajaClienteONull("cajaClienteDiasCredito"),
+      max_credito: valorCajaClienteONull("cajaClienteMaxCredito"),
+    };
+
+    const nombreCompleto = [
+      payload.nombre,
+      payload.nombre2,
+      payload.apellido,
+      payload.apellido2,
+    ]
+      .filter(Boolean)
+      .join(" ") || payload.empresa || dni;
+
+    formRegistrarClienteCaja.dataset.submitting = "true";
+    btnGuardarClienteCaja.disabled = true;
+
+    try {
+      const respuesta = await fetch(btnGuardarClienteCaja.dataset.url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")?.value || "",
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await respuesta.json().catch(() => ({}));
+
+      if (!respuesta.ok || !data.success) {
+        throw new Error(data.message || "No se pudo registrar el cliente");
+      }
+
+      const clienteNuevo = {
+        id: data.id,
+        nombre_completo: nombreCompleto,
+        dni,
+        empresa: payload.empresa,
+        telefono: payload.telefono,
+      };
+      const modalRegistro = bootstrap.Modal.getInstance(modalRegistrarClienteCajaElement);
+      clienteNuevoRegistroCaja = clienteNuevo;
+
+      formRegistrarClienteCaja.reset();
+      modalRegistro?.hide();
+      mensaje(data.message || "Cliente registrado correctamente", "success", "");
+    } catch (error) {
+      mensaje(error.message || "No se pudo registrar el cliente", "error", "");
+    } finally {
+      formRegistrarClienteCaja.dataset.submitting = "false";
+      btnGuardarClienteCaja.disabled = false;
+    }
+  });
 }
 
 // ==========================================================
@@ -2153,6 +2545,11 @@ if (postPagar) {
     // ------------------------------------------------
     // CLIENTE
     // ------------------------------------------------
+
+    if (!clienteSeleccionado) {
+      mensaje("Seleccione un cliente antes de realizar la venta", "error", "");
+      return;
+    }
 
     if (!clienteId) {
       mensaje("Seleccione un cliente antes de realizar la venta", "error", "");
@@ -2320,18 +2717,14 @@ function limpiarCajaDespuesDeVenta() {
   if (detalleCliente) detalleCliente.textContent = "";
 
   ["div_dinero", "div_nuemro", "div_digito", "div_banco", "div_red"].forEach(
-    (id) => {
-      const campo = document.getElementById(id);
-      if (campo) campo.style.display = "none";
-    },
+    (id) => ocultarCampoPagoInmediato(document.getElementById(id)),
   );
   const dineroRecibido = document.getElementById("Pdinero");
-  if (dineroRecibido) dineroRecibido.value = "0.00";
+  if (dineroRecibido) dineroRecibido.value = "";
 
   const notasBody = document.getElementById("notasCreditoBody");
   if (notasBody) {
-    notasBody.innerHTML =
-      '<tr><td colspan="5" class="text-center text-muted py-4">Ingrese una referencia y presione buscar.</td></tr>';
+    notasBody.replaceChildren();
   }
   const buscarNota = document.getElementById("buscarNotaCredito");
   if (buscarNota) buscarNota.value = "";
@@ -2592,6 +2985,56 @@ if (btnPagar) {
 
 const tipoPagoSelect = document.getElementById("tipo_pago");
 
+function ocultarCampoPagoInmediato(campo) {
+  if (!campo) return;
+  campo.dataset.visible = "false";
+  campo.style.display = "none";
+  campo.style.removeProperty("max-height");
+  campo.style.removeProperty("opacity");
+  campo.style.removeProperty("overflow");
+  campo.style.removeProperty("transform");
+}
+
+function alternarCampoPago(campo, mostrar) {
+  if (!campo || (campo.dataset.visible === "true") === mostrar) return;
+  campo.dataset.visible = String(mostrar);
+
+  if (mostrar) {
+    campo.style.display = "block";
+    const alturaFinal = campo.scrollHeight;
+    campo.style.overflow = "hidden";
+    campo.style.maxHeight = "0px";
+    campo.style.opacity = "0";
+    campo.style.transform = "translateY(-8px)";
+    requestAnimationFrame(() => {
+      campo.style.maxHeight = `${alturaFinal}px`;
+      campo.style.opacity = "1";
+      campo.style.transform = "translateY(0)";
+    });
+  } else {
+    campo.style.overflow = "hidden";
+    campo.style.maxHeight = `${campo.scrollHeight}px`;
+    campo.style.opacity = "1";
+    campo.style.transform = "translateY(0)";
+    requestAnimationFrame(() => {
+      campo.style.maxHeight = "0px";
+      campo.style.opacity = "0";
+      campo.style.transform = "translateY(-8px)";
+    });
+  }
+
+  const finalizar = (evento) => {
+    if (evento.propertyName !== "max-height") return;
+    if (!mostrar) campo.style.display = "none";
+    campo.style.removeProperty("max-height");
+    campo.style.removeProperty("overflow");
+    campo.style.removeProperty("opacity");
+    campo.style.removeProperty("transform");
+    campo.removeEventListener("transitionend", finalizar);
+  };
+  campo.addEventListener("transitionend", finalizar);
+}
+
 if (tipoPagoSelect) {
   tipoPagoSelect.addEventListener("change", function (e) {
     const opcion = e.target.value;
@@ -2607,51 +3050,41 @@ if (tipoPagoSelect) {
     // ------------------------------------------------
 
     if (opcion === "pago_contado" || opcion === "pago_deposito") {
-      if (dinero) dinero.style.display = "block";
-
-      if (numero) numero.style.display = "none";
-
-      if (digito) digito.style.display = "none";
+      alternarCampoPago(dinero, true);
+      alternarCampoPago(numero, false);
+      alternarCampoPago(digito, false);
 
       // ------------------------------------------------
       // PAGO CON CHEQUE
       // ------------------------------------------------
     } else if (opcion === "pago_cheque") {
-      if (dinero) dinero.style.display = "none";
-
-      if (numero) numero.style.display = "none";
-
-      if (digito) digito.style.display = "none";
+      alternarCampoPago(dinero, false);
+      alternarCampoPago(numero, false);
+      alternarCampoPago(digito, false);
 
       // ------------------------------------------------
       // PAGO TARJETA
       // ------------------------------------------------
     } else if (opcion === "pago_tarjeta") {
-      if (dinero) dinero.style.display = "none";
-
-      if (numero) numero.style.display = "block";
-
-      if (digito) digito.style.display = "block";
+      alternarCampoPago(dinero, false);
+      alternarCampoPago(numero, true);
+      alternarCampoPago(digito, true);
 
       // ------------------------------------------------
       // PAGO A CRÉDITO
       // ------------------------------------------------
     } else if (opcion === "pago_credito") {
-      if (dinero) dinero.style.display = "none";
-
-      if (numero) numero.style.display = "none";
-
-      if (digito) digito.style.display = "none";
+      alternarCampoPago(dinero, false);
+      alternarCampoPago(numero, false);
+      alternarCampoPago(digito, false);
 
       // ------------------------------------------------
       // SIN SELECCION
       // ------------------------------------------------
     } else {
-      if (dinero) dinero.style.display = "none";
-
-      if (numero) numero.style.display = "none";
-
-      if (digito) digito.style.display = "none";
+      alternarCampoPago(dinero, false);
+      alternarCampoPago(numero, false);
+      alternarCampoPago(digito, false);
     }
   });
 }
@@ -2682,11 +3115,17 @@ function mensaje(texto, tipo, funcion) {
 // APERTURA DE CAJA
 // ==========================================================
 
-const btnAbrirCaja = document.getElementById("btnAbrirCaja");
+const btnAbrirCaja = document.getElementById(
+  window.matchMedia("(max-width: 1032px)").matches
+    ? "btnAbrirCajaMovil"
+    : "btnAbrirCaja",
+);
 
 if (btnAbrirCaja) {
   btnAbrirCaja.addEventListener("click", function () {
-    const montoInput = document.getElementById("monto_apertura");
+    const montoInput = document.getElementById(
+      btnAbrirCaja.dataset.input || "monto_apertura",
+    );
 
     if (!montoInput) {
       return;
@@ -2754,7 +3193,9 @@ if (btnAbrirCaja) {
               confirmButton: "classbotones",
             },
           }).then(() => {
-            const modalElement = document.getElementById("modalAperturaCaja");
+            const modalElement = document.getElementById(
+              btnAbrirCaja.dataset.modal || "modalAperturaCaja",
+            );
 
             if (modalElement) {
               const modal = bootstrap.Modal.getInstance(modalElement);
@@ -2952,9 +3393,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const contenidoModal = document.querySelector(
     "#modalProductosMovil .modal-content",
   );
+  const modalProductosMovil = document.getElementById("modalProductosMovil");
   const seleccionados = new Set();
   if (!form || !lista || !paginas || !boton) return;
   let busqueda = "";
+  let productosPagina = new Map();
 
   const truncarExistencia = (valor) => {
     const texto = String(valor ?? "0").trim().replace(",", ".");
@@ -2965,8 +3408,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const actualizarListaConAnimacion = (contenido) => {
     const alturaInicial = lista.getBoundingClientRect().height;
     const alturaModalInicial = contenidoModal?.getBoundingClientRect().height || 0;
+    const esHojaMovil = Boolean(
+      modalProductosMovil?.classList.contains("modal-sheet-mobile") &&
+      window.matchMedia("(max-width: 1032px)").matches,
+    );
     lista.style.height = alturaInicial ? `${alturaInicial}px` : "";
-    if (alturaModalInicial) {
+    if (!esHojaMovil && alturaModalInicial) {
       contenidoModal.style.height = `${alturaModalInicial}px`;
     }
     lista.innerHTML = contenido;
@@ -2978,20 +3425,20 @@ document.addEventListener("DOMContentLoaded", () => {
     lista.style.height = alturaInicial ? `${alturaInicial}px` : "";
     if (!alturaInicial) {
       lista.style.height = "";
-      contenidoModal?.style.removeProperty("height");
+      if (!esHojaMovil) contenidoModal?.style.removeProperty("height");
       return;
     }
 
     requestAnimationFrame(() => {
       lista.style.height = `${alturaFinal}px`;
-      if (alturaModalInicial) {
+      if (!esHojaMovil && alturaModalInicial) {
         const diferencia = alturaFinal - alturaInicial;
         contenidoModal.style.height = `${alturaModalInicial + diferencia}px`;
       }
       const terminarTransicion = (evento) => {
         if (evento.propertyName !== "height") return;
         lista.style.height = "";
-        contenidoModal?.style.removeProperty("height");
+        if (!esHojaMovil) contenidoModal?.style.removeProperty("height");
         lista.removeEventListener("transitionend", terminarTransicion);
       };
       lista.addEventListener("transitionend", terminarTransicion);
@@ -3010,20 +3457,33 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const respuesta = await fetch(url);
       const data = await respuesta.json();
+      productosPagina = new Map(
+        data.results.map((producto) => [producto.codigoSKU, producto]),
+      );
       actualizarListaConAnimacion(
         data.results
           .map(
             (p) =>
-              `<article class="caja-product-option ${seleccionados.has(p.codigoSKU) ? "seleccionado" : ""}" data-codigo="${p.codigoSKU}"><img class="caja-product-option__image" src="${p.imagenUrl || "/static/img/default.png"}" onerror="this.src='/static/img/default.png'"><div class="caja-product-option__info"><strong>${p.nombre}</strong><small>Existencia: ${truncarExistencia(p.stock)} ${p.unidad || ""}</small></div><span class="caja-product-option__action"><i class="bx ${seleccionados.has(p.codigoSKU) ? "bx-check-circle" : "bx-plus-circle"}"></i> ${seleccionados.has(p.codigoSKU) ? "Seleccionado" : "Seleccionar"}</span></article>`,
+              `<article class="caja-product-option ${seleccionados.has(p.codigoSKU) ? "seleccionado" : ""}" data-codigo="${p.codigoSKU}"><img class="caja-product-option__image" src="${p.imagenUrl || "/static/img/default.webp"}" onerror="this.src='/static/img/default.webp'"><div class="caja-product-option__info"><strong>${p.nombre}</strong><small>Existencia: ${truncarExistencia(p.stock)} ${p.unidad || ""}</small></div><span class="caja-product-option__action"><i class="bx ${seleccionados.has(p.codigoSKU) ? "bx-check-circle" : "bx-plus-circle"}"></i> ${seleccionados.has(p.codigoSKU) ? "Seleccionado" : "Seleccionar"}</span></article>`,
           )
           .join("") ||
-          '<p class="text-center py-4">No se encontraron productos disponibles.</p>',
+          '<p class="text-center py-4">No se encontraron productos.</p>',
       );
       lista.classList.remove("is-loading");
       lista.querySelectorAll("[data-codigo]").forEach(
         (item) =>
           (item.onclick = () => {
             const codigo = item.dataset.codigo;
+            const producto = productosPagina.get(codigo);
+            const stockVendible = Math.floor(Number(producto?.stock) || 0);
+            if (stockVendible < 1) {
+              mensaje(
+                `${producto?.nombre || "El producto"} no tiene unidades completas disponibles. Existencia: ${truncarExistencia(producto?.stock)} ${producto?.unidad || ""}.`,
+                "warning",
+                "",
+              );
+              return;
+            }
             seleccionados.has(codigo)
               ? seleccionados.delete(codigo)
               : seleccionados.add(codigo);

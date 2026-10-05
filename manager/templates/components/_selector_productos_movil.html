@@ -1,0 +1,49 @@
+{% if selector_productos_caja %}
+<div class="modal fade modal-sheet-mobile" id="modalProductosMovil" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal600 caja-product-modal">
+    <div class="modal-content caja-product-modal__content">
+      <div class="modal-header">
+        <span class="modal-sheet-handle" aria-hidden="true"></span>
+        <h5 class="modal-title">Seleccionar productos</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body caja-product-modal__body">
+        <form class="caja-product-search" id="buscarProductosMovilForm">
+          <input id="buscarProductosMovil" type="search" placeholder="Buscar producto o SKU" aria-label="Buscar productos" autocomplete="off">
+          <button type="submit" class="btn classbotones" aria-label="Buscar productos"><i class="bx bx-search" aria-hidden="true"></i></button>
+        </form>
+        <div id="listaProductosMovil" class="caja-product-list-wrap"></div>
+        <nav class="caja-product-pagination" aria-label="Páginas de productos"><ul id="paginacionProductosMovil" class="pagination justify-content-center"></ul></nav>
+      </div>
+      <div class="modal-footer caja-product-modal__footer">
+        <button type="button" id="agregarProductosMovil" class="btn classbotones"><i class="bx bx-plus"></i> Agregar selección</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="modal fade modal-sheet-mobile" id="modalregis" tabindex="-1" aria-labelledby="selectorProductosTitulo" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal600 compras-product-modal">
+    <div class="modal-content compras-product-modal__content">
+      <div class="modal-header">
+        <span class="modal-sheet-handle" aria-hidden="true"></span>
+        <h5 class="modal-title" id="selectorProductosTitulo">Agregar productos</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body compras-product-modal__body">
+        <form class="compras-product-search" id="formBuscarProductosCompra">
+          <input type="text" id="buscadorProductos" placeholder="Buscar por nombre o SKU..." aria-label="Buscar productos" autocomplete="off">
+          <button type="submit" class="dv-header-search__button" aria-label="Buscar productos"><i class="bx bx-search" aria-hidden="true"></i></button>
+        </form>
+        <div id="contenedorProductosAjax" class="contenedorProductosAjax compras-product-list-wrap">
+          <div id="loadingProductos" class="text-center py-4">Cargando productos...</div>
+        </div>
+        <nav class="compras-product-pagination" aria-label="Páginas de productos"><ul class="pagination" id="paginacionProductos"></ul></nav>
+      </div>
+      <div class="modal-footer compras-product-modal__footer">
+        <button type="button" class="btn classbotones" id="guardarProductosSeleccionados"><i class="bx bx-plus"></i> Agregar selección</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}

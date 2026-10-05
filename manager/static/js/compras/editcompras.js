@@ -212,7 +212,7 @@ async function cargarProductos(page = 1, search = "") {
       div.dataset.sku = prod.codigoSKU.toLowerCase();
 
       div.innerHTML = `
-                <img class="compras-product-option__image" src="${prod.imagenUrl}" alt="" onerror="this.src='/static/img/default.png'">
+                <img class="compras-product-option__image" src="${prod.imagenUrl}" alt="" onerror="this.src='/static/img/default.webp'">
                 <div class="compras-product-option__info">
                     <strong>${prod.nombre}</strong>
                     <small>${prod.unidadMedida.nombre} · SKU: ${prod.codigoSKU}</small>

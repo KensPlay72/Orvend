@@ -6,6 +6,7 @@
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}">
     <link rel="stylesheet" href="{% static 'css/ventas.css' %}">
+    <link rel="stylesheet" href="{% static 'css/listados_caja_mobile.css' %}?v=20261004-filtros-estados">
 {% endblock %}
 
 {% block titulo_content %}
@@ -16,36 +17,87 @@
 {% endblock %}
 
 {% block main_content %}
-    <div class="container-fluid">
+    <div class="container-fluid devoluciones-list-page">
         <form method="get" class="ventas-filter-form" id="devolucionesFilterForm" data-export-url="{% url 'exportar_devoluciones_venta_excel' %}">
-            <div class="ventas-filter-group">
+            <div class="devoluciones-filter-heading">
+                <span><i class="bx bx-filter-alt"></i></span>
+                <div><strong>Filtrar devoluciones</strong><small>Consulta notas de crédito por fecha, sucursal o estado.</small></div>
+            </div>
+            <div class="ventas-filter-group filtro-fecha-inicio">
                 <label class="ventas-filter-label">Fecha inicial</label>
                 <input type="date" name="fecha_inicio" class="form-control" value="{{ fecha_inicio }}">
             </div>
-            <div class="ventas-filter-group">
+            <div class="ventas-filter-group filtro-fecha-fin">
                 <label class="ventas-filter-label">Fecha final</label>
                 <input type="date" name="fecha_fin" class="form-control" value="{{ fecha_fin }}">
             </div>
-            <div class="ventas-filter-group">
+            <div class="ventas-filter-group filtro-sucursal">
                 <label class="ventas-filter-label">Sucursal</label>
                 <select name="sucursal" class="form-control">
-                    <option value="">Todas las sucursales</option>
+                    <option value="">Todas con notas de crédito</option>
                     {% for s in sucursales %}
                         <option value="{{ s.id }}" {% if sucursal_seleccionada == s.id|stringformat:"s" %}selected{% endif %}>{{ s.nombre }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="ventas-filter-group">
+            <div class="ventas-filter-group filtro-estado">
+                <label class="ventas-filter-label">Estado</label>
+                <select name="estado" class="form-control">
+                    <option value="">Disponibles y usadas</option>
+                    <option value="DISPONIBLE" {% if estado_seleccionado == "DISPONIBLE" %}selected{% endif %}>Disponibles</option>
+                    <option value="USADA" {% if estado_seleccionado == "USADA" %}selected{% endif %}>Usadas</option>
+                </select>
+            </div>
+            <div class="ventas-filter-group devoluciones-filter-search">
                 <button type="submit" class="ventas-search-btn w-100">Buscar</button>
             </div>
-            <div class="ventas-filter-group ventas-export-group">
+            <div class="ventas-filter-group ventas-export-group devoluciones-filter-export">
                 <button type="button" class="ventas-excel-btn" id="exportarDevolucionesExcel" aria-label="Exportar devoluciones a Excel" title="Exportar a Excel">
-                    <i class="bx bx-spreadsheet" aria-hidden="true"></i>
+                    <i class="bx bx-spreadsheet" aria-hidden="true"></i><span>Exportar</span>
                 </button>
             </div>
         </form>
 
-        <div class="tabla-container">
+        <section class="devoluciones-status-summary" aria-label="Resumen de notas de crédito">
+            <article><span><i class="bx bx-check-circle"></i></span><div><small>Disponibles</small><strong>{{ disponibles_count }}</strong></div></article>
+            <article><span><i class="bx bx-check-double"></i></span><div><small>Usadas</small><strong>{{ usadas_count }}</strong></div></article>
+        </section>
+
+        <section class="caja-mobile-records caja-mobile-records--devoluciones" aria-label="Devoluciones registradas">
+            {% for devolucion in page_obj %}
+            <article class="caja-mobile-record-card">
+                <header class="caja-mobile-record-card__header">
+                    <div class="caja-mobile-record-card__reference">
+                        <span class="caja-mobile-record-card__icon"><i class="bx bx-revision"></i></span>
+                        <span><small>Nota de crédito</small><strong>{{ devolucion.nota_credito }}</strong></span>
+                    </div>
+                    <span class="caja-mobile-record-card__status caja-mobile-record-card__status--{{ devolucion.estado|lower }}">{{ devolucion.get_estado_display }}</span>
+                </header>
+                <div class="caja-mobile-record-card__principal">
+                    <span class="caja-mobile-record-card__principal-icon"><i class="bx bx-user"></i></span>
+                    <div>
+                        <small>Cliente</small>
+                        <strong>{% if devolucion.venta.id_cliente %}{% if devolucion.venta.con_rtn %}{{ devolucion.venta.id_cliente.empresa|default:devolucion.venta.id_cliente.nombre_completo }}{% else %}{{ devolucion.venta.id_cliente.nombre_completo }}{% endif %}{% else %}Consumidor Final{% endif %}</strong>
+                    </div>
+                    <span class="caja-mobile-record-card__amount">{{ moneda_simbolo }} {{ devolucion.monto_total|floatformat:2 }}</span>
+                </div>
+                <div class="caja-mobile-record-card__meta">
+                    <div><i class="bx bx-calendar"></i><span><small>Fecha</small><strong>{{ devolucion.f_creacion|date:"d/m/Y H:i" }}</strong></span></div>
+                    <div><i class="bx bx-receipt"></i><span><small>Factura</small><strong>{{ devolucion.venta.id_factura_cai.numero_factura }}</strong></span></div>
+                    <div><i class="bx bx-store"></i><span><small>Sucursal</small><strong>{{ devolucion.venta.sucursal.nombre }}</strong></span></div>
+                    <div><i class="bx bx-message-square-detail"></i><span><small>Motivo</small><strong>{{ devolucion.get_motivo_display }}</strong></span></div>
+                </div>
+                <div class="caja-mobile-record-card__products">
+                    <small>Productos devueltos</small>
+                    <p>{% for detalle in devolucion.detalles.all %}{{ detalle.producto.nombre }} × {{ detalle.cantidad }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</p>
+                </div>
+            </article>
+            {% empty %}
+            <div class="caja-mobile-records__empty"><i class="bx bx-revision"></i><strong>Sin devoluciones</strong><span>No se encontraron devoluciones.</span></div>
+            {% endfor %}
+        </section>
+
+        <div class="tabla-container caja-desktop-records">
             <table class="tablas-todo" id="tablaDevolucionesVenta">
                 <thead>
                     <tr>
@@ -98,7 +150,7 @@
             <ul class="pagination">
                 <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
                     {% if page_obj.has_previous %}
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&sucursal={{ sucursal_seleccionada }}">«</a>
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&sucursal={{ sucursal_seleccionada }}&estado={{ estado_seleccionado }}">«</a>
                     {% else %}
                         <span class="page-link">«</span>
                     {% endif %}
@@ -106,12 +158,12 @@
                 {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
                 {% for p in paginas_visibles %}
                     <li class="page-item {% if p == page_obj.number %}active{% endif %}">
-                        <a class="page-link" href="?page={{ p }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&sucursal={{ sucursal_seleccionada }}">{{ p }}</a>
+                        <a class="page-link" href="?page={{ p }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&sucursal={{ sucursal_seleccionada }}&estado={{ estado_seleccionado }}">{{ p }}</a>
                     </li>
                 {% endfor %}
                 <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
                     {% if page_obj.has_next %}
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&sucursal={{ sucursal_seleccionada }}">»</a>
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&sucursal={{ sucursal_seleccionada }}&estado={{ estado_seleccionado }}">»</a>
                     {% else %}
                         <span class="page-link">»</span>
                     {% endif %}

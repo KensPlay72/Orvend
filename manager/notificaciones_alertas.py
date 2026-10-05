@@ -7,7 +7,13 @@ from django.db import transaction
 from django.db.models import F, Min, Q, Sum
 from django.utils import timezone
 
-from .models import CuentasPorCobrar, CuentasPorPagar, Inventarios, Notificacion
+from .models import (
+    CuentasPorCobrar,
+    CuentasPorPagar,
+    Inventarios,
+    Notificacion,
+    SuscripcionSistema,
+)
 from .notificaciones_realtime import publicar_actualizacion_usuarios
 
 
@@ -198,6 +204,42 @@ def actualizar_notificaciones_alertas(*, emitir=True):
         monto_pendiente__gt=0,
         fecha_vencimiento__date__lte=hoy.date() + timedelta(days=5),
     ).select_related("proveedor")
+    suscripcion = SuscripcionSistema.objects.only(
+        "fecha_inicio", "fecha_fin", "activa"
+    ).first()
+    alertas_suscripcion = []
+    if (
+        suscripcion
+        and suscripcion.activa
+        and suscripcion.fecha_inicio <= hoy.date()
+    ):
+        dias_restantes = (suscripcion.fecha_fin - hoy.date()).days
+        if 0 <= dias_restantes <= 5:
+            fecha_fin = suscripcion.fecha_fin.strftime("%d/%m/%Y")
+            if dias_restantes == 0:
+                titulo = "La suscripción vence hoy"
+                mensaje = (
+                    "La suscripción del sistema vence hoy "
+                    f"({fecha_fin}). Renueva el período para evitar restricciones."
+                )
+            else:
+                titulo = "Suscripción próxima a vencer"
+                mensaje = (
+                    f"La suscripción vence el {fecha_fin}. "
+                    f"Faltan {dias_restantes} día{'s' if dias_restantes != 1 else ''}."
+                )
+            # La fecha actual forma parte de la referencia para que el aviso se
+            # renueve cada día durante los últimos cinco días del período.
+            alertas_suscripcion.append(
+                {
+                    "referencia": (
+                        "suscripcion:vencimiento:"
+                        f"{suscripcion.fecha_fin.isoformat()}:{hoy.date().isoformat()}"
+                    ),
+                    "titulo": titulo,
+                    "mensaje": mensaje,
+                }
+            )
     usuarios_compras = _usuarios_con_permiso("view_compras")
     usuarios_afectados = set()
     usuarios_afectados.update(
@@ -220,6 +262,11 @@ def actualizar_notificaciones_alertas(*, emitir=True):
         _usuarios_con_permiso("view_cuentasporpagar"),
         Notificacion.Tipo.CUENTA_PAGAR,
         alertas_cuentas(cuentas_por_pagar, es_cobro=False),
+    ))
+    usuarios_afectados.update(_sincronizar(
+        _usuarios_con_permiso("gestionar_configuracion"),
+        Notificacion.Tipo.SUSCRIPCION,
+        alertas_suscripcion,
     ))
     if emitir:
         publicar_actualizacion_usuarios(usuarios_afectados)

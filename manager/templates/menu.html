@@ -2,7 +2,8 @@
 {% block content %}
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="viewport"
+              content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
         <link rel="stylesheet" href="{% static 'plugins/bootstrap.min.css' %}">
         <link rel="icon"
               href="{% static 'img/logo-card.ico' %}"
@@ -12,7 +13,7 @@
         <!--========== BOX ICONS ==========-->
         <link rel="stylesheet" href="{% static 'plugins/css/boxicons.min.css' %}">
         <!--========== CSS ==========-->
-        <link rel="stylesheet" href="{% static 'css/menu.css' %}">
+        <link rel="stylesheet" href="{% static 'css/menu.css' %}?v=20261004-sin-zoom-movil">
         <link rel="stylesheet" href="{% static 'css/carga_manager.css' %}?v=20260920">
         <link rel="stylesheet" href="{% static 'css/tema_sistema.css' %}">
         <title>
@@ -488,6 +489,7 @@
         <script src="{% static 'plugins/jwt-decode.min.js' %}"></script>
         <script src="{% static 'plugins/jquery.min.js' %}"></script>
         <script src="{% static 'plugins/bootstrap.min.js' %}"></script>
+        <script src="{% static 'js/modal_sheet_mobile.js' %}?v=20261004-01"></script>
         <script src="{% static 'plugins/sweetalert2.min.js' %}"></script>
         <script src="{% static 'js/carga_manager.js' %}?v=20260924"></script>
     </body>

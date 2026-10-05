@@ -6,7 +6,7 @@
     Cuadre de Caja
     {% endblock title %}
 
-    {% block extra_css %} <link rel="stylesheet" href="{% static 'css/cuadre_caja.css' %}" /> <link rel="stylesheet" href="{% static 'css/caja.css' %}" />
+    {% block extra_css %} <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261004-cierre-sheet" /> <link rel="stylesheet" href="{% static 'css/cuadre_caja.css' %}?v=20261004-cierre-sheet" /> <link rel="stylesheet" href="{% static 'css/caja.css' %}?v=20261004-modales-movil" />
     {% endblock extra_css %}
 
     {% block titulo_content %} <div class="tituloscont"> <img
@@ -45,7 +45,7 @@
         <!-- RESUMEN DE CAJA -->
         <!-- ========================= -->
 
-        <div class="row g-3 mb-4">
+        <div class="row g-3 mb-4 cuadre-summary-grid">
 
             <div class="col-lg-3 col-md-6">
                 <div class="card summary-card summary-card--sales">
@@ -145,9 +145,9 @@
                         <tbody>
                             {% for denominacion in denominaciones_efectivo %}
                             <tr>
-                                <td>{{ moneda_simbolo }} {{ denominacion|floatformat:2 }}</td>
-                                <td><input type="text" class="form-control cantidad-billete" oninput="validateNumber(this)"></td>
-                                <td class="subtotal">{{ moneda_simbolo }} 0.00</td>
+                                <td data-label="Denominación">{{ moneda_simbolo }} {{ denominacion|floatformat:2 }}</td>
+                                <td data-label="Cantidad"><input type="text" class="form-control cantidad-billete" inputmode="numeric" autocomplete="off" oninput="validateNumber(this)"></td>
+                                <td data-label="Subtotal" class="subtotal">{{ moneda_simbolo }} 0.00</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -161,6 +161,11 @@
 
                     </table>
 
+                </div>
+
+                <div class="cuadre-total-mobile" aria-live="polite">
+                    <span>Total contado</span>
+                    <strong id="totalContadoMobile">{{ moneda_simbolo }} 0.00</strong>
                 </div>
 
             </div>
@@ -266,6 +271,23 @@
 
     </div>
 
+    <div class="modal fade modal-sheet-mobile modal-sheet-mobile--auto" id="modalConfirmarCuadre" tabindex="-1" aria-labelledby="modalConfirmarCuadreTitulo" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content cuadre-confirmacion-modal">
+                <div class="modal-header">
+                    <span class="modal-sheet-handle" aria-hidden="true"></span>
+                    <h5 class="modal-title" id="modalConfirmarCuadreTitulo">¿Cerrar cuadre de caja?</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body" id="contenidoConfirmarCuadre"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn classbotones" id="confirmarCierreCuadre">Sí, cerrar caja</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- CSRF -->
 
     <form style="display:none;">
@@ -278,6 +300,6 @@
     </script> {% endcomment %}
 
 
-    <script src="{% static 'js/caja/cuadre.js' %}"></script>
+    <script src="{% static 'js/caja/cuadre.js' %}?v=20261004-modal"></script>
 
     {% endblock main_content %}

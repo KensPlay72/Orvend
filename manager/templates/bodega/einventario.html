@@ -1,10 +1,11 @@
 {% extends "menu.html" %}
 {% load static pagination_tags %}
 {% block title %}
-    Recepción de Inventario
+    Recepción
 {% endblock title %}
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}?v=20261003-mobile-cards" />
 {% endblock extra_css %}
 {% block search_content %}
     <div class="header__search">
@@ -73,7 +74,7 @@
         </div>
     </div>
     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-    <div class="tabla-container">
+    <div class="tabla-container recepcion-table-desktop">
         <table class="tablas-todo" id="tablacont">
             <thead>
                 <tr>
@@ -92,8 +93,8 @@
                     <tr data-id="{{ item.id }}"
                         data-tipo="{{ item.tipo_codigo }}"
                         {% if item.detalle_url %}data-detail-url="{{ item.detalle_url }}" class="recepcion-row--detail"{% endif %}>
-                        <td>{{ item.id }}</td>
-                        <td>
+                        <td data-label="Registro">{{ item.id }}</td>
+                        <td data-label="Tipo">
                             {% if item.es_cambio %}
                                 <span class="badge bg-success">Cambio</span>
                             {% elif item.tipo == "Compra" %}
@@ -102,21 +103,21 @@
                                 <span class="badge bg-info text-dark">Traslado</span>
                             {% endif %}
                         </td>
-                        <td>{{ item.referencia }}</td>
-                        <td>{{ item.fecha|date:"d/m/Y H:i" }}</td>
-                        <td>{{ item.cantidad }}</td>
-                        <td class="estado-centrado">
+                        <td data-label="Proveedor / origen">{{ item.referencia }}</td>
+                        <td data-label="Fecha">{{ item.fecha|date:"d/m/Y H:i" }}</td>
+                        <td data-label="Cantidad">{{ item.cantidad }}</td>
+                        <td data-label="Estado" class="estado-centrado">
                             {% if item.estado == "Pendiente" %}
                                 <span class="badge bg-warning text-dark">Pendiente</span>
                             {% elif item.estado == "Llegada Bodega" %}
-                                <span class="badge estado-llegada-bodega">Llegó a bodega</span>
+                                <span class="badge estado-llegada-bodega">En bodega</span>
                             {% elif item.estado == "Completado" %}
                                 <span class="badge bg-success">Completado</span>
                             {% else %}
                                 <span class="badge bg-danger">{{ item.estado }}</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td data-label="Llegada">
                             {% if item.llego_bodega %}
                                 <span class="llegada-bodega-registro"
                                       title="{{ item.llegada_bodega_usuario }} · {{ item.fecha_llegada_bodega|date:'d/m/Y H:i' }}">
@@ -126,14 +127,14 @@
                                 <button type="button"
                                         class="btn btn-sm classbotones btn-marcar-llegada"
                                         data-url="{% url 'marcar_llegada_compra' item.token %}"
-                                        title="Marcar llegada a bodega">
-                                    <i class="bx bx-package"></i> Marcar llegada
+                                        title="Marcar como en bodega">
+                                    <i class="bx bx-package"></i> Marcar en bodega
                                 </button>
                             {% else %}
                                 <span class="text-muted">—</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td data-label="Acción" class="recepcion-accion">
                             {% if perms.manager.add_hautorizarcompra and item.puede_autorizar %}
                                 <button type="button"
                                         class="btn btn-sm btn-success btn-edit"
@@ -147,12 +148,92 @@
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="8" class="text-center">No hay entradas disponibles</td>
+                        <td colspan="8" class="table-empty-state">No hay entradas disponibles</td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+    <section class="recepcion-mobile-list" aria-label="Entradas disponibles">
+        {% for item in recepciones %}
+            <article class="recepcion-mobile-card{% if item.detalle_url %} recepcion-row--detail{% endif %}"
+                     {% if item.detalle_url %}data-detail-url="{{ item.detalle_url }}"{% endif %}>
+                <header class="recepcion-mobile-card__header">
+                    <div class="recepcion-mobile-card__registro">
+                        <span class="recepcion-mobile-card__icon"><i class="bx bx-clipboard"></i></span>
+                        <span><small>Registro</small><strong>#{{ item.id }}</strong></span>
+                    </div>
+                    <div class="recepcion-mobile-card__estado">
+                        {% if item.estado == "Pendiente" %}
+                            <span class="badge bg-warning text-dark">Pendiente</span>
+                        {% elif item.estado == "Llegada Bodega" %}
+                            <span class="badge estado-llegada-bodega">En bodega</span>
+                        {% elif item.estado == "Completado" %}
+                            <span class="badge bg-success">Completado</span>
+                        {% else %}
+                            <span class="badge bg-danger">{{ item.estado }}</span>
+                        {% endif %}
+                    </div>
+                </header>
+                <div class="recepcion-mobile-card__origen">
+                    <span class="recepcion-mobile-card__origen-icon"><i class="bx bx-building-house"></i></span>
+                    <div>
+                        <small>Proveedor / origen</small>
+                        <strong>{{ item.referencia }}</strong>
+                    </div>
+                    <span class="recepcion-mobile-card__tipo">
+                        {% if item.es_cambio %}
+                            <span class="badge bg-success">Cambio</span>
+                        {% elif item.tipo == "Compra" %}
+                            <span class="badge bg-primary">Compra</span>
+                        {% else %}
+                            <span class="badge bg-info text-dark">Traslado</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="recepcion-mobile-card__meta">
+                    <div>
+                        <i class="bx bx-calendar"></i>
+                        <span><small>Fecha</small><strong>{{ item.fecha|date:"d/m/Y H:i" }}</strong></span>
+                    </div>
+                    <div>
+                        <i class="bx bx-package"></i>
+                        <span><small>Cantidad</small><strong>{{ item.cantidad }}</strong></span>
+                    </div>
+                </div>
+                {% if item.llego_bodega or item.puede_marcar_llegada or perms.manager.add_hautorizarcompra and item.puede_autorizar %}
+                <footer class="recepcion-mobile-card__acciones">
+                    {% if item.llego_bodega %}
+                        <span class="llegada-bodega-registro"
+                              title="{{ item.llegada_bodega_usuario }} · {{ item.fecha_llegada_bodega|date:'d/m/Y H:i' }}">
+                            <i class="bx bx-package"></i> En bodega
+                        </span>
+                    {% elif item.puede_marcar_llegada %}
+                        <button type="button"
+                                class="btn classbotones btn-marcar-llegada"
+                                data-url="{% url 'marcar_llegada_compra' item.token %}">
+                            <i class="bx bx-package"></i> Marcar llegada
+                        </button>
+                    {% endif %}
+                    {% if perms.manager.add_hautorizarcompra and item.puede_autorizar %}
+                        <button type="button"
+                                class="btn btn-success btn-edit"
+                                data-token="{{ item.token }}"
+                                data-tipo="{{ item.tipo }}">
+                            <i class="bx bx-check-circle"></i> Autorizar recepción
+                        </button>
+                    {% endif %}
+                </footer>
+                {% endif %}
+            </article>
+        {% empty %}
+            <div class="recepcion-mobile-empty">
+                <i class="bx bx-package"></i>
+                <strong>No hay entradas disponibles</strong>
+                <span>Las entradas pendientes aparecerán aquí.</span>
+            </div>
+        {% endfor %}
+    </section>
     <nav class="d-flex justify-content-center mt-4">
         <ul class="pagination">
             <!-- Flecha anterior SIEMPRE visible -->
@@ -173,5 +254,5 @@
         </ul>
     </nav>
     <br>
-    <script type="module" src="{% static 'js/bodega/bodega.js' %}?v=20260926"></script>
+    <script type="module" src="{% static 'js/bodega/bodega.js' %}?v=20261003-mobile-cards"></script>
 {% endblock main_content %}

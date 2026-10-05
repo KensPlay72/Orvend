@@ -10,32 +10,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  function validarCantidades() {
-    const rows = document.querySelectorAll("#tabladecom tbody tr");
-
-    rows.forEach((row) => {
-      const input = row.querySelector(".cantidad-recepcion");
-      if (!input) return;
-
-      input.addEventListener("input", function () {
-        const cantidadMaxima = parseFloat(row.children[5].innerText) || 0;
-        let valorIngresado = parseFloat(this.value);
-
-        if (this.value === "") return;
-
-        if (valorIngresado > cantidadMaxima) {
-          this.value = cantidadMaxima;
-        }
-
-        if (valorIngresado < 0) {
-          this.value = 0;
-        }
-      });
-    });
-  }
-
-  validarCantidades();
-
   const botonDevolucion = document.getElementById("enviarDevolucionBtn");
   if (botonDevolucion) {
     botonDevolucion.addEventListener("click", async () => {
@@ -115,6 +89,86 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const modalHijos = document.getElementById("modalHijosDevolucion");
   const listaHijos = document.getElementById("listaHijosDevolucion");
+  const modalDevolucion = document.getElementById("devo");
+  const listaDevolucionMovil = document.getElementById("listaDevolucionModalMovil");
+  let volverADevolucion = false;
+
+  const escaparHtml = (valor) => String(valor ?? "").replace(/[&<>'"]/g, (caracter) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "'": "&#039;",
+    '"': "&quot;",
+  })[caracter]);
+
+  const construirTarjetasDevolucionMovil = () => {
+    if (!listaDevolucionMovil) return;
+
+    const filas = Array.from(document.querySelectorAll("#tablaDevolucion tbody tr"));
+    listaDevolucionMovil.innerHTML = "";
+
+    filas.forEach((fila, indice) => {
+      const nombre = fila.querySelector(".nombre-devolucion")?.textContent.trim() || "Producto";
+      const sku = fila.querySelector(".sku-devolucion")?.textContent.trim() || "Sin SKU";
+      const cantidad = fila.querySelector(".cantidad-devolucion")?.textContent.trim() || "0";
+      const motivo = fila.querySelector(".motivo-select");
+      const convertir = fila.querySelector(".convertir-hijo-btn");
+      const convertido = fila.classList.contains("es-convertido");
+      const cantidadHijo = fila.querySelector(".cantidad-hijo");
+
+      const tarjeta = document.createElement("article");
+      tarjeta.className = "recepcion-mobile-card modal-devolucion-mobile-card";
+      tarjeta.innerHTML = `
+        <header class="recepcion-mobile-card__header">
+          <div class="recepcion-mobile-card__registro">
+            <span class="recepcion-mobile-card__icon"><i class="bx bx-package" aria-hidden="true"></i></span>
+            <span><small>Producto ${indice + 1}</small><strong>${escaparHtml(nombre)}</strong></span>
+          </div>
+          <div class="recepcion-mobile-card__estado"><span class="badge bg-warning text-dark">${escaparHtml(cantidad)} ud.</span></div>
+        </header>
+        <div class="recepcion-mobile-card__origen">
+          <span class="recepcion-mobile-card__origen-icon"><i class="bx bx-barcode" aria-hidden="true"></i></span>
+          <div><small>SKU</small><strong>${escaparHtml(sku)}</strong></div>
+          <span class="recepcion-mobile-card__tipo"><span class="badge bg-primary">Devolución</span></span>
+        </div>
+        <div class="recepcion-mobile-card__meta">
+          <div><i class="bx bx-package"></i><span><small>Cantidad</small><strong>${escaparHtml(cantidad)}</strong></span></div>
+          <div><i class="bx bx-check-square"></i><span><small>Estado</small><strong>${convertido ? "Convertido" : "Unidad original"}</strong></span></div>
+        </div>
+        <div class="modal-devolucion-mobile-card__controles">
+          <label class="modal-devolucion-mobile-card__seleccion"><input type="checkbox" ${fila.querySelector(".check-devolucion")?.checked ? "checked" : ""}> Seleccionar producto</label>
+          <select class="form-select modal-devolucion-mobile-card__motivo">${motivo?.innerHTML || ""}</select>
+          ${convertir && !convertir.classList.contains("d-none") ? '<button type="button" class="btn btn-outline-success modal-devolucion-mobile-card__convertir"><i class="bx bx-transfer-alt"></i> Convertir a unidad</button>' : ""}
+          ${convertido ? `<input type="text" inputmode="numeric" class="form-control modal-devolucion-mobile-card__cantidad-hijo" value="${escaparHtml(cantidadHijo?.value || "")}" placeholder="Cantidad a devolver">` : ""}
+        </div>`;
+
+      const checkOriginal = fila.querySelector(".check-devolucion");
+      const checkMovil = tarjeta.querySelector("input[type=checkbox]");
+      const motivoMovil = tarjeta.querySelector(".modal-devolucion-mobile-card__motivo");
+      if (motivoMovil && motivo) motivoMovil.value = motivo.value;
+      checkMovil?.addEventListener("change", () => { checkOriginal.checked = checkMovil.checked; });
+      motivoMovil?.addEventListener("change", () => { motivo.value = motivoMovil.value; });
+      tarjeta.querySelector(".modal-devolucion-mobile-card__convertir")?.addEventListener("click", () => convertir.click());
+      tarjeta.querySelector(".modal-devolucion-mobile-card__cantidad-hijo")?.addEventListener("input", (evento) => {
+        cantidadHijo.value = evento.target.value;
+        cantidadHijo.dispatchEvent(new Event("input", { bubbles: true }));
+        evento.target.value = cantidadHijo.value;
+      });
+      listaDevolucionMovil.appendChild(tarjeta);
+    });
+  };
+
+  modalDevolucion?.addEventListener("show.bs.modal", construirTarjetasDevolucionMovil);
+  document.addEventListener("devolucion:hijo-seleccionado", construirTarjetasDevolucionMovil);
+
+  // Evita modales encimados: el selector de hijos toma el lugar temporalmente
+  // de la devolución y esta vuelve a mostrarse al terminar o cancelarlo.
+  modalHijos?.addEventListener("hidden.bs.modal", () => {
+    if (!volverADevolucion || !modalDevolucion) return;
+
+    volverADevolucion = false;
+    bootstrap.Modal.getOrCreateInstance(modalDevolucion).show();
+  });
 
   document.querySelectorAll("#tablaDevolucion tbody tr").forEach((fila) => {
     fila.dataset.cantidadOriginal = fila.querySelector(".cantidad-devolucion")?.textContent.trim() || "0";
@@ -135,7 +189,26 @@ document.addEventListener("DOMContentLoaded", () => {
         botonHijo.addEventListener("click", () => seleccionarProductoHijo(fila, opcion));
         listaHijos.appendChild(botonHijo);
       });
-      bootstrap.Modal.getOrCreateInstance(modalHijos).show();
+      let selectorAbierto = false;
+      const mostrarSelectorHijos = () => {
+        if (selectorAbierto) return;
+        selectorAbierto = true;
+        bootstrap.Modal.getOrCreateInstance(modalHijos).show();
+      };
+
+      volverADevolucion = true;
+      const instanciaDevolucion = modalDevolucion
+        ? bootstrap.Modal.getOrCreateInstance(modalDevolucion)
+        : null;
+
+      if (modalDevolucion?.classList.contains("show") && instanciaDevolucion) {
+        modalDevolucion.addEventListener("hidden.bs.modal", mostrarSelectorHijos, {
+          once: true,
+        });
+        instanciaDevolucion.hide();
+      } else {
+        mostrarSelectorHijos();
+      }
     });
 
     cantidadHijo.addEventListener("input", () => {
@@ -162,6 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
     cantidadHijo.value = "";
     cantidadHijo.focus();
     fila.querySelector(".equivalencia-hijo").textContent = `Total convertido: ${maximo} unidades (Valor: ${equivalencia}).`;
+    document.dispatchEvent(new Event("devolucion:hijo-seleccionado"));
     bootstrap.Modal.getInstance(modalHijos)?.hide();
   }
 });
@@ -188,14 +262,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // VALIDAR CANTIDADES
   // =====================================================
   function validarCantidades() {
-    const rows = document.querySelectorAll("#tabladecom tbody tr");
+    const rows = document.querySelectorAll(".recepcion-product-row");
 
     rows.forEach((row) => {
       const input = row.querySelector(".cantidad-recepcion");
       if (!input) return;
 
       input.addEventListener("input", function () {
-        const cantidadMaxima = parseFloat(row.children[5].innerText) || 0;
+        const cantidadMaxima = Number(row.dataset.cantidadSolicitada) || 0;
         let valorIngresado = parseFloat(this.value);
 
         if (this.value === "") return;
@@ -219,7 +293,8 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("toggleDropdownPanel32")
     .addEventListener("click", function () {
-      const rows = document.querySelectorAll("#tabladecom tbody tr");
+      const rows = Array.from(document.querySelectorAll(".recepcion-product-row"))
+        .filter((row) => row.offsetParent !== null);
       const productos = [];
 
       rows.forEach((row) => {
@@ -232,10 +307,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (cantidadRecibida > 0) {
           const productoId = row.querySelector(".producto-id").value;
-          const nombre = row.children[1].innerText;
-          const presentacion = row.children[3].innerText;
-          const sku = row.children[4].innerText;
-          const cantidadSolicitada = parseFloat(row.children[5].innerText);
+          const nombre = row.dataset.productoNombre || "";
+          const presentacion = row.dataset.presentacion || "";
+          const sku = row.dataset.sku || "";
+          const cantidadSolicitada = Number(row.dataset.cantidadSolicitada) || 0;
 
           const fvencimientoInput = row.querySelector(".fecha-vencimiento");
           let fvencimiento = null;
@@ -269,23 +344,44 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const tbodyModal = document.getElementById("tablaDetallesModal");
+      const listaModalMovil = document.getElementById("listaConfirmacionModalMovil");
       const mostrarVencimiento = document
         .getElementById("tablacomprar")
         ?.dataset.mostrarVencimiento === "true";
       tbodyModal.innerHTML = "";
+      if (listaModalMovil) listaModalMovil.innerHTML = "";
 
       productos.forEach((p, index) => {
         tbodyModal.innerHTML += `
-          <tr>
-            <td>${index + 1}</td>
-            <td>${p.ProductoId}</td>
-            <td>${p.Nombre}</td>
-            <td>${p.Presentacion}</td>
-            <td>${p.Sku}</td>
-            <td>${p.CantidadComprada} / ${p.CantidadRecibida}</td>
-            ${mostrarVencimiento ? `<td>${p.Fvencimiento || "-"}</td>` : ""}
+          <tr class="modal-recepcion-card">
+            <td data-label="#">${index + 1}</td>
+            <td data-label="Producto ID">${p.ProductoId}</td>
+            <td data-label="Producto">${p.Nombre}</td>
+            <td data-label="Presentación">${p.Presentacion}</td>
+            <td data-label="SKU">${p.Sku}</td>
+            <td data-label="Solicitado / recibido">${p.CantidadComprada} / ${p.CantidadRecibida}</td>
+            ${mostrarVencimiento ? `<td data-label="Vencimiento">${p.Fvencimiento || "-"}</td>` : ""}
           </tr>
         `;
+
+        if (listaModalMovil) {
+          listaModalMovil.insertAdjacentHTML(
+            "beforeend",
+            `<article class="confirmar-inventario-mobile-card modal-confirmacion-mobile-card">
+              <header class="confirmar-inventario-mobile-card__header">
+                <span class="confirmar-inventario-mobile-card__icono"><i class="bx bx-package" aria-hidden="true"></i></span>
+                <div><small>Producto ${index + 1}</small><strong>${p.Nombre}</strong></div>
+                <span class="confirmar-inventario-mobile-card__cantidad">${p.CantidadRecibida}</span>
+              </header>
+              <div class="confirmar-inventario-mobile-card__datos">
+                <div><span><i class="bx bx-box"></i> Presentación</span><strong>${p.Presentacion || "Sin presentación"}</strong></div>
+                <div><span><i class="bx bx-list-ol"></i> Solicitada</span><strong>${p.CantidadComprada}</strong></div>
+                <div class="confirmar-inventario-mobile-card__sku"><span><i class="bx bx-barcode"></i> SKU</span><strong>${p.Sku || "Sin SKU"}</strong></div>
+              </div>
+              ${mostrarVencimiento ? `<div class="modal-confirmacion-mobile-card__vencimiento"><i class="bx bx-calendar"></i><span>Vencimiento</span><strong>${p.Fvencimiento || "No indicado"}</strong></div>` : ""}
+            </article>`,
+          );
+        }
       });
 
       window.productosAutorizacion = productos;

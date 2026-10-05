@@ -168,6 +168,469 @@ body:has(.cuadre-caja-shell) .header-notifications {
   }
 }
 
+/* Cuadre operativo en móvil/tablet: prioriza lectura, digitación y cierre sin
+   márgenes laterales grandes ni tablas que obliguen a desplazarse. */
+@media (max-width: 1032px) {
+  body:has(.cuadre-caja-shell) {
+    padding-top: 3.7rem !important;
+  }
+
+  body:has(.cuadre-caja-shell) .main {
+    padding: 0 !important;
+  }
+
+  .cuadre-caja-shell.container-fluid {
+    width: 100%;
+    margin: 0 !important;
+    padding: 0.45rem 0.65rem 1rem;
+  }
+
+  .cuadre-caja-shell > br {
+    display: none;
+  }
+
+  .cuadre-caja-header {
+    gap: 0.7rem;
+    padding: 0.95rem;
+    margin-bottom: 0.8rem;
+    border-radius: 14px;
+  }
+
+  .cuadre-caja-title {
+    font-size: 1.2rem;
+  }
+
+  .cuadre-caja-subtitle {
+    font-size: 0.79rem;
+    line-height: 1.38;
+  }
+
+  .cuadre-caja-status {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 0.65rem;
+    border-top: 1px solid var(--cuadre-border);
+  }
+
+  .status-text {
+    max-width: 58%;
+    font-size: 0.7rem;
+    text-align: right;
+  }
+
+  .cuadre-summary-grid {
+    margin: 0 -0.2rem 0.85rem;
+  }
+
+  .cuadre-summary-grid > [class*="col-"] {
+    width: 50%;
+    padding: 0.25rem;
+  }
+
+  .summary-card {
+    min-height: 92px;
+    gap: 0.55rem;
+    padding: 0.72rem;
+    border-radius: 12px;
+  }
+
+  .summary-card__icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    font-size: 1rem;
+  }
+
+  .summary-card__label {
+    margin-bottom: 0.14rem;
+    font-size: 0.59rem;
+    letter-spacing: 0.045em;
+  }
+
+  .summary-card h3 {
+    overflow: hidden;
+    font-size: clamp(0.86rem, 3.6vw, 1.04rem);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .difference-card {
+    padding: 0.9rem;
+    margin-bottom: 0.85rem !important;
+    border-radius: 14px;
+  }
+
+  .difference-card__content {
+    align-items: center;
+    text-align: center;
+  }
+
+  .difference-card__label {
+    margin-bottom: 0.08rem;
+    font-size: 0.68rem;
+  }
+
+  .difference-card h2 {
+    font-size: 1.7rem;
+  }
+
+  .difference-card__caption {
+    justify-content: center;
+    width: 100%;
+    padding: 0.35rem 0.55rem;
+    font-size: 0.72rem;
+  }
+
+  .count-card {
+    border-radius: 14px;
+  }
+
+  .count-card__header {
+    gap: 0.65rem;
+    padding: 0.85rem;
+  }
+
+  .count-card__header h5 {
+    font-size: 0.98rem;
+  }
+
+  .count-card__header p {
+    font-size: 0.74rem;
+  }
+
+  .count-card__hint {
+    font-size: 0.64rem;
+    white-space: normal;
+  }
+
+  .count-card .card-body {
+    padding: 0.65rem !important;
+  }
+
+  .count-card .table-responsive {
+    overflow: visible;
+  }
+
+  .cuadre-table,
+  .cuadre-table tbody,
+  .cuadre-table tfoot {
+    display: block;
+    width: 100%;
+  }
+
+  .cuadre-table thead {
+    display: none;
+  }
+
+  .cuadre-table tbody {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .cuadre-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 74px minmax(0, 0.95fr);
+    align-items: stretch;
+    overflow: hidden;
+    border: 1px solid var(--cuadre-border);
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 3px 9px color-mix(in srgb, var(--system-secondary) 7%, transparent);
+  }
+
+  .cuadre-table tbody td {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.16rem;
+    padding: 0.48rem 0.45rem !important;
+    border: 0 !important;
+    border-right: 1px solid var(--cuadre-border) !important;
+    font-size: 0.82rem;
+    font-weight: 750;
+  }
+
+  .cuadre-table tbody td:last-child {
+    border-right: 0 !important;
+    text-align: right;
+  }
+
+  .cuadre-table tbody td::before {
+    content: attr(data-label);
+    color: var(--text-color-light);
+    font-size: 0.57rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .cuadre-table .cantidad-billete {
+    width: 100%;
+    min-height: 38px;
+    padding: 0.28rem;
+    border-color: color-mix(in srgb, var(--system-primary) 34%, #fff);
+    color: var(--system-secondary);
+    font-size: 1rem;
+    font-weight: 800;
+    text-align: center;
+  }
+
+  .cuadre-table tfoot tr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    margin-top: 0.65rem;
+    padding: 0.68rem 0.75rem;
+    border-radius: 10px;
+    color: #fff;
+    background: var(--system-primary);
+  }
+
+  .cuadre-table tfoot th {
+    padding: 0 !important;
+    border: 0 !important;
+    color: inherit !important;
+    font-size: 0.78rem;
+  }
+
+  .cuadre-table tfoot #totalContado {
+    font-size: 1rem;
+  }
+
+  .payment-reconciliation {
+    margin-top: 0.85rem !important;
+    padding: 0.85rem !important;
+    border-radius: 14px;
+  }
+
+  .payment-reconciliation__heading {
+    gap: 0.55rem;
+  }
+
+  .payment-reconciliation__heading h5 {
+    font-size: 0.96rem;
+  }
+
+  .payment-reconciliation__heading p {
+    font-size: 0.73rem;
+  }
+
+  .payment-reconciliation__grid {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .payment-reconciliation__card {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 0.55rem;
+    padding: 0.72rem;
+  }
+
+  .payment-reconciliation__icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .payment-reconciliation__card .monto-otro-pago {
+    min-height: 40px;
+  }
+
+  .footer-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    margin: 0.85rem -0.65rem 0 !important;
+    padding: 0.7rem 0.65rem calc(0.7rem + env(safe-area-inset-bottom));
+    background: color-mix(in srgb, #fff 92%, transparent);
+    box-shadow: 0 -7px 18px color-mix(in srgb, var(--system-secondary) 10%, transparent);
+  }
+
+  #btnCerrarCuadre {
+    width: 100%;
+    min-height: 46px;
+    border-radius: 10px;
+    font-size: 0.92rem;
+  }
+}
+
+/* Ajustes de jerarquía para el trabajo táctil: título y valor no compiten por
+   espacio y el conteo conserva una grilla estable de tres columnas. */
+.cuadre-total-mobile {
+  display: none;
+}
+
+.cuadre-confirmacion-modal .modal-body {
+  padding: 1.1rem 1.25rem;
+}
+
+.cuadre-confirmacion-modal .modal-footer {
+  gap: 0.65rem;
+}
+
+@media (max-width: 1032px) {
+  .cuadre-caja-shell.container-fluid {
+    margin-top: 0.55rem !important;
+  }
+
+  .cuadre-summary-grid {
+    --bs-gutter-x: 0.45rem;
+    --bs-gutter-y: 0.45rem;
+    margin-bottom: 1rem !important;
+  }
+
+  .cuadre-summary-grid > [class*="col-"] {
+    padding: 0.225rem;
+  }
+
+  .difference-card {
+    margin-top: 0.75rem;
+  }
+
+  .summary-card {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    column-gap: 0.65rem;
+    row-gap: 0.2rem;
+    align-items: center;
+  }
+
+  .summary-card__icon {
+    grid-row: 1 / span 2;
+    grid-column: 1;
+  }
+
+  .summary-card > div:not(.summary-card__icon) {
+    display: contents;
+  }
+
+  .summary-card__label {
+    grid-row: 1;
+    grid-column: 2;
+    align-self: end;
+    margin: 0;
+  }
+
+  .summary-card h3 {
+    grid-row: 2;
+    grid-column: 2;
+    align-self: start;
+    margin-top: 0.12rem;
+  }
+
+  .cuadre-table thead {
+    display: block;
+    margin-bottom: 0.45rem;
+    overflow: hidden;
+    border-radius: 9px;
+    background: var(--system-primary);
+  }
+
+  .cuadre-table thead tr,
+  .cuadre-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .cuadre-table thead th {
+    display: flex;
+    min-height: 39px;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4rem 0.25rem !important;
+    border: 0 !important;
+    color: #fff !important;
+    background: transparent !important;
+    font-size: 0.63rem;
+    letter-spacing: 0.025em;
+    text-align: center;
+  }
+
+  .cuadre-table tbody tr {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .cuadre-table tbody td {
+    align-items: center;
+    padding: 0.5rem 0.35rem !important;
+    text-align: center;
+  }
+
+  .cuadre-table tbody td:last-child {
+    text-align: center;
+  }
+
+  .cuadre-table tbody td::before {
+    display: none;
+  }
+
+  .cuadre-table .cantidad-billete {
+    max-width: 64px;
+  }
+
+  .cuadre-table tfoot {
+    display: none;
+  }
+
+  .cuadre-total-mobile {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 0.65rem;
+    padding: 0.72rem 0.8rem;
+    border-radius: 10px;
+    color: #fff;
+    background: var(--system-primary);
+  }
+
+  .cuadre-total-mobile span {
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .cuadre-total-mobile strong {
+    font-size: 1.05rem;
+  }
+
+  .cuadre-confirmacion-modal .modal-body {
+    padding: 0.85rem;
+  }
+
+  .cuadre-confirmacion-modal .modal-footer {
+    display: grid;
+    grid-template-columns: 0.75fr 1.25fr;
+    padding: 0.7rem 0.85rem calc(0.7rem + env(safe-area-inset-bottom));
+  }
+
+  .cuadre-confirmacion-modal .modal-footer .btn {
+    min-height: 43px;
+  }
+
+  .cuadre-confirmacion-modal .cuadre-confirmacion__header,
+  .cuadre-confirmacion-modal .cuadre-confirmacion__row {
+    grid-template-columns: minmax(88px, 1.2fr) repeat(3, minmax(52px, 1fr));
+    gap: 0.2rem;
+  }
+
+  .cuadre-confirmacion-modal .cuadre-confirmacion__header,
+  .cuadre-confirmacion-modal .cuadre-confirmacion__row {
+    padding-right: 0.35rem;
+    padding-left: 0.35rem;
+    font-size: 0.64rem;
+  }
+
+  .cuadre-confirmacion-modal .cuadre-confirmacion__method {
+    gap: 0.2rem;
+    font-size: 0.66rem;
+  }
+}
+
 .difference-card {
   padding: 1.2rem 1.4rem;
   border-radius: 1rem;
@@ -643,5 +1106,157 @@ body:has(.cuadre-caja-shell) .header-notifications {
 
   .cuadre-confirmacion__total > div {
     text-align: left;
+  }
+}
+
+/* Debe quedar al final: gana sobre los estilos generales de la tabla. */
+@media (max-width: 1032px) {
+  .summary-card {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    column-gap: 0.65rem;
+    row-gap: 0.2rem;
+    align-items: center;
+  }
+
+  .summary-card__icon { grid-row: 1 / span 2; grid-column: 1; }
+  .summary-card > div:not(.summary-card__icon) { display: contents; }
+  .summary-card__label { grid-row: 1; grid-column: 2; align-self: end; margin: 0; }
+  .summary-card h3 { grid-row: 2; grid-column: 2; align-self: start; margin-top: 0.12rem; }
+
+  .cuadre-table thead {
+    display: block;
+    margin-bottom: 0.45rem;
+    overflow: hidden;
+    border-radius: 9px;
+    background: var(--system-primary);
+  }
+
+  .cuadre-table thead tr,
+  .cuadre-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .cuadre-table thead th {
+    display: flex;
+    min-height: 39px;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4rem 0.25rem !important;
+    border: 0 !important;
+    color: #fff !important;
+    background: transparent !important;
+    font-size: 0.63rem;
+    letter-spacing: 0.025em;
+    text-align: center;
+  }
+
+  .cuadre-table tbody td {
+    align-items: center;
+    padding: 0.5rem 0.35rem !important;
+    text-align: center !important;
+  }
+
+  .cuadre-table tbody td:last-child { text-align: center !important; }
+  .cuadre-table tbody td::before { display: none; }
+  .cuadre-table .cantidad-billete { max-width: 64px; }
+  .cuadre-table tfoot { display: none; }
+
+  .cuadre-total-mobile {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 0.65rem;
+    padding: 0.72rem 0.8rem;
+    border-radius: 10px;
+    color: #fff;
+    background: var(--system-primary);
+  }
+
+  .cuadre-total-mobile span { font-size: 0.78rem; font-weight: 800; }
+  .cuadre-total-mobile strong { font-size: 1.05rem; }
+
+  .cuadre-confirmacion-modal .modal-body { padding: 0.85rem; }
+
+  #modalConfirmarCuadre.modal-sheet-mobile.fade .modal-dialog {
+    top: auto;
+    bottom: 0;
+    min-height: 0;
+    height: auto;
+    max-height: min(82dvh, 620px);
+    align-items: flex-end;
+    justify-content: flex-end;
+  }
+
+  #modalConfirmarCuadre.modal-sheet-mobile .modal-content {
+    height: auto;
+    max-height: min(82dvh, 620px);
+  }
+
+  #modalConfirmarCuadre.modal-sheet-mobile .modal-body {
+    flex: 0 1 auto;
+    overflow-y: auto;
+  }
+  .cuadre-confirmacion-modal .modal-footer {
+    display: grid;
+    grid-template-columns: 0.75fr 1.25fr;
+    padding: 0.7rem 0.85rem calc(0.7rem + env(safe-area-inset-bottom));
+  }
+  .cuadre-confirmacion-modal .modal-footer .btn { min-height: 43px; }
+  .cuadre-confirmacion-modal .cuadre-confirmacion__header,
+  .cuadre-confirmacion-modal .cuadre-confirmacion__row {
+    grid-template-columns: minmax(88px, 1.2fr) repeat(3, minmax(52px, 1fr));
+    gap: 0.2rem;
+    padding-right: 0.35rem;
+    padding-left: 0.35rem;
+    font-size: 0.72rem;
+  }
+  .cuadre-confirmacion-modal .cuadre-confirmacion__header { font-size: 0.68rem; }
+  .cuadre-confirmacion-modal .cuadre-confirmacion__method {
+    justify-content: center;
+    gap: 0.24rem;
+    font-size: 0.72rem;
+  }
+}
+
+@media (max-width: 1032px) {
+  .swal2-popup.cuadre-confirmacion-popup {
+    width: calc(100% - 0.75rem) !important;
+    padding: 0.85rem !important;
+  }
+
+  .cuadre-confirmacion-popup .swal2-title {
+    margin: 0.1rem 0 0.55rem !important;
+    font-size: 1.18rem !important;
+  }
+
+  .cuadre-confirmacion-popup .swal2-html-container {
+    margin: 0 !important;
+  }
+
+  .cuadre-confirmacion-popup .cuadre-confirmacion__header,
+  .cuadre-confirmacion-popup .cuadre-confirmacion__row {
+    grid-template-columns: minmax(88px, 1.2fr) repeat(3, minmax(52px, 1fr));
+    gap: 0.2rem;
+    padding-right: 0.35rem;
+    padding-left: 0.35rem;
+    font-size: 0.72rem;
+  }
+
+  .cuadre-confirmacion-popup .cuadre-confirmacion__header {
+    font-size: 0.67rem;
+  }
+
+  .cuadre-confirmacion-popup .cuadre-confirmacion__method {
+    justify-content: center;
+    gap: 0.24rem;
+    font-size: 0.72rem;
+  }
+
+  .cuadre-confirmacion-popup .swal2-actions {
+    margin-top: 0.85rem;
   }
 }

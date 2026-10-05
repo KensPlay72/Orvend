@@ -5,7 +5,7 @@ function validateNumber(input) {
   input.value = input.value.replace(/[^0-9.+]/g, '');
 }
 
-const DEFAULT_PRODUCT_IMAGE = "/static/img/default.png";
+const DEFAULT_PRODUCT_IMAGE = "/static/img/default.webp";
 
 function setSubmitButtonState(button, isProcessing) {
   button.disabled = isProcessing;

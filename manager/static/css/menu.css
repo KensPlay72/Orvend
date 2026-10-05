@@ -1239,3 +1239,24 @@ a {
   margin-top: 4px;
   cursor: pointer;
 }
+/* Evita zoom por enfoque y doble toque en todas las vistas móviles y tablet. */
+@media (max-width: 1032px) {
+  html,
+  body {
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+    touch-action: manipulation;
+  }
+
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+}

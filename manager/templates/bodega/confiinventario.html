@@ -5,8 +5,8 @@
 {% endblock title %}
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
-  <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
-  <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}?v=20260918-02" />
+  <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261004-confirmar-sheet" />
+  <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}?v=20261004-modal-footer-mobile" />
 {% endblock extra_css %}
 {% block titulo_content %}
   <div class="tituloscont">
@@ -19,7 +19,7 @@
   </div>
 {% endblock titulo_content %}
 {% block main_content %}
-  <div class="divbuttons2">
+  <div class="divbuttons2 recepcion-confirm-actions">
     <button id="toggleDropdownPanel"
             class="btn-dropdown"
             onclick="location.href='{% url 'recepcion_inventario' %}'">
@@ -36,7 +36,9 @@
 </button>
       {% endif %}
       <button type="button" id="toggleDropdownPanel32" class="btn-dropdown">
-        <i class="bx bx-check-circle"></i> Confirmar Entrada
+        <i class="bx bx-check-circle"></i>
+        <span class="confirmar-entrada-desktop">Confirmar entrada</span>
+        <span class="confirmar-entrada-mobile">Confirmar</span>
       </button>
     </div>
   </div>
@@ -54,7 +56,7 @@
   <!-- ===================================================== -->
   <!-- MODAL CONFIRMACION -->
   <!-- ===================================================== -->
-  <div class="modal fade"
+  <div class="modal fade modal-sheet-mobile modal-sheet-mobile--auto"
        id="completarcompra"
        tabindex="-1"
        aria-labelledby="completarCompraLabel"
@@ -62,6 +64,7 @@
     <div class="modal-dialog modal-lg modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
+          <span class="modal-sheet-handle" aria-hidden="true"></span>
           <h5 class="modal-title" id="completarCompraLabel">Confirmar Recepción de Productos</h5>
           <button type="button"
                   class="btn-close"
@@ -69,7 +72,7 @@
                   aria-label="Cerrar"></button>
         </div>
         <div class="modal-body">
-          <div class="tabla-container">
+          <div class="tabla-container modal-confirmacion-table-desktop">
             <table class="tablas-todo"
                    id="tablacomprar"
                    data-mostrar-vencimiento="{{ compra.mostrar_vencimiento|yesno:'true,false' }}">
@@ -88,6 +91,10 @@
               </tbody>
             </table>
           </div>
+          <section id="listaConfirmacionModalMovil"
+                   class="confirmar-inventario-mobile-list modal-confirmacion-mobile-list"
+                   aria-label="Productos a confirmar">
+          </section>
         </div>
         <div class="modal-footer altura-footer2">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -100,7 +107,7 @@
   <!-- MODAL DEVOLUCION SOLO PARA COMPRAS -->
   <!-- ===================================================== -->
   {% if compra.tipo == "Compra" %}
-<div class="modal fade"
+<div class="modal fade modal-sheet-mobile modal-sheet-mobile--auto"
      id="devo"
      tabindex="-1"
      aria-labelledby="devoLabel"
@@ -110,6 +117,7 @@
         <div class="modal-content">
 
             <div class="modal-header">
+                <span class="modal-sheet-handle" aria-hidden="true"></span>
 
                 <h5 class="modal-title" id="devoLabel">
                     Solicitud de Devolución
@@ -138,7 +146,7 @@
 
                 <br>
 
-                <div class="table-responsive">
+                <div class="table-responsive modal-devolucion-table-desktop">
 
                     <table class="tablas-todo"
                            id="tablaDevolucion">
@@ -160,9 +168,9 @@
 
                                 {% if detalle.cantidad > 0 %}
 
-                                    <tr>
+                                    <tr class="modal-devolucion-card">
 
-                                        <td>
+                                        <td data-label="Seleccionar">
                                             <input type="checkbox"
                                                    class="check-devolucion">
 
@@ -171,20 +179,21 @@
                                                    value="{{ detalle.productoId }}">
                                         </td>
 
-                                        <td class="nombre-devolucion">
-                                            {{ detalle.productoNombre }}
+                                        <td data-label="Producto" class="modal-devolucion-producto">
+                                            <span class="modal-devolucion-producto__icon"><i class="bx bx-package" aria-hidden="true"></i></span>
+                                            <span class="nombre-devolucion">{{ detalle.productoNombre }}</span>
                                         </td>
 
-                                        <td class="sku-devolucion">
+                                        <td data-label="SKU" class="sku-devolucion">
                                             {{ detalle.sku }}
                                         </td>
 
-                                        <td class="cantidad-devolucion">
+                                        <td data-label="Cantidad" class="cantidad-devolucion">
                                             {{ detalle.cantidad }}
                                         </td>
 
                                         {% if compra.mostrar_conversion %}
-                                            <td class="devolucion-conversion">
+                                            <td data-label="Conversión" class="devolucion-conversion">
                                                 {% if detalle.hijos %}
                                                     <button type="button" class="btn btn-outline-success btn-sm convertir-hijo-btn"><i class="bx bx-transfer-alt"></i> Convertir a unidad</button>
                                                     <select class="hijo-select d-none">
@@ -202,7 +211,7 @@
                                             </td>
                                         {% endif %}
 
-                                        <td>
+                                        <td data-label="Motivo">
 
                                             <select class="form-select motivo-select">
 
@@ -252,6 +261,11 @@
 
                 </div>
 
+                <section id="listaDevolucionModalMovil"
+                         class="recepcion-mobile-list modal-devolucion-mobile-list"
+                         aria-label="Productos para devolución">
+                </section>
+
             </div>
 
             <div class="modal-footer altura-footer2">
@@ -276,9 +290,9 @@
 
 </div>
 
-<div class="modal fade" id="modalHijosDevolucion" tabindex="-1" aria-hidden="true">
+<div class="modal fade modal-sheet-mobile modal-sheet-mobile--auto" id="modalHijosDevolucion" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content hijos-devolucion-modal">
-    <div class="modal-header"><h5 class="modal-title">Convertir a producto hijo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-header"><span class="modal-sheet-handle" aria-hidden="true"></span><h5 class="modal-title">Convertir a producto hijo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
     <div class="modal-body"><p class="hijos-devolucion-intro">Selecciona el producto hijo al que deseas convertir esta presentación.</p><div id="listaHijosDevolucion" class="hijos-devolucion-lista"></div></div>
   </div></div>
 </div>
@@ -286,6 +300,7 @@
   <!-- ===================================================== -->
   <!-- TABLA PRINCIPAL -->
   <!-- ===================================================== -->
+  <div class="confirmar-inventario-table-desktop">
   <table class="tablas-todo" id="tabladecom">
     <thead>
       <tr>
@@ -301,14 +316,18 @@
     </thead>
     <tbody>
       {% for detalle in detalles %}
-        <tr>
-          <td>{{ detalles.start_index|add:forloop.counter0 }}</td>
-          <td>{{ detalle.productoNombre }}</td>
-          <td>{{ detalle.marcas }}</td>
-          <td>{{ detalle.presentacion }}</td>
-          <td>{{ detalle.sku }}</td>
-          <td>{{ detalle.cantidad }}</td>
-          <td>
+        <tr class="recepcion-product-row"
+            data-producto-nombre="{{ detalle.productoNombre }}"
+            data-presentacion="{{ detalle.presentacion }}"
+            data-sku="{{ detalle.sku }}"
+            data-cantidad-solicitada="{{ detalle.cantidad }}">
+          <td data-label="#">{{ detalles.start_index|add:forloop.counter0 }}</td>
+          <td data-label="Producto">{{ detalle.productoNombre }}</td>
+          <td data-label="Marca">{{ detalle.marcas }}</td>
+          <td data-label="Presentación">{{ detalle.presentacion }}</td>
+          <td data-label="SKU">{{ detalle.sku }}</td>
+          <td data-label="Cantidad solicitada">{{ detalle.cantidad }}</td>
+          <td data-label="Cantidad a recibir">
             <input type="text"
                    class="cantidad-recepcion"
                    style="width:100px"
@@ -318,7 +337,7 @@
                    {% if detalle.cantidad == 0 %}disabled{% endif %}>
           </td>
           {% if compra.mostrar_vencimiento %}
-            <td>
+            <td data-label="Fecha de vencimiento">
               {% if detalle.requiereVencimiento %}
                 <input type="date"
                        class="fecha-vencimiento"
@@ -331,6 +350,47 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
+
+  <section class="confirmar-inventario-mobile-list" aria-label="Productos por confirmar">
+    {% for detalle in detalles %}
+      <article class="recepcion-product-row confirmar-inventario-mobile-card"
+               data-producto-nombre="{{ detalle.productoNombre }}"
+               data-presentacion="{{ detalle.presentacion }}"
+               data-sku="{{ detalle.sku }}"
+               data-cantidad-solicitada="{{ detalle.cantidad }}">
+        <header class="confirmar-inventario-mobile-card__header">
+          <span class="confirmar-inventario-mobile-card__icono"><i class="bx bx-package" aria-hidden="true"></i></span>
+          <div><small>PRODUCTO {{ detalles.start_index|add:forloop.counter0 }}</small><strong>{{ detalle.productoNombre }}</strong></div>
+          <span class="confirmar-inventario-mobile-card__cantidad">{{ detalle.cantidad }}</span>
+        </header>
+        <div class="confirmar-inventario-mobile-card__datos">
+          <div><span><i class="bx bx-purchase-tag-alt"></i> Marca</span><strong>{{ detalle.marcas|default:"Sin marca" }}</strong></div>
+          <div><span><i class="bx bx-box"></i> Presentación</span><strong>{{ detalle.presentacion|default:"Sin presentación" }}</strong></div>
+          <div class="confirmar-inventario-mobile-card__sku"><span><i class="bx bx-barcode"></i> SKU</span><strong>{{ detalle.sku|default:"Sin SKU" }}</strong></div>
+        </div>
+        <div class="confirmar-inventario-mobile-card__recepcion">
+          <label for="cantidad-recepcion-{{ detalle.productoId }}">Cantidad a recibir <small>Solicitada: {{ detalle.cantidad }}</small></label>
+          <input type="text"
+                 id="cantidad-recepcion-{{ detalle.productoId }}"
+                 class="cantidad-recepcion"
+                 inputmode="decimal"
+                 autocomplete="off"
+                 aria-label="Cantidad de recepción de {{ detalle.productoNombre }}"
+                 {% if detalle.cantidad == 0 %}disabled{% endif %}>
+        </div>
+        {% if compra.mostrar_vencimiento and detalle.requiereVencimiento %}
+        <div class="confirmar-inventario-mobile-card__vencimiento">
+          <label for="fecha-vencimiento-{{ detalle.productoId }}">Fecha de vencimiento</label>
+          <input type="date" id="fecha-vencimiento-{{ detalle.productoId }}" class="fecha-vencimiento" value="{{ detalle.fvencimiento }}">
+        </div>
+        {% endif %}
+        <input type="hidden" class="producto-id" value="{{ detalle.productoId }}">
+      </article>
+    {% empty %}
+      <div class="recepcion-mobile-empty"><i class="bx bx-package"></i><strong>Sin productos pendientes</strong><span>No hay productos para confirmar en esta página.</span></div>
+    {% endfor %}
+  </section>
   {% if detalles.paginator.num_pages > 1 %}
     <nav class="d-flex justify-content-center mt-4" aria-label="Páginas de productos">
       <ul class="pagination">
@@ -354,5 +414,5 @@
     </nav>
   {% endif %}
   <br>
-  <script type="module" src="{% static 'js/bodega/entradainventario.js' %}?v=20260918-03"></script>
+  <script type="module" src="{% static 'js/bodega/entradainventario.js' %}?v=20261004-recepcion-cards-02"></script>
 {% endblock main_content %}

@@ -308,4 +308,25 @@
   .retiros-grid {
     grid-template-columns: 1fr;
   }
+
+  #modalRetiroCaja .modal-header,
+  #modalRetiroCaja .modal-body {
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+
+  #modalRetiroCaja .modal-footer {
+    display: block;
+    padding: 0.8rem 1rem calc(0.8rem + env(safe-area-inset-bottom));
+  }
+
+  #modalRetiroCaja .retiro-modal__cerrar {
+    display: none;
+  }
+
+  #modalRetiroCaja #guardarRetiro {
+    width: 100%;
+    min-height: 44px;
+    border-radius: 11px;
+  }
 }

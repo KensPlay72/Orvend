@@ -40,6 +40,8 @@ function calcularCuadre() {
   if (totalContadoElemento) {
     totalContadoElemento.textContent = `L. ${totalContado.toFixed(2)}`;
   }
+  const totalContadoMovil = document.getElementById("totalContadoMobile");
+  if (totalContadoMovil) totalContadoMovil.textContent = `L. ${totalContado.toFixed(2)}`;
 
   // =========================
   // TOTAL ESPERADO
@@ -74,6 +76,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const btnCerrar = document.getElementById("btnCerrarCuadre");
 
   const totalContadoElement = document.getElementById("totalContado");
+  const totalContadoMobileElement = document.getElementById("totalContadoMobile");
   const diferenciaElement = document.getElementById("diferencia");
   const totalEsperadoElement = document.getElementById("totalEsperado");
   const otrosPagosCards = document.querySelectorAll("[data-payment-type]");
@@ -169,6 +172,9 @@ document.addEventListener("DOMContentLoaded", function () {
     // Total contado
 
     totalContadoElement.textContent = `L. ${totalContado.toFixed(2)}`;
+    if (totalContadoMobileElement) {
+      totalContadoMobileElement.textContent = `L. ${totalContado.toFixed(2)}`;
+    }
 
     // Total esperado
 
@@ -242,16 +248,6 @@ document.addEventListener("DOMContentLoaded", function () {
       }),
     ];
 
-    const totalGeneralEsperado = resumenPagos.reduce(function (total, pago) {
-      return total + pago.esperado;
-    }, 0);
-
-    const totalGeneralRecibido = resumenPagos.reduce(function (total, pago) {
-      return total + pago.recibido;
-    }, 0);
-
-    const diferenciaGeneral = totalGeneralRecibido - totalGeneralEsperado;
-
     const resumenFilas = resumenPagos
       .map(function (pago) {
         return `
@@ -267,13 +263,11 @@ document.addEventListener("DOMContentLoaded", function () {
       })
       .join("");
 
-    // =========================
-    // CONFIRMACIÓN SWEETALERT
-    // =========================
+    const contenidoConfirmacion = document.getElementById("contenidoConfirmarCuadre");
+    const modalConfirmacion = document.getElementById("modalConfirmarCuadre");
+    if (!contenidoConfirmacion || !modalConfirmacion) return;
 
-    Swal.fire({
-      title: "¿Cerrar cuadre de caja?",
-      html: `
+    contenidoConfirmacion.innerHTML = `
                 <div class="cuadre-confirmacion">
                     <p class="cuadre-confirmacion__intro">Revisa los montos registrados antes de finalizar el día.</p>
                     <div class="cuadre-confirmacion__table">
@@ -285,33 +279,15 @@ document.addEventListener("DOMContentLoaded", function () {
                         </div>
                         ${resumenFilas}
                     </div>
-                    <div class="cuadre-confirmacion__total">
-                        <span>Total general</span>
-                        <div>
-                            <small>Esperado <strong>L. ${totalGeneralEsperado.toFixed(2)}</strong></small>
-                            <small>Recibido <strong>L. ${totalGeneralRecibido.toFixed(2)}</strong></small>
-                            <b>Diferencia: L. ${diferenciaGeneral.toFixed(2)}</b>
-                        </div>
-                    </div>
                     <p class="cuadre-confirmacion__warning"><i class="bx bx-info-circle"></i> Una vez cerrada la caja no podrás modificar este cuadre.</p>
                 </div>
-            `,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Sí, cerrar caja",
-      cancelButtonText: "Cancelar",
-      reverseButtons: true,
-      customClass: {
-        popup: "cuadre-confirmacion-popup",
-        confirmButton: "classbotones",
-      },
-    }).then(function (result) {
-      if (!result.isConfirmed) {
-        return;
-      }
+            `;
+    bootstrap.Modal.getOrCreateInstance(modalConfirmacion).show();
+  });
 
-      cerrarCaja();
-    });
+  document.getElementById("confirmarCierreCuadre")?.addEventListener("click", function () {
+    bootstrap.Modal.getInstance(document.getElementById("modalConfirmarCuadre"))?.hide();
+    cerrarCaja();
   });
 
   // =========================
@@ -417,20 +393,6 @@ document.addEventListener("DOMContentLoaded", function () {
             }),
         ];
 
-        const totalGeneralEsperado = pagosCerrados.reduce(function (
-          total,
-          pago,
-        ) {
-          return total + pago.esperado;
-        }, 0);
-        const totalGeneralRecibido = pagosCerrados.reduce(function (
-          total,
-          pago,
-        ) {
-          return total + pago.recibido;
-        }, 0);
-        const diferenciaGeneral = totalGeneralRecibido - totalGeneralEsperado;
-
         const filasCierre = pagosCerrados
           .map(function (pago) {
             return `
@@ -459,14 +421,6 @@ document.addEventListener("DOMContentLoaded", function () {
                                 <span>Diferencia</span>
                             </div>
                             ${filasCierre}
-                        </div>
-                        <div class="cuadre-confirmacion__total">
-                            <span>Total general</span>
-                            <div>
-                                <small>Esperado <strong>L. ${totalGeneralEsperado.toFixed(2)}</strong></small>
-                                <small>Recibido <strong>L. ${totalGeneralRecibido.toFixed(2)}</strong></small>
-                                <b>Diferencia: L. ${diferenciaGeneral.toFixed(2)}</b>
-                            </div>
                         </div>
                     </div>
                 `,

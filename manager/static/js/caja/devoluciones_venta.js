@@ -79,7 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const checkbox = fila.querySelector(".dv-seleccionar");
     const input = fila.querySelector(".dv-cantidad-input");
     input.disabled = !checkbox.checked;
-    if (!checkbox.checked) input.value = "0";
+    if (!checkbox.checked) input.value = "";
     fila.classList.toggle("dv-fila-seleccionada", checkbox.checked);
   }
 
@@ -141,12 +141,15 @@ document.addEventListener("DOMContentLoaded", () => {
         return `
         <tr data-detalle-id="${detalle.detalleVentaId}" data-disponible="${detalle.cantidadDisponible}">
           <td data-label="Seleccionar" class="dv-seleccion-celda"><input type="checkbox" class="form-check-input dv-seleccionar" ${sinDisponible ? "disabled" : ""}></td>
-          <td data-label="Producto" class="dv-producto-celda">${escapeHtml(detalle.producto)}</td>
+          <td data-label="Producto" class="dv-producto-celda">
+            <span class="dv-producto-icon"><i class="bx bx-package" aria-hidden="true"></i></span>
+            <span class="dv-producto-nombre">${escapeHtml(detalle.producto)}</span>
+          </td>
           <td data-label="Vendido">${detalle.cantidadVendida}</td>
           <td data-label="Devuelto">${detalle.cantidadDevuelta}</td>
           <td data-label="Disponible">${detalle.cantidadDisponible}</td>
           <td data-label="Precio unitario">${window.MONEDA_SISTEMA || "L."} ${Number(detalle.precioUnitario).toFixed(2)}</td>
-          <td data-label="Cantidad a devolver" class="dv-cantidad-celda"><input type="number" inputmode="decimal" class="form-control dv-cantidad-input" min="0.01" step="0.01" max="${detalle.cantidadDisponible}" value="0" disabled ${sinDisponible ? "" : ""}></td>
+          <td data-label="Cantidad a devolver" class="dv-cantidad-celda"><input type="number" inputmode="decimal" class="form-control dv-cantidad-input" min="0.01" step="0.01" max="${detalle.cantidadDisponible}" value="" placeholder="0" disabled></td>
         </tr>`;
       })
       .join("");

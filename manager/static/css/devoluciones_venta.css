@@ -151,6 +151,10 @@
   cursor: pointer;
 }
 
+.dv-producto-icon {
+  display: none;
+}
+
 .dv-tabla-container .tablas-todo tbody tr.dv-fila-seleccionada td {
   background: color-mix(in srgb, var(--system-primary) 7%, #fff);
 }
@@ -224,36 +228,102 @@
   }
 
   .dv-mobile-search-card {
+    position: relative;
     display: block;
-    margin-bottom: 0.7rem;
-    padding: 0.5rem 0.65rem;
+    margin-bottom: 0.85rem;
+    padding: 0.85rem;
+    overflow: hidden;
     border: 1px solid color-mix(in srgb, var(--system-primary) 16%, #fff);
-    border-radius: 13px;
+    border-radius: 16px;
     background: #fff;
-    box-shadow: 0 5px 15px color-mix(in srgb, var(--system-secondary) 8%, transparent);
+    box-shadow: 0 8px 22px color-mix(in srgb, var(--system-secondary) 11%, transparent);
+  }
+
+  .dv-mobile-search-card::before {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--system-primary), var(--system-button));
+    content: "";
+  }
+
+  .dv-mobile-search-card__intro {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .dv-mobile-search-card__icon {
+    display: grid;
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    place-items: center;
+    border-radius: 11px;
+    color: var(--system-primary);
+    background: color-mix(in srgb, var(--system-primary) 10%, #fff);
+    font-size: 1.25rem;
+  }
+
+  .dv-mobile-search-card__intro strong,
+  .dv-mobile-search-card__intro small {
+    display: block;
+  }
+
+  .dv-mobile-search-card__intro strong {
+    color: #263b36;
+    font-size: 0.9rem;
+    line-height: 1.2;
+  }
+
+  .dv-mobile-search-card__intro small {
+    margin-top: 0.15rem;
+    color: #76827f;
+    font-size: 0.7rem;
+    line-height: 1.35;
   }
 
   .dv-mobile-search {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: 0.55rem;
-    min-height: 42px;
+    gap: 0.5rem;
   }
 
-  .dv-mobile-search > i {
+  .dv-mobile-search__field {
+    position: relative;
+    min-width: 0;
+  }
+
+  .dv-mobile-search__field > i {
+    position: absolute;
+    top: 50%;
+    left: 0.8rem;
+    z-index: 1;
     color: var(--system-primary);
-    font-size: 1.25rem;
+    font-size: 1.1rem;
+    transform: translateY(-50%);
+    pointer-events: none;
   }
 
   .dv-mobile-search input {
     width: 100%;
     min-width: 0;
-    padding: 0.68rem 0.72rem;
-    border: 1px solid color-mix(in srgb, var(--system-primary) 25%, #fff);
-    border-radius: 9px;
+    height: 44px;
+    padding: 0.65rem 0.75rem 0.65rem 2.35rem;
+    border: 1px solid color-mix(in srgb, var(--system-primary) 22%, #dce7e5);
+    border-radius: 11px;
+    background: color-mix(in srgb, var(--system-primary) 3%, #fff);
+    color: #263b36;
     outline: 0;
     font: inherit;
+  }
+
+  .dv-mobile-search input::placeholder {
+    color: #8b9693;
   }
 
   .dv-mobile-search input:focus {
@@ -262,14 +332,44 @@
   }
 
   .dv-mobile-search button {
-    display: grid;
-    width: 40px;
-    height: 40px;
-    place-items: center;
+    display: inline-flex;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0 0.85rem;
     border: 0;
-    border-radius: 9px;
+    border-radius: 11px;
     color: #fff;
     background: var(--system-button);
+    font-size: 0.78rem;
+    font-weight: 700;
+    box-shadow: 0 5px 12px color-mix(in srgb, var(--system-button) 25%, transparent);
+  }
+
+  .dv-mobile-search button i {
+    font-size: 1.05rem;
+  }
+
+  .dv-mobile-list-access {
+    display: flex;
+    min-height: 40px;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.55rem 0.7rem;
+    margin-top: 0.65rem;
+    border-top: 1px solid color-mix(in srgb, var(--system-primary) 12%, #fff);
+    color: var(--system-primary);
+    font-size: 0.75rem;
+    font-weight: 750;
+    text-decoration: none;
+  }
+
+  .dv-mobile-list-access span {
+    flex: 1;
+  }
+
+  .dv-mobile-list-access i:last-child {
     font-size: 1.15rem;
   }
 
@@ -277,6 +377,65 @@
   .dv-section-head {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  #resultadoFactura {
+    animation: dv-mobile-result-in 0.28s ease both;
+  }
+
+  .dv-card {
+    margin-bottom: 0.8rem;
+    padding: 0.85rem;
+    border-radius: 16px;
+    box-shadow: 0 7px 20px color-mix(in srgb, var(--system-secondary) 9%, transparent);
+  }
+
+  .dv-factura-card {
+    position: relative;
+    gap: 0.8rem;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--system-primary) 16%, #fff);
+    border-left: 0;
+  }
+
+  .dv-factura-card::before {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 4px;
+    background: var(--system-primary);
+    content: "";
+  }
+
+  .dv-factura-title {
+    gap: 0.6rem;
+    padding-left: 0.2rem;
+  }
+
+  .dv-factura-title > i {
+    display: grid;
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    place-items: center;
+    border-radius: 11px;
+    color: #fff;
+    background: var(--system-primary);
+    font-size: 1.2rem;
+    box-shadow: 0 5px 12px color-mix(in srgb, var(--system-primary) 24%, transparent);
+  }
+
+  .dv-factura-title span {
+    color: #77827f;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+
+  .dv-factura-title strong {
+    color: #243a35;
+    font-size: 1.05rem;
   }
 
   .dv-factura-datos {
@@ -292,25 +451,66 @@
 
   .dv-factura-datos div {
     min-width: 0;
-    padding: 0.6rem 0.7rem;
-    border: 1px solid color-mix(in srgb, var(--system-primary) 12%, #fff);
-    border-radius: 9px;
-    background: color-mix(in srgb, var(--system-primary) 4%, #fff);
+    padding: 0.6rem 0.65rem;
+    border: 0;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--system-primary) 5%, #fff);
+  }
+
+  .dv-factura-datos div:nth-child(2) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .dv-factura-datos span {
+    margin-bottom: 0.15rem;
+    color: #77827f;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
   }
 
   .dv-factura-datos strong {
     width: 100%;
+    color: #243a35;
+    font-size: 0.78rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .dv-section-head {
-    gap: 0.75rem;
+    gap: 0.65rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--system-primary) 10%, #fff);
+  }
+
+  .dv-section-head h5 {
+    color: #243a35;
+    font-size: 0.95rem;
+    font-weight: 750;
+  }
+
+  .dv-section-head p {
+    font-size: 0.72rem;
+    line-height: 1.4;
   }
 
   .dv-section-head .btn {
     width: 100%;
+    min-height: 39px;
+    border-color: color-mix(in srgb, var(--system-primary) 34%, #fff);
+    border-radius: 10px;
+    color: var(--system-primary);
+    background: color-mix(in srgb, var(--system-primary) 5%, #fff);
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+
+  .dv-section-head .btn.btn-success {
+    border-color: var(--system-primary);
+    color: #fff;
+    background: var(--system-primary);
   }
 
   .dv-tabla-container {
@@ -334,35 +534,41 @@
     display: grid !important;
     height: auto !important;
     max-height: none !important;
-    gap: 0.75rem;
+    gap: 0.8rem;
+    padding-top: 0.8rem;
   }
 
   .dv-tabla-container .tablas-todo tbody tr {
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    position: relative;
     gap: 0;
     overflow: hidden;
-    border: 1px solid color-mix(in srgb, var(--system-primary) 17%, #fff);
-    border-radius: 11px;
+    border: 1px solid color-mix(in srgb, var(--system-primary) 14%, #dce7e5);
+    border-radius: 14px;
     background: #fff;
-    box-shadow: 0 3px 10px color-mix(in srgb, var(--system-secondary) 7%, transparent);
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--system-secondary) 9%, transparent);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
   }
 
-  .dv-tabla-container .tablas-todo tbody tr:nth-child(even) {
-    background: color-mix(in srgb, var(--system-primary) 2%, #fff);
+  .dv-tabla-container .tablas-todo tbody tr.dv-fila-seleccionada {
+    border-color: var(--system-primary);
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--system-primary) 17%, transparent);
+    transform: translateY(-1px);
   }
 
   .dv-tabla-container .tablas-todo tbody td {
     display: flex !important;
     min-width: 0;
-    min-height: 62px;
-    padding: 0.55rem 0.7rem !important;
+    min-height: 56px;
+    padding: 0.5rem 0.65rem !important;
     border: 0 !important;
     border-bottom: 1px solid color-mix(in srgb, var(--system-primary) 10%, #fff) !important;
     flex-direction: column;
     justify-content: center;
     color: #212529;
-    font-weight: 500;
+    font-size: 0.78rem;
+    font-weight: 650;
     text-align: left !important;
   }
 
@@ -372,9 +578,9 @@
 
   .dv-tabla-container .tablas-todo tbody td::before {
     margin-bottom: 0.18rem;
-    color: #212529;
+    color: #75817e;
     content: attr(data-label);
-    font-size: 0.7rem;
+    font-size: 0.59rem;
     font-weight: 700;
     letter-spacing: 0.02em;
     text-transform: uppercase;
@@ -386,10 +592,36 @@
 
   .dv-tabla-container .tablas-todo tbody .dv-producto-celda {
     min-height: 0;
+    display: grid !important;
+    grid-template-columns: 36px minmax(0, 1fr);
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.65rem !important;
     border-right: 0 !important;
     background: color-mix(in srgb, var(--system-primary) 5%, #fff);
-    font-size: 0.96rem;
-    font-weight: 650;
+    font-size: 0.86rem;
+    font-weight: 750;
+  }
+
+  .dv-tabla-container .tablas-todo tbody .dv-producto-celda::before {
+    display: none;
+  }
+
+  .dv-producto-icon {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border-radius: 10px;
+    color: #fff;
+    background: var(--system-primary);
+    font-size: 1rem;
+  }
+
+  .dv-producto-nombre {
+    min-width: 0;
+    color: #223833;
+    line-height: 1.3;
   }
 
   .dv-tabla-container .tablas-todo tbody .dv-seleccion-celda {
@@ -399,7 +631,7 @@
     align-items: center;
     gap: 0.55rem;
     border-bottom: 0 !important;
-    background: color-mix(in srgb, var(--system-primary) 6%, #fff);
+    background: color-mix(in srgb, var(--system-primary) 5%, #fff);
   }
 
   .dv-tabla-container .tablas-todo tbody .dv-seleccion-celda::before {
@@ -415,12 +647,69 @@
 
   .dv-cantidad-input {
     width: 100%;
+    height: 38px;
     margin: 0;
+    border-radius: 9px;
+  }
+
+  .dv-cantidad-input::placeholder {
+    color: #95a19e;
+    opacity: 1;
+  }
+
+  #modalDevolucionVenta .modal-header {
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+
+  #modalDevolucionVenta .modal-body {
+    padding: 1rem;
+  }
+
+  #modalDevolucionVenta .modal-footer {
+    display: block;
+    padding: 0.8rem 1rem calc(0.8rem + env(safe-area-inset-bottom));
+  }
+
+  #modalDevolucionVenta .dv-modal-cancel {
+    display: none;
+  }
+
+  #modalDevolucionVenta #crearDevolucion {
+    width: 100%;
+    min-height: 44px;
+    border-radius: 11px;
+  }
+
+  .dv-finalizar-card {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .dv-crear-btn {
+    width: 100%;
+    height: 46px;
+    border-radius: 12px;
+    font-size: 0.84rem;
+    font-weight: 750;
+  }
+
+  @keyframes dv-mobile-result-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
   }
 
 @media (max-width: 520px) {
   .dv-factura-datos {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

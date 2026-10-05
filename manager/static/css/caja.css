@@ -7,6 +7,33 @@
   background: white;
 }
 
+/* En hojas móviles la X y el gesto de arrastre ya resuelven el cierre.
+   El pie conserva solamente la acción que confirma el formulario. */
+@media (max-width: 1032px) {
+  #modalagregar.modal-sheet-mobile .modal-footer,
+  #modalDescuento.modal-sheet-mobile .modal-footer,
+  #modalPago.modal-sheet-mobile .modal-footer,
+  #modalRegistrarClienteCaja.modal-sheet-mobile .modal-footer {
+    display: block;
+  }
+
+  #modalagregar.modal-sheet-mobile .modal-footer > .btn-secondary[data-bs-dismiss="modal"],
+  #modalDescuento.modal-sheet-mobile .modal-footer > .btn-secondary[data-bs-dismiss="modal"],
+  #modalPago.modal-sheet-mobile .modal-footer > .btn-secondary[data-bs-dismiss="modal"],
+  #modalRegistrarClienteCaja.modal-sheet-mobile .modal-footer > .btn-secondary[data-bs-dismiss="modal"] {
+    display: none;
+  }
+
+  #modalagregar.modal-sheet-mobile .modal-footer > .btn:not(.btn-secondary),
+  #modalDescuento.modal-sheet-mobile .modal-footer > .btn:not(.btn-secondary),
+  #modalPago.modal-sheet-mobile .modal-footer > .btn:not(.btn-secondary),
+  #modalRegistrarClienteCaja.modal-sheet-mobile .modal-footer > .btn:not(.btn-secondary) {
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
+  }
+}
+
 /* TABLA */
 .tablas-todo {
   width: 100%;
@@ -359,6 +386,10 @@ th {
   border-radius: 8px;
   color: #fff;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .btn_add {
@@ -458,6 +489,30 @@ th {
   font-size: 1.15rem;
 }
 
+/* Botón de búsqueda único para los selectores de Caja: productos, clientes
+   y devoluciones mantienen el mismo tamaño, icono y color configurable. */
+.modal-search-button {
+  display: grid;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0;
+  place-items: center;
+  border-radius: 10px;
+}
+
+.modal-search-button i {
+  font-size: 1.15rem;
+}
+
+.btn-registrar-cliente-caja {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
 /* Este es el único contenedor que se desplaza dentro del modal. */
 .caja-product-list-wrap {
   max-height: 390px;
@@ -540,6 +595,27 @@ th {
   color: var(--system-primary);
 }
 
+/* La cantidad se edita al tocarla. Se usa texto con inputmode numérico para
+   evitar las flechas nativas de los campos number en escritorio. */
+.div_row .pre {
+  cursor: text;
+}
+
+.cantidad-editable {
+  width: 72px;
+  min-width: 0;
+  padding: 0.24rem 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--system-primary) 46%, #dce7e5);
+  border-radius: 7px;
+  outline: 0;
+  color: var(--system-secondary);
+  font: inherit;
+  font-weight: 700;
+  text-align: center;
+  background: #fff;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--system-primary) 12%, transparent);
+}
+
 .caja-product-modal__footer {
   display: flex;
   align-items: center;
@@ -556,6 +632,36 @@ th {
 
 .caja-product-pagination .pagination {
   margin-bottom: 0;
+}
+
+/* Selector de cliente: inicia con Cliente final y crece de forma gradual
+   al mostrar una búsqueda; al llegar al límite el listado se desplaza. */
+.cliente-selector-results {
+  max-height: 126px;
+  overflow-y: auto;
+  transition: height 0.28s ease;
+}
+
+.cliente-selector-results--expanded {
+  max-height: min(46vh, 390px);
+}
+
+.pago-campo-animado {
+  will-change: max-height, opacity, transform;
+  transition: max-height 0.28s ease, opacity 0.2s ease, transform 0.28s ease;
+}
+
+@media (max-width: 1032px) {
+  .modal-sheet-mobile .cliente-selector-results--expanded {
+    max-height: min(48dvh, 390px);
+  }
+
+  /* Safari/iOS amplía automáticamente los campos con letra menor de 16px.
+     En estos modales ese zoom desplaza la hoja inferior y rompe el layout. */
+  #modalProductosMovil input,
+  #modalagregar input {
+    font-size: 16px !important;
+  }
 }
 
 @media (max-width: 576px) {
@@ -830,8 +936,8 @@ th {
     color: #243c3a;
     font-weight: 600;
     line-height: 1.2;
-    justify-content: flex-start;
-    text-align: left;
+    justify-content: center;
+    text-align: center;
   }
   #tablaProductos td:nth-child(4),
   #tablaProductos td:nth-child(6) {
@@ -1322,4 +1428,156 @@ th {
   font-weight: 700;
   box-shadow: 0 5px 14px
     color-mix(in srgb, var(--system-secondary) 8%, transparent);
+}
+
+/* En móvil las devoluciones se leen como fichas, sin obligar a desplazar una tabla. */
+@media (max-width: 1032px) {
+  .btn-registrar-cliente-caja {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    padding: 0;
+  }
+
+  .btn-registrar-cliente-caja span {
+    display: none;
+  }
+
+  #modalRegistrarClienteCaja input,
+  #modalRegistrarClienteCaja textarea {
+    font-size: 16px;
+  }
+
+  #modalNotasCredito.modal-sheet-mobile--auto .modal-body {
+    max-height: calc(82dvh - 5.7rem);
+  }
+
+  #modalNotasCredito .modal-body {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+  }
+
+  #modalNotasCredito .notas-credito-container {
+    width: 100%;
+    min-height: 0;
+    max-height: none;
+    flex: 1 1 auto;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  #modalNotasCredito .notas-credito-tabla,
+  #modalNotasCredito .notas-credito-tabla tbody {
+    display: block;
+    width: 100%;
+  }
+
+  #modalNotasCredito .notas-credito-tabla thead {
+    display: none;
+  }
+
+  #modalNotasCredito .nota-credito-card {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem 0.8rem;
+    margin: 0 0 0.7rem;
+    padding: 0.8rem;
+    border: 1px solid color-mix(in srgb, var(--system-primary) 18%, #fff);
+    border-left: 4px solid var(--system-primary);
+    border-radius: 0.9rem;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--system-primary) 7%, #fff), #fff 48%);
+    box-shadow: 0 7px 18px color-mix(in srgb, var(--system-secondary) 9%, transparent);
+  }
+
+  #modalNotasCredito .nota-credito-card td {
+    display: flex;
+    min-width: 0;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.45rem;
+    padding: 0;
+    border: 0;
+    color: var(--system-secondary);
+    font-size: 0.87rem;
+    text-align: right;
+    background: transparent !important;
+  }
+
+  #modalNotasCredito .nota-credito-card td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    color: color-mix(in srgb, var(--system-secondary) 62%, #fff);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.035em;
+    text-align: left;
+    text-transform: uppercase;
+    background: transparent !important;
+  }
+
+  #modalNotasCredito .nota-credito-card td:nth-child(3),
+  #modalNotasCredito .nota-credito-card td:nth-child(4),
+  #modalNotasCredito .nota-credito-card td:nth-child(5) {
+    grid-column: 1 / -1;
+  }
+
+  #modalNotasCredito .nota-credito-card td:nth-child(3) {
+    align-items: flex-start;
+  }
+
+  #modalNotasCredito .nota-credito-card td:nth-child(1),
+  #modalNotasCredito .nota-credito-card td:nth-child(2) {
+    color: var(--system-secondary);
+    font-weight: 800;
+  }
+
+  #modalNotasCredito .nota-credito-card td:nth-child(4) {
+    padding-top: 0.45rem;
+    border-top: 1px dashed color-mix(in srgb, var(--system-primary) 22%, #fff);
+    color: var(--system-primary);
+    font-size: 1rem;
+    font-weight: 900;
+  }
+
+  #modalNotasCredito .nota-credito-card td:nth-child(3)::before {
+    margin-top: 0.1rem;
+  }
+
+  #modalNotasCredito .nota-credito-card td:nth-child(5) .btn {
+    width: 100%;
+    min-height: 42px;
+  }
+
+  /* El botón se explica por sí solo; no necesita la etiqueta “Acción”. */
+  #modalNotasCredito .nota-credito-card td:nth-child(5)::before {
+    display: none;
+  }
+
+  #modalNotasCredito .nota-credito-card .btn-aplicar-nota {
+    border-color: var(--system-primary);
+    background: var(--system-primary);
+    color: #fff;
+    font-weight: 800;
+  }
+
+  #modalNotasCredito .nota-credito-card .btn-aplicar-nota.btn-danger {
+    border-color: #b63c46;
+    background: #b63c46;
+  }
+
+  #modalNotasCredito .notas-credito-tabla td[colspan] {
+    display: block;
+    padding: 1.25rem 0.75rem;
+    border: 0;
+    text-align: center;
+  }
+
+  #modalNotasCredito #buscarNotaCredito,
+  #modalDescuento #Ddescuento {
+    font-size: 16px;
+  }
 }

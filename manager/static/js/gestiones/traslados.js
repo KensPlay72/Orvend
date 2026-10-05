@@ -189,7 +189,7 @@ async function cargarInventarioEnModal(ubicacionId) {
     const imagen = prod.imagen;
 
     div.innerHTML = `
-      <img class="compras-product-option__image" src="${imagen || '/static/img/default.png'}" alt="" onerror="this.src='/static/img/default.png'">
+      <img class="compras-product-option__image" src="${imagen || '/static/img/default.webp'}" alt="" onerror="this.src='/static/img/default.webp'">
       <div class="compras-product-option__info datos-producto" data-sku="${prod.sku}" data-stock="${prod.stock}">
         <strong>${prod.nombre}</strong>
         <small>SKU: ${prod.sku} · Existencias: ${prod.stock}</small>

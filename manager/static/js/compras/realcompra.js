@@ -627,17 +627,19 @@ async function cargarProductos(page = 1, search = "") {
 
     data.results.forEach((prod) => {
       const div = document.createElement("div");
+      const presentacion =
+        prod.unidadMedida?.abreviatura || prod.unidadMedida?.nombre || "N/A";
       div.className = "productosstyle producto-item compras-product-option";
       div.dataset.id = prod.id;
       div.dataset.nombre = prod.nombre.toLowerCase();
-      div.dataset.presentacion = prod.unidadMedida.nombre.toLowerCase();
+      div.dataset.presentacion = presentacion;
       div.dataset.sku = prod.codigoSKU.toLowerCase();
 
       div.innerHTML = `
-                <img class="compras-product-option__image" src="${prod.imagenUrl}" alt="" onerror="this.src='/static/img/default.png'">
+                <img class="compras-product-option__image" src="${prod.imagenUrl}" alt="" onerror="this.src='/static/img/default.webp'">
                 <div class="compras-product-option__info">
                     <strong>${prod.nombre}</strong>
-                    <small>${prod.unidadMedida.nombre} · SKU: ${prod.codigoSKU}</small>
+                    <small>${presentacion} · SKU: ${prod.codigoSKU}</small>
                 </div>
                 <span class="compras-product-option__action"><i class="bx bx-plus-circle"></i> Seleccionar</span>
                 <input type="checkbox" class="form-check-input producto-checkbox d-none" value="${prod.id}">
