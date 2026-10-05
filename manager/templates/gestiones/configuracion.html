@@ -44,7 +44,7 @@
     {% endif %}
   </header>
 
-  <form id="formConfiguracion" class="config-layout" novalidate>
+  <form id="formConfiguracion" class="config-layout" method="post" action="{% url 'guardar_configuracion' %}" data-save-url="{% url 'guardar_configuracion' %}" novalidate>
     {% csrf_token %}
     <article class="config-card config-card--logo">
       <div class="config-card__head">
@@ -296,8 +296,5 @@
   </form>
 </section>
 
-<script>
-  const CONFIGURACION_URL = "{% url 'guardar_configuracion' %}";
-</script>
-<script src="{% static 'js/gestiones/configuracion.js' %}?v=20260918-02"></script>
+<script src="{% static 'js/gestiones/configuracion.js' %}?v=20261005-guardar-produccion"></script>
 {% endblock %}

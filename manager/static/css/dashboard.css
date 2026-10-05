@@ -320,16 +320,17 @@
    PANEL GRID
 ========================================================== */
 
-.panel-grid {
+.dashboard-detail-layout {
     width: 100%;
-
     display: grid;
-
     grid-template-columns: minmax(0, 2fr) minmax(350px, 1fr);
-
     gap: 20px;
+    align-items: start;
+}
 
-    align-items: stretch;
+/* El gráfico y sus resúmenes forman una columna; las alertas abarcan ambas filas. */
+.panel-grid {
+    display: contents;
 }
 
 
@@ -423,7 +424,9 @@
 ========================================================== */
 
 .chart-panel {
-    min-height: 420px;
+    grid-column: 1;
+    grid-row: 1;
+    height: 440px;
 }
 
 .chart-container {
@@ -442,7 +445,19 @@
 ========================================================== */
 
 .alerts-panel {
-    min-height: 420px;
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    height: 620px;
+    display: flex;
+    flex-direction: column;
+}
+
+.alerts-panel .panel-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
 }
 
 .alert-header-icon {
@@ -732,17 +747,13 @@
 
 .bottom-grid {
     width: 100%;
-
+    grid-column: 1;
+    grid-row: 2;
     display: grid;
 
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
 
     gap: 18px;
-}
-
-/* El resumen conserva una distribución equilibrada cuando se ocultan cuentas. */
-.bottom-grid:has(.summary-card:nth-child(2):last-child) {
-    grid-template-columns: repeat(2, 1fr);
 }
 
 
@@ -848,6 +859,16 @@
 
 @media (max-width: 1200px) {
 
+    .dashboard-detail-layout {
+        display: block;
+    }
+
+    .panel-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
     .cards-grid {
         grid-template-columns: repeat(2, 1fr);
     }
@@ -856,13 +877,16 @@
         grid-template-columns: repeat(2, 1fr);
     }
 
-    .panel-grid {
-        grid-template-columns: 1fr;
+    .alerts-panel {
+        grid-column: auto;
+        grid-row: auto;
+        height: 440px;
+        min-height: 0;
     }
 
-    .alerts-panel {
-        min-height: auto;
-    }
+    .chart-panel { grid-column: auto; grid-row: auto; }
+
+    .bottom-grid { grid-column: auto; grid-row: auto; }
 
 }
 

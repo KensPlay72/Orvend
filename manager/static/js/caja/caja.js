@@ -80,22 +80,7 @@ const codigoBusqueda = document.getElementById("codigo_busqueda");
 
 if (codigoBusqueda) {
   codigoBusqueda.addEventListener("input", function () {
-    const valor = this.value.toUpperCase();
-    const prefijo = valor.match(/^C(?:O(?:T-?)?)?/);
-    const textoPrefijo = prefijo ? prefijo[0] : "";
-
-    if (textoPrefijo === "COT-") {
-      this.value =
-        textoPrefijo + valor.slice(textoPrefijo.length).replace(/\D/g, "");
-    } else if (
-      textoPrefijo === "C" ||
-      textoPrefijo === "CO" ||
-      textoPrefijo === "COT"
-    ) {
-      this.value = textoPrefijo;
-    } else {
-      this.value = valor.replace(/\D/g, "");
-    }
+    this.value = this.value.toUpperCase().replace(/[^A-Z0-9-]/g, "");
   });
 
   codigoBusqueda.addEventListener("keydown", function (event) {

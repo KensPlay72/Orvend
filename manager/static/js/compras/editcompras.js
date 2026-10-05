@@ -1,6 +1,17 @@
 let productosSeleccionadosGlobal = {};
 const PRODUCTOS_POR_PAGINA = 10;
-let paginaTablaCompra = 1;
+let paginaTablaCompra =
+  Math.max(1, Number(new URLSearchParams(window.location.search).get("page"))) || 1;
+
+function urlPaginaCompra(pagina) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("page", pagina);
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+function actualizarUrlPaginaCompra() {
+  window.history.replaceState({}, "", urlPaginaCompra(paginaTablaCompra));
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   const buscador = document.getElementById("buscadorProductos");
@@ -384,6 +395,7 @@ function actualizarPaginacionTablaCompra() {
   }
 
   paginaTablaCompra = Math.min(Math.max(1, paginaTablaCompra), totalPaginas);
+  actualizarUrlPaginaCompra();
   filas.forEach((fila, indice) => {
     fila.hidden =
       Math.floor(indice / PRODUCTOS_POR_PAGINA) + 1 !== paginaTablaCompra;
@@ -394,13 +406,17 @@ function actualizarPaginacionTablaCompra() {
   const crearBoton = (texto, pagina, deshabilitado, activo = false) => {
     const item = document.createElement("li");
     item.className = `page-item${deshabilitado ? " disabled" : ""}${activo ? " active" : ""}`;
-    const boton = document.createElement("button");
-    boton.type = "button";
+    const boton = document.createElement("a");
     boton.className = "page-link";
     boton.textContent = texto;
-    boton.disabled = deshabilitado;
+    boton.href = urlPaginaCompra(Math.max(1, pagina));
+    if (deshabilitado) {
+      boton.setAttribute("aria-disabled", "true");
+      boton.tabIndex = -1;
+    }
     if (!deshabilitado && !activo) {
-      boton.addEventListener("click", () => {
+      boton.addEventListener("click", (event) => {
+        event.preventDefault();
         paginaTablaCompra = pagina;
         actualizarPaginacionTablaCompra();
       });

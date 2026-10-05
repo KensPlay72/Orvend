@@ -181,7 +181,8 @@ img {
 }
 .notifications-panel {
   width: 350px;
-  max-height: min(72dvh, 620px);
+  height: min(520px, calc(100dvh - 5.5rem));
+  max-height: none;
   padding: 0 0.35rem 0.35rem;
   /* Mantiene accesibles las notificaciones cuando se acumulan. */
   overflow: hidden;
@@ -203,7 +204,7 @@ img {
 .notifications-panel__list {
   min-height: 0;
   flex: 1 1 auto;
-  max-height: min(calc(72dvh - 45px), 575px);
+  max-height: none;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -822,10 +823,11 @@ Modal Inner Content
     top: 4.55rem;
     right: 0.75rem;
     width: min(350px, calc(100vw - 1.5rem));
-    max-height: calc(100dvh - 5.3rem);
+    height: min(520px, calc(100dvh - 5.3rem));
+    max-height: none;
   }
   .header__container > .header-notifications .notifications-panel__list {
-    max-height: calc(100dvh - 8.4rem);
+    max-height: none;
   }
   .header__container > .initials-circle {
     display: flex;

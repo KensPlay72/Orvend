@@ -25,10 +25,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   const activarCarrusel = () => {
     const vista = document.getElementById("carruselPreview"),
-      items = [...vista.querySelectorAll("figure")],
       dots = document.getElementById("carruselDots"),
       anterior = document.getElementById("carruselPrev"),
       siguiente = document.getElementById("carruselNext");
+    if (!vista || !dots || !anterior || !siguiente) return;
+    const items = [...vista.querySelectorAll("figure")];
     let indice = 0;
     anterior.hidden = siguiente.hidden = items.length < 2;
     dots.hidden = items.length < 2;
@@ -153,7 +154,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   activarCarrusel();
 
-  inputLogo.addEventListener("change", () => {
+  inputLogo?.addEventListener("change", () => {
     const archivo = inputLogo.files?.[0];
     if (!archivo) return;
     if (!["image/jpeg", "image/png", "image/webp"].includes(archivo.type)) {
@@ -172,12 +173,14 @@ document.addEventListener("DOMContentLoaded", () => {
     logoPreview.src = URL.createObjectURL(archivo);
   });
 
-  document.getElementById("quitarLogo").addEventListener("click", () => {
+  document.getElementById("quitarLogo")?.addEventListener("click", () => {
     logo = null;
     quitarLogo = true;
     inputLogo.value = "";
-    logoPreview.src = "/static/img/LH.png";
+    logoPreview.src = "/static/img/LH.webp";
   });
+
+  if (!form || !botonGuardar) return;
 
   form.addEventListener("submit", async (evento) => {
     evento.preventDefault();
@@ -241,7 +244,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (logo) datos.append("logo", logo);
     try {
       botonGuardar.disabled = true;
-      const respuesta = await fetch(CONFIGURACION_URL, {
+      const respuesta = await fetch(form.dataset.saveUrl || form.action, {
         method: "POST",
         headers: {
           "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")

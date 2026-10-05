@@ -3,6 +3,8 @@ from requests.auth import HTTPBasicAuth
 from django.conf import settings
 from urllib.parse import quote
 
+_TIEMPO_ESPERA_ARCHIVO = (3.05, 12)
+
 
 def _carpeta_nextcloud(carpeta=None):
     """Obtiene la carpeta remota evitando mezclar archivos por módulo."""
@@ -55,6 +57,7 @@ def obtener_archivo(nombre_archivo, carpeta=None):
             settings.NEXTCLOUD_USER,
             settings.NEXTCLOUD_PASSWORD,
         ),
+        timeout=_TIEMPO_ESPERA_ARCHIVO,
     )
 
     if response.status_code != 200:

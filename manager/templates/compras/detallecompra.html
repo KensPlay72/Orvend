@@ -261,10 +261,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const ul = document.createElement("ul");
         ul.className = "pagination";
 
+        const hrefPagina = numeroPagina => {
+            const url = new URL(window.location.href);
+            url.searchParams.set("page", Math.max(1, numeroPagina));
+            return `${url.pathname}${url.search}${url.hash}`;
+        };
+
         // Botón anterior
         const liPrev = document.createElement("li");
         liPrev.className = `page-item ${pagina === 1 ? "disabled" : ""}`;
-        liPrev.innerHTML = `<a class="page-link" href="?page=${pagina - 1}">«</a>`;
+        liPrev.innerHTML = `<a class="page-link" href="${hrefPagina(pagina - 1)}">«</a>`;
         ul.appendChild(liPrev);
 
         // Rango dinámico
@@ -274,14 +280,14 @@ document.addEventListener("DOMContentLoaded", () => {
         for (let i = start; i <= end; i++) {
             const li = document.createElement("li");
             li.className = `page-item ${i === pagina ? "active" : ""}`;
-            li.innerHTML = `<a class="page-link" href="?page=${i}">${i}</a>`;
+            li.innerHTML = `<a class="page-link" href="${hrefPagina(i)}">${i}</a>`;
             ul.appendChild(li);
         }
 
         // Botón siguiente
         const liNext = document.createElement("li");
         liNext.className = `page-item ${pagina === totalPaginas ? "disabled" : ""}`;
-        liNext.innerHTML = `<a class="page-link" href="?page=${pagina + 1}">»</a>`;
+        liNext.innerHTML = `<a class="page-link" href="${hrefPagina(pagina + 1)}">»</a>`;
         ul.appendChild(liNext);
 
         paginador.appendChild(ul);

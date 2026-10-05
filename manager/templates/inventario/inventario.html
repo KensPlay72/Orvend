@@ -4,7 +4,7 @@
     Inventario
 {% endblock title %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/inventario.css' %}" />
+<link rel="stylesheet" href="{% static 'css/inventario.css' %}?v=20261005-escritorio-redisenado-06" />
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 {% endblock extra_css %}
 {% block titulo_content %}
@@ -19,27 +19,56 @@
 {% endblock titulo_content %}
 {% block main_content %}
     {% csrf_token %}
+    <section class="inventario-mobile-search-card">
+        <div class="inventario-mobile-search-card__intro">
+            <span class="inventario-mobile-search-card__icon"><i class="bx bx-package" aria-hidden="true"></i></span>
+            <div><strong>Buscar en inventario</strong><small>Consulta productos por nombre, marca o código.</small></div>
+        </div>
+        <form method="get" class="inventario-mobile-search" role="search">
+            <div class="inventario-mobile-search__field"><i class="bx bx-search" aria-hidden="true"></i><input type="search" name="search" value="{{ search }}" placeholder="Producto, marca o código" autocomplete="off" /></div>
+            <button type="submit"><i class="bx bx-search" aria-hidden="true"></i><span>Buscar</span></button>
+        </form>
+    </section>
     <div class="todo">
         <div class="tabl">
+            <section class="inventario-mobile-list" aria-label="Productos de inventario">
+                {% for producto in productos %}
+                <article class="inventario-mobile-card" data-id="{{ producto.id }}">
+                    <button type="button" class="inventario-mobile-card__header" aria-expanded="false">
+                        <span class="inventario-mobile-card__icon"><i class="bx bx-package" aria-hidden="true"></i></span>
+                        <span class="inventario-mobile-card__copy"><small>Producto</small><strong>{{ producto.nombre }}</strong><em><span>{{ producto.unidadMedida.abreviatura }}</span><span>{{ producto.codigoSKU }}</span><span>{{ producto.marcas.nombre }}</span><b>{% if producto.tieneDescuento %}L. {{ producto.precioFinal|floatformat:2 }}{% else %}L. {{ producto.precioVenta|floatformat:2 }}{% endif %}</b></em></span>
+                        <span class="inventario-mobile-card__chevron"><i class="bx bx-chevron-down" aria-hidden="true"></i></span>
+                    </button>
+                    <div class="inventario-mobile-card__detail">
+                        <div class="inventario-mobile-card__detail-inner">
+                            <section class="inventario-mobile-card__image"><span>Imagen</span><div><i class="bx bx-image-alt" aria-hidden="true"></i><img alt="Imagen del producto" width="60" height="60" hidden></div></section>
+                            <section class="inventario-mobile-card__locations"><span>Ubicación</span><ul><li><i class="bx bx-loader-alt bx-spin" aria-hidden="true"></i><span>Selecciona el producto para consultar existencias.</span></li></ul></section>
+                        </div>
+                    </div>
+                </article>
+                {% empty %}
+                <p class="inventario-mobile-empty">No se encontraron productos.</p>
+                {% endfor %}
+            </section>
             <div class="tabla-container">
                 <table class="tablas-todo" id="tablaProductos">
                     <thead>
                         <tr>
-                            <th>Nombre</th>
-                            <th>Present</th>
-                            <th>Marca</th>
-                            <th>CodBarras</th>
-                            <th>Precio</th>
+                            <th><i class="bx bx-package" aria-hidden="true"></i> Producto</th>
+                            <th><i class="bx bx-box" aria-hidden="true"></i> Presentación</th>
+                            <th><i class="bx bx-purchase-tag" aria-hidden="true"></i> Marca</th>
+                            <th><i class="bx bx-barcode" aria-hidden="true"></i> Código</th>
+                            <th><i class="bx bx-wallet" aria-hidden="true"></i> Precio</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for producto in productos %}
                             <tr class="fila-producto" data-id="{{ producto.id }}">
-                                <td>{{ producto.nombre }}</td>
+                                <td class="inventario-desktop-producto"><span class="inventario-desktop-producto__icon"><i class="bx bx-package" aria-hidden="true"></i></span><span><strong>{{ producto.nombre }}</strong></span></td>
                                 <td>{{ producto.unidadMedida.abreviatura }}</td>
                                 <td>{{ producto.marcas.nombre }}</td>
                                 <td>{{ producto.codigoSKU }}</td>
-                                <td>
+                                <td class="inventario-desktop-precio">
                                     {% if producto.tieneDescuento %}
                                         <div>
                                             <span class="text-decoration-line-through text-danger">L. {{ producto.precioVenta|floatformat:2 }}</span>
@@ -79,6 +108,7 @@
         </div>
         <div class="tbimg">
             <div class="imagenesp">
+                <div class="inventario-desktop-panel-title"><i class="bx bx-image-alt" aria-hidden="true"></i><span>Vista previa</span></div>
                 <div id="imagenCargando" class="estado-imagen d-none" role="status" aria-live="polite">
                     <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                     <span>Cargando imagen...</span>
@@ -90,6 +120,7 @@
                 <img id="imgProducto" class="imgProducto d-none" alt="Imagen del producto" width="200" height="200">
             </div>
             <div class="cantp">
+                <div class="inventario-desktop-panel-title"><i class="bx bx-map" aria-hidden="true"></i><span>Existencias por ubicación</span></div>
                 <div class="tabla-container">
                     <table class="tablas-todo">
                         <thead>
@@ -113,5 +144,5 @@
         </div>
     </div>
     <br>
-    <script type="module" src="{% static 'js/gestiones/inventario.js' %}"></script>
+    <script type="module" src="{% static 'js/gestiones/inventario.js' %}?v=20261005-listado-plegable-02"></script>
 {% endblock main_content %}

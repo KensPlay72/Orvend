@@ -4,7 +4,7 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20260928-stock-03">
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20261005-alertas-scroll">
 {% endblock %}
 
 {% block titulo_content %}
@@ -242,6 +242,7 @@
          CONTENIDO PRINCIPAL
     ====================================================== -->
 
+    <div class="dashboard-detail-layout">
     <div class="panel-grid">
 
 
@@ -565,34 +566,7 @@
         </div>
 
 
-        <!-- CUENTAS -->
-        {% if perms.manager.view_cuentasporpagar %}
-        <div class="summary-card">
-
-            <div class="summary-header">
-
-                <div>
-                    <span>Cuentas Pendientes</span>
-                    <h3>
-                        {{ cuentas_pendientes }}
-                    </h3>
-                </div>
-
-                <div class="summary-icon accounts-summary">
-                    <i class='bx bx-credit-card'></i>
-                </div>
-
-            </div>
-
-            <div class="summary-line"></div>
-
-            <span class="summary-description">
-                Cuentas por pagar pendientes
-            </span>
-
-        </div>
-        {% endif %}
-
+    </div>
     </div>
 
 </div>

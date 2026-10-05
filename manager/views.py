@@ -19,6 +19,7 @@ from django.db import transaction
 from django.db.models import Q, Sum, OuterRef, Subquery, F, Min, Max, Prefetch, Value, DecimalField, Count
 from django.http import Http404, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
+from django.templatetags.static import static
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.csrf import csrf_exempt
@@ -2556,12 +2557,10 @@ def producto_imagen(request, imagen_id):
             status=404,
         )
 
-    except Exception as e:
-
-        return HttpResponse(
-            f"Error obteniendo imagen: {str(e)}",
-            status=500,
-        )
+    except Exception:
+        # Una imagen remota no debe convertir la pantalla de productos en un 500.
+        # El navegador recibe el recurso predeterminado si Nextcloud no responde.
+        return redirect(static("img/default.webp"))
 
 
 @login_required
