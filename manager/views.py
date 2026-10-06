@@ -2441,7 +2441,8 @@ def descargar_plantilla_compras(request):
     instrucciones.append(
         [
             "Producto (ID), Cantidad, Precio compra e Impuesto (%) son "
-            "obligatorios en cada fila. No repita productos."
+            "obligatorios en cada fila. Si repite un producto con el mismo "
+            "precio e impuesto, se sumarán sus cantidades."
         ]
     )
     instrucciones.append(
@@ -2470,24 +2471,32 @@ def importar_compras_excel(request):
         if not filas:
             raise ValueError("No se encontraron filas para importar.")
 
-        def leer_id(valor):
-            numero = Decimal(str(valor).strip())
+        def leer_id(valor, campo):
+            try:
+                numero = Decimal(str(valor).strip())
+            except (InvalidOperation, TypeError, ValueError):
+                raise ValueError(f"{campo} debe contener un ID numérico entero.")
             if not numero.is_finite() or numero != numero.to_integral_value():
-                raise ValueError
+                raise ValueError(f"{campo} debe contener un ID numérico entero.")
             return int(numero)
 
-        def leer_decimal(valor):
-            numero = Decimal(str(valor).strip())
+        def leer_decimal(valor, campo):
+            try:
+                numero = Decimal(str(valor).strip())
+            except (InvalidOperation, TypeError, ValueError):
+                raise ValueError(f"{campo} debe ser un número válido.")
             if not numero.is_finite():
-                raise ValueError
+                raise ValueError(f"{campo} debe ser un número válido.")
             redondeado = numero.quantize(Decimal("0.01"))
-            if redondeado != numero:
-                raise ValueError
+            # Excel puede guardar residuos de coma flotante en valores que
+            # visualmente tienen dos decimales (por ejemplo, 18.6499999999).
+            if abs(redondeado - numero) > Decimal("0.00000001"):
+                raise ValueError(f"{campo} admite como máximo dos decimales.")
             return redondeado
 
         errores = []
         detalles = []
-        productos_vistos = set()
+        detalle_por_producto = {}
         proveedor_id = None
         ubicacion_id = None
         tipo_compra = None
@@ -2501,10 +2510,10 @@ def importar_compras_excel(request):
                 fila_observaciones = str(fila.get("observaciones") or "").strip()
 
                 if proveedor_id is None:
-                    proveedor_id = leer_id(fila_proveedor)
-                    ubicacion_id = leer_id(fila_ubicacion)
+                    proveedor_id = leer_id(fila_proveedor, "Proveedor (ID)")
+                    ubicacion_id = leer_id(fila_ubicacion, "Ubicación (ID)")
                     tipo_compra = (
-                        leer_id(fila_tipo)
+                        leer_id(fila_tipo, "Tipo compra")
                         if fila_tipo not in (None, "")
                         else Compras.TIPO_CONTADO
                     )
@@ -2512,21 +2521,21 @@ def importar_compras_excel(request):
                 else:
                     if (
                         fila_proveedor not in (None, "")
-                        and leer_id(fila_proveedor) != proveedor_id
+                        and leer_id(fila_proveedor, "Proveedor (ID)") != proveedor_id
                     ):
                         raise ValueError(
                             f"Fila {numero_fila}: todas las filas deben usar el mismo proveedor."
                         )
                     if (
                         fila_ubicacion not in (None, "")
-                        and leer_id(fila_ubicacion) != ubicacion_id
+                        and leer_id(fila_ubicacion, "Ubicación (ID)") != ubicacion_id
                     ):
                         raise ValueError(
                             f"Fila {numero_fila}: todas las filas deben usar la misma ubicación."
                         )
                     if (
                         fila_tipo not in (None, "")
-                        and leer_id(fila_tipo) != tipo_compra
+                        and leer_id(fila_tipo, "Tipo compra") != tipo_compra
                     ):
                         raise ValueError(
                             f"Fila {numero_fila}: todas las filas deben usar el mismo tipo de compra."
@@ -2536,25 +2545,24 @@ def importar_compras_excel(request):
                             f"Fila {numero_fila}: las observaciones deben coincidir con la primera fila."
                         )
 
-                producto_id = leer_id(fila.get("producto_(id)"))
-                cantidad = leer_decimal(fila.get("cantidad"))
-                precio = leer_decimal(fila.get("precio_compra"))
-                impuesto_porcentaje = leer_decimal(fila.get("impuesto_(%)"))
+                producto_id = leer_id(fila.get("producto_(id)"), "Producto (ID)")
+                cantidad = leer_decimal(fila.get("cantidad"), "Cantidad")
+                precio = leer_decimal(fila.get("precio_compra"), "Precio compra")
+                impuesto_porcentaje = leer_decimal(
+                    fila.get("impuesto_(%)"), "Impuesto (%)"
+                )
             except ValueError as error:
                 mensaje = str(error)
                 errores.append(
                     mensaje
                     if mensaje.startswith(f"Fila {numero_fila}:")
-                    else (
-                        f"Fila {numero_fila}: revisa los IDs, cantidad, precio, "
-                        "impuesto y los datos comunes de la compra."
-                    )
+                    else f"Fila {numero_fila}: {mensaje}"
                 )
                 continue
-            except (InvalidOperation, TypeError):
+            except (InvalidOperation, TypeError) as error:
                 errores.append(
-                    f"Fila {numero_fila}: revisa los IDs, cantidad, precio, impuesto "
-                    "y los datos comunes de la compra."
+                    f"Fila {numero_fila}: hay un valor no válido "
+                    f"({str(error) or 'revisa los datos de la compra'})."
                 )
                 continue
 
@@ -2569,20 +2577,30 @@ def importar_compras_excel(request):
                     "el impuesto debe estar entre 0 y 100."
                 )
                 continue
-            if producto_id in productos_vistos:
-                errores.append(
-                    f"Fila {numero_fila}: el producto ID {producto_id} está repetido."
-                )
+            detalle_existente = detalle_por_producto.get(producto_id)
+            if detalle_existente:
+                if (
+                    detalle_existente["precio"] != precio
+                    or detalle_existente["impuesto_porcentaje"]
+                    != impuesto_porcentaje
+                ):
+                    errores.append(
+                        f"Fila {numero_fila}: el producto ID {producto_id} ya "
+                        "aparece con otro precio o impuesto. Mantén el mismo "
+                        "precio e impuesto para que sus cantidades se sumen."
+                    )
+                    continue
+                detalle_existente["cantidad"] += cantidad
                 continue
-            productos_vistos.add(producto_id)
-            detalles.append(
-                {
-                    "producto_id": producto_id,
-                    "cantidad": cantidad,
-                    "precio": precio,
-                    "impuesto_porcentaje": impuesto_porcentaje,
-                }
-            )
+
+            detalle = {
+                "producto_id": producto_id,
+                "cantidad": cantidad,
+                "precio": precio,
+                "impuesto_porcentaje": impuesto_porcentaje,
+            }
+            detalle_por_producto[producto_id] = detalle
+            detalles.append(detalle)
 
         if errores:
             raise ValueError("\n".join(errores[:8]))
