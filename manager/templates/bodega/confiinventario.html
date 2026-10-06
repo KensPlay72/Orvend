@@ -50,6 +50,16 @@
       <i class="bx bx-transfer-alt"></i> Devoluciones
     </button>
     {% endif %}
+    {% if compra.tipo == "Compra" or compra.tipo == "Traslado" %}
+    <button
+      type="button"
+      id="confirmarTodoInventarioBtn"
+      class="btn-dropdown"
+      {% if not compra.puede_autorizar %}disabled title="No hay cantidades pendientes por confirmar"{% endif %}
+    >
+      <i class="bx bx-check-double"></i> Confirmar todo
+    </button>
+    {% endif %}
     <button type="button" id="toggleDropdownPanel32" class="btn-dropdown">
       <i class="bx bx-check-circle"></i>
       <span class="confirmar-entrada-desktop">Confirmar entrada</span>
@@ -66,9 +76,9 @@
   value="{{ compra.tipo|default:'COMPRA' }}"
 />
 <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}" />
-{% if compra.tipo == "Compra" %} {% include "bodega/_tracking_compra.html" with
-tracking=compra.tracking %}
-<script src="{% static 'js/bodega/tracking_compra.js' %}?v=20261004-space"></script>
+{% if compra.tipo == "Compra" or compra.tipo == "Traslado" %}
+{% include "bodega/_tracking_compra.html" with tracking=tracking only %}
+<script src="{% static 'js/bodega/tracking_compra.js' %}?v=20261006-fix-include"></script>
 {% endif %}
 <!-- ===================================================== -->
 <!-- MODAL CONFIRMACION -->
@@ -519,6 +529,6 @@ tracking=compra.tracking %}
 <br />
 <script
   type="module"
-  src="{% static 'js/bodega/entradainventario.js' %}?v=20261004-borrador-paginas"
+  src="{% static 'js/bodega/entradainventario.js' %}?v=20261006-confirmar-todo"
 ></script>
 {% endblock main_content %}

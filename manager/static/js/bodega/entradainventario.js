@@ -457,6 +457,58 @@ document.addEventListener("DOMContentLoaded", () => {
   // =====================================================
   // ENVIAR AUTORIZACION (COMPRA + TRASLADO)
   // =====================================================
+  const procesarAutorizacion = async (payload) => {
+    const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
+    const modalElement = document.getElementById("completarcompra");
+    const modalInstance = bootstrap.Modal.getInstance(modalElement);
+
+    try {
+      Swal.fire({
+        title: "Procesando...",
+        text: "Confirmando entrada de inventario",
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+      });
+
+      const response = await fetch("/manager/bodega/detalleinventario/post/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken,
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "No se pudo confirmar la entrada.");
+      }
+
+      sessionStorage.removeItem(claveBorrador);
+      if (modalInstance) modalInstance.hide();
+      Swal.close();
+      const resultado = await Swal.fire({
+        title: "¡Éxito!",
+        text: data.message || "Entrada confirmada correctamente.",
+        icon: "success",
+        confirmButtonText: "Aceptar",
+        customClass: { confirmButton: "classbotones" },
+      });
+      if (resultado.isConfirmed) {
+        window.location.href = "/manager/bodega/recepcion_inventario/";
+      }
+    } catch (error) {
+      console.error(error);
+      Swal.close();
+      Swal.fire({
+        title: "Error",
+        text: error.message || "Error inesperado de conexión.",
+        icon: "error",
+        confirmButtonText: "Aceptar",
+        customClass: { confirmButton: "classbotones" },
+      });
+    }
+  };
+
   document
     .getElementById("enviarAutorizacionBtn")
     .addEventListener("click", async () => {
@@ -469,10 +521,6 @@ document.addEventListener("DOMContentLoaded", () => {
         .toString()
         .trim()
         .toUpperCase();
-
-      const csrfToken = document.querySelector(
-        "[name=csrfmiddlewaretoken]",
-      ).value;
 
       // =========================
       // VALIDACIONES
@@ -503,7 +551,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const payload = {
-        EntradaId: parseInt(entradaId),
+        EntradaId: Number(entradaId),
         TipoEntrada: tipoEntrada,
         Productos: window.productosAutorizacion.map((p) => ({
           ProductoId: p.ProductoId,
@@ -513,69 +561,46 @@ document.addEventListener("DOMContentLoaded", () => {
             : null,
         })),
       };
+      await procesarAutorizacion(payload);
+    });
 
-      console.log("TIPO ENVIADO:", tipoEntrada);
-      console.log("PAYLOAD:", payload);
+  document
+    .getElementById("confirmarTodoInventarioBtn")
+    ?.addEventListener("click", async () => {
+      const entradaId = Number(document.getElementById("entrada-id").value);
+      const tipoEntrada = document
+        .getElementById("tipo-entrada")
+        .value.trim()
+        .toUpperCase();
+      if (
+        !entradaId ||
+        (tipoEntrada !== "COMPRA" && tipoEntrada !== "TRASLADO")
+      ) return;
 
-      const modalElement = document.getElementById("completarcompra");
-      const modalInstance = bootstrap.Modal.getInstance(modalElement);
+      const esTraslado = tipoEntrada === "TRASLADO";
+      const confirmacion = await Swal.fire({
+        icon: "warning",
+        title: esTraslado
+          ? "¿Confirmar todo el traslado?"
+          : "¿Confirmar toda la compra?",
+        text: esTraslado
+          ? "Se recibirán todas las cantidades pendientes de todos los productos y se actualizará el inventario de destino."
+          : "Se ingresarán al inventario todas las cantidades pendientes de todos los productos, aunque estén en otras páginas. No se asignarán fechas de vencimiento.",
+        showCancelButton: true,
+        confirmButtonText: "Confirmar todo",
+        cancelButtonText: "Cancelar",
+        customClass: {
+          confirmButton: "classbotones",
+          cancelButton: "btn btn-secondary",
+        },
+      });
+      if (!confirmacion.isConfirmed) return;
 
-      try {
-        Swal.fire({
-          title: "Procesando...",
-          text: "Confirmando entrada de inventario",
-          allowOutsideClick: false,
-          didOpen: () => Swal.showLoading(),
-        });
-
-        const response = await fetch(
-          "/manager/bodega/detalleinventario/post/",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRFToken": csrfToken,
-            },
-            body: JSON.stringify(payload),
-          },
-        );
-
-        const data = await response.json();
-        Swal.close();
-
-        if (data.success) {
-          sessionStorage.removeItem(claveBorrador);
-          if (modalInstance) modalInstance.hide();
-
-          Swal.fire({
-            title: "¡Éxito!",
-            text: data.message || "Entrada confirmada correctamente.",
-            icon: "success",
-            confirmButtonText: "Aceptar",
-            customClass: { confirmButton: "classbotones" },
-          }).then(() => {
-            window.location.href = "/manager/bodega/recepcion_inventario/";
-          });
-        } else {
-          Swal.fire({
-            title: "Error",
-            text: data.message || "No se pudo confirmar.",
-            icon: "error",
-            confirmButtonText: "Aceptar",
-            customClass: { confirmButton: "classbotones" },
-          });
-        }
-      } catch (error) {
-        console.error(error);
-        Swal.close();
-
-        Swal.fire({
-          title: "Error",
-          text: "Error inesperado de conexión.",
-          icon: "error",
-          confirmButtonText: "Aceptar",
-          customClass: { confirmButton: "classbotones" },
-        });
-      }
+      await procesarAutorizacion({
+        EntradaId: entradaId,
+        TipoEntrada: tipoEntrada,
+        Productos: [],
+        ConfirmarTodo: true,
+      });
     });
 });

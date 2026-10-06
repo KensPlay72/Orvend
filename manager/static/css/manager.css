@@ -988,11 +988,11 @@ input[type="number"]::-webkit-outer-spin-button {
   align-items: center;
 }
 
-/* Acciones del encabezado de Compras: dos accesos en columna y el Excel
-   centrado verticalmente a su lado. */
+/* PC: compra/devoluciones a la izquierda; exportación e importación al centro,
+   con la plantilla debajo de importación. */
 .compras-header__actions {
   display: grid;
-  grid-template-columns: auto 44px;
+  grid-template-columns: 190px 44px;
   grid-template-rows: repeat(2, minmax(40px, auto));
   align-items: center;
   gap: 0.55rem 0.8rem;
@@ -1000,16 +1000,63 @@ input[type="number"]::-webkit-outer-spin-button {
   margin: 1rem;
 }
 
+.compras-header__actions--superuser {
+  grid-template-columns: 190px 44px 44px;
+}
+
+.compras-header__primary-actions,
+.compras-header__file-actions {
+  display: contents;
+}
+
 .compras-header__actions .btn-dropdown {
   grid-column: 1;
+  width: 190px;
   margin: 0;
   min-width: 170px;
+  min-height: 40px;
   white-space: nowrap;
 }
 
-.compras-header__actions .productos-export-btn {
+.compras-header__actions .compras-header__crear {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.compras-header__actions .compras-header__devoluciones {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.compras-header__actions .compras-header__exportar {
   grid-column: 2;
   grid-row: 1 / span 2;
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  padding: 0;
+}
+
+.compras-header__actions .compras-header__exportar span,
+.compras-header__actions .compras-header__import span,
+.compras-header__actions .compras-header__template span {
+  display: none;
+}
+
+.compras-header__actions--superuser .compras-header__import {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.compras-header__actions--superuser .compras-header__template {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.compras-header__actions .productos-export-btn {
   align-self: center;
 }
 

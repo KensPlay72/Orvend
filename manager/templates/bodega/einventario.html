@@ -127,7 +127,8 @@
                             {% elif item.puede_marcar_llegada %}
                                 <button type="button"
                                         class="btn btn-sm classbotones btn-marcar-llegada"
-                                        data-url="{% url 'marcar_llegada_compra' item.token %}"
+                                        data-url="{% if item.tipo == 'Compra' %}{% url 'marcar_llegada_compra' item.token %}{% else %}{% url 'marcar_llegada_traslado' item.token %}{% endif %}"
+                                        data-tipo="{{ item.tipo }}"
                                         title="Marcar como en bodega">
                                     <i class="bx bx-package"></i> Marcar en bodega
                                 </button>
@@ -212,7 +213,8 @@
                     {% elif item.puede_marcar_llegada %}
                         <button type="button"
                                 class="btn classbotones btn-marcar-llegada"
-                                data-url="{% url 'marcar_llegada_compra' item.token %}">
+                                data-url="{% if item.tipo == 'Compra' %}{% url 'marcar_llegada_compra' item.token %}{% else %}{% url 'marcar_llegada_traslado' item.token %}{% endif %}"
+                                data-tipo="{{ item.tipo }}">
                             <i class="bx bx-package"></i> Marcar llegada
                         </button>
                     {% endif %}

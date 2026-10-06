@@ -2412,6 +2412,308 @@ PRODUCTOS_PLANTILLA = [
     "Es padre", "Requiere vencimiento",
 ]
 
+COMPRAS_PLANTILLA = [
+    "Proveedor (ID)",
+    "Ubicación (ID)",
+    "Producto (ID)",
+    "Cantidad",
+    "Precio compra",
+    "Impuesto (%)",
+    "Tipo compra",
+    "Observaciones",
+]
+
+
+@login_required
+def descargar_plantilla_compras(request):
+    _requiere_superusuario(request)
+    libro = _libro_plantilla("Compra inicial", COMPRAS_PLANTILLA)
+    instrucciones = libro.create_sheet("Instrucciones")
+    instrucciones.append(["Importación de compra inicial"])
+    instrucciones.append(
+        [
+            "Cada fila agrega un producto a una sola compra inicial. "
+            "Proveedor (ID), Ubicación (ID), Tipo compra y Observaciones "
+            "se indican en la primera fila; pueden dejarse vacíos en las "
+            "siguientes filas."
+        ]
+    )
+    instrucciones.append(
+        [
+            "Producto (ID), Cantidad, Precio compra e Impuesto (%) son "
+            "obligatorios en cada fila. No repita productos."
+        ]
+    )
+    instrucciones.append(
+        [
+            "Tipo compra: 1 = Contado, 2 = Crédito. Los IDs son los IDs "
+            "numéricos registrados en el sistema."
+        ]
+    )
+    instrucciones.column_dimensions["A"].width = 110
+    return _respuesta_excel(libro, "plantilla_compras.xlsx")
+
+
+@login_required
+@require_POST
+def importar_compras_excel(request):
+    _requiere_superusuario(request)
+    try:
+        encabezados, filas = _leer_filas_excel(request.FILES.get("archivo"))
+        requeridos = {
+            _normalizar_encabezado_excel(encabezado)
+            for encabezado in COMPRAS_PLANTILLA
+        }
+        if not requeridos.issubset(encabezados):
+            faltantes = ", ".join(sorted(requeridos - set(encabezados)))
+            raise ValueError(f"Faltan columnas requeridas: {faltantes}.")
+        if not filas:
+            raise ValueError("No se encontraron filas para importar.")
+
+        def leer_id(valor):
+            numero = Decimal(str(valor).strip())
+            if not numero.is_finite() or numero != numero.to_integral_value():
+                raise ValueError
+            return int(numero)
+
+        def leer_decimal(valor):
+            numero = Decimal(str(valor).strip())
+            if not numero.is_finite():
+                raise ValueError
+            redondeado = numero.quantize(Decimal("0.01"))
+            if redondeado != numero:
+                raise ValueError
+            return redondeado
+
+        errores = []
+        detalles = []
+        productos_vistos = set()
+        proveedor_id = None
+        ubicacion_id = None
+        tipo_compra = None
+        observaciones = None
+
+        for numero_fila, fila in filas:
+            try:
+                fila_proveedor = fila.get("proveedor_(id)")
+                fila_ubicacion = fila.get("ubicacion_(id)")
+                fila_tipo = fila.get("tipo_compra")
+                fila_observaciones = str(fila.get("observaciones") or "").strip()
+
+                if proveedor_id is None:
+                    proveedor_id = leer_id(fila_proveedor)
+                    ubicacion_id = leer_id(fila_ubicacion)
+                    tipo_compra = (
+                        leer_id(fila_tipo)
+                        if fila_tipo not in (None, "")
+                        else Compras.TIPO_CONTADO
+                    )
+                    observaciones = fila_observaciones
+                else:
+                    if (
+                        fila_proveedor not in (None, "")
+                        and leer_id(fila_proveedor) != proveedor_id
+                    ):
+                        raise ValueError(
+                            f"Fila {numero_fila}: todas las filas deben usar el mismo proveedor."
+                        )
+                    if (
+                        fila_ubicacion not in (None, "")
+                        and leer_id(fila_ubicacion) != ubicacion_id
+                    ):
+                        raise ValueError(
+                            f"Fila {numero_fila}: todas las filas deben usar la misma ubicación."
+                        )
+                    if (
+                        fila_tipo not in (None, "")
+                        and leer_id(fila_tipo) != tipo_compra
+                    ):
+                        raise ValueError(
+                            f"Fila {numero_fila}: todas las filas deben usar el mismo tipo de compra."
+                        )
+                    if fila_observaciones and fila_observaciones != observaciones:
+                        raise ValueError(
+                            f"Fila {numero_fila}: las observaciones deben coincidir con la primera fila."
+                        )
+
+                producto_id = leer_id(fila.get("producto_(id)"))
+                cantidad = leer_decimal(fila.get("cantidad"))
+                precio = leer_decimal(fila.get("precio_compra"))
+                impuesto_porcentaje = leer_decimal(fila.get("impuesto_(%)"))
+            except ValueError as error:
+                mensaje = str(error)
+                errores.append(
+                    mensaje
+                    if mensaje.startswith(f"Fila {numero_fila}:")
+                    else (
+                        f"Fila {numero_fila}: revisa los IDs, cantidad, precio, "
+                        "impuesto y los datos comunes de la compra."
+                    )
+                )
+                continue
+            except (InvalidOperation, TypeError):
+                errores.append(
+                    f"Fila {numero_fila}: revisa los IDs, cantidad, precio, impuesto "
+                    "y los datos comunes de la compra."
+                )
+                continue
+
+            if (
+                cantidad <= 0
+                or precio <= 0
+                or impuesto_porcentaje < 0
+                or impuesto_porcentaje > 100
+            ):
+                errores.append(
+                    f"Fila {numero_fila}: cantidad y precio deben ser mayores a cero; "
+                    "el impuesto debe estar entre 0 y 100."
+                )
+                continue
+            if producto_id in productos_vistos:
+                errores.append(
+                    f"Fila {numero_fila}: el producto ID {producto_id} está repetido."
+                )
+                continue
+            productos_vistos.add(producto_id)
+            detalles.append(
+                {
+                    "producto_id": producto_id,
+                    "cantidad": cantidad,
+                    "precio": precio,
+                    "impuesto_porcentaje": impuesto_porcentaje,
+                }
+            )
+
+        if errores:
+            raise ValueError("\n".join(errores[:8]))
+        if tipo_compra not in (
+            Compras.TIPO_CONTADO,
+            Compras.TIPO_CREDITO,
+        ):
+            raise ValueError("Tipo compra debe ser 1 (Contado) o 2 (Crédito).")
+        if len(observaciones) > 200:
+            raise ValueError("Las observaciones admiten hasta 200 caracteres.")
+
+        proveedor = Proveedores.objects.filter(
+            id=proveedor_id, is_delete=False
+        ).first()
+        ubicacion = Ubicaciones.objects.filter(
+            id=ubicacion_id, is_delete=False
+        ).first()
+        if not proveedor:
+            raise ValueError(
+                f"El proveedor ID {proveedor_id} no existe o está eliminado."
+            )
+        if not ubicacion:
+            raise ValueError(
+                f"La ubicación ID {ubicacion_id} no existe o está eliminada."
+            )
+
+        productos = {
+            producto.id: producto
+            for producto in Productos.objects.filter(
+                id__in=[detalle["producto_id"] for detalle in detalles],
+                is_delete=False,
+            )
+        }
+        if len(productos) != len(detalles):
+            ids_inexistentes = sorted(
+                {detalle["producto_id"] for detalle in detalles} - productos.keys()
+            )
+            raise ValueError(
+                "No existen productos disponibles para los IDs: "
+                + ", ".join(map(str, ids_inexistentes[:8]))
+                + "."
+            )
+
+        total_antes_impuesto = Decimal("0.00")
+        total_impuesto = Decimal("0.00")
+        detalles_crear = []
+        for detalle in detalles:
+            impuesto_unitario = (
+                detalle["precio"]
+                * detalle["impuesto_porcentaje"]
+                / Decimal("100")
+            ).quantize(Decimal("0.01"))
+            subtotal_linea = (detalle["cantidad"] * detalle["precio"]).quantize(
+                Decimal("0.01")
+            )
+            impuesto_linea = (impuesto_unitario * detalle["cantidad"]).quantize(
+                Decimal("0.01")
+            )
+            total_antes_impuesto += subtotal_linea
+            total_impuesto += impuesto_linea
+            detalles_crear.append(
+                DetalleCompra(
+                    producto=productos[detalle["producto_id"]],
+                    cantidad=detalle["cantidad"],
+                    precio_compra=detalle["precio"],
+                    impuesto_porcentaje=detalle["impuesto_porcentaje"],
+                    impuesto_unitario=impuesto_unitario,
+                    precio_compra_con_impuesto=detalle["precio"] + impuesto_unitario,
+                    u_creo_id=request.user.id,
+                )
+            )
+
+        total = total_antes_impuesto + total_impuesto
+        with transaction.atomic():
+            compra = Compras.objects.create(
+                proveedor=proveedor,
+                ubicacion=ubicacion,
+                tipo_compra=tipo_compra,
+                estado=EstadoCompra.LLEGADA_BODEGA,
+                fecha_llegada_bodega=timezone.now(),
+                llegada_bodega_por=request.user,
+                total=total,
+                total_antes_impuesto=total_antes_impuesto,
+                total_impuesto=total_impuesto,
+                observaciones=observaciones,
+                u_creo_id=request.user.id,
+            )
+            for detalle in detalles_crear:
+                detalle.compra = compra
+            DetalleCompra.objects.bulk_create(detalles_crear)
+
+            if (
+                tipo_compra == Compras.TIPO_CREDITO
+                and proveedor.dias_credito > 0
+            ):
+                compra.fecha_vencimiento = timezone.now() + timezone.timedelta(
+                    days=proveedor.dias_credito
+                )
+                compra.save(update_fields=["fecha_vencimiento"])
+
+            if tipo_compra == Compras.TIPO_CREDITO and total > 0:
+                CuentasPorPagar.objects.create(
+                    proveedor=proveedor,
+                    compra=compra,
+                    monto_total=total,
+                    monto_pendiente=total,
+                    fecha_vencimiento=compra.fecha_vencimiento or timezone.now(),
+                    estado=EstadoCuenta.PENDIENTE,
+                    u_creo_id=request.user.id,
+                )
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": (
+                    f"Compra inicial creada con {len(detalles_crear)} productos "
+                    "y lista para confirmar el ingreso a inventario."
+                ),
+            }
+        )
+    except ValueError as error:
+        return JsonResponse({"success": False, "message": str(error)}, status=400)
+    except Exception as error:
+        traceback.print_exc()
+        mensaje = (
+            f"No se pudo importar la compra: {error}"
+            if settings.DEBUG
+            else "No se pudo importar la compra."
+        )
+        return JsonResponse({"success": False, "message": mensaje}, status=500)
+
 
 @login_required
 def descargar_plantilla_productos(request):
@@ -4870,6 +5172,46 @@ def _tracking_compra(compra):
     }
 
 
+def _tracking_traslado(traslado):
+    detalles = list(traslado.detalles_traslado.all())
+    recepcion_registrada = any(
+        (detalle.cantidad_entregada or Decimal("0")) > 0
+        for detalle in detalles
+    )
+    traslado_completado = bool(detalles) and all(
+        (detalle.cantidad_entregada or Decimal("0"))
+        >= detalle.cantidad_solicitada
+        for detalle in detalles
+    )
+    pasos = [
+        {"nombre": "Traslado", "icono": "bx-transfer-alt"},
+        {
+            "nombre": "En bodega",
+            "icono": "bx-package",
+        },
+        {"nombre": "Recepción", "icono": "bx-clipboard"},
+        {"nombre": "Inventario", "icono": "bx-box"},
+    ]
+    paso_actual = 0
+    if traslado.fecha_llegada_bodega:
+        paso_actual = 1
+    if recepcion_registrada:
+        paso_actual = 2
+    if traslado_completado:
+        paso_actual = 3
+
+    return {
+        "clave": str(traslado.documento_token),
+        "pasos": pasos,
+        "paso_actual": paso_actual,
+        "etiqueta": "Estado del traslado",
+        "version": (
+            f"{traslado.fecha_llegada_bodega or ''}:"
+            f"{traslado.estado}:{traslado_completado}"
+        ),
+    }
+
+
 @login_required
 def detalle_compra_view(request, token):
 
@@ -6635,7 +6977,11 @@ def recepcion_inventario_view(request):
     # =========================================================
     traslados_qs = (
         Traslados.objects.filter(is_delete=False)
-        .select_related("ubicacion_origen", "ubicacion_destino")
+        .select_related(
+            "ubicacion_origen",
+            "ubicacion_destino",
+            "llegada_bodega_por",
+        )
         .prefetch_related("detalles_traslado")
     )
     if ubicaciones_permitidas is not None:
@@ -6669,9 +7015,23 @@ def recepcion_inventario_view(request):
                 "fecha": t.f_creacion,
                 "cantidad": float(total_pendiente),
                 "estado": t.estado,
-                "llego_bodega": False,
-                "puede_marcar_llegada": False,
-                "puede_autorizar": total_pendiente > 0,
+                "llego_bodega": t.fecha_llegada_bodega is not None,
+                "fecha_llegada_bodega": t.fecha_llegada_bodega,
+                "llegada_bodega_por": t.llegada_bodega_por,
+                "llegada_bodega_usuario": (
+                    t.llegada_bodega_por.get_full_name()
+                    or t.llegada_bodega_por.username
+                    if t.llegada_bodega_por
+                    else ""
+                ),
+                "puede_marcar_llegada": (
+                    total_pendiente > 0
+                    and t.fecha_llegada_bodega is None
+                    and t.estado == Estados.PENDIENTE
+                ),
+                "puede_autorizar": (
+                    total_pendiente > 0 and t.fecha_llegada_bodega is not None
+                ),
             }
         )
 
@@ -6770,6 +7130,57 @@ def marcar_llegada_compra(request, token):
         {
             "ok": True,
             "mensaje": "La compra está en bodega. Aún no se ingresó inventario.",
+        }
+    )
+
+
+@login_required
+@require_POST
+@transaction.atomic
+@permission_required("manager.gestionar_recepcion_inventario", raise_exception=True)
+def marcar_llegada_traslado(request, token):
+    traslado = get_object_or_404(
+        Traslados.objects.select_for_update().select_related("ubicacion_destino"),
+        documento_token=token,
+        is_delete=False,
+    )
+    ubicaciones_permitidas = _ubicaciones_recepcion_usuario(request.user)
+    if (
+        ubicaciones_permitidas is not None
+        and traslado.ubicacion_destino_id not in ubicaciones_permitidas
+    ):
+        raise PermissionDenied("No puede registrar llegadas para esta ubicación")
+
+    if traslado.fecha_llegada_bodega:
+        return JsonResponse({"ok": True, "mensaje": "El traslado ya llegó a bodega."})
+
+    if traslado.estado != Estados.PENDIENTE or not traslado.detalles_traslado.filter(
+        cantidad_solicitada__gt=F("cantidad_entregada")
+    ).exists():
+        return JsonResponse(
+            {
+                "ok": False,
+                "mensaje": "Solo puede marcar la llegada de traslados pendientes.",
+            },
+            status=400,
+        )
+
+    traslado.fecha_llegada_bodega = timezone.now()
+    traslado.llegada_bodega_por = request.user
+    traslado.u_modifico_id = request.user.id
+    traslado.f_modificacion = timezone.now()
+    traslado.save(
+        update_fields=[
+            "fecha_llegada_bodega",
+            "llegada_bodega_por",
+            "u_modifico_id",
+            "f_modificacion",
+        ]
+    )
+    return JsonResponse(
+        {
+            "ok": True,
+            "mensaje": "La llegada del traslado quedó registrada. Ya puede confirmar la recepción.",
         }
     )
 
@@ -6902,6 +7313,10 @@ def autorizar_entrada_view(request, tipo, token):
             and traslado.ubicacion_destino_id not in ubicaciones_permitidas
         ):
             raise PermissionDenied("No puede recibir traslados de esta ubicación")
+        if not traslado.fecha_llegada_bodega:
+            raise PermissionDenied(
+                "Primero debe marcar el traslado como llegado a bodega"
+            )
 
         detalles = []
 
@@ -6938,6 +7353,7 @@ def autorizar_entrada_view(request, tipo, token):
             "detalles": detalles,
             "puede_autorizar": puede_autorizar,
             "tipo": "Traslado",
+            "tracking": _tracking_traslado(traslado),
         }
 
     else:
@@ -6961,6 +7377,7 @@ def autorizar_entrada_view(request, tipo, token):
         {
             "compra_id": compra_data["id"],
             "compra": compra_data,
+            "tracking": compra_data.get("tracking"),
             "detalles": detalles_paginados,
             "page_obj": detalles_paginados,
         },
@@ -7151,10 +7568,19 @@ def post_autorizar_inventario(request):
         entrada_id = data.get("EntradaId")
         tipo = data.get("TipoEntrada")
         productos = data.get("Productos", [])
+        confirmar_todo = data.get("ConfirmarTodo") is True
 
-        if not entrada_id or not tipo or not productos:
+        if not entrada_id or not tipo or (not productos and not confirmar_todo):
             return JsonResponse(
                 {"success": False, "message": "Datos incompletos"}, status=400
+            )
+        if confirmar_todo and tipo not in ("COMPRA", "TRASLADO"):
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Tipo de entrada no válido para confirmar todo.",
+                },
+                status=400,
             )
 
         ubicaciones_permitidas = _ubicaciones_recepcion_usuario(request.user)
@@ -7166,6 +7592,7 @@ def post_autorizar_inventario(request):
 
             entrada = get_object_or_404(
                 Compras.objects
+                .select_for_update()
                 .select_related("ubicacion")
                 .prefetch_related("compra_detalles"),
                 id=entrada_id,
@@ -7182,7 +7609,49 @@ def post_autorizar_inventario(request):
 
             ubicacion_destino = entrada.ubicacion
 
-            detalles = entrada.compra_detalles.all()
+            detalles = list(entrada.compra_detalles.all())
+            detalles_por_producto = {}
+            cantidades_compradas = {}
+            for detalle_compra in detalles:
+                detalles_por_producto.setdefault(
+                    detalle_compra.producto_id, detalle_compra
+                )
+                cantidades_compradas[detalle_compra.producto_id] = (
+                    cantidades_compradas.get(
+                        detalle_compra.producto_id, Decimal("0")
+                    )
+                    + detalle_compra.cantidad
+                )
+            if confirmar_todo:
+                productos = []
+                for producto_id, cantidad_comprada in cantidades_compradas.items():
+                    autorizado = HAutorizarCompra.objects.filter(
+                        compra_id=entrada.id,
+                        producto_id=producto_id,
+                    ).aggregate(total=Sum("cantidad_autorizada"))["total"] or Decimal("0")
+                    devuelto = DevolucionCompraDetalle.objects.filter(
+                        compra_id=entrada.id,
+                        producto_id=producto_id,
+                        devolucion_compra__estado__in=ESTADOS_DEVOLUCION_ACTIVA,
+                    ).aggregate(total=Sum("cantidad"))["total"] or Decimal("0")
+                    pendiente = cantidad_comprada - autorizado - devuelto
+                    if pendiente > Decimal("0.005"):
+                        productos.append(
+                            {
+                                "ProductoId": producto_id,
+                                "Cantidad": str(pendiente),
+                                "Fvencimiento": None,
+                            }
+                        )
+
+                if not productos:
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "message": "No hay cantidades pendientes para ingresar al inventario.",
+                        },
+                        status=400,
+                    )
 
             for p in productos:
 
@@ -7197,9 +7666,7 @@ def post_autorizar_inventario(request):
                 if cantidad <= 0:
                     continue
 
-                detalle = detalles.filter(
-                    producto_id=producto_id
-                ).first()
+                detalle = detalles_por_producto.get(producto_id)
 
                 if not detalle:
                     continue
@@ -7222,9 +7689,11 @@ def post_autorizar_inventario(request):
                     devolucion_compra__estado__in=ESTADOS_DEVOLUCION_ACTIVA,
                 ).aggregate(total=Sum("cantidad"))["total"] or Decimal("0")
 
-                pendiente = detalle.cantidad - autorizado_actual - devuelto_actual
+                cantidad_comprada = cantidades_compradas[producto_id]
+                pendiente = cantidad_comprada - autorizado_actual - devuelto_actual
 
                 if cantidad > pendiente:
+                    transaction.set_rollback(True)
 
                     return JsonResponse(
                         {
@@ -7245,6 +7714,7 @@ def post_autorizar_inventario(request):
                 )
 
                 if not producto:
+                    transaction.set_rollback(True)
 
                     return JsonResponse(
                         {
@@ -7268,7 +7738,7 @@ def post_autorizar_inventario(request):
                 HAutorizarCompra.objects.create(
                     compra_id=entrada.id,
                     producto_id=producto_id,
-                    cantidad_comprada=detalle.cantidad,
+                    cantidad_comprada=cantidad_comprada,
                     cantidad_autorizada=cantidad,
                     fvencimiento=fecha_vencimiento,
                     u_creo_id=request.user.id,
@@ -7338,7 +7808,7 @@ def post_autorizar_inventario(request):
                 Traslados.objects.select_related(
                     "ubicacion_origen",
                     "ubicacion_destino",
-                ),
+                ).select_for_update(),
                 id=entrada_id,
             )
             if (
@@ -7346,13 +7816,41 @@ def post_autorizar_inventario(request):
                 and entrada.ubicacion_destino_id not in ubicaciones_permitidas
             ):
                 raise PermissionDenied("No puede recibir traslados de esta ubicación")
+            if not entrada.fecha_llegada_bodega:
+                raise PermissionDenied(
+                    "Primero debe marcar el traslado como llegado a bodega"
+                )
 
             origen = entrada.ubicacion_origen
             destino = entrada.ubicacion_destino
 
-            detalles = DetalleTraslado.objects.filter(
-                traslado_id=entrada.id
+            detalles = list(
+                DetalleTraslado.objects.select_for_update()
+                .filter(traslado_id=entrada.id)
+                .select_related("producto")
             )
+            if confirmar_todo:
+                productos = [
+                    {
+                        "ProductoId": detalle.producto_id,
+                        "Cantidad": str(
+                            detalle.cantidad_solicitada
+                            - (detalle.cantidad_entregada or Decimal("0"))
+                        ),
+                        "Fvencimiento": None,
+                    }
+                    for detalle in detalles
+                    if detalle.cantidad_solicitada
+                    > (detalle.cantidad_entregada or Decimal("0"))
+                ]
+                if not productos:
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "message": "No hay cantidades pendientes para recibir.",
+                        },
+                        status=400,
+                    )
 
             for p in productos:
 
@@ -7367,11 +7865,13 @@ def post_autorizar_inventario(request):
                 if cantidad <= 0:
                     continue
 
-                detalle = detalles.filter(
-                    producto_id=producto_id
-                ).first()
+                detalle = next(
+                    (d for d in detalles if d.producto_id == producto_id),
+                    None,
+                )
 
                 if not detalle:
+                    transaction.set_rollback(True)
                     return JsonResponse(
                         {
                             "success": False,
@@ -7397,6 +7897,7 @@ def post_autorizar_inventario(request):
 
                 if cantidad > cantidad_pendiente:
 
+                    transaction.set_rollback(True)
                     return JsonResponse(
                         {
                             "success": False,
@@ -7412,10 +7913,19 @@ def post_autorizar_inventario(request):
                 # PRODUCTO PRINCIPAL + RELACIONES
                 # =====================================================
 
-                producto = Productos.objects.get(
+                producto = Productos.objects.filter(
                     id=producto_id,
                     is_delete=False,
-                )
+                ).first()
+                if not producto:
+                    transaction.set_rollback(True)
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "message": f"Producto {producto_id} no existe",
+                        },
+                        status=400,
+                    )
 
                 productos_transferir = (
                     obtener_productos_relacionados(
@@ -7460,6 +7970,7 @@ def post_autorizar_inventario(request):
 
                     if not reserva:
 
+                        transaction.set_rollback(True)
                         return JsonResponse(
                             {
                                 "success": False,
@@ -7477,6 +7988,7 @@ def post_autorizar_inventario(request):
 
                     if reserva.cantidad < cantidad_transferir:
 
+                        transaction.set_rollback(True)
                         return JsonResponse(
                             {
                                 "success": False,
@@ -7514,6 +8026,7 @@ def post_autorizar_inventario(request):
 
                     if stock_total < cantidad_transferir:
 
+                        transaction.set_rollback(True)
                         return JsonResponse(
                             {
                                 "success": False,
@@ -7755,6 +8268,7 @@ def post_autorizar_inventario(request):
         )
 
     except Exception as e:
+        transaction.set_rollback(True)
         return JsonResponse({"success": False, "message": str(e)}, status=500)
 
 
@@ -13479,6 +13993,7 @@ def detalle_traslado_view(request, token):
         Traslados.objects.select_related(
             "solicitado_por",
             "autorizado_por",
+            "llegada_bodega_por",
             "ubicacion_origen",
             "ubicacion_destino",
         ).prefetch_related(
@@ -13492,7 +14007,8 @@ def detalle_traslado_view(request, token):
     detalles = []
     total_solicitado = Decimal("0")
     total_trasladado = Decimal("0")
-    for detalle in traslado.detalles_traslado.all():
+    detalles_traslado = list(traslado.detalles_traslado.all())
+    for detalle in detalles_traslado:
         producto = detalle.producto
         cantidad_solicitada = Decimal(detalle.cantidad_solicitada or 0)
         cantidad_trasladada = Decimal(detalle.cantidad_entregada or 0)
@@ -13509,8 +14025,15 @@ def detalle_traslado_view(request, token):
             }
         )
 
+    puede_recepcionar = request.user.has_perm(
+        "manager.gestionar_recepcion_inventario"
+    )
+    ubicaciones_permitidas = (
+        _ubicaciones_recepcion_usuario(request.user) if puede_recepcionar else set()
+    )
     data = {
         "id": traslado.id,
+        "token": traslado.documento_token,
         "origen": traslado.ubicacion_origen.nombre,
         "destino": traslado.ubicacion_destino.nombre,
         "solicitado_por": traslado.solicitado_por.username,
@@ -13519,11 +14042,33 @@ def detalle_traslado_view(request, token):
         ),
         "fecha_solicitud": traslado.f_creacion,
         "fecha_autorizacion": traslado.fecha_autorizacion,
+        "fecha_llegada_bodega": traslado.fecha_llegada_bodega,
+        "llegada_bodega_usuario": (
+            traslado.llegada_bodega_por.get_full_name()
+            or traslado.llegada_bodega_por.username
+            if traslado.llegada_bodega_por
+            else ""
+        ),
+        "llego_bodega": traslado.fecha_llegada_bodega is not None,
+        "puede_marcar_llegada": (
+            puede_recepcionar
+            and traslado.fecha_llegada_bodega is None
+            and traslado.estado == Estados.PENDIENTE
+            and any(
+                detalle.cantidad_solicitada > detalle.cantidad_entregada
+                for detalle in detalles_traslado
+            )
+            and (
+                ubicaciones_permitidas is None
+                or traslado.ubicacion_destino_id in ubicaciones_permitidas
+            )
+        ),
         "estado": traslado.get_estado_display(),
         "observaciones": traslado.observaciones,
         "total_solicitado": total_solicitado,
         "total_trasladado": total_trasladado,
         "detalles": detalles,
+        "tracking": _tracking_traslado(traslado),
     }
     return render(request, "traslados/detalletraslado.html", {"traslado": data})
 

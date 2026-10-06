@@ -3,7 +3,7 @@
   data-tracker-key="{{ tracking.clave }}"
   data-current-step="{{ tracking.paso_actual }}"
   data-tracker-version="{{ tracking.version }}"
-  aria-label="Estado de la compra"
+  aria-label="{{ tracking.etiqueta|default:'Estado de la compra' }}"
 >
   <div class="purchase-tracker__steps">
     <div class="purchase-tracker__line"><span></span></div>

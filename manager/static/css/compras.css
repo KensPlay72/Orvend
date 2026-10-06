@@ -423,8 +423,27 @@
 }
 
 .compra-detalle__llegada {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
   min-height: 40px;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid #c47a12;
+  border-radius: 9px;
+  background: #f4a62a;
+  color: #30200a;
+  font-weight: 700;
   white-space: nowrap;
+  transition: background-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.compra-detalle__llegada:hover,
+.compra-detalle__llegada:focus-visible {
+  border-color: #a95f00;
+  background: #e99513;
+  color: #241805;
+  box-shadow: 0 0 0 3px rgb(244 166 42 / 22%);
 }
 
 .compra-detalle__llegada-registrada {

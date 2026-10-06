@@ -14,6 +14,9 @@
 @media (max-width: 1032px) {
   .compra-resumen__encabezado { min-height: 0 !important; padding: .55rem .75rem !important; }
   .compra-resumen__titulo { font-size: .9rem; }
+  .traslado-detalle__acciones { flex: 1 0 100%; width: 100%; margin-top: .15rem; }
+  .traslado-detalle__acciones .compra-detalle__buscador { flex: 1 1 0; min-width: 0; }
+  .traslado-detalle__acciones .compra-detalle__llegada { flex: 0 0 auto; }
   .compra-detalle-layout { display: flex !important; flex-direction: column !important; gap: .85rem; }
   .compra-detalle-layout > .compra-detalle__totales { order: 1 !important; width: 100%; }
   .compra-detalle-layout > .tablaencompras { order: 2 !important; width: 100%; min-width: 0; }

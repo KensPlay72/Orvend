@@ -2,9 +2,9 @@
 {% load static pagination_tags %}
 {% block title %}Compras{% endblock %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261004-compras-header" />
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261006-compras-actions-centered" />
 {% endblock %}
-{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/compras_mobile.css' %}?v=20261006-boton-compras" />{% endblock page_css_overrides %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/compras_mobile.css' %}?v=20261006-compras-responsive-5" />{% endblock page_css_overrides %}
 {% block search_content %}
     <div class="header__search">
         <input type="search"
@@ -61,27 +61,50 @@
         </div>
     </div>
 
-    <div class="bottom_content compras-header__actions catalog-toolbar__actions">
-        <button id="toggleDropdownPanel" class="btn-dropdown compras-header__crear" onclick="location.href='{% url 'realizarcompra' %}'">
-            <i class="bx bx-plus-circle"></i> <span class="compras-header__crear-text">Realizar Compra</span>
-        </button>
-        {% if perms.manager.view_devolucioncompra %}
-        <button id="toggleDropdownPanel" class="btn-dropdown" onclick="location.href='{% url 'devoluciones_view' %}'">
-            <i class='bx bx-undo'></i> Devoluciones
-        </button>
-        {% endif %}
-        <span class="compras-header__separator" aria-hidden="true">|</span>
-        <button type="button"
-                id="btnExportarCompras"
-                class="productos-export-btn"
-                data-bs-toggle="modal"
-                data-bs-target="#modalExportarCompras"
-                aria-label="Exportar compras a Excel"
-                title="Exportar compras a Excel">
-            <i class="bx bx-spreadsheet" aria-hidden="true"></i>
-        </button>
+    <div class="bottom_content compras-header__actions{% if request.user.is_superuser %} compras-header__actions--superuser{% endif %}">
+        <div class="compras-header__primary-actions">
+            <button id="toggleDropdownPanel" class="btn-dropdown compras-header__crear" onclick="location.href='{% url 'realizarcompra' %}'">
+                <i class="bx bx-plus-circle" aria-hidden="true"></i> Realizar Compra
+            </button>
+            {% if perms.manager.view_devolucioncompra %}
+            <button id="toggleDropdownPanel" class="btn-dropdown compras-header__devoluciones" onclick="location.href='{% url 'devoluciones_view' %}'">
+                <i class='bx bx-undo' aria-hidden="true"></i> Devoluciones
+            </button>
+            {% endif %}
+        </div>
+        <div class="compras-header__file-actions{% if request.user.is_superuser %} compras-header__file-actions--superuser{% endif %}">
+            <button type="button"
+                    id="btnExportarCompras"
+                    class="productos-export-btn compras-header__exportar"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalExportarCompras"
+                    aria-label="Exportar compras a Excel"
+                    title="Exportar compras a Excel">
+                <i class="bx bx-spreadsheet" aria-hidden="true"></i><span>Exportar</span>
+            </button>
+            {% if request.user.is_superuser %}
+            <button type="button"
+                    class="productos-export-btn compras-header__import"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalImportarCompras"
+                    aria-label="Importar compra inicial"
+                    title="Importar compra inicial">
+                <i class="bx bx-import" aria-hidden="true"></i><span>Importar</span>
+            </button>
+            <a class="productos-export-btn compras-header__template"
+               href="{% url 'descargar_plantilla_compras' %}"
+               aria-label="Descargar plantilla de compras"
+               title="Descargar plantilla">
+                <i class="bx bx-file-blank" aria-hidden="true"></i><span>Plantilla</span>
+            </a>
+            {% endif %}
+        </div>
     </div>
  </div>
+{% if request.user.is_superuser %}
+{% url 'importar_compras_excel' as import_url_compras %}
+{% include "gestiones/_modal_importar_excel.html" with modal_id="modalImportarCompras" titulo="compras iniciales" import_url=import_url_compras descripcion="Cada archivo crea una compra inicial lista para confirmar en inventario. Usa una fila por producto; proveedor, ubicación, tipo de compra y observaciones se pueden indicar solo en la primera fila." %}
+{% endif %}
 
 <div class="modal fade modal-sheet-mobile modal-sheet-mobile--auto compras-mobile-modal" id="modalExportarCompras" tabindex="-1"
      aria-labelledby="modalExportarComprasTitulo" aria-hidden="true">
@@ -292,4 +315,5 @@
 </nav>
         <br>
         <script type="module" src="{% static 'js/compras/compras.js' %}?v=20260929-exportar"></script>
+        {% if request.user.is_superuser %}<script src="{% static 'js/importar_excel.js' %}"></script>{% endif %}
 {% endblock %}

@@ -2,12 +2,12 @@
 {% load static %}
 {% block title %}Detalle Traslado{% endblock %}
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/compras.css' %}?v=20261006-llegada-btn" />
   <link rel="stylesheet" href="{% static 'css/traslados.css' %}" />
   <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
   <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}?v=20261005-detalle-traslado" />
 {% endblock %}
-{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/detalletraslado_mobile.css' %}?v=20261005-detalle-movil" />{% endblock page_css_overrides %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/detalletraslado_mobile.css' %}?v=20261006-llegada-btn" />{% endblock page_css_overrides %}
 {% block titulo_content %}
   <div class="tituloscont">
     <img class="logop" src="{% static 'img/LH.webp' %}" alt="logo" width="0" height="0" />
@@ -21,10 +21,20 @@
         <i class="bx bx-transfer-alt" aria-hidden="true"></i>
         <span>Información del traslado</span>
       </span>
-      <label class="compra-detalle__buscador" for="buscarProductoTraslado">
-        <i class="bx bx-search" aria-hidden="true"></i>
-        <input type="text" id="buscarProductoTraslado" placeholder="Buscar producto, presentación o SKU..." autocomplete="off" />
-      </label>
+      <div class="compra-detalle__acciones traslado-detalle__acciones">
+        <label class="compra-detalle__buscador" for="buscarProductoTraslado">
+          <i class="bx bx-search" aria-hidden="true"></i>
+          <input type="text" id="buscarProductoTraslado" placeholder="Buscar producto, presentación o SKU..." autocomplete="off" />
+        </label>
+        {% if traslado.puede_marcar_llegada %}
+          <button type="button"
+                  class="btn compra-detalle__llegada btn-marcar-llegada"
+                  data-url="{% url 'marcar_llegada_traslado' traslado.token %}"
+                  data-tipo="Traslado">
+            <i class="bx bx-package" aria-hidden="true"></i> Marcar llegada
+          </button>
+        {% endif %}
+      </div>
     </div>
     <div class="compra-resumen__datos traslado-resumen__datos">
       <div class="compra-resumen__dato">
@@ -48,6 +58,10 @@
       <p class="traslado-detalle__observaciones"><i class="bx bx-message-detail" aria-hidden="true"></i> {{ traslado.observaciones }}</p>
     {% endif %}
   </section>
+
+  {% include "bodega/_tracking_compra.html" with tracking=traslado.tracking only %}
+  <script src="{% static 'js/bodega/tracking_compra.js' %}?v=20261006-traslado-tracker"></script>
+  <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}" />
 
   <div class="divbuttons3 compra-detalle-layout">
     <div class="tablaencompras">
@@ -133,4 +147,5 @@
       mostrarPagina(1);
     });
   </script>
+  <script type="module" src="{% static 'js/bodega/bodega.js' %}?v=20261006-llegada-traslado"></script>
 {% endblock %}

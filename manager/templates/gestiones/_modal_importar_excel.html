@@ -8,7 +8,11 @@
       <form class="excel-import-form" data-import-url="{{ import_url }}">
         {% csrf_token %}
         <div class="modal-body">
+          {% if descripcion %}
+          <p>{{ descripcion }}</p>
+          {% else %}
           <p>Selecciona la plantilla completada en formato Excel.</p>
+          {% endif %}
           <input type="file" name="archivo" class="form-control" accept=".xlsx" required>
         </div>
         <div class="modal-footer">

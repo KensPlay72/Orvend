@@ -950,6 +950,14 @@ class Traslados(Abstracto):
     )
 
     fecha_autorizacion = models.DateTimeField(null=True, blank=True)
+    fecha_llegada_bodega = models.DateTimeField(null=True, blank=True)
+    llegada_bodega_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="traslados_llegadas_bodega",
+    )
 
     estado = models.CharField(max_length=20, choices=Estados.choices)
 

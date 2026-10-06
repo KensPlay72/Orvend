@@ -132,6 +132,16 @@ urlpatterns = [
     path("ubicaciones/bodega/search/", views.search_bodegas, name="search_bodegas"),
     path("compras/", views.compras_view, name="compras"),
     path("compras/exportar/", views.exportar_compras_excel, name="exportar_compras_excel"),
+    path(
+        "compras/plantilla/",
+        views.descargar_plantilla_compras,
+        name="descargar_plantilla_compras",
+    ),
+    path(
+        "compras/importar/",
+        views.importar_compras_excel,
+        name="importar_compras_excel",
+    ),
     path("compras/realizarcompra", views.realizarcompra_view, name="realizarcompra"),
     path("compras/realizarcompra/post/", views.post_compra, name="post_compra"),
     path(
@@ -201,6 +211,11 @@ urlpatterns = [
         "bodega/compras/<uuid:token>/marcar-llegada/",
         views.marcar_llegada_compra,
         name="marcar_llegada_compra",
+    ),
+    path(
+        "bodega/traslados/<uuid:token>/marcar-llegada/",
+        views.marcar_llegada_traslado,
+        name="marcar_llegada_traslado",
     ),
     path(
         "bodega/detalleinventario/post/",

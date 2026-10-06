@@ -6,18 +6,47 @@
 }
 
 .compras-header__actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) 44px;
-  grid-template-rows: none;
-  gap: 0.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
   width: 100%;
   margin: 0;
 }
 
+.compras-header__primary-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.65rem;
+  border: 1px solid
+    color-mix(in srgb, var(--system-primary, #32877f) 16%, #fff);
+  border-radius: 0.9rem;
+  background: #fff;
+  box-shadow: 0 0.3rem 0.9rem
+    color-mix(in srgb, var(--system-secondary, #10463e) 8%, transparent);
+}
+
+.compras-header__file-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.65rem;
+  border: 1px solid
+    color-mix(in srgb, var(--system-primary, #32877f) 16%, #fff);
+  border-radius: 0.9rem;
+  background: #fff;
+  box-shadow: 0 0.3rem 0.9rem
+    color-mix(in srgb, var(--system-secondary, #10463e) 8%, transparent);
+}
+
+.compras-header__file-actions--superuser {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .compras-header__actions .btn-dropdown,
 .compras-header__actions .productos-export-btn {
-  grid-column: auto;
-  grid-row: auto;
   display: inline-flex;
   width: 100%;
   min-width: 0;
@@ -27,11 +56,80 @@
   justify-content: center;
 }
 
-.compras-header__actions .productos-export-btn i {
+.compras-header__actions .compras-header__exportar {
+  width: 100%;
+  gap: 0.25rem;
+}
+
+.compras-header__actions .compras-header__exportar,
+.compras-header__actions .compras-header__import,
+.compras-header__actions .compras-header__template {
+  flex-direction: row;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0.35rem 0.2rem;
+  gap: 0.3rem;
+  border-radius: 0.65rem;
+  font-size: 0.72rem;
+}
+
+.compras-header__actions .compras-header__exportar i,
+.compras-header__actions .compras-header__import i,
+.compras-header__actions .compras-header__template i {
+  flex: 0 0 auto;
   font-size: 1.1rem;
 }
+
 .compras-header__separator {
   display: none !important;
+}
+
+@media (max-width: 1032px) {
+  .compras-header__actions .productos-export-btn span {
+    display: inline;
+    font-size: 0.72rem;
+    line-height: 1.1;
+  }
+
+  .compras-header__primary-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: row;
+    align-items: stretch;
+  }
+
+  .compras-header__primary-actions .compras-header__crear {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+  }
+
+  .compras-header__primary-actions .compras-header__devoluciones {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+  }
+
+  .compras-header__primary-actions .btn-dropdown {
+    display: inline-flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    align-self: stretch;
+  }
+
+  .compras-header__file-actions--superuser {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .compras-header__file-actions .productos-export-btn {
+    grid-column: auto;
+    grid-row: auto;
+    flex-direction: row;
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    padding: 0.35rem 0.2rem;
+    gap: 0.3rem;
+  }
 }
 
 .compra-editor-mobile .total {
@@ -64,25 +162,13 @@
     grid-column: 1 / -1;
   }
 
-  .compras-header__actions .compras-header__crear {
-    font-size: inherit !important;
-  }
-  .compras-header__actions.catalog-toolbar__actions > * {
-    gap: 0.35rem;
-    font-size: 0.75rem !important;
+  .compras-header__actions .btn-dropdown {
+    gap: 0.3rem;
+    padding: 0.45rem 0.3rem;
+    font-size: 0.76rem !important;
   }
   .compras-header__actions .productos-export-btn {
-    width: 44px;
-  }
-  .compras-header__crear-text {
-    display: none !important;
-  }
-  .compras-header__crear i {
-    font-size: 1.15rem !important;
-  }
-  .compras-header__crear::after {
-    content: "Comprar";
-    font-size: 0.75rem;
+    font-size: 0.72rem !important;
   }
 
   .divbuttons2.compra-toolbar {
@@ -650,13 +736,20 @@
   .compras-header__actions {
     display: grid;
     flex: 0 0 auto;
-    grid-template-columns: 190px 1px 44px;
+    grid-template-columns: 190px 44px;
     grid-template-rows: repeat(2, minmax(40px, auto));
     width: auto;
     margin: 0;
     align-items: center;
     column-gap: 0.8rem;
     row-gap: 0.55rem;
+  }
+  .compras-header__actions--superuser {
+    grid-template-columns: 190px 44px 44px;
+  }
+  .compras-header__primary-actions,
+  .compras-header__file-actions {
+    display: contents;
   }
   .compras-header__actions .btn-dropdown {
     grid-column: 1;
@@ -671,9 +764,28 @@
     border-radius: 9px;
     white-space: nowrap;
   }
-  .compras-header__actions .productos-export-btn {
-    grid-column: 3;
+  .compras-header__actions .compras-header__exportar {
+    grid-column: 2;
     grid-row: 1 / span 2;
+    display: inline-flex;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    padding: 0;
+  }
+  .compras-header__actions--superuser .compras-header__import {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .compras-header__actions--superuser .compras-header__template {
+    grid-column: 3;
+    grid-row: 2;
+  }
+  .compras-header__actions .compras-header__import,
+  .compras-header__actions .compras-header__template {
+    grid-column: 3;
     width: 44px;
   }
   .compras-header__separator {

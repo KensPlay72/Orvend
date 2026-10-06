@@ -24,9 +24,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
   document.querySelectorAll(".btn-marcar-llegada").forEach((btn) => {
     btn.addEventListener("click", async function () {
+      const esTraslado = this.dataset.tipo === "Traslado";
       const confirmacion = await Swal.fire({
-        title: "¿Marcar compra como en bodega?",
-        text: "La compra quedará disponible para recepción, pero no ingresará inventario todavía.",
+        title: esTraslado
+          ? "¿Confirmar llegada del traslado?"
+          : "¿Marcar compra como en bodega?",
+        text: esTraslado
+          ? "El traslado quedará disponible para recepción, pero todavía no ingresará al inventario."
+          : "La compra quedará disponible para recepción, pero no ingresará inventario todavía.",
         icon: "question",
         showCancelButton: true,
         confirmButtonText: "Sí, registrar llegada",
@@ -49,7 +54,7 @@ document.addEventListener("DOMContentLoaded", function () {
           throw new Error(data.mensaje || "No se pudo registrar la llegada.");
         }
         await Swal.fire({
-          title: "Compra en bodega",
+          title: esTraslado ? "Traslado en bodega" : "Compra en bodega",
           text: data.mensaje,
           icon: "success",
           confirmButtonText: "Aceptar",

@@ -2,7 +2,7 @@
 {% load static %}
 {% block title %}Detalle Compra{% endblock %}
 {% block extra_css %}
-        <link rel="stylesheet" href="{% static 'css/compras.css' %}?v=20261005-detalle-movil" />
+        <link rel="stylesheet" href="{% static 'css/compras.css' %}?v=20261006-llegada-btn" />
         <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261004-tracker-space" />
         <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}?v=20261005-tabla-lateral-tablet" />
 {% endblock %}
@@ -29,7 +29,8 @@
                     {% if compra.puede_marcar_llegada %}
                     <button type="button"
                             id="btnMarcarLlegadaDetalle"
-                            class="btn classbotones compra-detalle__llegada"
+                            class="btn compra-detalle__llegada btn-marcar-llegada"
+                            data-tipo="Compra"
                             data-url="{% url 'marcar_llegada_compra' compra.token %}">
                         <i class="bx bx-package"></i> Marcar llegada
                     </button>
