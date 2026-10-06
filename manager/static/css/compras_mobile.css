@@ -650,7 +650,7 @@
   .compras-header__actions {
     display: grid;
     flex: 0 0 auto;
-    grid-template-columns: 164px 1px 44px;
+    grid-template-columns: 190px 1px 44px;
     grid-template-rows: repeat(2, minmax(40px, auto));
     width: auto;
     margin: 0;
@@ -660,10 +660,14 @@
   }
   .compras-header__actions .btn-dropdown {
     grid-column: 1;
-    width: 164px;
-    min-width: 164px;
+    display: inline-flex;
+    width: 190px;
+    min-width: 190px;
     min-height: 40px;
     padding: 0.55rem 0.9rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
     border-radius: 9px;
     white-space: nowrap;
   }

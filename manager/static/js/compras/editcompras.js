@@ -1,4 +1,7 @@
 let productosSeleccionadosGlobal = {};
+let ordenProductosSeleccionados = [];
+let paginaSelectorProductos = 1;
+let busquedaSelectorProductos = "";
 const PRODUCTOS_POR_PAGINA = 10;
 let paginaTablaCompra =
   Math.max(1, Number(new URLSearchParams(window.location.search).get("page"))) || 1;
@@ -15,8 +18,12 @@ function actualizarUrlPaginaCompra() {
 
 document.addEventListener("DOMContentLoaded", () => {
   const buscador = document.getElementById("buscadorProductos");
+  const modalProductos = document.getElementById("modalregis");
 
-  cargarProductos();
+  modalProductos.addEventListener("show.bs.modal", () => {
+    buscador.value = busquedaSelectorProductos;
+    cargarProductos(paginaSelectorProductos, busquedaSelectorProductos);
+  });
 
   buscador.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
@@ -50,6 +57,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Eliminar también del estado global
     delete productosSeleccionadosGlobal[idProducto];
+    ordenProductosSeleccionados = ordenProductosSeleccionados.filter(
+      (id) => id !== idProducto,
+    );
 
     // Deseleccionar en el modal
     const checkbox = document.querySelector(
@@ -102,12 +112,14 @@ function cargarCompraEnFormulario(compra) {
 
   // --- Limpiar estado y tabla ---
   productosSeleccionadosGlobal = {};
+  ordenProductosSeleccionados = [];
   const tablaBody = document.querySelector("#tablacont tbody");
   tablaBody.innerHTML = "";
 
   // --- Insertar productos de la compra ---
   compra.detalles.forEach((detalle, index) => {
     const id = detalle.productoId;
+    ordenProductosSeleccionados.push(String(id));
 
     productosSeleccionadosGlobal[id] = {
       nombre: detalle.productoNombre,
@@ -174,6 +186,9 @@ function cargarCompraEnFormulario(compra) {
 }
 
 async function cargarProductos(page = 1, search = "") {
+  paginaSelectorProductos = page;
+  busquedaSelectorProductos = search;
+
   const contenedor = document.getElementById("contenedorProductosAjax");
   const paginacion = document.getElementById("paginacionProductos");
 
@@ -220,9 +235,9 @@ async function cargarProductos(page = 1, search = "") {
       const div = document.createElement("div");
       div.className = "productosstyle producto-item compras-product-option";
       div.dataset.id = prod.id;
-      div.dataset.nombre = prod.nombre.toLowerCase();
-      div.dataset.presentacion = prod.unidadMedida.nombre.toLowerCase();
-      div.dataset.sku = prod.codigoSKU.toLowerCase();
+      div.dataset.nombre = prod.nombre;
+      div.dataset.presentacion = prod.unidadMedida.nombre;
+      div.dataset.sku = prod.codigoSKU;
       div.dataset.marca = prod.marca?.nombre || prod.marcaNombre || prod.marca || "Sin marca";
 
       div.innerHTML = `
@@ -271,6 +286,9 @@ function inicializarSeleccionProductos() {
       actualizarEtiqueta();
 
       if (checkbox.checked) {
+        if (!ordenProductosSeleccionados.includes(id)) {
+          ordenProductosSeleccionados.push(id);
+        }
         productosSeleccionadosGlobal[id] = {
           nombre: prod.dataset.nombre,
           presentacion: prod.dataset.presentacion,
@@ -279,6 +297,9 @@ function inicializarSeleccionProductos() {
         };
       } else {
         delete productosSeleccionadosGlobal[id];
+        ordenProductosSeleccionados = ordenProductosSeleccionados.filter(
+          (productoId) => productoId !== id,
+        );
       }
     });
   });
@@ -326,9 +347,10 @@ function renderPaginacion(currentPage, totalPages, search) {
 
 function agregarProductosSeleccionados() {
   const tablaBody = document.querySelector("#tablacont tbody");
-  let agregados = 0;
 
-  Object.entries(productosSeleccionadosGlobal).forEach(([id, data]) => {
+  ordenProductosSeleccionados.forEach((id) => {
+    const data = productosSeleccionadosGlobal[id];
+    if (!data) return;
     if (document.querySelector(`#producto-row-${id}`)) return;
 
     const fila = document.createElement("tr");
@@ -355,18 +377,12 @@ function agregarProductosSeleccionados() {
             </td>
         `;
     tablaBody.appendChild(fila);
-    agregados++;
     inicializarEventosInputsTotales();
   });
 
   reordenarTabla();
-  if (agregados) paginaTablaCompra = 1;
   actualizarPaginacionTablaCompra();
   actualizarTotales();
-
-  const buscador = document.getElementById("buscadorProductos");
-  if (buscador) buscador.value = "";
-  cargarProductos(1, "");
 
   const modal = bootstrap.Modal.getInstance(
     document.getElementById("modalregis"),

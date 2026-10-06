@@ -16,7 +16,7 @@
 .divbuttons2.compra-toolbar {
   display: grid;
   grid-template-columns: max-content max-content max-content max-content;
-  justify-content: center;
+  justify-content: space-around;
   align-items: center;
   column-gap: 1.5rem;
   row-gap: 1rem;
@@ -664,6 +664,13 @@
   min-width: 72px;
   padding-right: 0.4rem !important;
   padding-left: 0.4rem !important;
+}
+
+@media (min-width: 1033px) {
+  .tablaencompras #tablacont .precio-input:not(.impuesto-input) {
+    width: 96px !important;
+    min-width: 96px;
+  }
 }
 
 /*------------------------------Estados -------------------------------*/
