@@ -746,12 +746,13 @@
     text-transform: uppercase;
   }
   .inventario-mobile-card__copy strong {
-    overflow: hidden;
+    overflow: visible;
     color: #1d293d;
     font-size: clamp(0.92rem, 2.2vw, 1.05rem);
     line-height: 1.2;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
   }
   .inventario-mobile-card__copy em {
     display: flex;

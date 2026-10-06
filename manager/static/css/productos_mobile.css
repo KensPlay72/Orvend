@@ -357,6 +357,10 @@
   .productos-mobile-card__title strong {
     margin: 0.08rem 0;
     font-size: 0.87rem;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
   }
   .productos-mobile-card__title em {
     color: color-mix(in srgb, var(--system-secondary, #10463e) 62%, #fff);
