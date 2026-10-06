@@ -512,8 +512,8 @@
       >
       {% else %}<span class="page-link">«</span>{% endif %}
     </li>
-    {% paginas_cercanas detalles.number detalles.paginator.num_pages as
-    paginas_visibles %} {% for p in paginas_visibles %}
+    {% paginas_cercanas detalles.number detalles.paginator.num_pages as paginas_visibles %}
+    {% for p in paginas_visibles %}
     <li class="page-item {% if p == detalles.number %}active{% endif %}">
       <a class="page-link" href="?page={{ p }}">{{ p }}</a>
     </li>
