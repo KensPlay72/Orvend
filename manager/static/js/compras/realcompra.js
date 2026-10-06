@@ -645,6 +645,7 @@ async function cargarProductos(page = 1, search = "") {
       div.dataset.nombre = prod.nombre.toLowerCase();
       div.dataset.presentacion = presentacion;
       div.dataset.sku = prod.codigoSKU.toLowerCase();
+      div.dataset.marca = prod.marca?.nombre || prod.marcaNombre || prod.marca || "Sin marca";
 
       div.innerHTML = `
                 <img class="compras-product-option__image" src="${prod.imagenUrl}" alt="" onerror="this.src='/static/img/default.webp'">
@@ -696,6 +697,7 @@ function inicializarSeleccionProductos() {
           nombre: prod.dataset.nombre,
           presentacion: prod.dataset.presentacion,
           sku: prod.dataset.sku,
+          marca: prod.dataset.marca || "Sin marca",
         };
       } else {
         delete productosSeleccionadosGlobal[id];
@@ -753,6 +755,7 @@ function agregarProductosSeleccionados() {
 
     const fila = document.createElement("tr");
     fila.id = `producto-row-${id}`;
+      fila.dataset.marca = data.marca || "Sin marca";
     fila.innerHTML = `
             <td></td>
             <td>${data.nombre}</td>
@@ -831,15 +834,15 @@ function actualizarTotales() {
   });
 
   document.getElementById("subtotal-compra").textContent =
-    `Antes imp.: L. ${subtotal.toFixed(2)}`;
+    `L. ${subtotal.toFixed(2)}`;
   document.getElementById("impuesto-compra").textContent =
-    `Impuestos: L. ${totalImpuesto.toFixed(2)}`;
+    `L. ${totalImpuesto.toFixed(2)}`;
   document.getElementById("total-compra").textContent =
-    `Después imp.: L. ${(subtotal + totalImpuesto).toFixed(2)}`;
+    `L. ${(subtotal + totalImpuesto).toFixed(2)}`;
   document.getElementById("contador-productos").textContent =
-    `Productos: ${contador}`;
+    contador;
   document.getElementById("cantidad-productos").textContent =
-    `Total de productos: ${cantidadTotal}`;
+    cantidadTotal;
 }
 
 function inicializarEventosInputsTotales() {

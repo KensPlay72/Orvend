@@ -3,8 +3,7 @@ const showMenu = (headerToggle, navbarId) => {
   const toggleBtn = document.getElementById(headerToggle),
     nav = document.getElementById(navbarId);
 
-  // Validate that variables exist
-  if (headerToggle && navbarId) {
+  if (toggleBtn && nav) {
     toggleBtn.addEventListener("click", () => {
       // We add the show-menu class to the div tag with the nav__menu class
       nav.classList.toggle("show-menu");
@@ -14,6 +13,22 @@ const showMenu = (headerToggle, navbarId) => {
   }
 };
 showMenu("header-toggle", "navbar");
+
+document.addEventListener("wheel", (event) => {
+  if (document.activeElement?.matches('input[type="number"]')) {
+    event.preventDefault();
+  }
+}, { passive: false });
+
+document.addEventListener("click", (event) => {
+  const nav = document.getElementById("navbar");
+  const toggleBtn = document.getElementById("header-toggle");
+  if (!nav || !toggleBtn || !nav.classList.contains("show-menu")) return;
+  if (!window.matchMedia("(max-width: 768px)").matches) return;
+  if (nav.contains(event.target) || toggleBtn.contains(event.target)) return;
+  nav.classList.remove("show-menu");
+  toggleBtn.classList.remove("bx-x");
+});
 
 const closeMenuBtn = document.getElementById("navbar-close");
 if (closeMenuBtn) {

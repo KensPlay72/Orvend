@@ -5,6 +5,7 @@
   box-shadow: 0 12px 28px
     color-mix(in srgb, var(--system-secondary, #708984) 22%, transparent);
 }
+
 .hijos-devolucion-modal .modal-header {
   padding: 1.15rem 1.3rem;
   border-bottom-color: color-mix(
@@ -168,10 +169,12 @@
   .confirmar-inventario-mobile-card {
     overflow: hidden;
     width: 100%;
-    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff);
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff);
     border-radius: 15px;
     background: #fff;
-    box-shadow: 0 8px 22px color-mix(in srgb, var(--system-secondary, #708984) 10%, transparent);
+    box-shadow: 0 8px 22px
+      color-mix(in srgb, var(--system-secondary, #708984) 10%, transparent);
   }
 
   .detalle-compra-mobile-card__header,
@@ -181,8 +184,13 @@
     gap: 0.6rem;
     min-height: 54px;
     padding: 0.68rem 0.8rem;
-    border-bottom: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
-    background: linear-gradient(105deg, color-mix(in srgb, var(--system-primary, #32877f) 9%, #fff), #fff 65%);
+    border-bottom: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+    background: linear-gradient(
+      105deg,
+      color-mix(in srgb, var(--system-primary, #32877f) 9%, #fff),
+      #fff 65%
+    );
   }
 
   .detalle-compra-mobile-card__icono,
@@ -284,7 +292,8 @@
     font-size: 0.78rem;
   }
 
-  .confirmar-inventario-mobile-card__datos .confirmar-inventario-mobile-card__sku {
+  .confirmar-inventario-mobile-card__datos
+    .confirmar-inventario-mobile-card__sku {
     grid-column: 1 / -1;
   }
 
@@ -293,7 +302,8 @@
     display: grid;
     gap: 0.38rem;
     padding: 0.72rem 0.85rem 0.85rem;
-    border-top: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+    border-top: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
   }
 
   .confirmar-inventario-mobile-card__vencimiento {
@@ -322,7 +332,8 @@
     width: 100% !important;
     min-height: 42px;
     padding: 0.45rem 0.65rem;
-    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 28%, #fff);
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 28%, #fff);
     border-radius: 9px;
     outline: none;
     color: var(--system-secondary, #243531);
@@ -332,7 +343,8 @@
   .confirmar-inventario-mobile-card .cantidad-recepcion:focus,
   .confirmar-inventario-mobile-card .fecha-vencimiento:focus {
     border-color: var(--system-primary, #32877f);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--system-primary, #32877f) 12%, transparent);
+    box-shadow: 0 0 0 3px
+      color-mix(in srgb, var(--system-primary, #32877f) 12%, transparent);
   }
 }
 
@@ -353,7 +365,8 @@
     margin: 0;
     padding: 0.65rem 0.75rem;
     gap: 0.55rem;
-    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 16%, #fff);
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 16%, #fff);
     box-shadow: 0 4px 12px
       color-mix(in srgb, var(--system-secondary, #708984) 9%, transparent);
   }
@@ -410,12 +423,15 @@
   #tablaDevolucion.tablas-todo tbody tr {
     display: block;
     overflow: hidden;
-    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 20%, #fff);
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 20%, #fff);
     border-radius: 12px;
     background: #fff;
     box-shadow: 0 4px 12px
       color-mix(in srgb, var(--system-secondary, #708984) 10%, transparent);
-    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    transition:
+      border-color 0.18s ease,
+      box-shadow 0.18s ease;
   }
 
   #tablacont.tablas-todo tbody tr {
@@ -423,7 +439,8 @@
   }
 
   #tabladecom.tablas-todo tbody tr {
-    border-left: 4px solid color-mix(in srgb, var(--system-primary, #32877f) 68%, #fff);
+    border-left: 4px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 68%, #fff);
   }
 
   #tablacont.tablas-todo tbody tr:active,
@@ -481,7 +498,11 @@
     min-height: 58px;
     padding-top: 0.75rem !important;
     padding-bottom: 0.75rem !important;
-    border-bottom-color: color-mix(in srgb, var(--system-primary, #32877f) 18%, #fff) !important;
+    border-bottom-color: color-mix(
+      in srgb,
+      var(--system-primary, #32877f) 18%,
+      #fff
+    ) !important;
     background: color-mix(in srgb, var(--system-primary, #32877f) 6%, #fff);
   }
 
@@ -547,7 +568,8 @@
     gap: 0.6rem;
     margin: 0.15rem 0 0.8rem;
     padding: 0.7rem;
-    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 18%, #fff);
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 18%, #fff);
     border-radius: 12px;
     background: color-mix(in srgb, var(--system-primary, #32877f) 5%, #fff);
     box-shadow: 0 4px 12px
@@ -558,6 +580,10 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.6rem;
+  }
+
+  .recepcion-confirm-actions .display-flex > :only-child {
+    grid-column: 1 / -1;
   }
 
   .recepcion-confirm-actions .btn-dropdown {
@@ -673,7 +699,8 @@
 
   .compra-detalle__tarjeta {
     min-height: 76px;
-    border-left: 3px solid color-mix(in srgb, var(--system-primary, #32877f) 62%, #fff);
+    border-left: 3px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 62%, #fff);
   }
 }
 
@@ -696,12 +723,15 @@
 
   .recepcion-mobile-card {
     overflow: hidden;
-    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff);
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff);
     border-radius: 15px;
     background: #fff;
     box-shadow: 0 7px 18px
       color-mix(in srgb, var(--system-secondary, #708984) 11%, transparent);
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.18s ease;
   }
 
   .recepcion-mobile-card.recepcion-row--detail {
@@ -720,7 +750,8 @@
     justify-content: space-between;
     gap: 0.7rem;
     padding: 0.72rem 0.85rem;
-    border-bottom: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+    border-bottom: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
     background: linear-gradient(
       100deg,
       color-mix(in srgb, var(--system-primary, #32877f) 9%, #fff),
@@ -823,7 +854,8 @@
     gap: 0.42rem;
     min-width: 0;
     padding: 0.58rem;
-    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 11%, #fff);
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 11%, #fff);
     border-radius: 9px;
     background: color-mix(in srgb, var(--system-primary, #32877f) 4%, #fff);
   }
@@ -852,7 +884,8 @@
     display: flex;
     gap: 0.55rem;
     padding: 0.7rem 0.9rem;
-    border-top: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+    border-top: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
     background: color-mix(in srgb, var(--system-primary, #32877f) 3%, #fff);
   }
 
@@ -881,7 +914,8 @@
     justify-items: center;
     gap: 0.3rem;
     padding: 2rem 1rem;
-    border: 1px dashed color-mix(in srgb, var(--system-primary, #32877f) 30%, #fff);
+    border: 1px dashed
+      color-mix(in srgb, var(--system-primary, #32877f) 30%, #fff);
     border-radius: 14px;
     color: color-mix(in srgb, var(--system-secondary, #708984) 62%, #fff);
     background: #fff;
@@ -954,7 +988,8 @@
 
   .modal-confirmacion-mobile-card {
     margin: 0;
-    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff) !important;
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff) !important;
     box-shadow: 0 8px 22px
       color-mix(in srgb, var(--system-secondary, #708984) 10%, transparent);
   }
@@ -992,7 +1027,8 @@
   }
 
   .modal-devolucion-mobile-card {
-    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff);
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff);
     box-shadow: 0 8px 22px
       color-mix(in srgb, var(--system-secondary, #708984) 10%, transparent);
   }
@@ -1001,7 +1037,8 @@
     display: grid;
     gap: 0.55rem;
     padding: 0.72rem 0.9rem 0.85rem;
-    border-top: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+    border-top: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
     background: color-mix(in srgb, var(--system-primary, #32877f) 3%, #fff);
   }
 
@@ -1044,8 +1081,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.48rem;
     padding: 0.65rem;
-    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff);
-    border-left: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff);
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff);
+    border-left: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff);
     border-radius: 13px;
     background: #fff;
   }
@@ -1056,7 +1095,8 @@
   #tablaDevolucion.tablas-todo tbody td {
     min-height: 54px;
     padding: 0.52rem 0.58rem !important;
-    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff) !important;
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff) !important;
     border-radius: 8px;
     background: color-mix(in srgb, var(--system-primary, #32877f) 5%, #fff);
   }
@@ -1117,7 +1157,8 @@
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 0;
     padding: 0.82rem 0.9rem 0.88rem;
-    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 16%, #fff);
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 16%, #fff);
     border-left: 4px solid var(--system-primary, #32877f);
     background: #fff;
     box-shadow: 0 7px 18px
@@ -1181,7 +1222,10 @@
   }
 
   #tablacont.tablas-todo tbody td[data-label="Estado"]::before,
-  #tablacont.tablas-todo tbody tr:has(.btn-marcar-llegada) .recepcion-accion::before {
+  #tablacont.tablas-todo
+    tbody
+    tr:has(.btn-marcar-llegada)
+    .recepcion-accion::before {
     display: none;
   }
 
@@ -1190,7 +1234,8 @@
     grid-row: 3;
     min-height: 0;
     padding-top: 0.75rem !important;
-    border-top: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+    border-top: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
     background: transparent;
     color: var(--system-secondary, #243531);
     font-size: 0.98rem;
@@ -1219,7 +1264,8 @@
     grid-column: 1 / -1;
     grid-row: 5;
     padding-top: 0.7rem !important;
-    border-top: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+    border-top: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
   }
 
   #tablacont.tablas-todo .llegada-bodega-registro {
@@ -1279,8 +1325,16 @@
   }
 
   /* Cabecera equivalente a las tarjetas de Recepción de Inventario. */
-  #completarcompra #tablacomprar.tablas-todo tbody tr.modal-recepcion-card td:nth-child(1),
-  #devo #tablaDevolucion.tablas-todo tbody tr.modal-devolucion-card td:nth-child(1) {
+  #completarcompra
+    #tablacomprar.tablas-todo
+    tbody
+    tr.modal-recepcion-card
+    td:nth-child(1),
+  #devo
+    #tablaDevolucion.tablas-todo
+    tbody
+    tr.modal-devolucion-card
+    td:nth-child(1) {
     grid-column: 1;
     grid-row: 2;
     min-height: 48px;
@@ -1289,7 +1343,11 @@
     background: transparent;
   }
 
-  #completarcompra #tablacomprar.tablas-todo tbody tr.modal-recepcion-card td:nth-child(2) {
+  #completarcompra
+    #tablacomprar.tablas-todo
+    tbody
+    tr.modal-recepcion-card
+    td:nth-child(2) {
     grid-column: 2;
     grid-row: 2;
     align-items: flex-end;
@@ -1299,8 +1357,16 @@
     background: transparent;
   }
 
-  #completarcompra #tablacomprar.tablas-todo tbody tr.modal-recepcion-card td:nth-child(3),
-  #devo #tablaDevolucion.tablas-todo tbody tr.modal-devolucion-card td:nth-child(2) {
+  #completarcompra
+    #tablacomprar.tablas-todo
+    tbody
+    tr.modal-recepcion-card
+    td:nth-child(3),
+  #devo
+    #tablaDevolucion.tablas-todo
+    tbody
+    tr.modal-devolucion-card
+    td:nth-child(2) {
     grid-column: 1 / -1;
     grid-row: 1;
     min-height: 62px;
@@ -1317,8 +1383,16 @@
     font-weight: 800;
   }
 
-  #completarcompra #tablacomprar.tablas-todo tbody tr.modal-recepcion-card td:nth-child(3)::before,
-  #devo #tablaDevolucion.tablas-todo tbody tr.modal-devolucion-card td:nth-child(2)::before {
+  #completarcompra
+    #tablacomprar.tablas-todo
+    tbody
+    tr.modal-recepcion-card
+    td:nth-child(3)::before,
+  #devo
+    #tablaDevolucion.tablas-todo
+    tbody
+    tr.modal-devolucion-card
+    td:nth-child(2)::before {
     color: var(--system-primary, #32877f);
   }
 
@@ -1348,8 +1422,16 @@
     min-width: 0;
   }
 
-  #completarcompra #tablacomprar.tablas-todo tbody tr.modal-recepcion-card td:nth-child(6),
-  #devo #tablaDevolucion.tablas-todo tbody tr.modal-devolucion-card td:last-child {
+  #completarcompra
+    #tablacomprar.tablas-todo
+    tbody
+    tr.modal-recepcion-card
+    td:nth-child(6),
+  #devo
+    #tablaDevolucion.tablas-todo
+    tbody
+    tr.modal-devolucion-card
+    td:last-child {
     grid-column: 1 / -1;
   }
 
@@ -1363,5 +1445,19 @@
     height: 19px;
     margin: 0.25rem 0;
     accent-color: var(--system-primary, #32877f);
+  }
+}
+
+/* En tablet se conserva la tabla junto al resumen; solo móvil la apila. */
+@media (min-width: 769px) and (max-width: 1032px) {
+  .compra-detalle-layout {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(205px, 250px) !important;
+    align-items: start;
+  }
+
+  .compra-detalle__totales {
+    order: initial;
+    grid-template-columns: 1fr !important;
   }
 }

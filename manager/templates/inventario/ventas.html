@@ -5,8 +5,10 @@
 {% endblock title %}
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}">
-    <link rel="stylesheet" href="{% static 'css/ventas.css' %}">
 {% endblock extra_css %}
+{% block page_css_overrides %}
+    <link rel="stylesheet" href="{% static 'css/ventas.css' %}?v=20261005-movil-tarjetas-01">
+{% endblock page_css_overrides %}
 {% block titulo_content %}
     <div class="tituloscont">
         <img
@@ -23,6 +25,10 @@
     <div class="container-fluid">
         <!-- FILTROS -->
         <form method="get" class="ventas-filter-form" id="ventasFilterForm" data-export-url="{% url 'exportar_ventas_excel' %}">
+            <div class="ventas-filter-heading">
+                <span><i class="bx bx-filter-alt" aria-hidden="true"></i></span>
+                <div><strong>Filtrar ventas</strong><small>Consulta ventas por fecha o sucursal.</small></div>
+            </div>
             <div class="ventas-filter-group">
                 <label class="ventas-filter-label">Fecha inicial</label>
                 <input type="date"
@@ -37,7 +43,7 @@
                        class="form-control"
                        value="{{ fecha_fin }}">
             </div>
-            <div class="ventas-filter-group">
+            <div class="ventas-filter-group ventas-filter-sucursal">
                 <label class="ventas-filter-label">Sucursal</label>
                 <select name="sucursal" class="form-control">
                     <option value="">Todas las sucursales</option>
@@ -49,12 +55,13 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="ventas-filter-group">
+            <div class="ventas-filter-group ventas-filter-search">
                 <button type="submit" class="ventas-search-btn w-100">Buscar</button>
             </div>
-            <div class="ventas-filter-group ventas-export-group">
+            <div class="ventas-filter-group ventas-export-group ventas-filter-export">
                 <button type="button" class="ventas-excel-btn" id="exportarVentasExcel" aria-label="Exportar ventas a Excel" title="Exportar a Excel">
                     <i class="bx bx-spreadsheet" aria-hidden="true"></i>
+                    <span>Exportar</span>
                 </button>
             </div>
         </form>
@@ -79,7 +86,32 @@
             </div>
         </div>
         <!-- TABLA -->
-        <div class="tabla-container">
+        <section class="ventas-mobile-list" aria-label="Ventas registradas">
+            {% for d in page_obj %}
+                <article class="ventas-mobile-card">
+                    <header class="ventas-mobile-card__header">
+                        <div class="ventas-mobile-card__reference"><span><i class="bx bx-receipt" aria-hidden="true"></i></span><div><small>Factura</small><strong>{{ d.venta.id_factura_cai.numero_factura }}</strong></div></div>
+                        <strong class="ventas-mobile-card__total">{{ moneda_simbolo }} {{ d.total_neto_linea|floatformat:2 }}</strong>
+                    </header>
+                    <div class="ventas-mobile-card__product"><span><i class="bx bx-package" aria-hidden="true"></i></span><div><small>Producto</small><strong>{% if d.combo %}{{ d.combo.nombre }}{% else %}{{ d.producto.nombre }}{% endif %}</strong></div></div>
+                    <div class="ventas-mobile-card__meta">
+                        <div><i class="bx bx-calendar" aria-hidden="true"></i><span><small>Fecha</small><strong>{{ d.venta.f_creacion|date:"d/m/Y H:i" }}</strong></span></div>
+                        <div><i class="bx bx-store" aria-hidden="true"></i><span><small>Sucursal</small><strong>{{ d.venta.sucursal.nombre }}</strong></span></div>
+                        <div><i class="bx bx-user" aria-hidden="true"></i><span><small>Cliente</small><strong>{% if d.venta.id_cliente %}{% if d.venta.con_rtn %}{{ d.venta.id_cliente.empresa|default:d.venta.id_cliente.nombre_completo }}{% else %}{{ d.venta.id_cliente.nombre_completo }}{% endif %}{% else %}Consumidor Final{% endif %}</strong></span></div>
+                        <div><i class="bx bx-user-check" aria-hidden="true"></i><span><small>Cajero</small><strong>{{ d.cajero_nombre }}</strong></span></div>
+                    </div>
+                    <footer class="ventas-mobile-card__amounts">
+                        <span class="ventas-mobile-card__metric"><i class="bx bx-layer" aria-hidden="true"></i><span>Cantidad</span><strong>{{ d.cantidad }}</strong></span>
+                        <span class="ventas-mobile-card__metric"><i class="bx bx-purchase-tag" aria-hidden="true"></i><span>P/U</span><strong>{{ moneda_simbolo }} {{ d.precio_unitario|floatformat:2 }}</strong></span>
+                        <span class="ventas-mobile-card__metric ventas-mobile-card__metric--discount"><i class="bx bx-discount" aria-hidden="true"></i><span>Descuento</span><strong>{{ moneda_simbolo }} {{ d.descuento|floatformat:2 }}</strong></span>
+                        <span class="ventas-mobile-card__metric ventas-mobile-card__metric--profit"><i class="bx bx-trending-up" aria-hidden="true"></i><span>Utilidad</span><strong>{{ moneda_simbolo }} {{ d.utilidad_unitaria|floatformat:2 }}</strong></span>
+                    </footer>
+                </article>
+            {% empty %}
+                <div class="ventas-mobile-empty"><i class="bx bx-receipt" aria-hidden="true"></i><strong>Sin ventas</strong><span>No se encontraron ventas con los filtros seleccionados.</span></div>
+            {% endfor %}
+        </section>
+        <div class="tabla-container ventas-desktop-table">
             <table class="tablas-todo" id="tablaVentas">
                 <thead>
                     <tr>

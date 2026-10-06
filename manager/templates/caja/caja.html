@@ -3,8 +3,8 @@
 {% block title %} Caja {% endblock title %} 
 {% block extra_css %}
 
-<link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261004-caja-sheet" />
-<link rel="stylesheet" href="{% static 'css/caja.css' %}?v=20261004-modal-footer-mobile" />
+<link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261005-number-inputs" />
+<link rel="stylesheet" href="{% static 'css/caja.css' %}?v=20261005-espacio-contenido" />
 
 {% endblock extra_css %} 
 {% block titulo_content %}
@@ -815,11 +815,11 @@
             </div>
             <div class="col-md-6 form-group">
               <label for="cajaClienteDni">DNI/RTN <span class="text-danger">*</span></label>
-              <input type="text" id="cajaClienteDni" class="form-control" placeholder="DNI/RTN" maxlength="14" inputmode="numeric" autocomplete="off" required>
+              <input type="tel" id="cajaClienteDni" class="form-control" placeholder="DNI/RTN" maxlength="14" inputmode="numeric" autocomplete="off" required>
             </div>
             <div class="col-md-6 form-group">
               <label for="cajaClienteTelefono">Número de teléfono</label>
-              <input type="text" id="cajaClienteTelefono" class="form-control" placeholder="Número de teléfono" maxlength="12" inputmode="tel" autocomplete="off">
+              <input type="tel" id="cajaClienteTelefono" class="form-control" placeholder="Número de teléfono" maxlength="12" inputmode="tel" autocomplete="off">
             </div>
             <div class="col-12 form-group">
               <label for="cajaClienteEmail">Email</label>
@@ -850,11 +850,11 @@
             {% if perms.manager.view_cuentasporcobrar %}
             <div class="col-md-6 form-group">
               <label for="cajaClienteDiasCredito">Días de crédito</label>
-              <input type="text" id="cajaClienteDiasCredito" class="form-control" placeholder="Días de crédito" inputmode="numeric" autocomplete="off">
+              <input type="number" id="cajaClienteDiasCredito" class="form-control" placeholder="Días de crédito" min="0" step="1" inputmode="numeric" autocomplete="off">
             </div>
             <div class="col-md-6 form-group">
               <label for="cajaClienteMaxCredito">Crédito máximo</label>
-              <input type="text" id="cajaClienteMaxCredito" class="form-control" placeholder="Crédito máximo" inputmode="decimal" autocomplete="off">
+              <input type="number" id="cajaClienteMaxCredito" class="form-control" placeholder="Crédito máximo" min="0" step="0.01" inputmode="decimal" autocomplete="off">
             </div>
             {% endif %}
           </div>
@@ -1003,7 +1003,7 @@
 
 <script
   type="module"
-  src="{% static 'js/caja/caja.js' %}?v=20261005-codigo-alfanumerico"
+  src="{% static 'js/caja/caja.js' %}?v=20261006-stock-concurrente"
 ></script>
 
 <!-- ========================================================= -->

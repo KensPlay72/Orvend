@@ -4,6 +4,7 @@
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261004-compras-header" />
 {% endblock %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/compras_mobile.css' %}?v=20261005-acciones-inline" />{% endblock page_css_overrides %}
 {% block search_content %}
     <div class="header__search">
         <input type="search"
@@ -20,7 +21,8 @@
     </div>
 {% endblock %}
 {% block main_content %}
-<div class="full2">
+<form method="get" class="catalog-mobile-search compras-mobile-search"><div class="catalog-mobile-search__field"><i class="bx bx-search"></i><input type="search" name="search" value="{{ search }}" placeholder="Buscar compra" autocomplete="off"></div><button type="submit"><i class="bx bx-search"></i><span>Buscar</span></button></form>
+<div class="full2 compras-summary">
     <div class="ventanas">
         <div class="ventanasi">
             <p class="ventana-titulo">Total de Compras</p>
@@ -59,15 +61,16 @@
         </div>
     </div>
 
-    <div class="bottom_content compras-header__actions">
-        <button id="toggleDropdownPanel" class="btn-dropdown" onclick="location.href='{% url 'realizarcompra' %}'">
-            <i class="bx bx-plus-circle"></i> Realizar Compra
+    <div class="bottom_content compras-header__actions catalog-toolbar__actions">
+        <button id="toggleDropdownPanel" class="btn-dropdown compras-header__crear" onclick="location.href='{% url 'realizarcompra' %}'">
+            <i class="bx bx-plus-circle"></i> <span class="compras-header__crear-text">Realizar Compra</span>
         </button>
         {% if perms.manager.view_devolucioncompra %}
         <button id="toggleDropdownPanel" class="btn-dropdown" onclick="location.href='{% url 'devoluciones_view' %}'">
             <i class='bx bx-undo'></i> Devoluciones
         </button>
         {% endif %}
+        <span class="compras-header__separator" aria-hidden="true">|</span>
         <button type="button"
                 id="btnExportarCompras"
                 class="productos-export-btn"
@@ -78,9 +81,9 @@
             <i class="bx bx-spreadsheet" aria-hidden="true"></i>
         </button>
     </div>
-</div>
+ </div>
 
-<div class="modal fade" id="modalExportarCompras" tabindex="-1"
+<div class="modal fade modal-sheet-mobile modal-sheet-mobile--auto compras-mobile-modal" id="modalExportarCompras" tabindex="-1"
      aria-labelledby="modalExportarComprasTitulo" aria-hidden="true">
 
     <div class="modal-dialog modal-dialog-centered">
@@ -163,7 +166,7 @@
 
 
 <div class="tabla-container">
-    <table class="tablas-todo" id="tablacont">
+    <table class="tablas-todo catalog-mobile-table catalog-mobile-table--compras" id="tablacont">
         <thead>
             <tr>
                 <th>#</th>
@@ -180,7 +183,8 @@
 
         <tbody>
             {% for compra in page_obj %}
-            <tr data-token="{{ compra.documento_token }}">
+            <tr data-token="{{ compra.documento_token }}"
+                data-detail-url="{% url 'detalle_compra' compra.documento_token %}">
 
                 <td>{{ compra.id }}</td>
 

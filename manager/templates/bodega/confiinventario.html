@@ -1,307 +1,344 @@
-{% extends "menu.html" %}
-{% load static pagination_tags %}
-{% block title %}
-  Confirmar Inventario
-{% endblock title %}
+{% extends "menu.html" %} 
+{% load static pagination_tags %} 
+{% block title %}Confirmar Inventario {% endblock title %} 
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
-  <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261004-tracker-space" />
-  <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}?v=20261004-sheet-max" />
-{% endblock extra_css %}
+<link rel="stylesheet" href="{% static 'css/compras.css' %}" />
+<link
+  rel="stylesheet"
+  href="{% static 'css/manager.css' %}?v=20261004-tracker-space"
+/>
+<link
+  rel="stylesheet"
+  href="{% static 'css/recepcion_inventario.css' %}?v=20261005-boton-confirmar"
+/>
+{% endblock extra_css %} 
 {% block titulo_content %}
-  <div class="tituloscont">
-    <img class="logop"
-         src="{% static 'img/LH.webp' %}"
-         alt="logo"
-         width="0"
-         height="0" />
-    <p class="header__logo">| Confirmar Inventario</p>
-  </div>
-{% endblock titulo_content %}
+<div class="tituloscont">
+  <img
+    class="logop"
+    src="{% static 'img/LH.webp' %}"
+    alt="logo"
+    width="0"
+    height="0"
+  />
+  <p class="header__logo">| Confirmar Inventario</p>
+</div>
+{% endblock titulo_content %} 
 {% block main_content %}
-  <div class="divbuttons2 recepcion-confirm-actions">
-    <button id="toggleDropdownPanel"
-            class="btn-dropdown"
-            data-default-url="{% url 'recepcion_inventario' %}"
-            onclick="location.href=sessionStorage.getItem('orvend:recepcion:return-url') || this.dataset.defaultUrl">
-      <i class="bx bx-arrow-back"></i> Regresar
+<div class="divbuttons2 recepcion-confirm-actions">
+  <button
+    id="toggleDropdownPanel"
+    class="btn-dropdown"
+    data-default-url="{% url 'recepcion_inventario' %}"
+    onclick="
+      location.href =
+        sessionStorage.getItem('orvend:recepcion:return-url') ||
+        this.dataset.defaultUrl
+    "
+  >
+    <i class="bx bx-arrow-back"></i> Regresar
+  </button>
+  <div class="display-flex">
+    {% if perms.manager.add_devolucioncompra and compra.tipo == "Compra" %}
+    <button
+      type="button"
+      id="devoluciones"
+      class="btn-dropdown"
+      data-bs-toggle="modal"
+      data-bs-target="#devo"
+    >
+      <i class="bx bx-transfer-alt"></i> Devoluciones
     </button>
-    <div class="display-flex">
-      {% if perms.manager.add_devolucioncompra and compra.tipo == "Compra" %}
-<button type="button"
-        id="devoluciones"
-        class="btn-dropdown"
-        data-bs-toggle="modal"
-        data-bs-target="#devo">
-    <i class="bx bx-transfer-alt"></i> Devoluciones
-</button>
-      {% endif %}
-      <button type="button" id="toggleDropdownPanel32" class="btn-dropdown">
-        <i class="bx bx-check-circle"></i>
-        <span class="confirmar-entrada-desktop">Confirmar entrada</span>
-        <span class="confirmar-entrada-mobile">Confirmar</span>
-      </button>
-    </div>
+    {% endif %}
+    <button type="button" id="toggleDropdownPanel32" class="btn-dropdown">
+      <i class="bx bx-check-circle"></i>
+      <span class="confirmar-entrada-desktop">Confirmar entrada</span>
+      <span class="confirmar-entrada-mobile">Confirmar</span>
+    </button>
   </div>
-  <br>
-  <!-- HIDDEN GENERALES -->
-  <input type="hidden" id="entrada-id" value="{{ compra.id }}">
-  <input type="hidden"
-         id="tipo-entrada"
-         value="{{ compra.tipo|default:'COMPRA' }}">
-  <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-  {% if compra.tipo == "Compra" %}
-    {% include "bodega/_tracking_compra.html" with tracking=compra.tracking %}
-    <script src="{% static 'js/bodega/tracking_compra.js' %}?v=20261004-space"></script>
-  {% endif %}
-  <!-- ===================================================== -->
-  <!-- MODAL CONFIRMACION -->
-  <!-- ===================================================== -->
-  <div class="modal fade modal-sheet-mobile modal-sheet-mobile--auto"
-       id="completarcompra"
-       tabindex="-1"
-       aria-labelledby="completarCompraLabel"
-       aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <span class="modal-sheet-handle" aria-hidden="true"></span>
-          <h5 class="modal-title" id="completarCompraLabel">Confirmar Recepción de Productos</h5>
-          <button type="button"
-                  class="btn-close"
-                  data-bs-dismiss="modal"
-                  aria-label="Cerrar"></button>
+</div>
+<br />
+<!-- HIDDEN GENERALES -->
+<input type="hidden" id="entrada-id" value="{{ compra.id }}" />
+<input
+  type="hidden"
+  id="tipo-entrada"
+  value="{{ compra.tipo|default:'COMPRA' }}"
+/>
+<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}" />
+{% if compra.tipo == "Compra" %} {% include "bodega/_tracking_compra.html" with
+tracking=compra.tracking %}
+<script src="{% static 'js/bodega/tracking_compra.js' %}?v=20261004-space"></script>
+{% endif %}
+<!-- ===================================================== -->
+<!-- MODAL CONFIRMACION -->
+<!-- ===================================================== -->
+<div
+  class="modal fade modal-sheet-mobile modal-sheet-mobile--auto"
+  id="completarcompra"
+  tabindex="-1"
+  aria-labelledby="completarCompraLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-sheet-handle" aria-hidden="true"></span>
+        <h5 class="modal-title" id="completarCompraLabel">
+          Confirmar Recepción de Productos
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Cerrar"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="tabla-container modal-confirmacion-table-desktop">
+          <table
+            class="tablas-todo"
+            id="tablacomprar"
+            data-mostrar-vencimiento="{{ compra.mostrar_vencimiento|yesno:'true,false' }}"
+          >
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>ProductoId</th>
+                <th>Nombre</th>
+                <th>Presentación</th>
+                <th>SKU</th>
+                <th>Solicitado / Recibido</th>
+                {% if compra.mostrar_vencimiento %}
+                <th>F. Vencimiento</th>
+                {% endif %}
+              </tr>
+            </thead>
+            <tbody id="tablaDetallesModal"></tbody>
+          </table>
         </div>
-        <div class="modal-body">
-          <div class="tabla-container modal-confirmacion-table-desktop">
-            <table class="tablas-todo"
-                   id="tablacomprar"
-                   data-mostrar-vencimiento="{{ compra.mostrar_vencimiento|yesno:'true,false' }}">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>ProductoId</th>
-                  <th>Nombre</th>
-                  <th>Presentación</th>
-                  <th>SKU</th>
-                  <th>Solicitado / Recibido</th>
-                  {% if compra.mostrar_vencimiento %}<th>F. Vencimiento</th>{% endif %}
-                </tr>
-              </thead>
-              <tbody id="tablaDetallesModal">
-              </tbody>
-            </table>
-          </div>
-          <section id="listaConfirmacionModalMovil"
-                   class="confirmar-inventario-mobile-list modal-confirmacion-mobile-list"
-                   aria-label="Productos a confirmar">
-          </section>
-        </div>
-        <div class="modal-footer altura-footer2">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="btn classbotones" id="enviarAutorizacionBtn">Autorizar</button>
-        </div>
+        <section
+          id="listaConfirmacionModalMovil"
+          class="confirmar-inventario-mobile-list modal-confirmacion-mobile-list"
+          aria-label="Productos a confirmar"
+        ></section>
+      </div>
+      <div class="modal-footer altura-footer2">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn classbotones"
+          id="enviarAutorizacionBtn"
+        >
+          Autorizar
+        </button>
       </div>
     </div>
   </div>
-  <!-- ===================================================== -->
-  <!-- MODAL DEVOLUCION SOLO PARA COMPRAS -->
-  <!-- ===================================================== -->
-  {% if compra.tipo == "Compra" %}
-<div class="modal fade modal-sheet-mobile modal-sheet-mobile--auto"
-     id="devo"
-     tabindex="-1"
-     aria-labelledby="devoLabel"
-     aria-hidden="true">
+</div>
+<!-- ===================================================== -->
+<!-- MODAL DEVOLUCION SOLO PARA COMPRAS -->
+<!-- ===================================================== -->
+{% if compra.tipo == "Compra" %}
+<div
+  class="modal fade modal-sheet-mobile modal-sheet-mobile--auto"
+  id="devo"
+  tabindex="-1"
+  aria-labelledby="devoLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-sheet-handle" aria-hidden="true"></span>
 
-<div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content">
+        <h5 class="modal-title" id="devoLabel">Solicitud de Devolución</h5>
 
-            <div class="modal-header">
-                <span class="modal-sheet-handle" aria-hidden="true"></span>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Cerrar"
+        ></button>
+      </div>
 
-                <h5 class="modal-title" id="devoLabel">
-                    Solicitud de Devolución
-                </h5>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="observaciones" class="form-label"> Observaciones </label>
 
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal"
-                        aria-label="Cerrar">
-                </button>
-
-            </div>
-
-            <div class="modal-body">
-
-                <div class="mb-3">
-                    <label for="observaciones" class="form-label">
-                        Observaciones
-                    </label>
-
-                    <textarea id="observaciones"
-                              class="form-control"
-                              rows="2"
-                              placeholder="Escribe aquí las observaciones..."></textarea>
-                </div>
-
-                <br>
-
-                <div class="table-responsive modal-devolucion-table-desktop">
-
-                    <table class="tablas-todo"
-                           id="tablaDevolucion">
-
-                        <thead>
-                            <tr>
-                                <th>Seleccionar</th>
-                                <th>Nombre</th>
-                                <th>SKU</th>
-                                <th>Cantidad</th>
-                                {% if compra.mostrar_conversion %}<th>Conversión</th>{% endif %}
-                                <th>Motivo</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-
-                            {% for detalle in detalles %}
-
-                                {% if detalle.cantidad > 0 %}
-
-                                    <tr class="modal-devolucion-card">
-
-                                        <td data-label="Seleccionar">
-                                            <input type="checkbox"
-                                                   class="check-devolucion">
-
-                                            <input type="hidden"
-                                                   class="producto-id"
-                                                   value="{{ detalle.productoId }}">
-                                        </td>
-
-                                        <td data-label="Producto" class="modal-devolucion-producto">
-                                            <span class="modal-devolucion-producto__icon"><i class="bx bx-package" aria-hidden="true"></i></span>
-                                            <span class="nombre-devolucion">{{ detalle.productoNombre }}</span>
-                                        </td>
-
-                                        <td data-label="SKU" class="sku-devolucion">
-                                            {{ detalle.sku }}
-                                        </td>
-
-                                        <td data-label="Cantidad" class="cantidad-devolucion">
-                                            {{ detalle.cantidad }}
-                                        </td>
-
-                                        {% if compra.mostrar_conversion %}
-                                            <td data-label="Conversión" class="devolucion-conversion">
-                                                {% if detalle.hijos %}
-                                                    <button type="button" class="btn btn-outline-success btn-sm convertir-hijo-btn"><i class="bx bx-transfer-alt"></i> Convertir a unidad</button>
-                                                    <select class="hijo-select d-none">
-                                                        {% for hijo in detalle.hijos %}
-                                                            <option value="{{ hijo.id }}" data-equivalencia="{{ hijo.equivalencia }}" data-maximo="{{ hijo.maximo }}" data-sku="{{ hijo.sku }}">{{ hijo.nombre }}</option>
-                                                        {% endfor %}
-                                                    </select>
-                                                    <div class="devolucion-hijo-campos d-none mt-2">
-                                                        <input type="text" class="form-control cantidad-hijo" inputmode="numeric" placeholder="Cantidad a devolver">
-                                                        <small class="equivalencia-hijo text-muted d-block mt-1"></small>
-                                                    </div>
-                                                {% else %}
-                                                    <small class="text-muted">No hay productos hijo relacionados.</small>
-                                                {% endif %}
-                                            </td>
-                                        {% endif %}
-
-                                        <td data-label="Motivo">
-
-                                            <select class="form-select motivo-select">
-
-                                                <option value=""
-                                                        selected
-                                                        disabled>
-                                                    Seleccione
-                                                </option>
-
-                                                <option value="1">
-                                                    Producto Dañado
-                                                </option>
-
-                                                <option value="2">
-                                                    Producto Vencido
-                                                </option>
-
-                                                <option value="3">
-                                                    Error de Pedido
-                                                </option>
-
-                                                <option value="4">
-                                                    Producto Incorrecto
-                                                </option>
-
-                                                <option value="5">
-                                                    Exceso de Inventario
-                                                </option>
-
-                                                <option value="6">
-                                                    Otro
-                                                </option>
-
-                                            </select>
-
-                                        </td>
-
-                                    </tr>
-
-                                {% endif %}
-
-                            {% endfor %}
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-                <section id="listaDevolucionModalMovil"
-                         class="recepcion-mobile-list modal-devolucion-mobile-list"
-                         aria-label="Productos para devolución">
-                </section>
-
-            </div>
-
-            <div class="modal-footer altura-footer2">
-
-                <button type="button"
-                        class="btn btn-secondary"
-                        data-bs-dismiss="modal">
-                    Cancelar
-                </button>
-
-                <button type="button"
-                        class="btn classbotones"
-                        id="enviarDevolucionBtn">
-                    Registrar Devolución
-                </button>
-
-            </div>
-
+          <textarea
+            id="observaciones"
+            class="form-control"
+            rows="2"
+            placeholder="Escribe aquí las observaciones..."
+          ></textarea>
         </div>
 
-    </div>
+        <br />
 
+        <div class="table-responsive modal-devolucion-table-desktop">
+          <table class="tablas-todo" id="tablaDevolucion">
+            <thead>
+              <tr>
+                <th>Seleccionar</th>
+                <th>Nombre</th>
+                <th>SKU</th>
+                <th>Cantidad</th>
+                {% if compra.mostrar_conversion %}
+                <th>Conversión</th>
+                {% endif %}
+                <th>Motivo</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {% for detalle in detalles %} {% if detalle.cantidad > 0 %}
+
+              <tr class="modal-devolucion-card">
+                <td data-label="Seleccionar">
+                  <input type="checkbox" class="check-devolucion" />
+
+                  <input
+                    type="hidden"
+                    class="producto-id"
+                    value="{{ detalle.productoId }}"
+                  />
+                </td>
+
+                <td data-label="Producto" class="modal-devolucion-producto">
+                  <span class="modal-devolucion-producto__icon"
+                    ><i class="bx bx-package" aria-hidden="true"></i
+                  ></span>
+                  <span class="nombre-devolucion"
+                    >{{ detalle.productoNombre }}</span
+                  >
+                </td>
+
+                <td data-label="SKU" class="sku-devolucion">
+                  {{ detalle.sku }}
+                </td>
+
+                <td data-label="Cantidad" class="cantidad-devolucion">
+                  {{ detalle.cantidad }}
+                </td>
+
+                {% if compra.mostrar_conversion %}
+                <td data-label="Conversión" class="devolucion-conversion">
+                  {% if detalle.hijos %}
+                  <button
+                    type="button"
+                    class="btn btn-outline-success btn-sm convertir-hijo-btn"
+                  >
+                    <i class="bx bx-transfer-alt"></i> Convertir a unidad
+                  </button>
+                  <select class="hijo-select d-none">
+                    {% for hijo in detalle.hijos %}
+                    <option
+                      value="{{ hijo.id }}"
+                      data-equivalencia="{{ hijo.equivalencia }}"
+                      data-maximo="{{ hijo.maximo }}"
+                      data-sku="{{ hijo.sku }}"
+                    >
+                      {{ hijo.nombre }}
+                    </option>
+                    {% endfor %}
+                  </select>
+                  <div class="devolucion-hijo-campos d-none mt-2">
+                    <input
+                      type="text"
+                      class="form-control cantidad-hijo"
+                      inputmode="numeric"
+                      placeholder="Cantidad a devolver"
+                    />
+                    <small
+                      class="equivalencia-hijo text-muted d-block mt-1"
+                    ></small>
+                  </div>
+                  {% else %}
+                  <small class="text-muted"
+                    >No hay productos hijo relacionados.</small
+                  >
+                  {% endif %}
+                </td>
+                {% endif %}
+
+                <td data-label="Motivo">
+                  <select class="form-select motivo-select">
+                    <option value="" selected disabled>Seleccione</option>
+
+                    <option value="1">Producto Dañado</option>
+
+                    <option value="2">Producto Vencido</option>
+
+                    <option value="3">Error de Pedido</option>
+
+                    <option value="4">Producto Incorrecto</option>
+
+                    <option value="5">Exceso de Inventario</option>
+
+                    <option value="6">Otro</option>
+                  </select>
+                </td>
+              </tr>
+
+              {% endif %} {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <section
+          id="listaDevolucionModalMovil"
+          class="recepcion-mobile-list modal-devolucion-mobile-list"
+          aria-label="Productos para devolución"
+        ></section>
+      </div>
+
+      <div class="modal-footer altura-footer2">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancelar
+        </button>
+
+        <button type="button" class="btn classbotones" id="enviarDevolucionBtn">
+          Registrar Devolución
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div class="modal fade modal-sheet-mobile modal-sheet-mobile--auto" id="modalHijosDevolucion" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content hijos-devolucion-modal">
-    <div class="modal-header"><span class="modal-sheet-handle" aria-hidden="true"></span><h5 class="modal-title">Convertir a producto hijo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-    <div class="modal-body"><p class="hijos-devolucion-intro">Selecciona el producto hijo al que deseas convertir esta presentación.</p><div id="listaHijosDevolucion" class="hijos-devolucion-lista"></div></div>
-  </div></div>
+<div
+  class="modal fade modal-sheet-mobile modal-sheet-mobile--auto"
+  id="modalHijosDevolucion"
+  tabindex="-1"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content hijos-devolucion-modal">
+      <div class="modal-header">
+        <span class="modal-sheet-handle" aria-hidden="true"></span>
+        <h5 class="modal-title">Convertir a producto hijo</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <p class="hijos-devolucion-intro">
+          Selecciona el producto hijo al que deseas convertir esta presentación.
+        </p>
+        <div id="listaHijosDevolucion" class="hijos-devolucion-lista"></div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endif %}
-  <!-- ===================================================== -->
-  <!-- TABLA PRINCIPAL -->
-  <!-- ===================================================== -->
-  <div class="confirmar-inventario-table-desktop">
+<!-- ===================================================== -->
+<!-- TABLA PRINCIPAL -->
+<!-- ===================================================== -->
+<div class="confirmar-inventario-table-desktop">
   <table class="tablas-todo" id="tabladecom">
     <thead>
       <tr>
@@ -312,108 +349,176 @@
         <th>SKU</th>
         <th>Cantidad</th>
         <th>Cant Recepción</th>
-        {% if compra.mostrar_vencimiento %}<th>FVencimiento</th>{% endif %}
+        {% if compra.mostrar_vencimiento %}
+        <th>FVencimiento</th>
+        {% endif %}
       </tr>
     </thead>
     <tbody>
       {% for detalle in detalles %}
-        <tr class="recepcion-product-row"
-            data-producto-nombre="{{ detalle.productoNombre }}"
-            data-presentacion="{{ detalle.presentacion }}"
-            data-sku="{{ detalle.sku }}"
-            data-cantidad-solicitada="{{ detalle.cantidad }}">
-          <td data-label="#">{{ detalles.start_index|add:forloop.counter0 }}</td>
-          <td data-label="Producto">{{ detalle.productoNombre }}</td>
-          <td data-label="Marca">{{ detalle.marcas }}</td>
-          <td data-label="Presentación">{{ detalle.presentacion }}</td>
-          <td data-label="SKU">{{ detalle.sku }}</td>
-          <td data-label="Cantidad solicitada">{{ detalle.cantidad }}</td>
-          <td data-label="Cantidad a recibir">
-            <input type="text"
-                   class="cantidad-recepcion"
-                   style="width:100px"
-                   inputmode="decimal"
-                   autocomplete="off"
-                   aria-label="Cantidad de recepción de {{ detalle.productoNombre }}"
-                   {% if detalle.cantidad == 0 %}disabled{% endif %}>
-          </td>
-          {% if compra.mostrar_vencimiento %}
-            <td data-label="Fecha de vencimiento">
-              {% if detalle.requiereVencimiento %}
-                <input type="date"
-                       class="fecha-vencimiento"
-                       value="{{ detalle.fvencimiento }}">
-              {% endif %}
-            </td>
+      <tr
+        class="recepcion-product-row"
+        data-producto-nombre="{{ detalle.productoNombre }}"
+        data-presentacion="{{ detalle.presentacion }}"
+        data-sku="{{ detalle.sku }}"
+        data-cantidad-solicitada="{{ detalle.cantidad }}"
+      >
+        <td data-label="#">{{ detalles.start_index|add:forloop.counter0 }}</td>
+        <td data-label="Producto">{{ detalle.productoNombre }}</td>
+        <td data-label="Marca">{{ detalle.marcas }}</td>
+        <td data-label="Presentación">{{ detalle.presentacion }}</td>
+        <td data-label="SKU">{{ detalle.sku }}</td>
+        <td data-label="Cantidad solicitada">{{ detalle.cantidad }}</td>
+        <td data-label="Cantidad a recibir">
+          <input
+            type="text"
+            class="cantidad-recepcion"
+            style="width: 100px"
+            inputmode="decimal"
+            autocomplete="off"
+            aria-label="Cantidad de recepción de {{ detalle.productoNombre }}"
+            {%
+            if
+            detalle.cantidad=""
+            ="0"
+            %}disabled{%
+            endif
+            %}
+          />
+        </td>
+        {% if compra.mostrar_vencimiento %}
+        <td data-label="Fecha de vencimiento">
+          {% if detalle.requiereVencimiento %}
+          <input
+            type="date"
+            class="fecha-vencimiento"
+            value="{{ detalle.fvencimiento }}"
+          />
           {% endif %}
-          <input type="hidden" class="producto-id" value="{{ detalle.productoId }}">
-        </tr>
+        </td>
+        {% endif %}
+        <input
+          type="hidden"
+          class="producto-id"
+          value="{{ detalle.productoId }}"
+        />
+      </tr>
       {% endfor %}
     </tbody>
   </table>
-  </div>
+</div>
 
-  <section class="confirmar-inventario-mobile-list" aria-label="Productos por confirmar">
-    {% for detalle in detalles %}
-      <article class="recepcion-product-row confirmar-inventario-mobile-card"
-               data-producto-nombre="{{ detalle.productoNombre }}"
-               data-presentacion="{{ detalle.presentacion }}"
-               data-sku="{{ detalle.sku }}"
-               data-cantidad-solicitada="{{ detalle.cantidad }}">
-        <header class="confirmar-inventario-mobile-card__header">
-          <span class="confirmar-inventario-mobile-card__icono"><i class="bx bx-package" aria-hidden="true"></i></span>
-          <div><small>PRODUCTO {{ detalles.start_index|add:forloop.counter0 }}</small><strong>{{ detalle.productoNombre }}</strong></div>
-          <span class="confirmar-inventario-mobile-card__cantidad">{{ detalle.cantidad }}</span>
-        </header>
-        <div class="confirmar-inventario-mobile-card__datos">
-          <div><span><i class="bx bx-purchase-tag-alt"></i> Marca</span><strong>{{ detalle.marcas|default:"Sin marca" }}</strong></div>
-          <div><span><i class="bx bx-box"></i> Presentación</span><strong>{{ detalle.presentacion|default:"Sin presentación" }}</strong></div>
-          <div class="confirmar-inventario-mobile-card__sku"><span><i class="bx bx-barcode"></i> SKU</span><strong>{{ detalle.sku|default:"Sin SKU" }}</strong></div>
-        </div>
-        <div class="confirmar-inventario-mobile-card__recepcion">
-          <label for="cantidad-recepcion-{{ detalle.productoId }}">Cantidad a recibir <small>Solicitada: {{ detalle.cantidad }}</small></label>
-          <input type="text"
-                 id="cantidad-recepcion-{{ detalle.productoId }}"
-                 class="cantidad-recepcion"
-                 inputmode="decimal"
-                 autocomplete="off"
-                 aria-label="Cantidad de recepción de {{ detalle.productoNombre }}"
-                 {% if detalle.cantidad == 0 %}disabled{% endif %}>
-        </div>
-        {% if compra.mostrar_vencimiento and detalle.requiereVencimiento %}
-        <div class="confirmar-inventario-mobile-card__vencimiento">
-          <label for="fecha-vencimiento-{{ detalle.productoId }}">Fecha de vencimiento</label>
-          <input type="date" id="fecha-vencimiento-{{ detalle.productoId }}" class="fecha-vencimiento" value="{{ detalle.fvencimiento }}">
-        </div>
-        {% endif %}
-        <input type="hidden" class="producto-id" value="{{ detalle.productoId }}">
-      </article>
-    {% empty %}
-      <div class="recepcion-mobile-empty"><i class="bx bx-package"></i><strong>Sin productos pendientes</strong><span>No hay productos para confirmar en esta página.</span></div>
+<section
+  class="confirmar-inventario-mobile-list"
+  aria-label="Productos por confirmar"
+>
+  {% for detalle in detalles %}
+  <article
+    class="recepcion-product-row confirmar-inventario-mobile-card"
+    data-producto-nombre="{{ detalle.productoNombre }}"
+    data-presentacion="{{ detalle.presentacion }}"
+    data-sku="{{ detalle.sku }}"
+    data-cantidad-solicitada="{{ detalle.cantidad }}"
+  >
+    <header class="confirmar-inventario-mobile-card__header">
+      <span class="confirmar-inventario-mobile-card__icono"
+        ><i class="bx bx-package" aria-hidden="true"></i
+      ></span>
+      <div>
+        <small>PRODUCTO {{ detalles.start_index|add:forloop.counter0 }}</small
+        ><strong>{{ detalle.productoNombre }}</strong>
+      </div>
+      <span class="confirmar-inventario-mobile-card__cantidad"
+        >{{ detalle.cantidad }}</span
+      >
+    </header>
+    <div class="confirmar-inventario-mobile-card__datos">
+      <div>
+        <span><i class="bx bx-purchase-tag-alt"></i> Marca</span
+        ><strong>{{ detalle.marcas|default:"Sin marca" }}</strong>
+      </div>
+      <div>
+        <span><i class="bx bx-box"></i> Presentación</span
+        ><strong>{{ detalle.presentacion|default:"Sin presentación" }}</strong>
+      </div>
+      <div class="confirmar-inventario-mobile-card__sku">
+        <span><i class="bx bx-barcode"></i> SKU</span
+        ><strong>{{ detalle.sku|default:"Sin SKU" }}</strong>
+      </div>
+    </div>
+    <div class="confirmar-inventario-mobile-card__recepcion">
+      <label for="cantidad-recepcion-{{ detalle.productoId }}"
+        >Cantidad a recibir
+        <small>Solicitada: {{ detalle.cantidad }}</small></label
+      >
+      <input
+        type="text"
+        id="cantidad-recepcion-{{ detalle.productoId }}"
+        class="cantidad-recepcion"
+        inputmode="decimal"
+        autocomplete="off"
+        aria-label="Cantidad de recepción de {{ detalle.productoNombre }}"
+        {%
+        if
+        detalle.cantidad=""
+        ="0"
+        %}disabled{%
+        endif
+        %}
+      />
+    </div>
+    {% if compra.mostrar_vencimiento and detalle.requiereVencimiento %}
+    <div class="confirmar-inventario-mobile-card__vencimiento">
+      <label for="fecha-vencimiento-{{ detalle.productoId }}"
+        >Fecha de vencimiento</label
+      >
+      <input
+        type="date"
+        id="fecha-vencimiento-{{ detalle.productoId }}"
+        class="fecha-vencimiento"
+        value="{{ detalle.fvencimiento }}"
+      />
+    </div>
+    {% endif %}
+    <input type="hidden" class="producto-id" value="{{ detalle.productoId }}" />
+  </article>
+  {% empty %}
+  <div class="recepcion-mobile-empty">
+    <i class="bx bx-package"></i><strong>Sin productos pendientes</strong
+    ><span>No hay productos para confirmar en esta página.</span>
+  </div>
+  {% endfor %}
+</section>
+{% if detalles.paginator.num_pages > 1 %}
+<nav
+  class="d-flex justify-content-center mt-4"
+  aria-label="Páginas de productos"
+>
+  <ul class="pagination">
+    <li class="page-item {% if not detalles.has_previous %}disabled{% endif %}">
+      {% if detalles.has_previous %}
+      <a class="page-link" href="?page={{ detalles.previous_page_number }}"
+        >«</a
+      >
+      {% else %}<span class="page-link">«</span>{% endif %}
+    </li>
+    {% paginas_cercanas detalles.number detalles.paginator.num_pages as
+    paginas_visibles %} {% for p in paginas_visibles %}
+    <li class="page-item {% if p == detalles.number %}active{% endif %}">
+      <a class="page-link" href="?page={{ p }}">{{ p }}</a>
+    </li>
     {% endfor %}
-  </section>
-  {% if detalles.paginator.num_pages > 1 %}
-    <nav class="d-flex justify-content-center mt-4" aria-label="Páginas de productos">
-      <ul class="pagination">
-        <li class="page-item {% if not detalles.has_previous %}disabled{% endif %}">
-          {% if detalles.has_previous %}
-            <a class="page-link" href="?page={{ detalles.previous_page_number }}">«</a>
-          {% else %}<span class="page-link">«</span>{% endif %}
-        </li>
-        {% paginas_cercanas detalles.number detalles.paginator.num_pages as paginas_visibles %}
-        {% for p in paginas_visibles %}
-          <li class="page-item {% if p == detalles.number %}active{% endif %}">
-            <a class="page-link" href="?page={{ p }}">{{ p }}</a>
-          </li>
-        {% endfor %}
-        <li class="page-item {% if not detalles.has_next %}disabled{% endif %}">
-          {% if detalles.has_next %}
-            <a class="page-link" href="?page={{ detalles.next_page_number }}">»</a>
-          {% else %}<span class="page-link">»</span>{% endif %}
-        </li>
-      </ul>
-    </nav>
-  {% endif %}
-  <br>
-  <script type="module" src="{% static 'js/bodega/entradainventario.js' %}?v=20261004-borrador-paginas"></script>
+    <li class="page-item {% if not detalles.has_next %}disabled{% endif %}">
+      {% if detalles.has_next %}
+      <a class="page-link" href="?page={{ detalles.next_page_number }}">»</a>
+      {% else %}<span class="page-link">»</span>{% endif %}
+    </li>
+  </ul>
+</nav>
+{% endif %}
+<br />
+<script
+  type="module"
+  src="{% static 'js/bodega/entradainventario.js' %}?v=20261004-borrador-paginas"
+></script>
 {% endblock main_content %}

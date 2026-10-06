@@ -1,0 +1,27 @@
+@media (min-width: 1033px) {
+  #tablaDetalleTraslado.tablas-todo {
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  #tablaDetalleTraslado.tablas-todo th,
+  #tablaDetalleTraslado.tablas-todo td {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}
+
+@media (max-width: 1032px) {
+  .compra-resumen__encabezado { min-height: 0 !important; padding: .55rem .75rem !important; }
+  .compra-resumen__titulo { font-size: .9rem; }
+  .compra-detalle-layout { display: flex !important; flex-direction: column !important; gap: .85rem; }
+  .compra-detalle-layout > .compra-detalle__totales { order: 1 !important; width: 100%; }
+  .compra-detalle-layout > .tablaencompras { order: 2 !important; width: 100%; min-width: 0; }
+  .detalle-traslado-table-desktop { display: none; }
+  #paginadorDetalleTraslado { display: none; }
+}
+
+@media (min-width: 681px) and (max-width: 1032px) {
+  .compra-resumen__encabezado { flex-wrap: nowrap !important; gap: .75rem; }
+  .compra-detalle__buscador { flex: 1 1 auto; margin: 0; }
+}

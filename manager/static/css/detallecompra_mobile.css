@@ -1,0 +1,79 @@
+/* Reglas propias de Detalle Compra. Se cargan al final para no heredar la
+   disposición lateral de la pantalla de recepción. */
+@media (min-width: 1033px) {
+  .compra-resumen__encabezado {
+    min-height: 62px;
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
+  }
+
+  .compra-resumen__encabezado .compra-detalle__acciones {
+    align-items: center;
+    margin: 0;
+  }
+
+  .compra-detalle__buscador {
+    margin: 0;
+  }
+
+  #tabladecom.tablas-todo {
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  #tabladecom.tablas-todo th,
+  #tabladecom.tablas-todo td {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  #tabladecom.tablas-todo th:nth-child(2),
+  #tabladecom.tablas-todo td:nth-child(2) {
+    width: 20%;
+  }
+}
+
+@media (max-width: 1032px) {
+  .compra-resumen__encabezado {
+    min-height: 0 !important;
+    padding: 0.55rem 0.75rem !important;
+  }
+
+  .compra-resumen__titulo {
+    font-size: 0.9rem;
+  }
+
+  .compra-detalle-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.85rem;
+  }
+
+  .compra-detalle-layout > .compra-detalle__totales {
+    order: 1 !important;
+    width: 100%;
+  }
+
+  .compra-detalle-layout > .tablaencompras {
+    order: 2 !important;
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+@media (min-width: 681px) and (max-width: 1032px) {
+  .compra-resumen__encabezado {
+    flex-wrap: nowrap !important;
+    gap: 0.75rem;
+  }
+
+  .compra-resumen__encabezado .compra-detalle__acciones {
+    flex: 1 1 auto;
+    flex-direction: row;
+    margin: 0 !important;
+  }
+
+  .compra-detalle__buscador {
+    flex: 1 1 auto;
+  }
+}

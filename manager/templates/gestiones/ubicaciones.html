@@ -6,6 +6,7 @@
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=ubicaciones-modal-20260930" />
 {% endblock extra_css %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/catalogos_mobile.css' %}?v=20261005-movil-solo" />{% endblock page_css_overrides %}
 {% block titulo_content %}
     <div class="tituloscont">
         <img class="logop"
@@ -17,15 +18,16 @@
     </div>
 {% endblock titulo_content %}
 {% block main_content %}
+    <form method="get" class="catalog-mobile-search"><div class="catalog-mobile-search__field"><i class="bx bx-search"></i><input type="search" name="search" value="{{ search }}" placeholder="Buscar ubicaciones" autocomplete="off"></div><button type="submit"><i class="bx bx-search"></i><span>Buscar</span></button></form>
     {% if perms.manager.add_ubicaciones %}
         <button id="toggleDropdownPanel"
-                class="btn-dropdown"
+                class="btn-dropdown catalog-mobile-add"
                 data-bs-toggle="modal"
                 data-bs-target="#modalregis">
             <i class="bx bx-plus-circle"></i> Agregar
         </button>
     {% endif %}
-    <div class="modal fade"
+    <div class="modal fade modal-sheet-mobile modal-sheet-mobile--auto catalog-mobile-modal"
          id="modalregis"
          tabindex="-1"
          aria-labelledby="exampleModalCenterTitle"
@@ -138,7 +140,7 @@
             </div>
         </div>
     </div>
-    <div class="modal fade"
+    <div class="modal fade modal-sheet-mobile modal-sheet-mobile--auto catalog-mobile-modal"
          id="modalput"
          tabindex="-1"
          aria-labelledby="exampleModalCenterTitle"
@@ -261,7 +263,7 @@
         </div>
     </div>
     <div class="tabla-container">
-        <table class="tablas-todo" id="tablacont">
+        <table class="tablas-todo catalog-mobile-table catalog-mobile-table--ubicaciones" id="tablacont">
             <thead>
                 <tr>
                     <th>#</th>

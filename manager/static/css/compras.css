@@ -236,8 +236,16 @@
 
 @media (max-width: 1032px) {
   .compra-resumen__encabezado {
-    align-items: stretch;
-    flex-direction: column;
+    align-items: center;
+    flex-flow: row wrap;
+    padding: 0.6rem 0.8rem;
+  }
+
+  .compra-resumen__titulo { font-size: 0.92rem; }
+
+  .compra-resumen__encabezado .compra-detalle__acciones {
+    flex: 1 0 100%;
+    margin-top: 0.15rem;
   }
 
   .compra-resumen__datos {
@@ -268,7 +276,7 @@
   display: flex;
   justify-content: space-between;
   gap: 1rem;
-  padding: .65rem .9rem;
+  padding: 0.65rem 0.9rem;
   border-bottom: 1px solid #ece6f0;
 }
 
@@ -555,9 +563,14 @@
   }
 
   .tablaencompras {
+    min-width: 0;
     width: 100%;
     overflow-x: auto;
   }
+
+  .compra-detalle-layout { display: flex; flex-direction: column; }
+  .compra-detalle-layout > .tablaencompras { order: 1; }
+  .compra-detalle-layout > .compra-detalle__totales { order: 2; width: 100%; }
 
   .total {
     display: grid;
@@ -827,11 +840,11 @@
 }
 
 .compras-product-option__info strong {
-  overflow: hidden;
   color: #283b36;
   font-size: 0.9rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .compras-product-option__info small {

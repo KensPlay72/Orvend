@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
     <link rel="stylesheet" href="{% static 'css/traslados.css' %}" />
 {% endblock extra_css %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/traslados_mobile.css' %}?v=20261005-lista-detalle" />{% endblock page_css_overrides %}
 {% block titulo_content %}
     <div class="tituloscont">
         <img class="logop"
@@ -18,14 +19,15 @@
     </div>
 {% endblock titulo_content %}
 {% block main_content %}
+    <form method="get" class="catalog-mobile-search traslados-mobile-search"><div class="catalog-mobile-search__field"><i class="bx bx-search"></i><input type="search" name="search" value="{{ search }}" placeholder="Buscar traslado" autocomplete="off"></div><button type="submit"><i class="bx bx-search"></i><span>Buscar</span></button></form>
     {% if perms.manager.add_traslados %}
-        <button class="btn-dropdown"
+        <button class="btn-dropdown catalog-mobile-add"
                 onclick="location.href='{% url 'traslados_create' %}'">
             <i class="bx bx-plus-circle"></i> Realizar Traslado
         </button>
     {% endif %}
     <div class="tabla-container">
-        <table class="tablas-todo" id="tablacont">
+        <table class="tablas-todo catalog-mobile-table--traslados" id="tablacont">
             <thead>
                 <tr>
                     <th>#</th>
@@ -62,6 +64,33 @@
             </tbody>
         </table>
     </div>
+    <section class="traslados-mobile-list" aria-label="Traslados registrados">
+        {% for traslado in page_obj %}
+            <a class="traslados-mobile-card" href="{% url 'detalle_traslado' traslado.documento_token %}" data-detail-url="{% url 'detalle_traslado' traslado.documento_token %}">
+                <header>
+                    <span class="traslados-mobile-card__icono"><i class="bx bx-transfer-alt" aria-hidden="true"></i></span>
+                    <span class="traslados-mobile-card__titulo"><small>Traslado #{{ traslado.id }}</small><strong>{{ traslado.ubicacion_origen.nombre }} <i class="bx bx-right-arrow-alt" aria-hidden="true"></i> {{ traslado.ubicacion_destino.nombre }}</strong></span>
+                    <i class="bx bx-chevron-right traslados-mobile-card__flecha" aria-hidden="true"></i>
+                </header>
+                <div class="traslados-mobile-card__datos">
+                    <div><span>Solicitado por</span><strong>{{ traslado.solicitado_por.username }}</strong></div>
+                    <div><span>Fecha</span><strong>{{ traslado.f_creacion|date:"d/m/Y H:i" }}</strong></div>
+                </div>
+                <footer>
+                    {% if traslado.estado == "Pendiente" %}
+                        <span class="badge bg-warning text-dark">Pendiente</span>
+                    {% elif traslado.estado == "Completado" %}
+                        <span class="badge bg-success">Completado</span>
+                    {% else %}
+                        <span class="badge bg-danger">Cancelado</span>
+                    {% endif %}
+                    <span>Ver detalle</span>
+                </footer>
+            </a>
+        {% empty %}
+            <div class="traslados-mobile-empty"><i class="bx bx-transfer-alt"></i><strong>Sin traslados</strong><span>No hay traslados registrados.</span></div>
+        {% endfor %}
+    </section>
     <nav class="d-flex justify-content-center mt-4">
         <ul class="pagination">
             <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
@@ -88,5 +117,5 @@
             </li>
         </ul>
     </nav>
-    <script type="module" src="{% static 'js/gestiones/traslados_list.js' %}"></script>
+    <script type="module" src="{% static 'js/gestiones/traslados_list.js' %}?v=20261005-detalle-movil"></script>
 {% endblock main_content %}

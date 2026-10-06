@@ -1,0 +1,70 @@
+@import url("catalogos_mobile.css?v=20261005-tarjetas-detalle");
+
+@media (max-width: 1032px) {
+  /* Aísla Descuentos de las reglas centradas de Bootstrap para conservar la
+     misma hoja inferior de Productos, aun cuando el diálogo sea modal-xl. */
+  #modalregis.modal-sheet-mobile.fade .modal-dialog.descuento-modal,
+  #modalput.modal-sheet-mobile.fade .modal-dialog.descuento-modal {
+    position: fixed !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    display: flex !important;
+    flex-direction: column;
+    width: 100vw !important;
+    max-width: none !important;
+    height: min(92dvh, 760px) !important;
+    margin: 0 !important;
+    transform: translateY(100%) !important;
+    transition: transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  }
+  #modalregis.modal-sheet-mobile.fade.show .modal-dialog.descuento-modal,
+  #modalput.modal-sheet-mobile.fade.show .modal-dialog.descuento-modal {
+    transform: translateY(0) !important;
+  }
+  #modalregis.modal-sheet-mobile .descuento-modal .modal-content,
+  #modalput.modal-sheet-mobile .descuento-modal .modal-content {
+    width: 100% !important;
+    height: 100% !important;
+  }
+  .descuento-modal .modal-content { border-radius: 1rem 1rem 0 0; }
+  .descuento-modal .modal-content > form {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .descuento-modal .modal-header { padding: .85rem .9rem .65rem; }
+  .descuento-modal .modal-header .btn-close { display: block; margin: 0; }
+  .descuento-modal__eyebrow { font-size: .61rem; }
+  .descuento-modal .modal-title { font-size: 1rem; line-height: 1.25; }
+  .descuento-modal .modal-body { min-height: 0; flex: 1 1 auto; padding: .7rem .8rem .85rem; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+  .descuento-modal .descuento-modal__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; margin: 0 !important; }
+  .descuento-modal .descuento-modal__grid > .col-md-6 { width: auto; padding: 0; }
+  .descuento-modal .descuento-modal__grid + .descuento-modal__grid { margin-top: .65rem !important; }
+  .descuento-modal .card { border-radius: .75rem; box-shadow: none; }
+  .descuento-modal .card-header { padding: .58rem .7rem; font-size: .76rem; }
+  .descuento-modal .card-body { padding: .65rem; }
+  .descuento-modal .form-group { margin-bottom: .65rem; }
+  .descuento-modal .form-group label,
+  .descuento-modal .form-check-label { font-size: .73rem; }
+  .descuento-modal .form-control,
+  .descuento-modal textarea,
+  .descuento-modal .select-container > .btn.form-control { min-height: 43px; border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 20%, #fff); border-radius: .65rem; background: #fff; font-size: 16px !important; }
+  .descuento-modal textarea { min-height: 78px; }
+  .descuento-modal .form-switch { min-height: 38px; margin: .55rem 0; padding: .5rem .55rem .5rem 2.65rem; }
+  .descuento-modal .form-switch .form-check-input { margin-left: -2rem; }
+  .descuento-modal .form-text,
+  .descuento-modal small.text-muted { margin: -.25rem 0 .55rem; font-size: .66rem; }
+  .descuento-modal hr,
+  .descuento-modal br { display: none; }
+  .descuento-modal .dropdown-menu { position: fixed !important; inset: auto .75rem .75rem !important; width: auto !important; max-height: 52dvh; overflow-y: auto; }
+  .descuento-modal .modal-footer { display: block; padding: .7rem .8rem calc(.7rem + env(safe-area-inset-bottom)); }
+  .descuento-modal .modal-footer .btn-secondary { display: none; }
+  .descuento-modal .modal-footer .btn:not(.btn-secondary) { width: 100%; min-height: 44px; margin: 0; }
+}
+
+@media (max-width: 680px) {
+  .descuento-modal .descuento-modal__grid { grid-template-columns: 1fr; }
+}

@@ -3,7 +3,8 @@
   --cuadre-primary-soft: color-mix(in srgb, var(--system-primary) 12%, #fff);
   --cuadre-primary-strong: var(--system-secondary);
   --cuadre-border: color-mix(in srgb, var(--system-primary) 18%, #fff);
-  --cuadre-shadow: 0 10px 24px color-mix(in srgb, var(--system-secondary) 10%, transparent);
+  --cuadre-shadow: 0 10px 24px
+    color-mix(in srgb, var(--system-secondary) 10%, transparent);
 }
 
 .cuadre-caja-shell {
@@ -23,7 +24,11 @@
   margin-bottom: 1.2rem;
   border: 1px solid var(--cuadre-border);
   border-radius: 1.1rem;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--system-primary) 8%, #fff), rgba(255, 255, 255, 0.95));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--system-primary) 8%, #fff),
+    rgba(255, 255, 255, 0.95)
+  );
   box-shadow: var(--cuadre-shadow);
 }
 
@@ -86,12 +91,15 @@
   border-radius: 1rem;
   box-shadow: var(--cuadre-shadow);
   min-height: 120px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .summary-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 14px 30px color-mix(in srgb, var(--system-secondary) 14%, transparent);
+  box-shadow: 0 14px 30px
+    color-mix(in srgb, var(--system-secondary) 14%, transparent);
 }
 
 .summary-card__icon {
@@ -123,19 +131,35 @@
 }
 
 .summary-card--sales {
-  background: linear-gradient(135deg, #ffffff, color-mix(in srgb, var(--system-primary) 5%, #fff));
+  background: linear-gradient(
+    135deg,
+    #ffffff,
+    color-mix(in srgb, var(--system-primary) 5%, #fff)
+  );
 }
 
 .summary-card--opening {
-  background: linear-gradient(135deg, #ffffff, color-mix(in srgb, var(--system-primary) 4%, #fff));
+  background: linear-gradient(
+    135deg,
+    #ffffff,
+    color-mix(in srgb, var(--system-primary) 4%, #fff)
+  );
 }
 
 .summary-card--expected {
-  background: linear-gradient(135deg, #ffffff, color-mix(in srgb, var(--system-primary) 8%, #fff));
+  background: linear-gradient(
+    135deg,
+    #ffffff,
+    color-mix(in srgb, var(--system-primary) 8%, #fff)
+  );
 }
 
 .summary-card--withdrawals {
-  background: linear-gradient(135deg, #ffffff, color-mix(in srgb, var(--system-primary) 6%, #fff));
+  background: linear-gradient(
+    135deg,
+    #ffffff,
+    color-mix(in srgb, var(--system-primary) 6%, #fff)
+  );
 }
 
 /* En Cuadre se conserva el encabezado superior, pero no el menú lateral. */
@@ -172,7 +196,7 @@ body:has(.cuadre-caja-shell) .header-notifications {
    márgenes laterales grandes ni tablas que obliguen a desplazarse. */
 @media (max-width: 1032px) {
   body:has(.cuadre-caja-shell) {
-    padding-top: 3.7rem !important;
+    padding-top: 4rem !important;
   }
 
   body:has(.cuadre-caja-shell) .main {
@@ -182,7 +206,7 @@ body:has(.cuadre-caja-shell) .header-notifications {
   .cuadre-caja-shell.container-fluid {
     width: 100%;
     margin: 0 !important;
-    padding: 0.45rem 0.65rem 1rem;
+    padding: var(--mobile-content-top-space, 0.65rem) 0.65rem 1rem;
   }
 
   .cuadre-caja-shell > br {
@@ -337,7 +361,8 @@ body:has(.cuadre-caja-shell) .header-notifications {
     border: 1px solid var(--cuadre-border);
     border-radius: 10px;
     background: #fff;
-    box-shadow: 0 3px 9px color-mix(in srgb, var(--system-secondary) 7%, transparent);
+    box-shadow: 0 3px 9px
+      color-mix(in srgb, var(--system-secondary) 7%, transparent);
   }
 
   .cuadre-table tbody td {
@@ -447,7 +472,8 @@ body:has(.cuadre-caja-shell) .header-notifications {
     margin: 0.85rem -0.65rem 0 !important;
     padding: 0.7rem 0.65rem calc(0.7rem + env(safe-area-inset-bottom));
     background: color-mix(in srgb, #fff 92%, transparent);
-    box-shadow: 0 -7px 18px color-mix(in srgb, var(--system-secondary) 10%, transparent);
+    box-shadow: 0 -7px 18px
+      color-mix(in srgb, var(--system-secondary) 10%, transparent);
   }
 
   #btnCerrarCuadre {
@@ -634,7 +660,11 @@ body:has(.cuadre-caja-shell) .header-notifications {
 .difference-card {
   padding: 1.2rem 1.4rem;
   border-radius: 1rem;
-  background: linear-gradient(135deg, var(--cuadre-primary), var(--system-button));
+  background: linear-gradient(
+    135deg,
+    var(--cuadre-primary),
+    var(--system-button)
+  );
   color: #fff;
   box-shadow: var(--cuadre-shadow);
 }
@@ -683,7 +713,11 @@ body:has(.cuadre-caja-shell) .header-notifications {
   align-items: flex-start;
   gap: 1rem;
   padding: 1rem 1.2rem;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--system-primary) 3%, #fff), color-mix(in srgb, var(--system-primary) 8%, #fff));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--system-primary) 3%, #fff),
+    color-mix(in srgb, var(--system-primary) 8%, #fff)
+  );
   border-bottom: 1px solid var(--cuadre-border);
 }
 
@@ -735,14 +769,19 @@ body:has(.cuadre-caja-shell) .header-notifications {
 
 .cuadre-table .cantidad-billete:focus {
   border-color: var(--cuadre-primary);
-  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--system-secondary) 16%, transparent);
+  box-shadow: 0 0 0 0.2rem
+    color-mix(in srgb, var(--system-secondary) 16%, transparent);
 }
 
 .payment-reconciliation {
   padding: 1.25rem;
   border: 1px solid var(--cuadre-border);
   border-radius: 1.1rem;
-  background: linear-gradient(145deg, #fff, color-mix(in srgb, var(--system-primary) 3%, #fff));
+  background: linear-gradient(
+    145deg,
+    #fff,
+    color-mix(in srgb, var(--system-primary) 3%, #fff)
+  );
   box-shadow: var(--cuadre-shadow);
 }
 
@@ -762,7 +801,8 @@ body:has(.cuadre-caja-shell) .header-notifications {
   background: var(--system-primary);
   color: #fff;
   font-size: 1.3rem;
-  box-shadow: 0 7px 16px color-mix(in srgb, var(--system-secondary) 18%, transparent);
+  box-shadow: 0 7px 16px
+    color-mix(in srgb, var(--system-secondary) 18%, transparent);
 }
 
 .payment-reconciliation__eyebrow {
@@ -804,8 +844,12 @@ body:has(.cuadre-caja-shell) .header-notifications {
   border: 1px solid color-mix(in srgb, var(--system-primary) 16%, #fff);
   border-radius: 0.95rem;
   background: #fff;
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--system-secondary) 8%, transparent);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 6px 16px
+    color-mix(in srgb, var(--system-secondary) 8%, transparent);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .payment-reconciliation__card::before {
@@ -821,7 +865,8 @@ body:has(.cuadre-caja-shell) .header-notifications {
 .payment-reconciliation__card:hover {
   transform: translateY(-2px);
   border-color: color-mix(in srgb, var(--system-primary) 36%, #fff);
-  box-shadow: 0 10px 20px color-mix(in srgb, var(--system-secondary) 13%, transparent);
+  box-shadow: 0 10px 20px
+    color-mix(in srgb, var(--system-secondary) 13%, transparent);
 }
 
 .payment-reconciliation__icon {
@@ -882,7 +927,8 @@ body:has(.cuadre-caja-shell) .header-notifications {
 
 .payment-reconciliation__card .monto-otro-pago:focus {
   border-color: var(--system-primary);
-  box-shadow: 0 0 0 0.18rem color-mix(in srgb, var(--system-secondary) 15%, transparent);
+  box-shadow: 0 0 0 0.18rem
+    color-mix(in srgb, var(--system-secondary) 15%, transparent);
 }
 
 .payment-reconciliation__card small {
@@ -903,7 +949,8 @@ body:has(.cuadre-caja-shell) .header-notifications {
   padding: 1.45rem !important;
   border: 1px solid color-mix(in srgb, var(--system-primary) 18%, #fff) !important;
   border-radius: 1.1rem !important;
-  box-shadow: 0 16px 34px color-mix(in srgb, var(--system-secondary) 18%, transparent) !important;
+  box-shadow: 0 16px 34px
+    color-mix(in srgb, var(--system-secondary) 18%, transparent) !important;
 }
 
 .cuadre-confirmacion-popup .swal2-title {
@@ -1005,7 +1052,11 @@ body:has(.cuadre-caja-shell) .header-notifications {
   margin-top: 1rem;
   padding: 0.9rem 1rem;
   border-radius: 0.8rem;
-  background: linear-gradient(135deg, var(--system-primary), var(--system-button));
+  background: linear-gradient(
+    135deg,
+    var(--system-primary),
+    var(--system-button)
+  );
   color: #fff;
 }
 
@@ -1054,8 +1105,13 @@ body:has(.cuadre-caja-shell) .header-notifications {
   padding: 0.6rem 1rem;
   font-weight: 700;
   font-size: 0.95rem;
-  background: linear-gradient(135deg, var(--cuadre-primary), var(--system-button));
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--system-secondary) 24%, transparent);
+  background: linear-gradient(
+    135deg,
+    var(--cuadre-primary),
+    var(--system-button)
+  );
+  box-shadow: 0 10px 24px
+    color-mix(in srgb, var(--system-secondary) 24%, transparent);
 }
 
 #btnCerrarCuadre:hover {
@@ -1120,10 +1176,25 @@ body:has(.cuadre-caja-shell) .header-notifications {
     align-items: center;
   }
 
-  .summary-card__icon { grid-row: 1 / span 2; grid-column: 1; }
-  .summary-card > div:not(.summary-card__icon) { display: contents; }
-  .summary-card__label { grid-row: 1; grid-column: 2; align-self: end; margin: 0; }
-  .summary-card h3 { grid-row: 2; grid-column: 2; align-self: start; margin-top: 0.12rem; }
+  .summary-card__icon {
+    grid-row: 1 / span 2;
+    grid-column: 1;
+  }
+  .summary-card > div:not(.summary-card__icon) {
+    display: contents;
+  }
+  .summary-card__label {
+    grid-row: 1;
+    grid-column: 2;
+    align-self: end;
+    margin: 0;
+  }
+  .summary-card h3 {
+    grid-row: 2;
+    grid-column: 2;
+    align-self: start;
+    margin-top: 0.12rem;
+  }
 
   .cuadre-table thead {
     display: block;
@@ -1159,10 +1230,18 @@ body:has(.cuadre-caja-shell) .header-notifications {
     text-align: center !important;
   }
 
-  .cuadre-table tbody td:last-child { text-align: center !important; }
-  .cuadre-table tbody td::before { display: none; }
-  .cuadre-table .cantidad-billete { max-width: 64px; }
-  .cuadre-table tfoot { display: none; }
+  .cuadre-table tbody td:last-child {
+    text-align: center !important;
+  }
+  .cuadre-table tbody td::before {
+    display: none;
+  }
+  .cuadre-table .cantidad-billete {
+    max-width: 64px;
+  }
+  .cuadre-table tfoot {
+    display: none;
+  }
 
   .cuadre-total-mobile {
     display: flex;
@@ -1176,10 +1255,17 @@ body:has(.cuadre-caja-shell) .header-notifications {
     background: var(--system-primary);
   }
 
-  .cuadre-total-mobile span { font-size: 0.78rem; font-weight: 800; }
-  .cuadre-total-mobile strong { font-size: 1.05rem; }
+  .cuadre-total-mobile span {
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+  .cuadre-total-mobile strong {
+    font-size: 1.05rem;
+  }
 
-  .cuadre-confirmacion-modal .modal-body { padding: 0.85rem; }
+  .cuadre-confirmacion-modal .modal-body {
+    padding: 0.85rem;
+  }
 
   #modalConfirmarCuadre.modal-sheet-mobile.fade .modal-dialog {
     top: auto;
@@ -1205,7 +1291,9 @@ body:has(.cuadre-caja-shell) .header-notifications {
     grid-template-columns: 0.75fr 1.25fr;
     padding: 0.7rem 0.85rem calc(0.7rem + env(safe-area-inset-bottom));
   }
-  .cuadre-confirmacion-modal .modal-footer .btn { min-height: 43px; }
+  .cuadre-confirmacion-modal .modal-footer .btn {
+    min-height: 43px;
+  }
   .cuadre-confirmacion-modal .cuadre-confirmacion__header,
   .cuadre-confirmacion-modal .cuadre-confirmacion__row {
     grid-template-columns: minmax(88px, 1.2fr) repeat(3, minmax(52px, 1fr));
@@ -1214,7 +1302,9 @@ body:has(.cuadre-caja-shell) .header-notifications {
     padding-left: 0.35rem;
     font-size: 0.72rem;
   }
-  .cuadre-confirmacion-modal .cuadre-confirmacion__header { font-size: 0.68rem; }
+  .cuadre-confirmacion-modal .cuadre-confirmacion__header {
+    font-size: 0.68rem;
+  }
   .cuadre-confirmacion-modal .cuadre-confirmacion__method {
     justify-content: center;
     gap: 0.24rem;

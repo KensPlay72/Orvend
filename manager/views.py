@@ -1735,8 +1735,12 @@ def combos_view(request):
 @login_required
 @permission_required("manager.view_combos", raise_exception=True)
 def combos_list_view(request):
+    search = request.GET.get("search", "").strip()
+    combos = Combos.objects.filter(is_delete=False).select_related("imagen")
+    if search:
+        combos = combos.filter(Q(nombre__icontains=search) | Q(codigo_sku__icontains=search))
     paginator = Paginator(
-        Combos.objects.filter(is_delete=False).select_related("imagen").order_by("nombre"),
+        combos.order_by("nombre"),
         10,
     )
     page_obj = paginator.get_page(request.GET.get("page", 1))
@@ -1746,7 +1750,8 @@ def combos_list_view(request):
         {
             "combos": page_obj,
             "page_obj": page_obj,
-            "mostrar_buscador": False,
+            "search": search,
+            "mostrar_buscador": True,
         },
     )
 
@@ -4892,9 +4897,19 @@ def detalle_compra_view(request, token):
     # Solo el permiso de Compras habilita importes; la vista desde la que se
     # abrió el detalle no modifica esa autorización.
     mostrar_importes = puede_ver_compras
+    busqueda = request.GET.get("search", "").strip()
+    detalles_query = compra.compra_detalles.select_related(
+        "producto__unidad_medida"
+    ).order_by("id")
+    if busqueda:
+        detalles_query = detalles_query.filter(
+            Q(producto__nombre__icontains=busqueda)
+            | Q(producto__codigo_sku__icontains=busqueda)
+        )
+    page_obj = Paginator(detalles_query, 10).get_page(request.GET.get("page", 1))
     detalles = []
 
-    for d in compra.compra_detalles.all():
+    for d in page_obj:
         producto = d.producto
 
         detalles.append(
@@ -4937,7 +4952,9 @@ def detalle_compra_view(request, token):
         "ubicacion": compra.ubicacion.nombre,
         "proveedorNombre": compra.proveedor.nombre_comercial,
         "tipoCompra": compra.get_tipo_compra_display(),
-        "totalProductos": int(sum(d.cantidad for d in compra.compra_detalles.all())),
+        "totalProductos": int(
+            compra.compra_detalles.aggregate(total=Sum("cantidad"))["total"] or 0
+        ),
         "detalles": detalles,
         "mostrar_importes": mostrar_importes,
         "puede_marcar_llegada": (
@@ -4962,7 +4979,11 @@ def detalle_compra_view(request, token):
             }
         )
 
-    return render(request, "compras/detallecompra.html", {"compra": data})
+    return render(
+        request,
+        "compras/detallecompra.html",
+        {"compra": data, "page_obj": page_obj, "search": busqueda},
+    )
 
 
 @csrf_exempt
@@ -6643,7 +6664,7 @@ def recepcion_inventario_view(request):
                 "token": t.documento_token,
                 "tipo": "Traslado",
                 "tipo_codigo": "TRASLADO",
-                "detalle_url": "",
+                "detalle_url": reverse("detalle_traslado", args=[t.documento_token]),
                 "referencia": f"{t.ubicacion_origen.nombre} → {t.ubicacion_destino.nombre}",
                 "fecha": t.f_creacion,
                 "cantidad": float(total_pendiente),
@@ -8830,6 +8851,14 @@ def traslados_view(request):
 @permission_required("manager.view_traslados", raise_exception=True)
 def inventario_por_ubicacion(request, ubicacion_id):
 
+    try:
+        page = max(1, int(request.GET.get("page", 1)))
+        limit = min(20, max(1, int(request.GET.get("limit", 10))))
+    except ValueError:
+        return JsonResponse({"error": "Paginación inválida"}, status=400)
+
+    search = request.GET.get("search", "").strip()
+
     imagen_subquery = (
         ProductosImagenes.objects
         .filter(
@@ -8840,6 +8869,20 @@ def inventario_por_ubicacion(request, ubicacion_id):
             imagen_archivo=""
         )
         .values("id")[:1]
+    )
+
+    reserva_subquery = (
+        ReservaInventario.objects
+        .filter(
+            producto_id=OuterRef("producto_id"),
+            ubicacion_id=ubicacion_id,
+            estado=ReservaInventario.Estado.RESERVADA,
+            is_active=True,
+            is_delete=False,
+        )
+        .values("producto_id")
+        .annotate(total=Sum("cantidad"))
+        .values("total")[:1]
     )
 
     inventario = (
@@ -8858,17 +8901,34 @@ def inventario_por_ubicacion(request, ubicacion_id):
             total_stock=Sum("cantidad"),
             imagen_id=Subquery(imagen_subquery),
         )
+        .annotate(
+            total_reservado=Coalesce(
+                Subquery(reserva_subquery),
+                Value(Decimal("0"), output_field=DecimalField(max_digits=18, decimal_places=4)),
+            ),
+            stock_disponible=F("total_stock") - F("total_reservado"),
+        )
+        .filter(stock_disponible__gte=1)
+        .order_by("producto__nombre", "producto_id")
     )
+
+    if search:
+        inventario = inventario.filter(
+            Q(producto__nombre__icontains=search)
+            | Q(producto__codigo_sku__icontains=search)
+        )
+
+    page_obj = Paginator(inventario, limit).get_page(page)
 
     data = []
 
-    for item in inventario:
+    for item in page_obj:
 
         stock = float(
-            item["total_stock"] or 0
+            item["stock_disponible"] or 0
         )
 
-        if stock <= 0:
+        if stock < 1:
             continue
 
         imagen_url = ""
@@ -8895,10 +8955,12 @@ def inventario_por_ubicacion(request, ubicacion_id):
             }
         )
 
-    return JsonResponse(
-        data,
-        safe=False,
-    )
+    return JsonResponse({
+        "results": data,
+        "page": page_obj.number,
+        "totalPages": page_obj.paginator.num_pages,
+        "total": page_obj.paginator.count,
+    })
 
 
 @login_required
@@ -9064,6 +9126,12 @@ def post_traslado(request):
 
                     raise Exception(
                         "Cantidad debe ser mayor a 0"
+                    )
+
+                if cantidad_solicitada != cantidad_solicitada.to_integral_value():
+
+                    raise Exception(
+                        "La cantidad a trasladar debe ser un número entero"
                     )
 
                 # ---------------------------------------------
@@ -10693,6 +10761,20 @@ def _stock_para_mostrar(stock):
     return Decimal(str(stock)).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
 
 
+class StockInsuficienteError(Exception):
+    """Error controlado para devolver el stock vigente a Caja sin recargarla."""
+
+    def __init__(self, producto, disponible, requerido):
+        self.producto_id = producto.id
+        self.producto_nombre = producto.nombre
+        self.disponible = Decimal(str(disponible))
+        self.requerido = Decimal(str(requerido))
+        super().__init__(
+            f"Ya no hay existencias suficientes de {producto.nombre}. "
+            f"Disponible: {self.disponible}, necesario: {self.requerido}."
+        )
+
+
 def _datos_combo_caja(combo, ubicaciones):
     detalles = list(combo.detalles.select_related("producto"))
     if not detalles:
@@ -11546,7 +11628,22 @@ def guardar_compra(request):
             # NUMERO DE FACTURA
             # =====================================================
 
-            sat = datos_sat.objects.filter(
+            # El consecutivo es único en toda la instalación. Se bloquea una
+            # fila compartida antes de leer MAX()+1 para que dos cajeros no
+            # puedan reservar el mismo número de factura al mismo tiempo.
+            ultima_factura_bloqueada = (
+                facturas_cai.objects.select_for_update()
+                .order_by("-numero_factura")
+                .first()
+            )
+            if ultima_factura_bloqueada is None:
+                # En una instalación sin facturas aún, la configuración es
+                # el candado común que evita la carrera de la primera venta.
+                ConfiguracionEmpresa.objects.select_for_update().filter(
+                    is_delete=False
+                ).order_by("id").first()
+
+            sat = datos_sat.objects.select_for_update().filter(
                 id_sucursal_id=sucursal_id,
                 is_active=True,
                 is_delete=False,
@@ -11813,40 +11910,48 @@ def guardar_compra(request):
                     # STOCK COMPARTIDO
                     # =================================================
 
-                    stock_total = (
+                    # =================================================
+                    # LOTES FIFO COMPARTIDOS BLOQUEADOS
+                    # =================================================
+                    # El bloqueo se toma antes de comprobar el saldo. Así,
+                    # dos cajeros que intenten vender la última unidad no
+                    # pueden leer el mismo lote y descontarlo dos veces.
+                    lotes = list(
                         Inventarios.objects
+                        .select_for_update()
                         .filter(
                             producto=producto_inventario,
                             ubicacion_id__in=ubicaciones_inventario,
-                            cantidad__gt=0,
-                        )
-                        .aggregate(
-                            total=Sum("cantidad")
-                        )["total"]
-                        or Decimal("0")
-                    )
-
-                    if stock_total < cantidad_a_rebajar:
-                        raise Exception(
-                            f"Stock insuficiente para "
-                            f"{producto_inventario.nombre}. "
-                            f"Disponible: {stock_total}, "
-                            f"necesario: {cantidad_a_rebajar}"
-                        )
-
-                    # =================================================
-                    # LOTES FIFO COMPARTIDOS
-                    # =================================================
-
-                    lotes = (
-                        Inventarios.objects
-                        .filter(
-                            producto=producto_inventario,
-                            ubicacion_id__in=ubicaciones_inventario,
+                            is_active=True,
+                            is_delete=False,
                             cantidad__gt=0,
                         )
                         .order_by("f_creacion", "id")
                     )
+
+                    stock_total = sum(
+                        (Decimal(str(lote.cantidad)) for lote in lotes),
+                        Decimal("0"),
+                    )
+                    stock_reservado = (
+                        ReservaInventario.objects.filter(
+                            producto=producto_inventario,
+                            ubicacion_id__in=ubicaciones_inventario,
+                            estado=ReservaInventario.Estado.RESERVADA,
+                            is_delete=False,
+                        ).aggregate(total=Sum("cantidad"))["total"]
+                        or Decimal("0")
+                    )
+                    stock_disponible = max(
+                        stock_total - Decimal(str(stock_reservado)), Decimal("0")
+                    )
+
+                    if stock_disponible < cantidad_a_rebajar:
+                        raise StockInsuficienteError(
+                            producto_inventario,
+                            stock_disponible,
+                            cantidad_a_rebajar,
+                        )
 
                     cantidad_necesaria = cantidad_a_rebajar
 
@@ -12180,6 +12285,20 @@ def guardar_compra(request):
                 }
             )
 
+    except StockInsuficienteError as e:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": str(e),
+                "stock_insuficiente": {
+                    "producto_id": e.producto_id,
+                    "producto_nombre": e.producto_nombre,
+                    "disponible": str(_stock_para_mostrar(e.disponible)),
+                    "requerido": str(e.requerido),
+                },
+            },
+            status=409,
+        )
     except Exception as e:
 
         return JsonResponse(

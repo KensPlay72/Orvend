@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 {% endblock extra_css %}
 {% block page_css_overrides %}
-<link rel="stylesheet" href="{% static 'css/inventario.css' %}?v=20261005-css-unificado-10" />
+<link rel="stylesheet" href="{% static 'css/inventario.css' %}?v=20261005-precarga-imagenes" />
 {% endblock page_css_overrides %}
 {% block titulo_content %}
     <div class="tituloscont">
@@ -43,7 +43,7 @@
                     </button>
                     <div class="inventario-mobile-card__detail">
                         <div class="inventario-mobile-card__detail-inner">
-                            <section class="inventario-mobile-card__image"><span>Imagen</span><div><i class="bx bx-image-alt" aria-hidden="true"></i><img alt="Imagen del producto" width="60" height="60" hidden></div></section>
+                            <section class="inventario-mobile-card__image"><div><i class="bx bx-image-alt" aria-hidden="true"></i><img alt="Imagen del producto" width="120" height="120" hidden></div></section>
                             <section class="inventario-mobile-card__locations"><span>Ubicación</span><ul><li><i class="bx bx-loader-alt bx-spin" aria-hidden="true"></i><span>Selecciona el producto para consultar existencias.</span></li></ul></section>
                         </div>
                     </div>
@@ -146,5 +146,5 @@
         </div>
     </div>
     <br>
-    <script type="module" src="{% static 'js/gestiones/inventario.js' %}?v=20261005-listado-plegable-02"></script>
+    <script type="module" src="{% static 'js/gestiones/inventario.js' %}?v=20261005-precarga-movil"></script>
 {% endblock main_content %}

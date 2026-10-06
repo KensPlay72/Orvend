@@ -4,6 +4,7 @@
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 {% endblock %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/catalogos_mobile.css' %}?v=20261005-movil-solo" />{% endblock page_css_overrides %}
 
 {% block titulo_content %}
     <div class="tituloscont">
@@ -12,6 +13,7 @@
     </div>
 {% endblock %}
 {% block main_content %}
+<form method="get" class="catalog-mobile-search"><div class="catalog-mobile-search__field"><i class="bx bx-search"></i><input type="search" name="search" value="{{ search }}" placeholder="Buscar proveedores" autocomplete="off"></div><button type="submit"><i class="bx bx-search"></i><span>Buscar</span></button></form>
 <div class="divbuttons2">
     {% if perms.manager.add_proveedores %}
     <button id="toggleDropdownPanel" class="btn-dropdown" data-bs-toggle="modal"
@@ -27,7 +29,7 @@
 </div>
 
 
-        <div class="modal fade"
+        <div class="modal fade modal-sheet-mobile modal-sheet-mobile--auto catalog-mobile-modal"
              id="modalregis"
              tabindex="-1"
              aria-labelledby="exampleModalCenterTitle"
@@ -116,7 +118,7 @@
             </div>
         </div>
 
-        <div class="modal fade"
+        <div class="modal fade modal-sheet-mobile modal-sheet-mobile--auto catalog-mobile-modal"
              id="modalput"
              tabindex="-1"
              aria-labelledby="exampleModalCenterTitle"
@@ -217,7 +219,7 @@
         </div>
 
 <div class="tabla-container">
-    <table class="tablas-todo" id="tablacont">
+    <table class="tablas-todo catalog-mobile-table catalog-mobile-table--proveedores" id="tablacont">
         <thead>
             <tr>
                 <th>#</th>

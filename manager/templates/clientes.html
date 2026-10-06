@@ -2,8 +2,11 @@
 {% load static pagination_tags %}
 {% block title %}Clientes{% endblock %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261005-number-inputs" />
 {% endblock %}
+{% block page_css_overrides %}
+    <link rel="stylesheet" href="{% static 'css/clientes_mobile.css' %}?v=20261005-tarjetas-movil-04" />
+{% endblock page_css_overrides %}
 {% block titulo_content %}
     <div class="tituloscont">
         <img class="logop" src="{% static 'img/LH.webp' %}" alt="">
@@ -11,6 +14,10 @@
     </div>
 {% endblock %}
 {% block main_content %}
+<section class="clientes-mobile-search-card" aria-label="Buscar clientes">
+    <div class="clientes-mobile-search-card__intro"><span><i class="bx bx-user" aria-hidden="true"></i></span><div><strong>Buscar clientes</strong><small>Consulta por nombre, DNI, correo o teléfono.</small></div></div>
+    <form method="get" class="clientes-mobile-search" role="search"><div class="clientes-mobile-search__field"><i class="bx bx-search" aria-hidden="true"></i><input type="search" name="search" value="{{ search }}" placeholder="Nombre, DNI o teléfono" autocomplete="off"></div><button type="submit"><i class="bx bx-search" aria-hidden="true"></i><span>Buscar</span></button></form>
+</section>
 <div class="full2">
     <div class="ventanas">
         <div class="ventanasi">
@@ -66,12 +73,12 @@
 </div>
 
         {% comment %} MODAL REGISTRAR {% endcomment %}
-        <div class="modal fade"
+        <div class="modal fade modal-sheet-mobile"
              id="modalregis"
              tabindex="-1"
              aria-labelledby="exampleModalCenterTitle"
              aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-dialog modal-dialog-centered clientes-modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="exampleModalLongTitle">Registrar Cliente</h5>
@@ -191,12 +198,13 @@
                                 </label>
 
                                 <input
-                                    type="text"
+                                    type="tel"
                                     name="dni"
                                     id="dni"
                                     class="form-control"
                                     placeholder="DNI/RTN"
                                     oninput="validateNumber(this)"
+                                    inputmode="numeric"
                                     maxlength="14"
                                 >
 
@@ -238,12 +246,13 @@
                                 </label>
 
                                 <input
-                                    type="text"
+                                    type="tel"
                                     name="telefono"
                                     id="telefono"
                                     class="form-control"
                                     placeholder="Número de teléfono"
                                     oninput="validateNumber(this)"
+                                    inputmode="tel"
                                     maxlength="12"
                                 >
 
@@ -332,7 +341,7 @@
                                 DIRECCION
                             =========================================================== -->
 
-                            <div class="form-group">
+                            <div class="form-group cliente-address-field">
 
                                 <label for="direccion">
                                     Dirección
@@ -366,12 +375,13 @@
                                     </label>
 
                                     <input
-                                        type="text"
+                                        type="number"
                                         name="d_credito"
                                         id="d_credito"
                                         class="form-control"
                                         placeholder="Dias de Credito"
                                         oninput="validateNumber(this)"
+                                        min="0" step="1" inputmode="numeric"
                                     >
 
                                 </div>
@@ -383,12 +393,13 @@
                                     </label>
 
                                     <input
-                                        type="text"
+                                        type="number"
                                         name="max_credito"
                                         placeholder="Credito Maximo"
                                         id="max_credito"
                                         class="form-control"
                                         oninput="validateNumber(this)"
+                                        min="0" step="0.01" inputmode="decimal"
                                     >
 
                                 </div>
@@ -407,12 +418,12 @@
         </div>
 
         {% comment %} MODAL EDITAR {% endcomment %}
-        <div class="modal fade"
+        <div class="modal fade modal-sheet-mobile"
              id="modalput"
              tabindex="-1"
              aria-labelledby="exampleModalCenterTitle"
              aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-dialog modal-dialog-centered clientes-modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="exampleModalLongTitle">Editar Empleado</h5>
@@ -556,12 +567,13 @@
                                 </label>
 
                                 <input
-                                    type="text"
+                                    type="tel"
                                     name="dniedit"
                                     id="dniedit"
                                     class="form-control"
                                     placeholder="DNI/RTN"
                                     oninput="validateNumber(this)"
+                                    inputmode="numeric"
                                     maxlength="14"
                                 >
 
@@ -605,12 +617,13 @@
                                 </label>
 
                                 <input
-                                    type="text"
+                                    type="tel"
                                     name="telefonoedit"
                                     id="telefonoedit"
                                     class="form-control"
                                     placeholder="Número de teléfono"
                                     oninput="validateNumber(this)"
+                                    inputmode="tel"
                                     maxlength="12"
                                 >
 
@@ -636,7 +649,7 @@
                                 DIRECCION
                             =========================================================== -->
 
-                            <div class="form-group">
+                            <div class="form-group cliente-address-field">
 
                                 <label for="direccionedit">
                                     Dirección
@@ -737,12 +750,13 @@
                                     </label>
 
                                     <input
-                                        type="text"
+                                        type="number"
                                         name="d_creditoedit"
                                         id="d_creditoedit"
                                         class="form-control"
                                         placeholder="Dias de Credito"
                                         oninput="validateNumber(this)"
+                                        min="0" step="1" inputmode="numeric"
                                     >
 
                                 </div>
@@ -755,12 +769,13 @@
                                     </label>
 
                                     <input
-                                        type="text"
+                                        type="number"
                                         name="max_creditoedit"
                                         id="max_creditoedit"
                                         class="form-control"
                                         placeholder="Credito Maximo"
                                         oninput="validateNumber(this)"
+                                        min="0" step="0.01" inputmode="decimal"
                                     >
 
                                 </div>
@@ -819,7 +834,7 @@
             </div>
         </div>
 
-<div class="tabla-container">
+<div class="tabla-container clientes-desktop-table">
     <table class="tablas-todo" id="tablaClientes">
         <thead>
             <tr>
@@ -871,6 +886,26 @@
         </tbody>
     </table>
 </div>
+<section class="clientes-mobile-list" aria-label="Listado de clientes">
+    {% for cliente in clientes %}
+    <article class="cliente-mobile-card">
+        <header class="cliente-mobile-card__header">
+            <span class="cliente-mobile-card__icon"><i class="bx bx-user" aria-hidden="true"></i></span>
+            <span class="cliente-mobile-card__title"><small>Cliente #{{ cliente.id }}</small><strong>{{ cliente.nombre_completo|default:"Sin nombre" }}</strong></span>
+            {% if cliente.is_active %}<span class="cliente-mobile-card__status is-active">Activo</span>{% else %}<span class="cliente-mobile-card__status">Inactivo</span>{% endif %}
+        </header>
+        <div class="cliente-mobile-card__fields">
+            <span class="cliente-mobile-card__field"><small>DNI / RTN</small><strong>{{ cliente.dni|default:"--" }}</strong></span>
+            <span class="cliente-mobile-card__field"><small>Teléfono</small><strong>{{ cliente.telefono|default:"--" }}</strong></span>
+            <span class="cliente-mobile-card__field cliente-mobile-card__field--wide"><small>Correo</small><strong>{{ cliente.email|default:"--" }}</strong></span>
+            <span class="cliente-mobile-card__field cliente-mobile-card__field--wide"><small>Empresa</small><strong>{{ cliente.empresa|default:"--" }}</strong></span>
+        </div>
+        {% if not cliente.is_delete %}<footer class="cliente-mobile-card__footer"><button type="button" class="btn btn-primary btn-edit" data-bs-toggle="modal" data-bs-target="#modalput" data-id="{{ cliente.id }}"><i class="bx bx-edit" aria-hidden="true"></i> Editar</button></footer>{% endif %}
+    </article>
+    {% empty %}
+    <div class="clientes-mobile-empty"><i class="bx bx-user-x" aria-hidden="true"></i><strong>Sin clientes</strong><span>No hay clientes registrados.</span></div>
+    {% endfor %}
+</section>
         <nav class="d-flex justify-content-center mt-4" aria-label="Páginas de clientes">
             <ul class="pagination">
                 <li class="page-item {% if not clientes.has_previous %}disabled{% endif %}">

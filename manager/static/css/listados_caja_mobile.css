@@ -30,7 +30,8 @@
   border: 1px solid color-mix(in srgb, var(--system-primary) 14%, #fff);
   border-radius: 12px;
   background: #fff;
-  box-shadow: 0 5px 14px color-mix(in srgb, var(--system-secondary) 8%, transparent);
+  box-shadow: 0 5px 14px
+    color-mix(in srgb, var(--system-secondary) 8%, transparent);
 }
 
 .devoluciones-status-summary article > span {
@@ -75,7 +76,8 @@
     border-color: color-mix(in srgb, var(--system-primary) 15%, #fff);
     border-radius: 16px;
     background: #fff;
-    box-shadow: 0 8px 22px color-mix(in srgb, var(--system-secondary) 10%, transparent);
+    box-shadow: 0 8px 22px
+      color-mix(in srgb, var(--system-secondary) 10%, transparent);
   }
 
   .devoluciones-filter-heading {
@@ -171,7 +173,8 @@
     border: 1px solid color-mix(in srgb, var(--system-primary) 17%, #fff);
     border-radius: 15px;
     background: #fff;
-    box-shadow: 0 7px 18px color-mix(in srgb, var(--system-secondary) 11%, transparent);
+    box-shadow: 0 7px 18px
+      color-mix(in srgb, var(--system-secondary) 11%, transparent);
   }
 
   .caja-mobile-record-card__header {
@@ -181,7 +184,11 @@
     gap: 0.7rem;
     padding: 0.72rem 0.85rem;
     border-bottom: 1px solid color-mix(in srgb, var(--system-primary) 12%, #fff);
-    background: linear-gradient(100deg, color-mix(in srgb, var(--system-primary) 9%, #fff), #fff 66%);
+    background: linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--system-primary) 9%, #fff),
+      #fff 66%
+    );
   }
 
   .caja-mobile-record-card__reference,
@@ -364,7 +371,8 @@
     border-radius: 12px;
     outline: 0;
     background: #fff;
-    box-shadow: 0 5px 15px color-mix(in srgb, var(--system-secondary) 8%, transparent);
+    box-shadow: 0 5px 15px
+      color-mix(in srgb, var(--system-secondary) 8%, transparent);
   }
 
   #retirosMobileList {

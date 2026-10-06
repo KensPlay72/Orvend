@@ -1,0 +1,281 @@
+@import url("catalogos_mobile.css?v=20261005-compras-traslados-02");
+
+.traslados-editor-mobile-list {
+  display: none;
+}
+.traslados-confirmar-mobile-list { display: none; }
+.traslados-mobile-list { display: none; }
+
+@media (max-width: 1032px) {
+  .catalog-mobile-table--traslados { display: none !important; }
+  .traslados-mobile-list { display: grid; gap: .8rem; width: 100%; margin-top: .8rem; }
+  .traslados-mobile-card { display: block; overflow: hidden; color: inherit; text-decoration: none; border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff); border-radius: 15px; background: #fff; box-shadow: 0 7px 18px color-mix(in srgb, var(--system-secondary, #10463e) 11%, transparent); }
+  .traslados-mobile-card > header { display: flex; align-items: center; gap: .6rem; padding: .72rem .85rem; border-bottom: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff); background: linear-gradient(105deg, color-mix(in srgb, var(--system-primary, #32877f) 9%, #fff), #fff 65%); }
+  .traslados-mobile-card__icono { display: grid; flex: 0 0 34px; width: 34px; height: 34px; place-items: center; border-radius: 10px; color: #fff; background: var(--system-primary, #32877f); font-size: 1.1rem; }
+  .traslados-mobile-card__titulo { display: grid; min-width: 0; flex: 1; gap: .1rem; }
+  .traslados-mobile-card__titulo small { color: var(--system-primary, #32877f); font-size: .64rem; font-weight: 800; letter-spacing: .045em; text-transform: uppercase; }
+  .traslados-mobile-card__titulo strong { overflow: hidden; color: var(--system-secondary, #10463e); font-size: .9rem; text-overflow: ellipsis; white-space: nowrap; }
+  .traslados-mobile-card__flecha { color: var(--system-primary, #32877f); font-size: 1.25rem; }
+  .traslados-mobile-card__datos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; padding: .7rem .85rem; }
+  .traslados-mobile-card__datos > div { display: grid; min-width: 0; gap: .16rem; padding: .5rem .56rem; border-radius: 9px; background: color-mix(in srgb, var(--system-primary, #32877f) 5%, #fff); }
+  .traslados-mobile-card__datos span { color: color-mix(in srgb, var(--system-secondary, #10463e) 60%, #fff); font-size: .61rem; font-weight: 750; letter-spacing: .035em; text-transform: uppercase; }
+  .traslados-mobile-card__datos strong { overflow: hidden; color: var(--system-secondary, #10463e); font-size: .79rem; text-overflow: ellipsis; white-space: nowrap; }
+  .traslados-mobile-card > footer { display: flex; align-items: center; justify-content: space-between; padding: .62rem .85rem; border-top: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff); color: var(--system-primary, #32877f); background: color-mix(in srgb, var(--system-primary, #32877f) 3%, #fff); font-size: .75rem; font-weight: 800; }
+  .traslados-mobile-empty { display: grid; place-items: center; gap: .35rem; min-height: 150px; padding: 1rem; border: 1px dashed color-mix(in srgb, var(--system-primary, #32877f) 30%, #fff); border-radius: 14px; color: var(--system-secondary, #10463e); text-align: center; }
+  .traslados-mobile-empty i { color: var(--system-primary, #32877f); font-size: 1.8rem; }
+  .traslado-editor-mobile {
+    min-width: 0;
+    overflow-x: auto;
+    border-radius: 0.9rem;
+  }
+  .traslado-editor-mobile .tablas-todo {
+    min-width: 620px;
+  }
+  .traslado-mobile-modal .modal-body .form-group,
+  .traslado-mobile-modal .modal-body .col-md-6 {
+    margin-bottom: 0.7rem;
+    padding: 0.65rem;
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 13%, #fff);
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 3%, #fff);
+  }
+  .traslado-mobile-modal .modal-body > .row { width: auto; margin: 0 .15rem .55rem !important; }
+  .traslado-mobile-modal .modal-body > .form-group { margin-bottom: .55rem !important; }
+  .traslado-mobile-modal .modal-body > br { display: none; }
+  .traslado-mobile-modal .modal-footer {
+    display: block;
+  }
+  .traslado-mobile-modal .modal-footer .btn-secondary {
+    display: none;
+  }
+  .traslado-mobile-modal .modal-footer .btn:not(.btn-secondary) {
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
+  }
+  .traslado-mobile-modal .tabla-container {
+    overflow-x: auto;
+  }
+  .traslado-mobile-modal .tablas-todo {
+    min-width: 560px;
+  }
+  .traslado-mobile-modal .form-control,
+  .traslado-mobile-modal textarea,
+  .traslados-editor-mobile-card__controls input {
+    min-height: 43px;
+    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 20%, #fff);
+    border-radius: .65rem;
+    color: var(--system-secondary, #10463e);
+    background: #fff;
+    box-shadow: none;
+  }
+  .traslado-mobile-modal textarea { min-height: 72px; }
+  .traslados-editor-mobile-card__controls input { position: relative; z-index: 2; touch-action: manipulation; }
+  .traslado-mobile-modal .form-control:focus,
+  .traslado-mobile-modal textarea:focus,
+  .traslados-editor-mobile-card__controls input:focus { border-color: var(--system-primary, #32877f); box-shadow: 0 0 0 .18rem color-mix(in srgb, var(--system-primary, #32877f) 16%, transparent); }
+  .divbuttons2.compra-toolbar { gap: .45rem; margin-top: 0 !important; padding: .55rem; }
+  .divbuttons2.compra-toolbar .compra-toolbar__field > .form-group.mb-3 { margin-bottom: 0 !important; }
+  .divbuttons2.compra-toolbar .compra-toolbar__action:last-child { margin-top: .3rem; }
+
+  .traslado-editor-mobile .tablas-todo,
+  .traslado-mobile-modal .tablas-todo {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    background: transparent;
+  }
+  .traslado-editor-mobile .tablas-todo thead,
+  .traslado-mobile-modal .tablas-todo thead {
+    display: none;
+  }
+  .traslado-editor-mobile .tablas-todo tbody,
+  .traslado-mobile-modal .tablas-todo tbody {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .traslado-editor-mobile .tablas-todo tbody tr,
+  .traslado-mobile-modal .tablas-todo tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 15%, #fff);
+    border-left: 4px solid var(--system-primary, #32877f);
+    border-radius: 0.9rem;
+    background: #fff;
+    box-shadow: 0 0.3rem 0.9rem
+      color-mix(in srgb, var(--system-secondary, #10463e) 8%, transparent);
+  }
+  .traslado-editor-mobile .tablas-todo tbody td,
+  .traslado-mobile-modal .tablas-todo tbody td {
+    display: grid;
+    min-width: 0;
+    padding: 0.48rem !important;
+    border: 0 !important;
+    border-radius: 0.58rem;
+    color: var(--system-secondary, #10463e);
+    background: color-mix(in srgb, var(--system-primary, #32877f) 4%, #fff);
+    font-size: 0.78rem;
+  }
+  .traslado-editor-mobile .tablas-todo tbody td:first-child,
+  .traslado-mobile-modal .tablas-todo tbody td:first-child {
+    display: none;
+  }
+  .traslado-editor-mobile .tablas-todo tbody td:nth-child(2),
+  .traslado-mobile-modal .tablas-todo tbody td:nth-child(2) {
+    grid-column: 1 / -1;
+    font-weight: 750;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 8%, #fff);
+  }
+  .traslado-editor-mobile .tablas-todo tbody td:nth-child(3)::before,
+  .traslado-mobile-modal .tablas-todo tbody td:nth-child(3)::before {
+    content: "SKU";
+  }
+  .traslado-editor-mobile .tablas-todo tbody td:nth-child(4)::before,
+  .traslado-mobile-modal .tablas-todo tbody td:nth-child(4)::before {
+    content: "Stock disponible";
+  }
+  .traslado-editor-mobile .tablas-todo tbody td:nth-child(5)::before,
+  .traslado-mobile-modal .tablas-todo tbody td:nth-child(5)::before {
+    content: "Cantidad a mover";
+  }
+  .traslado-editor-mobile .tablas-todo tbody td:nth-child(5) {
+    grid-column: 1 / -1;
+  }
+  .traslado-editor-mobile .tablas-todo tbody td:last-child {
+    grid-column: 1 / -1;
+    background: transparent;
+  }
+  .traslado-editor-mobile .cantidad-final,
+  .traslado-editor-mobile .eliminar-traslado {
+    width: 100%;
+    min-height: 42px;
+  }
+  .divbuttons2.compra-toolbar .compra-toolbar__field {
+    position: relative;
+    z-index: 1;
+  }
+  .divbuttons2.compra-toolbar .compra-toolbar__field:has(.dropdown-menu.show) {
+    z-index: 30;
+  }
+
+  .traslado-editor-mobile .tablas-todo {
+    display: none !important;
+  }
+  .traslado-mobile-modal .tabla-container { display: none; }
+  .traslados-confirmar-mobile-list { display: grid; gap: .75rem; width: 100%; }
+  .traslados-confirmar-mobile-card { overflow: hidden; border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff); border-radius: 15px; background: #fff; box-shadow: 0 7px 18px color-mix(in srgb, var(--system-secondary, #10463e) 11%, transparent); }
+  .traslados-confirmar-mobile-card > header { display: flex; align-items: center; gap: .6rem; padding: .72rem .85rem; border-bottom: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff); background: linear-gradient(100deg, color-mix(in srgb, var(--system-primary, #32877f) 9%, #fff), #fff 66%); }
+  .traslados-confirmar-mobile-card__icon { display: grid; flex: 0 0 auto; width: 34px; height: 34px; place-items: center; border-radius: 10px; color: var(--system-primary, #32877f); background: color-mix(in srgb, var(--system-primary, #32877f) 13%, #fff); font-size: 1.12rem; }
+  .traslados-confirmar-mobile-card > header div { min-width: 0; flex: 1; }
+  .traslados-confirmar-mobile-card small { display: block; color: color-mix(in srgb, var(--system-secondary, #10463e) 55%, #fff); font-size: .61rem; font-weight: 750; letter-spacing: .045em; text-transform: uppercase; }
+  .traslados-confirmar-mobile-card strong { display: block; overflow: hidden; margin-top: .08rem; color: var(--system-secondary, #10463e); font-size: .86rem; text-overflow: ellipsis; white-space: nowrap; }
+  .traslados-confirmar-mobile-card__quantity { padding: .3rem .5rem; border-radius: 999px; color: var(--system-primary, #32877f); background: color-mix(in srgb, var(--system-primary, #32877f) 10%, #fff); font-size: .75rem; font-weight: 850; white-space: nowrap; }
+  .traslados-confirmar-mobile-card__meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; padding: .78rem .85rem .55rem; }
+  .traslados-confirmar-mobile-card__meta > div { display: flex; min-width: 0; align-items: center; gap: .42rem; padding: .58rem; border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 11%, #fff); border-radius: 9px; background: color-mix(in srgb, var(--system-primary, #32877f) 4%, #fff); }
+  .traslados-confirmar-mobile-card__meta i { color: var(--system-primary, #32877f); font-size: 1rem; }
+  .traslados-confirmar-mobile-card__meta span { min-width: 0; }
+  .traslados-confirmar-mobile-card__amount { margin: .2rem .85rem .78rem; padding: .58rem; border-radius: 9px; background: color-mix(in srgb, var(--system-primary, #32877f) 4%, #fff); }
+  .traslados-editor-mobile-list {
+    display: grid;
+    gap: 0.75rem;
+    width: 100%;
+  }
+  .traslados-editor-mobile-card {
+    overflow: hidden;
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff);
+    border-radius: 15px;
+    background: #fff;
+    box-shadow: 0 7px 18px
+      color-mix(in srgb, var(--system-secondary, #10463e) 11%, transparent);
+  }
+  .traslados-editor-mobile-card > header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.72rem 0.85rem;
+    border-bottom: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+    background: linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--system-primary, #32877f) 9%, #fff),
+      #fff 66%
+    );
+  }
+  .traslados-editor-mobile-card__icon {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 10px;
+    color: var(--system-primary, #32877f);
+    background: color-mix(in srgb, var(--system-primary, #32877f) 13%, #fff);
+    font-size: 1.12rem;
+  }
+  .traslados-editor-mobile-card small {
+    display: block;
+    color: color-mix(in srgb, var(--system-secondary, #10463e) 55%, #fff);
+    font-size: 0.61rem;
+    font-weight: 750;
+    text-transform: uppercase;
+  }
+  .traslados-editor-mobile-card strong {
+    display: block;
+    overflow: hidden;
+    margin-top: 0.08rem;
+    color: var(--system-secondary, #10463e);
+    font-size: 0.86rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .traslados-editor-mobile-card__meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+    padding: 0.78rem 0.85rem 0.55rem;
+  }
+  .traslados-editor-mobile-card__meta > div {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.42rem;
+    padding: 0.58rem;
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 11%, #fff);
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 4%, #fff);
+  }
+  .traslados-editor-mobile-card__meta i {
+    color: var(--system-primary, #32877f);
+    font-size: 1rem;
+  }
+  .traslados-editor-mobile-card__controls {
+    padding: 0.2rem 0.85rem 0.78rem;
+  }
+  .traslados-editor-mobile-card__controls label {
+    display: grid;
+    gap: 0.3rem;
+  }
+  .traslados-editor-mobile-card__controls input {
+    min-height: 42px;
+    border-radius: 0.65rem;
+  }
+  .traslados-editor-mobile-card > footer {
+    padding: 0.7rem 0.85rem;
+    border-top: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+    background: color-mix(in srgb, var(--system-primary, #32877f) 3%, #fff);
+  }
+  .traslados-editor-mobile-card > footer .btn {
+    display: inline-flex;
+    width: 100%;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+  }
+}

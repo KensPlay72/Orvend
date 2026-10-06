@@ -1,307 +1,802 @@
 {% load static %}
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es-HN">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-        <link rel="icon" href="{% static 'img/logo-card.ico' %}" type="image/x-icon">
-        <title>OrvendMart | ERP para caja, inventario, ventas y compras</title>
-        <meta name="description" content="OrvendMart conecta caja, inventario, ventas, compras, sucursales, créditos y reportes en un solo sistema para administrar tu negocio." />
-        <meta name="keywords" content="ERP, caja, inventario, ventas, compras, sucursales, créditos, reportes, OrvendMart" />
-        <meta name="author" content="OrvendMart" />
-        <meta name="robots" content="index, follow, max-image-preview:large" />
-        <meta name="theme-color" content="#3b927d" />
-        <link rel="canonical" href="https://orvendmart.com/" />
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <link
+      rel="icon"
+      href="{% static 'img/logo-card.ico' %}"
+      type="image/x-icon"
+    />
+    <title>OrvendMart | ERP para caja, inventario, ventas y compras</title>
+    <meta
+      name="description"
+      content="OrvendMart conecta caja, inventario, ventas, compras, sucursales, créditos y reportes en un solo sistema para administrar tu negocio."
+    />
+    <meta
+      name="keywords"
+      content="ERP, caja, inventario, ventas, compras, sucursales, créditos, reportes, OrvendMart"
+    />
+    <meta name="author" content="OrvendMart" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#3b927d" />
+    <link rel="canonical" href="https://orvendmart.com/" />
 
-        <!-- Open Graph: vista previa en WhatsApp, Facebook, LinkedIn y otras plataformas -->
-        <meta property="og:type" content="website" />
-        <meta property="og:site_name" content="OrvendMart" />
-        <meta property="og:locale" content="es_HN" />
-        <meta property="og:url" content="https://orvendmart.com/" />
-        <meta property="og:title" content="OrvendMart | ERP para administrar tu negocio" />
-        <meta property="og:description" content="Caja, inventario, ventas, compras, sucursales, créditos y reportes conectados en un solo sistema." />
-        <meta property="og:image" content="https://orvendmart.com/public/opengraph.webp" />
-        <meta property="og:image:secure_url" content="https://orvendmart.com/public/opengraph.webp" />
-        <meta property="og:image:type" content="image/webp" />
-        <meta property="og:image:alt" content="OrvendMart, ERP para administrar tu negocio" />
+    <!-- Open Graph: vista previa en WhatsApp, Facebook, LinkedIn y otras plataformas -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="OrvendMart" />
+    <meta property="og:locale" content="es_HN" />
+    <meta property="og:url" content="https://orvendmart.com/" />
+    <meta
+      property="og:title"
+      content="OrvendMart | ERP para administrar tu negocio"
+    />
+    <meta
+      property="og:description"
+      content="Caja, inventario, ventas, compras, sucursales, créditos y reportes conectados en un solo sistema."
+    />
+    <meta
+      property="og:image"
+      content="https://orvendmart.com/public/opengraph.webp"
+    />
+    <meta
+      property="og:image:secure_url"
+      content="https://orvendmart.com/public/opengraph.webp"
+    />
+    <meta property="og:image:type" content="image/webp" />
+    <meta
+      property="og:image:alt"
+      content="OrvendMart, ERP para administrar tu negocio"
+    />
 
-        <!-- Twitter/X utiliza estas etiquetas para la tarjeta al compartir -->
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="OrvendMart | ERP para administrar tu negocio" />
-        <meta name="twitter:description" content="Caja, inventario, ventas, compras, sucursales, créditos y reportes conectados en un solo sistema." />
-        <meta name="twitter:image" content="https://orvendmart.com/public/opengraph.webp" />
-        <meta name="twitter:image:alt" content="OrvendMart, ERP para administrar tu negocio" />
+    <!-- Twitter/X utiliza estas etiquetas para la tarjeta al compartir -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="OrvendMart | ERP para administrar tu negocio"
+    />
+    <meta
+      name="twitter:description"
+      content="Caja, inventario, ventas, compras, sucursales, créditos y reportes conectados en un solo sistema."
+    />
+    <meta
+      name="twitter:image"
+      content="https://orvendmart.com/public/opengraph.webp"
+    />
+    <meta
+      name="twitter:image:alt"
+      content="OrvendMart, ERP para administrar tu negocio"
+    />
 
-        <script type="application/ld+json">
-        {
-          "@context": "https://schema.org",
-          "@graph": [
-            {
-              "@type": "Organization",
-              "name": "OrvendMart",
-              "url": "https://orvendmart.com/",
-              "logo": "https://orvendmart.com/public/opengraph.webp"
-            },
-            {
-              "@type": "WebSite",
-              "name": "OrvendMart",
-              "url": "https://orvendmart.com/",
-              "inLanguage": "es-HN",
-              "description": "Sistema ERP para caja, inventario, ventas, compras, sucursales, créditos y reportes."
-            },
-            {
-              "@type": "SoftwareApplication",
-              "name": "OrvendMart",
-              "applicationCategory": "BusinessApplication",
-              "operatingSystem": "Web",
-              "url": "https://orvendmart.com/",
-              "image": "https://orvendmart.com/public/opengraph.webp",
-              "inLanguage": "es-HN",
-              "description": "ERP para administrar caja, inventario, ventas, compras, sucursales, créditos y reportes."
-            }
-          ]
-        }
-        </script>
-        <link rel="preload" href="{% static 'img/pagina.webp' %}" as="image" fetchpriority="high">
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet" href="{% static 'css/style.css' %}" media="print" onload="this.media='all'">
-        <link rel="stylesheet"
-              href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;700&display=swap"
-              media="print"
-              onload="this.media='all'">
-        <link rel="stylesheet"
-              href="{% static 'plugins/css/boxicons.min.css' %}"
-              media="print"
-              onload="this.media='all'">
-        <noscript>
-            <link rel="stylesheet" href="{% static 'css/style.css' %}">
-            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;700&display=swap">
-            <link rel="stylesheet" href="{% static 'plugins/css/boxicons.min.css' %}">
-        </noscript>
-        <style>
-          html,body{width:100%;margin:0;overflow-x:hidden}body{color:#fff;font-family:'Source Sans Pro',Arial,sans-serif}.gradient{background:linear-gradient(90deg,#3b927d 0%,#badec1 100%)}.navbar{position:fixed;top:0;width:100%;z-index:30;color:#fff}.navbar-container{display:flex;align-items:center;justify-content:space-between;max-width:1200px;margin:0 auto;padding:.5rem 1rem}.navbar-brand,.navbar-logo{display:flex;align-items:center}.navbar-brand{padding-left:1rem}.navbar-logo{color:#fff;font-size:2rem;font-weight:700;text-decoration:none}.navbar-logo .logo-img{width:auto;height:38px;margin-right:.5rem}.navbar-links{display:none}.erp-showcase{display:grid;grid-template-columns:1fr 1fr;gap:55px;align-items:center;max-width:1160px;margin:auto;padding:135px 24px 85px}.erp-copy h1{margin:18px 0;color:#fff;font-size:clamp(40px,5vw,66px);line-height:1.05;letter-spacing:-.05em}.erp-copy p{color:#e3f4ef;font-size:18px;line-height:1.7}.erp-pill{display:inline-flex;gap:7px;padding:8px 12px;border-radius:99px;background:rgba(255,255,255,.14);font-size:12px;font-weight:700;letter-spacing:.07em}.erp-cta,.erp-link{display:inline-flex;align-items:center;gap:7px;margin:13px 10px 0 0;padding:13px 18px;border-radius:9px;font-weight:700;text-decoration:none}.erp-cta{color:#235d55;background:#fff}.erp-link{border:1px solid rgba(255,255,255,.45);color:#fff}.erp-screen{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.4);border-radius:16px;background:#fff;box-shadow:0 20px 45px rgba(0,0,0,.2)}.erp-browser{display:flex;align-items:center;gap:6px;height:38px;padding:0 14px;color:#61726e;background:#fff;font-size:11px}.erp-browser span{width:7px;height:7px;border-radius:50%;background:#c9dcd8}.erp-browser b{margin-left:6px}.erp-screen>img{display:block;width:100%;height:320px;object-fit:cover;object-position:top}.erp-stat{position:absolute;right:14px;bottom:14px;display:flex;gap:9px;align-items:center;padding:10px;border-radius:9px;color:#294b46;background:#fff;box-shadow:0 7px 20px rgba(0,0,0,.16)}.erp-stat i{padding:7px;border-radius:7px;color:#32877f;background:#e5f3ef}.erp-stat small,.erp-stat strong{display:block;font-size:10px}@media (max-width:760px){.erp-showcase{grid-template-columns:1fr;gap:28px;padding:105px 22px 58px}.erp-screen{order:-1}.erp-screen>img{height:220px}.erp-copy h1{font-size:40px}.erp-copy p{font-size:16px}.erp-copy div{display:flex;flex-direction:column;align-items:stretch}.erp-cta,.erp-link{justify-content:center;margin-right:0}}
-        </style>
-    </head>
-    <body class="text-white gradient"
-          style="font-family: 'Source Sans Pro', sans-serif">
-        <!--Nav-->
-        <nav id="header" class="navbar gradient">
-            <div class="navbar-container">
-                <div class="navbar-brand">
-                    <a href="#" class="navbar-logo">
-                        <img src="{% static 'img/CarBlanco.webp' %}" alt="Logo" class="logo-img" />
-                        OrvendMart
-                    </a>
-                </div>
-                <div id="nav-content" class="navbar-links">
-                    <ul class="nav-items">
-                        <li>
-                            <a href="" class="nav-link" data-target="contactanos">Contáctanos</a>
-                        </li>
-                        <li>
-                            <a href="#suscripciones" class="nav-link">Planes</a>
-                        </li>
-                    </ul>
-                    <a id="navAction" class="nav-action" href="{% url 'login' %}">Login</a>
-                </div>
-            </div>
-            <hr class="navbar-divider" />
-        </nav>
-        <section class="erp-showcase">
-            <div class="erp-copy"><span class="erp-pill"><i class='bx bx-check-shield'></i> ERP PARA NEGOCIOS QUE CRECEN</span><h1>Controla todo tu negocio desde un solo lugar.</h1><p>OrvendMart conecta caja, inventario, compras, sucursales, créditos y reportes para que tu equipo trabaje con información real.</p><div><a class="erp-cta" href="{% url 'login' %}">Entrar al sistema <i class='bx bx-right-arrow-alt'></i></a><a class="erp-link" href="#modulos">Conocer módulos</a></div></div>
-            <div class="erp-screen"><div class="erp-browser"><span></span><span></span><span></span><b>Panel de OrvendMart</b></div><img src="{% static 'img/pagina.webp' %}" alt="Panel de OrvendMart" fetchpriority="high" decoding="async"><div class="erp-stat"><i class='bx bx-line-chart'></i><div><small>Datos en tiempo real</small><strong>Decisiones más claras</strong></div></div></div>
-        </section>
-        <section id="modulos" class="erp-modules">
-            <div class="erp-head">
-                <span class="erp-head__eyebrow"><i class='bx bx-grid-alt'></i> UN SOLO SISTEMA</span>
-                <h2>Herramientas para cada parte de tu operación</h2>
-                <div class="erp-head__rule" aria-hidden="true"></div>
-                <p>Gestiona tu negocio de principio a fin, con información conectada y lista para tomar decisiones.</p>
-            </div>
-            <div class="erp-module-grid erp-module-grid--full">
-                <article><i class='bx bx-store'></i><b>Caja</b><p>Ventas rápidas, facturación y cobros.</p></article><article><i class='bx bx-line-chart'></i><b>Ventas</b><p>Historial, reportes y rendimiento.</p></article><article><i class='bx bx-package'></i><b>Inventario</b><p>Existencias por ubicación en tiempo real.</p></article><article><i class='bx bx-purchase-tag'></i><b>Descuentos</b><p>Promociones y precios controlados.</p></article><article><i class='bx bx-undo'></i><b>Devoluciones</b><p>Procesos claros de compra y venta.</p></article><article><i class='bx bx-group'></i><b>Proveedores</b><p>Compras, saldos y seguimiento.</p></article><article><i class='bx bx-purchase-tag-alt'></i><b>Catálogo</b><p>Productos, marcas y presentaciones.</p></article><article><i class='bx bx-category'></i><b>Categorías</b><p>Organiza tu inventario con orden.</p></article><article><i class='bx bx-cart'></i><b>Compras</b><p>Órdenes, recepción y costos.</p></article><article><i class='bx bx-buildings'></i><b>Multisucursales</b><p>Opera varias tiendas en un solo sistema.</p></article><article><i class='bx bx-credit-card'></i><b>Créditos</b><p>Cuentas por cobrar y por pagar.</p></article><article><i class='bx bx-transfer'></i><b>Traslados</b><p>Mueve productos entre ubicaciones.</p></article><article><i class='bx bx-user'></i><b>Clientes</b><p>Datos y ventas centralizados.</p></article><article><i class='bx bx-receipt'></i><b>Datos SAT</b><p>Documentos listos para tu operación.</p></article><article><i class='bx bx-archive'></i><b>Bodega</b><p>Recepción y control de mercancía.</p></article><article><i class='bx bx-list-check'></i><b>Combos</b><p>Arma y vende productos agrupados.</p></article>
-            </div>
-        </section>
-        <!--Hero-->
-        <div class="hero-section">
-            <div class="hero-container">
-                <!--Left Col-->
-                <div class="hero-left">
-                    <p class="hero-tagline">Tecnología que impulsa, soluciones que transforman</p>
-                    <h1 class="hero-title">CRECE CON ORVEND</h1>
-                    <p class="hero-subtitle">Llevamos tu empresa al siguiente nivel con innovación y estrategia</p>
-                    {% comment %} <a class="hero-button" href="{% url 'suscripciones' %}">Suscribete</a> {% endcomment %}
-                </div>
-                <!--Right Col-->
-                <div class="hero-right">
-                    <br>
-                    <img src="{% static 'img/junta.webp' %}" alt="Equipo de trabajo" loading="lazy" decoding="async" />
-                </div>
-            </div>
-        </div>
-        <div class="hero-wave">
-            <img src="{% static 'img/fil1.svg' %}" alt="" loading="lazy" decoding="async">
-        </div>
-        <section class="feature-section">
-            <div class="feature-container">
-                <div class="feature-divider-container" data-aos="fade-up">
-                    <div class="feature-divider"></div>
-                </div>
-                <!-- Misión: texto e imagen -->
-                <div class="feature-row" data-aos="fade-left">
-                    <div class="feature-text mt" data-aos="fade-right">
-                        <div class="feature-align">
-                            <h3 class="feature-subtitle">Misión</h3>
-                            <p class="feature-description">
-                                Posicionarnos como una de las mejores empresas de servicios en Honduras, ofreciendo soluciones confiables, accesibles y de alta calidad que mejoren la vida de nuestros clientes.
-                            </p>
-                        </div>
-                    </div>
-                    <div class="feature-image mt" data-aos="fade-left">
-                        <img src="{% static 'img/pagina.webp' %}" alt="Panel de OrvendMart" loading="lazy" decoding="async" />
-                    </div>
-                </div>
-                <!-- Visión: imagen y texto -->
-                <div class="feature-row" data-aos="fade-right">
-                    <div class="feature-image" data-aos="fade-right">
-                        <img src="{% static 'img/mapa.webp' %}" alt="Alcance global de OrvendMart" loading="lazy" decoding="async" />
-                    </div>
-                    <div class="feature-text" data-aos="fade-left">
-                        <h3 class="feature-subtitle">Visión</h3>
-                        <p class="feature-description">
-                            Expandir nuestras operaciones a nivel mundial, llevando nuestros servicios a nuevos mercados y consolidándonos como un referente global en excelencia, innovación y compromiso con nuestros clientes.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </section>
-        <section class="card-section">
-            <div class="card-container">
-                <h2 class="card-title" data-aos="fade-up">Comentarios</h2>
-                <div class="card-divider-wrapper" data-aos="fade-up">
-                    <div class="card-divider"></div>
-                </div>
-                <div class="card-row">
-                    <!-- Card 1: Izquierda -->
-                    <div class="card" data-aos="fade-right">
-                        <div class="card-content">
-                            <a href="#" class="card-link">
-                                <p class="card-label">xGETTING STARTED</p>
-                                <div class="card-heading">Lorem ipsum dolor sit amet.</div>
-                                <p class="card-text">
-                                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam at ipsum eu nunc commodo posuere et sit amet ligula.
-                                </p>
-                            </a>
-                        </div>
-                        <div class="card-footer">
-                            <div class="card-footer-content start">
-                                <button class="card-button">Action</button>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Card 2: Centro -->
-                    <div class="card" data-aos="fade-up">
-                        <div class="card-content">
-                            <a href="#" class="card-link">
-                                <p class="card-label">xGETTING STARTED</p>
-                                <div class="card-heading">Lorem ipsum dolor sit amet.</div>
-                                <p class="card-text">
-                                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam at ipsum eu nunc commodo posuere et sit amet ligula.
-                                </p>
-                            </a>
-                        </div>
-                        <div class="card-footer">
-                            <div class="card-footer-content center">
-                                <button class="card-button">Action</button>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Card 3: Derecha -->
-                    <div class="card" data-aos="fade-left">
-                        <div class="card-content">
-                            <a href="#" class="card-link">
-                                <p class="card-label">xGETTING STARTED</p>
-                                <div class="card-heading">Lorem ipsum dolor sit amet.</div>
-                                <p class="card-text">
-                                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam at ipsum eu nunc commodo posuere et sit amet ligula.
-                                </p>
-                            </a>
-                        </div>
-                        <div class="card-footer">
-                            <div class="card-footer-content end">
-                                <button class="card-button">Action</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-        <section id="suscripciones" class="erp-plans">
-            <div class="erp-head"><span>PLANES SIMPLES</span><h2>Empieza sin complicaciones</h2><p>Dos meses de prueba para conocer el sistema con tranquilidad.</p></div>
-            <div class="erp-plan-grid">
-                <article class="erp-plan"><div><i class='bx bx-store-alt'></i><span>PARA UNA TIENDA</span><h3>Plan Normal</h3><p>Todo lo esencial para controlar una sucursal.</p></div><ul><li><i class='bx bx-check'></i> 1 sucursal</li><li><i class='bx bx-check'></i> 2 meses de prueba</li><li><i class='bx bx-check'></i> Caja, inventario, compras y más</li></ul><div class="erp-price"><strong>L. 500</strong><span>por mes durante los primeros 2 meses</span><b>Luego L. 800 / mes</b></div><a href="https://wa.me/message/AKLEH34XJYENN1?text=Estoy%20interesado%20en%20contratar%20OrvendMart%20y%20el%20Plan%20Normal." target="_blank" rel="noopener noreferrer">Solicitar el plan</a></article>
-                <article class="erp-plan erp-plan--featured"><div><i class='bx bx-buildings'></i><span>PARA CRECER</span><h3>Plan Multisucursal</h3><p>Una visión centralizada para varias tiendas.</p></div><ul><li><i class='bx bx-check'></i> Hasta 3 sucursales</li><li><i class='bx bx-check'></i> 2 meses de prueba</li><li><i class='bx bx-check'></i> Traslados y control centralizado</li></ul><div class="erp-price"><strong>L. 800</strong><span>por mes durante los primeros 2 meses</span><b>Luego L. 1,000 / mes</b></div><a href="https://wa.me/message/AKLEH34XJYENN1?text=Estoy%20interesado%20en%20contratar%20OrvendMart%20y%20el%20Plan%20Multisucursal." target="_blank" rel="noopener noreferrer">Solicitar el plan</a></article>
-            </div>
-        </section>
-        <img src="{% static 'img/fil4.svg' %}" alt="" loading="lazy" decoding="async">
-        <section id="contactanos" class="contact-section" data-aos="fade-up">
-            <h2 class="contact-title" data-aos="fade-up">Contactanos</h2>
-            <div class="contact-divider-wrap" data-aos="fade-up" data-aos-delay="100">
-                <div class="contact-divider"></div>
-            </div>
-            <h3 class="contact-subtitle"
-                data-aos="fade-up"
-                data-aos-delay="200">¿Tienes dudas o necesitas asistencia? ¡Hablemos!</h3>
-            <div class="centrado" data-aos="fade-up" data-aos-delay="300">
-                <a href="https://wa.me/message/AKLEH34XJYENN1" target="_blank" rel="noopener noreferrer" class="contact-action">
-                    <i class='bx bxl-whatsapp'></i>
-                    Whatsapp
-                </a>
-            </div>
-        </section>
-        <!--Footer-->
-        <footer class="site-footer">
-            <div class="site-footer__content">
-                <div class="site-footer__brand"><a href="#" class="brand-logo"><img src="{% static 'img/LH1.webp' %}" alt="OrvendMart" class="logo-img" /></a><p>Controla las áreas clave de tu negocio desde una sola plataforma.</p></div>
-                <div><p class="footer-title">Sistema</p><ul class="footer-list"><li><a href="#modulos">Módulos</a></li><li><a href="#suscripciones">Planes</a></li><li><a href="{% url 'login' %}">Iniciar sesión</a></li></ul></div>
-                <div><p class="footer-title">Contacto</p><ul class="footer-list"><li><a href="https://wa.me/message/AKLEH34XJYENN1" target="_blank" rel="noopener noreferrer"><i class='bx bxl-whatsapp'></i> WhatsApp</a></li><li><a href="#contactanos">Escríbenos</a></li></ul></div>
-                <div><p class="footer-title">Legal</p><ul class="footer-list"><li><a href="{% url 'politica_privacidad' %}">Privacidad</a></li><li><a href="{% url 'politica_cookies' %}">Cookies</a></li><li><a href="{% url 'terminos_condiciones' %}">Términos</a></li><li><a href="{% url 'politica_reembolsos' %}">Reembolsos</a></li></ul></div>
-            </div>
-            <div class="footer-copy">&copy; OrvendMart {% now "Y" %}. Todos los derechos reservados.</div>
-        </footer>
-        <!-- AOS Script -->
-        <script>
-  window.addEventListener('load', () => {
-    const aosStyles = document.createElement('link');
-    aosStyles.rel = 'stylesheet';
-    aosStyles.href = 'https://unpkg.com/aos@2.3.4/dist/aos.css';
-    document.head.appendChild(aosStyles);
-
-    const aosScript = document.createElement('script');
-    aosScript.src = 'https://unpkg.com/aos@2.3.4/dist/aos.js';
-    aosScript.onload = () => window.AOS?.init({ once: true, duration: 800, easing: 'ease-in-out' });
-    document.body.appendChild(aosScript);
-  });
-        </script>
-        <script>
-  document.querySelectorAll('.nav-link').forEach(link => {
-    link.addEventListener('click', function(e) {
-      e.preventDefault();
-      const targetId = this.getAttribute('data-target');
-      const targetEl = document.getElementById(targetId);
-      if (targetEl) {
-        targetEl.scrollIntoView({ behavior: 'smooth' });
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "name": "OrvendMart",
+            "url": "https://orvendmart.com/",
+            "logo": "https://orvendmart.com/public/opengraph.webp"
+          },
+          {
+            "@type": "WebSite",
+            "name": "OrvendMart",
+            "url": "https://orvendmart.com/",
+            "inLanguage": "es-HN",
+            "description": "Sistema ERP para caja, inventario, ventas, compras, sucursales, créditos y reportes."
+          },
+          {
+            "@type": "SoftwareApplication",
+            "name": "OrvendMart",
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": "Web",
+            "url": "https://orvendmart.com/",
+            "image": "https://orvendmart.com/public/opengraph.webp",
+            "inLanguage": "es-HN",
+            "description": "ERP para administrar caja, inventario, ventas, compras, sucursales, créditos y reportes."
+          }
+        ]
       }
-    });
-  });
-        </script>
-        <script>
-          document.querySelector('a[href="#suscripciones"]')?.addEventListener('click', function(event) {
-            event.preventDefault();
-            document.getElementById('suscripciones')?.scrollIntoView({ behavior: 'smooth' });
+    </script>
+    <link
+      rel="preload"
+      href="{% static 'img/pagina.webp' %}"
+      as="image"
+      fetchpriority="high"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="{% static 'css/style.css' %}"
+      media="print"
+      onload="this.media = 'all'"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;700&display=swap"
+      media="print"
+      onload="this.media = 'all'"
+    />
+    <link
+      rel="stylesheet"
+      href="{% static 'plugins/css/boxicons.min.css' %}"
+      media="print"
+      onload="this.media = 'all'"
+    />
+    <noscript>
+      <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;700&display=swap"
+      />
+      <link
+        rel="stylesheet"
+        href="{% static 'plugins/css/boxicons.min.css' %}"
+      />
+    </noscript>
+    <style>
+      html,
+      body {
+        width: 100%;
+        margin: 0;
+        overflow-x: hidden;
+      }
+      body {
+        color: #fff;
+        font-family: "Source Sans Pro", Arial, sans-serif;
+      }
+      .gradient {
+        background: linear-gradient(90deg, #3b927d 0%, #badec1 100%);
+      }
+      .navbar {
+        position: fixed;
+        top: 0;
+        width: 100%;
+        z-index: 30;
+        color: #fff;
+      }
+      .navbar-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0.5rem 1rem;
+      }
+      .navbar-brand,
+      .navbar-logo {
+        display: flex;
+        align-items: center;
+      }
+      .navbar-brand {
+        padding-left: 1rem;
+      }
+      .navbar-logo {
+        color: #fff;
+        font-size: 2rem;
+        font-weight: 700;
+        text-decoration: none;
+      }
+      .navbar-logo .logo-img {
+        width: auto;
+        height: 38px;
+        margin-right: 0.5rem;
+      }
+      .navbar-links {
+        display: none;
+      }
+      .erp-showcase {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 55px;
+        align-items: center;
+        max-width: 1160px;
+        margin: auto;
+        padding: 135px 24px 85px;
+      }
+      .erp-copy h1 {
+        margin: 18px 0;
+        color: #fff;
+        font-size: clamp(40px, 5vw, 66px);
+        line-height: 1.05;
+        letter-spacing: -0.05em;
+      }
+      .erp-copy p {
+        color: #e3f4ef;
+        font-size: 18px;
+        line-height: 1.7;
+      }
+      .erp-pill {
+        display: inline-flex;
+        gap: 7px;
+        padding: 8px 12px;
+        border-radius: 99px;
+        background: rgba(255, 255, 255, 0.14);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.07em;
+      }
+      .erp-cta,
+      .erp-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        margin: 13px 10px 0 0;
+        padding: 13px 18px;
+        border-radius: 9px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+      .erp-cta {
+        color: #235d55;
+        background: #fff;
+      }
+      .erp-link {
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        color: #fff;
+      }
+      .erp-screen {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 20px 45px rgba(0, 0, 0, 0.2);
+      }
+      .erp-browser {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        height: 38px;
+        padding: 0 14px;
+        color: #61726e;
+        background: #fff;
+        font-size: 11px;
+      }
+      .erp-browser span {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #c9dcd8;
+      }
+      .erp-browser b {
+        margin-left: 6px;
+      }
+      .erp-screen > img {
+        display: block;
+        width: 100%;
+        height: 320px;
+        object-fit: cover;
+        object-position: top;
+      }
+      .erp-stat {
+        position: absolute;
+        right: 14px;
+        bottom: 14px;
+        display: flex;
+        gap: 9px;
+        align-items: center;
+        padding: 10px;
+        border-radius: 9px;
+        color: #294b46;
+        background: #fff;
+        box-shadow: 0 7px 20px rgba(0, 0, 0, 0.16);
+      }
+      .erp-stat i {
+        padding: 7px;
+        border-radius: 7px;
+        color: #32877f;
+        background: #e5f3ef;
+      }
+      .erp-stat small,
+      .erp-stat strong {
+        display: block;
+        font-size: 10px;
+      }
+      @media (max-width: 760px) {
+        .erp-showcase {
+          grid-template-columns: 1fr;
+          gap: 28px;
+          padding: 105px 22px 58px;
+        }
+        .erp-screen {
+          order: -1;
+        }
+        .erp-screen > img {
+          height: 220px;
+        }
+        .erp-copy h1 {
+          font-size: 40px;
+        }
+        .erp-copy p {
+          font-size: 16px;
+        }
+        .erp-copy div {
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .erp-cta,
+        .erp-link {
+          justify-content: center;
+          margin-right: 0;
+        }
+      }
+    </style>
+  </head>
+  <body
+    class="text-white gradient"
+    style="font-family: &quot;Source Sans Pro&quot;, sans-serif"
+  >
+    <!--Nav-->
+    <nav id="header" class="navbar gradient">
+      <div class="navbar-container">
+        <div class="navbar-brand">
+          <a href="#" class="navbar-logo">
+            <img
+              src="{% static 'img/CarBlanco.webp' %}"
+              alt="Logo"
+              class="logo-img"
+            />
+            OrvendMart
+          </a>
+        </div>
+        <div id="nav-content" class="navbar-links">
+          <ul class="nav-items">
+            <li>
+              <a href="" class="nav-link" data-target="contactanos"
+                >Contáctanos</a
+              >
+            </li>
+            <li>
+              <a href="#suscripciones" class="nav-link">Planes</a>
+            </li>
+          </ul>
+          <a id="navAction" class="nav-action" href="{% url 'login' %}"
+            >Login</a
+          >
+        </div>
+      </div>
+      <hr class="navbar-divider" />
+    </nav>
+    <section class="erp-showcase">
+      <div class="erp-copy">
+        <span class="erp-pill"
+          ><i class="bx bx-check-shield"></i> ERP PARA NEGOCIOS QUE CRECEN</span
+        >
+        <h1>Controla todo tu negocio desde un solo lugar.</h1>
+        <p>
+          OrvendMart conecta caja, inventario, compras, sucursales, créditos y
+          reportes para que tu equipo trabaje con información real.
+        </p>
+        <div>
+          <a class="erp-cta" href="{% url 'login' %}"
+            >Entrar al sistema <i class="bx bx-right-arrow-alt"></i></a
+          ><a class="erp-link" href="#modulos">Conocer módulos</a>
+        </div>
+      </div>
+      <div class="erp-screen">
+        <div class="erp-browser">
+          <span></span><span></span><span></span><b>Panel de OrvendMart</b>
+        </div>
+        <img
+          src="{% static 'img/pagina.webp' %}"
+          alt="Panel de OrvendMart"
+          fetchpriority="high"
+          decoding="async"
+        />
+        <div class="erp-stat">
+          <i class="bx bx-line-chart"></i>
+          <div>
+            <small>Datos en tiempo real</small
+            ><strong>Decisiones más claras</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="modulos" class="erp-modules">
+      <div class="erp-head">
+        <span class="erp-head__eyebrow"
+          ><i class="bx bx-grid-alt"></i> UN SOLO SISTEMA</span
+        >
+        <h2>Herramientas para cada parte de tu operación</h2>
+        <div class="erp-head__rule" aria-hidden="true"></div>
+        <p>
+          Gestiona tu negocio de principio a fin, con información conectada y
+          lista para tomar decisiones.
+        </p>
+      </div>
+      <div class="erp-module-grid erp-module-grid--full">
+        <article>
+          <i class="bx bx-store"></i><b>Caja</b>
+          <p>Ventas rápidas, facturación y cobros.</p>
+        </article>
+        <article>
+          <i class="bx bx-line-chart"></i><b>Ventas</b>
+          <p>Historial, reportes y rendimiento.</p>
+        </article>
+        <article>
+          <i class="bx bx-package"></i><b>Inventario</b>
+          <p>Existencias por ubicación en tiempo real.</p>
+        </article>
+        <article>
+          <i class="bx bx-purchase-tag"></i><b>Descuentos</b>
+          <p>Promociones y precios controlados.</p>
+        </article>
+        <article>
+          <i class="bx bx-undo"></i><b>Devoluciones</b>
+          <p>Procesos claros de compra y venta.</p>
+        </article>
+        <article>
+          <i class="bx bx-group"></i><b>Proveedores</b>
+          <p>Compras, saldos y seguimiento.</p>
+        </article>
+        <article>
+          <i class="bx bx-purchase-tag-alt"></i><b>Catálogo</b>
+          <p>Productos, marcas y presentaciones.</p>
+        </article>
+        <article>
+          <i class="bx bx-category"></i><b>Categorías</b>
+          <p>Organiza tu inventario con orden.</p>
+        </article>
+        <article>
+          <i class="bx bx-cart"></i><b>Compras</b>
+          <p>Órdenes, recepción y costos.</p>
+        </article>
+        <article>
+          <i class="bx bx-buildings"></i><b>Multisucursales</b>
+          <p>Opera varias tiendas en un solo sistema.</p>
+        </article>
+        <article>
+          <i class="bx bx-credit-card"></i><b>Créditos</b>
+          <p>Cuentas por cobrar y por pagar.</p>
+        </article>
+        <article>
+          <i class="bx bx-transfer"></i><b>Traslados</b>
+          <p>Mueve productos entre ubicaciones.</p>
+        </article>
+        <article>
+          <i class="bx bx-user"></i><b>Clientes</b>
+          <p>Datos y ventas centralizados.</p>
+        </article>
+        <article>
+          <i class="bx bx-receipt"></i><b>Datos SAT</b>
+          <p>Documentos listos para tu operación.</p>
+        </article>
+        <article>
+          <i class="bx bx-archive"></i><b>Bodega</b>
+          <p>Recepción y control de mercancía.</p>
+        </article>
+        <article>
+          <i class="bx bx-list-check"></i><b>Combos</b>
+          <p>Arma y vende productos agrupados.</p>
+        </article>
+      </div>
+    </section>
+    <!--Hero-->
+    <div class="hero-section">
+      <div class="hero-container">
+        <!--Left Col-->
+        <div class="hero-left">
+          <p class="hero-tagline">
+            Tecnología que impulsa, soluciones que transforman
+          </p>
+          <h1 class="hero-title">CRECE CON ORVEND</h1>
+          <p class="hero-subtitle">
+            Llevamos tu empresa al siguiente nivel con innovación y estrategia
+          </p>
+          {% comment %}
+          <a class="hero-button" href="{% url 'suscripciones' %}">Suscribete</a>
+          {% endcomment %}
+        </div>
+        <!--Right Col-->
+        <div class="hero-right">
+          <br />
+          <img
+            src="{% static 'img/junta.webp' %}"
+            alt="Equipo de trabajo"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+      </div>
+    </div>
+    <div class="hero-wave">
+      <img
+        src="{% static 'img/fil1.svg' %}"
+        alt=""
+        loading="lazy"
+        decoding="async"
+      />
+    </div>
+    <section class="feature-section">
+      <div class="feature-container">
+        <div class="feature-divider-container" data-aos="fade-up">
+          <div class="feature-divider"></div>
+        </div>
+        <!-- Misión: texto e imagen -->
+        <div class="feature-row" data-aos="fade-left">
+          <div class="feature-text mt" data-aos="fade-right">
+            <div class="feature-align">
+              <h3 class="feature-subtitle">Misión</h3>
+              <p class="feature-description">
+                Posicionarnos como una de las mejores empresas de servicios en
+                Honduras, ofreciendo soluciones confiables, accesibles y de alta
+                calidad que mejoren la vida de nuestros clientes.
+              </p>
+            </div>
+          </div>
+          <div class="feature-image mt" data-aos="fade-left">
+            <img
+              src="{% static 'img/pagina.webp' %}"
+              alt="Panel de OrvendMart"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+        </div>
+        <!-- Visión: imagen y texto -->
+        <div class="feature-row" data-aos="fade-right">
+          <div class="feature-image" data-aos="fade-right">
+            <img
+              src="{% static 'img/mapa.webp' %}"
+              alt="Alcance global de OrvendMart"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+          <div class="feature-text" data-aos="fade-left">
+            <h3 class="feature-subtitle">Visión</h3>
+            <p class="feature-description">
+              Expandir nuestras operaciones a nivel mundial, llevando nuestros
+              servicios a nuevos mercados y consolidándonos como un referente
+              global en excelencia, innovación y compromiso con nuestros
+              clientes.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="card-section">
+      <div class="card-container">
+        <h2 class="card-title" data-aos="fade-up">Comentarios</h2>
+        <div class="card-divider-wrapper" data-aos="fade-up">
+          <div class="card-divider"></div>
+        </div>
+        <div class="card-row">
+          <!-- Card 1: Izquierda -->
+          <div class="card" data-aos="fade-right">
+            <div class="card-content">
+              <a href="#" class="card-link">
+                <p class="card-label">xGETTING STARTED</p>
+                <div class="card-heading">Lorem ipsum dolor sit amet.</div>
+                <p class="card-text">
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+                  Aliquam at ipsum eu nunc commodo posuere et sit amet ligula.
+                </p>
+              </a>
+            </div>
+            <div class="card-footer">
+              <div class="card-footer-content start">
+                <button class="card-button">Action</button>
+              </div>
+            </div>
+          </div>
+          <!-- Card 2: Centro -->
+          <div class="card" data-aos="fade-up">
+            <div class="card-content">
+              <a href="#" class="card-link">
+                <p class="card-label">xGETTING STARTED</p>
+                <div class="card-heading">Lorem ipsum dolor sit amet.</div>
+                <p class="card-text">
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+                  Aliquam at ipsum eu nunc commodo posuere et sit amet ligula.
+                </p>
+              </a>
+            </div>
+            <div class="card-footer">
+              <div class="card-footer-content center">
+                <button class="card-button">Action</button>
+              </div>
+            </div>
+          </div>
+          <!-- Card 3: Derecha -->
+          <div class="card" data-aos="fade-left">
+            <div class="card-content">
+              <a href="#" class="card-link">
+                <p class="card-label">xGETTING STARTED</p>
+                <div class="card-heading">Lorem ipsum dolor sit amet.</div>
+                <p class="card-text">
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+                  Aliquam at ipsum eu nunc commodo posuere et sit amet ligula.
+                </p>
+              </a>
+            </div>
+            <div class="card-footer">
+              <div class="card-footer-content end">
+                <button class="card-button">Action</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="suscripciones" class="erp-plans">
+      <div class="erp-head">
+        <span>PLANES SIMPLES</span>
+        <h2>Empieza sin complicaciones</h2>
+        <p>Dos meses de prueba para conocer el sistema con tranquilidad.</p>
+      </div>
+      <div class="erp-plan-grid">
+        <article class="erp-plan">
+          <div>
+            <i class="bx bx-store-alt"></i><span>PARA UNA TIENDA</span>
+            <h3>Plan Normal</h3>
+            <p>Todo lo esencial para controlar una sucursal.</p>
+          </div>
+          <ul>
+            <li><i class="bx bx-check"></i> 1 sucursal</li>
+            <li><i class="bx bx-check"></i> 2 meses de prueba</li>
+            <li><i class="bx bx-check"></i> Caja, inventario, compras y más</li>
+          </ul>
+          <div class="erp-price">
+            <strong>L. 500</strong
+            ><span>por mes durante los primeros 2 meses</span
+            ><b>Luego L. 800 / mes</b>
+          </div>
+          <a
+            href="https://wa.me/message/AKLEH34XJYENN1?text=Estoy%20interesado%20en%20contratar%20OrvendMart%20y%20el%20Plan%20Normal."
+            target="_blank"
+            rel="noopener noreferrer"
+            >Solicitar el plan</a
+          >
+        </article>
+        <article class="erp-plan erp-plan--featured">
+          <div>
+            <i class="bx bx-buildings"></i><span>PARA CRECER</span>
+            <h3>Plan Multisucursal</h3>
+            <p>Una visión centralizada para varias tiendas.</p>
+          </div>
+          <ul>
+            <li><i class="bx bx-check"></i> Hasta 3 sucursales</li>
+            <li><i class="bx bx-check"></i> 2 meses de prueba</li>
+            <li>
+              <i class="bx bx-check"></i> Traslados y control centralizado
+            </li>
+          </ul>
+          <div class="erp-price">
+            <strong>L. 800</strong
+            ><span>por mes durante los primeros 2 meses</span
+            ><b>Luego L. 1,000 / mes</b>
+          </div>
+          <a
+            href="https://wa.me/message/AKLEH34XJYENN1?text=Estoy%20interesado%20en%20contratar%20OrvendMart%20y%20el%20Plan%20Multisucursal."
+            target="_blank"
+            rel="noopener noreferrer"
+            >Solicitar el plan</a
+          >
+        </article>
+      </div>
+    </section>
+    <img
+      src="{% static 'img/fil4.svg' %}"
+      alt=""
+      loading="lazy"
+      decoding="async"
+    />
+    <section id="contactanos" class="contact-section" data-aos="fade-up">
+      <h2 class="contact-title" data-aos="fade-up">Contactanos</h2>
+      <div class="contact-divider-wrap" data-aos="fade-up" data-aos-delay="100">
+        <div class="contact-divider"></div>
+      </div>
+      <h3 class="contact-subtitle" data-aos="fade-up" data-aos-delay="200">
+        ¿Tienes dudas o necesitas asistencia? ¡Hablemos!
+      </h3>
+      <div class="centrado" data-aos="fade-up" data-aos-delay="300">
+        <a
+          href="https://wa.me/message/AKLEH34XJYENN1"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="contact-action"
+        >
+          <i class="bx bxl-whatsapp"></i>
+          Whatsapp
+        </a>
+      </div>
+    </section>
+    <!--Footer-->
+    <footer class="site-footer">
+      <div class="site-footer__content">
+        <div class="site-footer__brand">
+          <a href="#" class="brand-logo"
+            ><img
+              src="{% static 'img/LH1.webp' %}"
+              alt="OrvendMart"
+              class="logo-img"
+          /></a>
+          <p>
+            Controla las áreas clave de tu negocio desde una sola plataforma.
+          </p>
+        </div>
+        <div>
+          <p class="footer-title">Sistema</p>
+          <ul class="footer-list">
+            <li><a href="#modulos">Módulos</a></li>
+            <li><a href="#suscripciones">Planes</a></li>
+            <li><a href="{% url 'login' %}">Iniciar sesión</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="footer-title">Contacto</p>
+          <ul class="footer-list">
+            <li>
+              <a
+                href="https://wa.me/message/AKLEH34XJYENN1"
+                target="_blank"
+                rel="noopener noreferrer"
+                ><i class="bx bxl-whatsapp"></i> WhatsApp</a
+              >
+            </li>
+            <li><a href="#contactanos">Escríbenos</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="footer-title">Legal</p>
+          <ul class="footer-list">
+            <li><a href="{% url 'politica_privacidad' %}">Privacidad</a></li>
+            <li><a href="{% url 'politica_cookies' %}">Cookies</a></li>
+            <li><a href="{% url 'terminos_condiciones' %}">Términos</a></li>
+            <li><a href="{% url 'politica_reembolsos' %}">Reembolsos</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-copy">
+        &copy; OrvendMart {% now "Y" %}. Todos los derechos reservados.
+      </div>
+    </footer>
+    <!-- AOS Script -->
+    <script>
+      window.addEventListener("load", () => {
+        const aosStyles = document.createElement("link");
+        aosStyles.rel = "stylesheet";
+        aosStyles.href = "https://unpkg.com/aos@2.3.4/dist/aos.css";
+        document.head.appendChild(aosStyles);
+
+        const aosScript = document.createElement("script");
+        aosScript.src = "https://unpkg.com/aos@2.3.4/dist/aos.js";
+        aosScript.onload = () =>
+          window.AOS?.init({
+            once: true,
+            duration: 800,
+            easing: "ease-in-out",
           });
-        </script>
-    </body>
+        document.body.appendChild(aosScript);
+      });
+    </script>
+    <script>
+      document.querySelectorAll(".nav-link").forEach((link) => {
+        link.addEventListener("click", function (e) {
+          e.preventDefault();
+          const targetId = this.getAttribute("data-target");
+          const targetEl = document.getElementById(targetId);
+          if (targetEl) {
+            targetEl.scrollIntoView({ behavior: "smooth" });
+          }
+        });
+      });
+    </script>
+    <script>
+      document
+        .querySelector('a[href="#suscripciones"]')
+        ?.addEventListener("click", function (event) {
+          event.preventDefault();
+          document
+            .getElementById("suscripciones")
+            ?.scrollIntoView({ behavior: "smooth" });
+        });
+    </script>
+  </body>
 </html>

@@ -4,6 +4,7 @@
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 {% endblock %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/catalogos_mobile.css' %}?v=20261005-movil-solo" />{% endblock page_css_overrides %}
 {% block titulo_content %}
     <div class="tituloscont">
         <img class="logop" src="{% static 'img/LH.webp' %}" alt="">
@@ -11,6 +12,7 @@
     </div>
 {% endblock %}
 {% block main_content %}
+<form method="get" class="catalog-mobile-search"><div class="catalog-mobile-search__field"><i class="bx bx-search"></i><input type="search" name="search" value="{{ search }}" placeholder="Buscar marcas" autocomplete="off"></div><button type="submit"><i class="bx bx-search"></i><span>Buscar</span></button></form>
 <div class="catalog-toolbar">
 <div>
 {% if perms.manager.add_marcas %}
@@ -29,12 +31,12 @@
     <div class="catalog-import-actions catalog-toolbar__actions">
         <a class="catalog-export-btn" href="{{ exportar_marcas }}"><i class="bx bx-spreadsheet"></i> Exportar</a>
         <button type="button" class="catalog-import-btn" data-bs-toggle="modal" data-bs-target="#modalImportarMarcas"><i class="bx bx-upload"></i> Importar</button>
-        <a class="catalog-template-btn" href="{{ plantilla_marcas }}"><i class="bx bx-download"></i> Plantilla</a>
+        <a class="catalog-template-btn" href="{{ plantilla_marcas }}"><i class="bx bx-file-blank"></i> Plantilla</a>
     </div>
     {% include "gestiones/_modal_importar_excel.html" with modal_id="modalImportarMarcas" titulo="marcas" import_url=importar_marcas %}
 {% endif %}
 </div>
-<div class="modal fade"
+<div class="modal fade modal-sheet-mobile modal-sheet-mobile--auto catalog-mobile-modal"
      id="modalregis"
      tabindex="-1"
      aria-labelledby="exampleModalCenterTitle"
@@ -105,7 +107,7 @@
     </div>
 </div>
 
-<div class="modal fade"
+<div class="modal fade modal-sheet-mobile modal-sheet-mobile--auto catalog-mobile-modal"
      id="modalput"
      tabindex="-1"
      aria-labelledby="exampleModalCenterTitle"
@@ -195,7 +197,7 @@
 </div>
 
 <div class="tabla-container">
-    <table class="tablas-todo" id="tablacont">
+    <table class="tablas-todo catalog-mobile-table catalog-mobile-table--marcas" id="tablacont">
         <thead>
             <tr>
                 <th>#</th>

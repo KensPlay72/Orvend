@@ -1,0 +1,634 @@
+/* Patrón móvil/tablet compartido para catálogos y cuentas.
+   Las tarjetas se generan en el DOM para reutilizar los datos de la tabla,
+   pero nunca deben ser visibles en escritorio. */
+.catalog-mobile-list,
+.catalog-mobile-search {
+  display: none;
+}
+
+@media (max-width: 1032px) {
+  .catalog-mobile-search {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    margin: 0 0 0.85rem;
+    padding: 0.75rem;
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 16%, #fff);
+    border-radius: 0.9rem;
+    background: #fff;
+    box-shadow: 0 0.3rem 0.9rem
+      color-mix(in srgb, var(--system-secondary, #10463e) 8%, transparent);
+  }
+  .catalog-mobile-search__intro {
+    display: flex;
+    grid-column: 1 / -1;
+    align-items: center;
+    gap: 0.55rem;
+  }
+  .catalog-mobile-search__intro > span {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: 0.58rem;
+    color: var(--system-primary, #32877f);
+    background: color-mix(in srgb, var(--system-primary, #32877f) 10%, #fff);
+  }
+  .catalog-mobile-search__intro strong,
+  .catalog-mobile-search__intro small {
+    display: block;
+  }
+  .catalog-mobile-search__intro strong {
+    color: var(--system-secondary, #10463e);
+    font-size: 0.82rem;
+  }
+  .catalog-mobile-search__intro small {
+    color: color-mix(in srgb, var(--system-secondary, #10463e) 62%, #fff);
+    font-size: 0.67rem;
+  }
+  .catalog-mobile-search__field {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0 0.65rem;
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 18%, #fff);
+    border-radius: 0.65rem;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 3%, #fff);
+  }
+  .catalog-mobile-search__field i {
+    color: var(--system-primary, #32877f);
+    font-size: 1.1rem;
+  }
+  .catalog-mobile-search__field input {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    border: 0;
+    outline: 0;
+    color: var(--system-secondary, #10463e);
+    background: transparent;
+    font-size: 0.78rem;
+  }
+  .catalog-mobile-search button {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0 0.75rem;
+    border: 0;
+    border-radius: 0.65rem;
+    color: #fff;
+    background: var(--system-primary, #32877f);
+    font-size: 0.75rem;
+    font-weight: 750;
+  }
+  .catalog-toolbar {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+    width: 100%;
+    margin-bottom: 0.85rem;
+  }
+  .catalog-toolbar > div:first-child .btn-dropdown {
+    display: flex;
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
+    align-items: center;
+    justify-content: center;
+  }
+  .divbuttons2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+    width: 100%;
+    margin: 0 0 0.85rem;
+  }
+  .divbuttons2 .btn-dropdown {
+    display: flex;
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
+    align-items: center;
+    justify-content: center;
+  }
+  .divbuttons2 > :only-child {
+    grid-column: 1 / -1;
+  }
+  .catalog-mobile-add {
+    display: flex;
+    width: 100% !important;
+    min-height: 44px;
+    margin: 0 0 0.85rem !important;
+    align-items: center;
+    justify-content: center;
+  }
+  .full2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    height: auto;
+    gap: 0.6rem;
+    margin: 0 0 0.85rem;
+  }
+  .full2 .ventanas {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    min-height: 74px;
+    height: auto;
+    margin: 0;
+    padding: 0.65rem;
+    gap: 0.55rem;
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 16%, #fff);
+    border-radius: 0.9rem;
+    box-shadow: 0 0.3rem 0.9rem
+      color-mix(in srgb, var(--system-secondary, #10463e) 8%, transparent);
+  }
+  .full2 .ventanas:nth-child(odd):last-child {
+    grid-column: 1 / -1;
+  }
+  .full2 .ventanasi {
+    width: auto;
+    min-width: 0;
+    flex: 1;
+  }
+  .full2 .ventana-titulo {
+    overflow: hidden;
+    color: var(--system-secondary, #10463e);
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .full2 .ventana-numero {
+    width: fit-content;
+    margin: 0.15rem 0 0;
+    padding: 0.1rem 0.45rem;
+    color: var(--system-primary, #32877f);
+    background: color-mix(in srgb, var(--system-primary, #32877f) 9%, #fff);
+    font-weight: 800;
+  }
+  .full2 .ventanasd {
+    width: auto;
+  }
+  .full2 .capsula {
+    display: grid;
+    width: 2.3rem;
+    height: 2.3rem;
+    place-items: center;
+    color: var(--system-primary, #32877f);
+    background: color-mix(in srgb, var(--system-primary, #32877f) 10%, #fff);
+  }
+  .catalog-toolbar__actions {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.65rem;
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 16%, #fff);
+    border-radius: 0.9rem;
+    background: #fff;
+  }
+  .catalog-toolbar__actions > * {
+    display: flex !important;
+    min-height: 42px;
+    padding: 0 !important;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.65rem;
+    font-size: 0 !important;
+  }
+  .catalog-toolbar__actions i {
+    margin: 0 !important;
+    font-size: 1.18rem !important;
+  }
+
+  .catalog-mobile-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 0.75rem;
+    background: transparent;
+  }
+
+  .catalog-mobile-card[data-detail-url] {
+    cursor: pointer;
+  }
+  .catalog-mobile-table thead {
+    display: none;
+  }
+  .catalog-mobile-table tbody {
+    display: table-row-group;
+  }
+  .catalog-mobile-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+    width: 100%;
+    margin: 0 0 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 15%, #fff);
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 0.3rem 0.9rem
+      color-mix(in srgb, var(--system-secondary, #10463e) 8%, transparent);
+  }
+  .catalog-mobile-table tbody td {
+    display: grid;
+    min-width: 0;
+    padding: 0.45rem !important;
+    border: 0 !important;
+    border-radius: 0.55rem;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 4%, #fff);
+    color: var(--system-secondary, #10463e);
+    font-size: 0.76rem;
+    text-align: left !important;
+  }
+  .catalog-mobile-table tbody td::before {
+    display: block;
+    margin-bottom: 0.12rem;
+    color: color-mix(in srgb, var(--system-secondary, #10463e) 60%, #fff);
+    font-size: 0.58rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+  .catalog-mobile-table tbody td:first-child {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--system-primary, #32877f);
+    background: color-mix(in srgb, var(--system-primary, #32877f) 9%, #fff);
+    font-weight: 800;
+  }
+  .catalog-mobile-table tbody td:first-child::before {
+    content: "Registro";
+    margin: 0;
+  }
+  .catalog-mobile-table tbody td:last-child {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.45rem;
+    background: transparent;
+  }
+  .catalog-mobile-table tbody td:last-child::before {
+    content: none !important;
+  }
+  .catalog-mobile-table tbody td:last-child .btn {
+    min-width: 2.45rem;
+    min-height: 2.3rem;
+  }
+  .catalog-mobile-table tbody tr:has(td[colspan]) {
+    display: grid;
+    place-items: center;
+    min-height: 9rem;
+    text-align: center;
+  }
+  .catalog-mobile-table tbody tr:has(td[colspan]) td {
+    grid-column: 1 / -1;
+    background: transparent;
+  }
+  .catalog-mobile-table tbody tr:has(td[colspan]) td::before {
+    content: none;
+  }
+
+  .catalog-mobile-table {
+    display: none;
+  }
+  .catalog-mobile-list {
+    display: grid;
+    width: 100%;
+    gap: 0.8rem;
+    margin-top: 1rem;
+  }
+  .catalog-mobile-card {
+    overflow: hidden;
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 15%, #fff);
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 0.3rem 0.9rem
+      color-mix(in srgb, var(--system-secondary, #10463e) 8%, transparent);
+  }
+  .catalog-mobile-card__header {
+    display: grid;
+    grid-template-columns: 2.7rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem;
+    border-bottom: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 10%, #fff);
+  }
+  .catalog-mobile-card__icon {
+    display: grid;
+    width: 2.7rem;
+    height: 2.7rem;
+    place-items: center;
+    border-radius: 0.72rem;
+    color: var(--system-primary, #32877f);
+    background: color-mix(in srgb, var(--system-primary, #32877f) 10%, #fff);
+    font-size: 1.2rem;
+  }
+  .catalog-mobile-card__title {
+    min-width: 0;
+  }
+  .catalog-mobile-card__title small,
+  .catalog-mobile-card__title strong {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .catalog-mobile-card__title small {
+    color: color-mix(in srgb, var(--system-secondary, #10463e) 60%, #fff);
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+  .catalog-mobile-card__title strong {
+    color: var(--system-secondary, #10463e);
+    font-size: 0.86rem;
+  }
+  .catalog-mobile-card__status .badge {
+    font-size: 0.6rem;
+  }
+  .catalog-mobile-card__fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.48rem;
+    padding: 0.75rem;
+  }
+  .catalog-mobile-card__field {
+    min-width: 0;
+    padding: 0.48rem;
+    border-radius: 0.58rem;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 4%, #fff);
+  }
+  .catalog-mobile-card__field small,
+  .catalog-mobile-card__field strong {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .catalog-mobile-card__field small {
+    color: color-mix(in srgb, var(--system-secondary, #10463e) 60%, #fff);
+    font-size: 0.57rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+  .catalog-mobile-card__field strong {
+    color: var(--system-secondary, #10463e);
+    font-size: 0.74rem;
+    font-weight: 600;
+  }
+  .catalog-mobile-card__footer {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: 0.45rem;
+    padding: 0 0.75rem 0.75rem;
+  }
+  .catalog-mobile-card__footer .btn {
+    display: inline-flex;
+    width: 100%;
+    min-height: 2.45rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+  }
+  .catalog-mobile-card__footer .btn span {
+    font-size: 0.75rem;
+    font-weight: 750;
+  }
+  .catalog-mobile-empty {
+    display: grid;
+    min-height: 9rem;
+    place-items: center;
+    gap: 0.35rem;
+    padding: 1rem;
+    border: 1px dashed
+      color-mix(in srgb, var(--system-primary, #32877f) 28%, #fff);
+    border-radius: 1rem;
+    color: var(--system-secondary, #10463e);
+    text-align: center;
+  }
+  .catalog-mobile-empty i {
+    color: var(--system-primary, #32877f);
+    font-size: 2rem;
+  }
+
+  .catalog-mobile-table--marcas td:nth-child(2)::before {
+    content: "Nombre";
+  }
+  .catalog-mobile-table--marcas td:nth-child(3)::before {
+    content: "Descripción";
+  }
+  .catalog-mobile-table--marcas td:nth-child(4)::before {
+    content: "Estado";
+  }
+  .catalog-mobile-table--presentaciones td:nth-child(2)::before {
+    content: "Nombre";
+  }
+  .catalog-mobile-table--presentaciones td:nth-child(3)::before {
+    content: "Abreviatura";
+  }
+  .catalog-mobile-table--presentaciones td:nth-child(4)::before {
+    content: "Valor";
+  }
+  .catalog-mobile-table--presentaciones td:nth-child(5)::before {
+    content: "Estado";
+  }
+  .catalog-mobile-table--proveedores td:nth-child(2)::before {
+    content: "Nombre legal";
+  }
+  .catalog-mobile-table--proveedores td:nth-child(3)::before {
+    content: "Nombre comercial";
+  }
+  .catalog-mobile-table--proveedores td:nth-child(4)::before {
+    content: "RTN";
+  }
+  .catalog-mobile-table--proveedores td:nth-child(5)::before {
+    content: "Días de crédito";
+  }
+  .catalog-mobile-table--proveedores td:nth-child(6)::before {
+    content: "Teléfono";
+  }
+  .catalog-mobile-table--proveedores td:nth-child(7)::before {
+    content: "Correo";
+  }
+  .catalog-mobile-table--proveedores td:nth-child(8)::before {
+    content: "Estado";
+  }
+  .catalog-mobile-table--contactos td:nth-child(2)::before {
+    content: "Proveedor";
+  }
+  .catalog-mobile-table--contactos td:nth-child(3)::before {
+    content: "Nombre";
+  }
+  .catalog-mobile-table--contactos td:nth-child(4)::before {
+    content: "Puesto";
+  }
+  .catalog-mobile-table--contactos td:nth-child(5)::before {
+    content: "Teléfono";
+  }
+  .catalog-mobile-table--contactos td:nth-child(6)::before {
+    content: "Correo";
+  }
+  .catalog-mobile-table--contactos td:nth-child(7)::before {
+    content: "Observación";
+  }
+  .catalog-mobile-table--contactos td:nth-child(8)::before {
+    content: "Estado";
+  }
+  .catalog-mobile-table--ubicaciones td:nth-child(2)::before {
+    content: "Nombre";
+  }
+  .catalog-mobile-table--ubicaciones td:nth-child(3)::before {
+    content: "Tipo";
+  }
+  .catalog-mobile-table--ubicaciones td:nth-child(4)::before {
+    content: "Código";
+  }
+  .catalog-mobile-table--ubicaciones td:nth-child(5)::before {
+    content: "Relación";
+  }
+  .catalog-mobile-table--ubicaciones td:nth-child(6)::before {
+    content: "Estado";
+  }
+  .catalog-mobile-table--pagar td:nth-child(2)::before {
+    content: "Proveedor";
+  }
+  .catalog-mobile-table--pagar td:nth-child(3)::before {
+    content: "Compra";
+  }
+  .catalog-mobile-table--pagar td:nth-child(4)::before {
+    content: "Total";
+  }
+  .catalog-mobile-table--pagar td:nth-child(5)::before {
+    content: "Pendiente";
+  }
+  .catalog-mobile-table--pagar td:nth-child(6)::before {
+    content: "Faltan";
+  }
+  .catalog-mobile-table--pagar td:nth-child(7)::before {
+    content: "Vencimiento";
+  }
+  .catalog-mobile-table--pagar td:nth-child(8)::before {
+    content: "Estado";
+  }
+  .catalog-mobile-table--cobrar td:nth-child(2)::before {
+    content: "Cliente";
+  }
+  .catalog-mobile-table--cobrar td:nth-child(3)::before {
+    content: "Factura";
+  }
+  .catalog-mobile-table--cobrar td:nth-child(4)::before {
+    content: "Total";
+  }
+  .catalog-mobile-table--cobrar td:nth-child(5)::before {
+    content: "Pendiente";
+  }
+  .catalog-mobile-table--cobrar td:nth-child(6)::before {
+    content: "Días de crédito";
+  }
+  .catalog-mobile-table--cobrar td:nth-child(7)::before {
+    content: "Faltan";
+  }
+  .catalog-mobile-table--cobrar td:nth-child(8)::before {
+    content: "Vencimiento";
+  }
+  .catalog-mobile-table--cobrar td:nth-child(9)::before {
+    content: "Estado";
+  }
+  .catalog-mobile-table--sat td:nth-child(2)::before {
+    content: "Sucursal";
+  }
+  .catalog-mobile-table--sat td:nth-child(3)::before {
+    content: "Nombre CAI";
+  }
+  .catalog-mobile-table--sat td:nth-child(4)::before {
+    content: "Número CAI";
+  }
+  .catalog-mobile-table--sat td:nth-child(5)::before {
+    content: "Rango inicial";
+  }
+  .catalog-mobile-table--sat td:nth-child(6)::before {
+    content: "Rango final";
+  }
+  .catalog-mobile-table--sat td:nth-child(7)::before {
+    content: "Emisión";
+  }
+  .catalog-mobile-table--sat td:nth-child(8)::before {
+    content: "Vencimiento";
+  }
+  .catalog-mobile-table--sat td:nth-child(9)::before {
+    content: "Estado";
+  }
+
+  /* La geometría y el arrastre se heredan de .modal-sheet-mobile (Caja).
+     --auto evita abrir una hoja alta cuando el formulario es corto. */
+  .catalog-mobile-modal.modal-sheet-mobile--auto .modal-content {
+    height: auto;
+    max-height: min(88dvh, 720px);
+    overflow: hidden;
+    border: 0;
+    border-radius: 1.1rem 1.1rem 0 0;
+  }
+  .catalog-mobile-modal .modal-body {
+    overflow-y: auto;
+    padding: 0.9rem 1rem 1rem;
+  }
+  .catalog-mobile-modal .modal-body br {
+    display: none;
+  }
+  .catalog-mobile-modal .modal-body .form-group,
+  .catalog-mobile-modal .modal-body .mb-3 {
+    margin: 0 0 0.65rem !important;
+    padding: 0.65rem;
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 3%, #fff);
+  }
+  .catalog-mobile-modal .form-control,
+  .catalog-mobile-modal select,
+  .catalog-mobile-modal textarea {
+    min-height: 43px;
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 20%, #fff);
+    border-radius: 0.6rem;
+    color: var(--system-secondary, #10463e);
+    background: #fff;
+    box-shadow: none;
+  }
+  .catalog-mobile-modal textarea {
+    min-height: 78px;
+  }
+  .catalog-mobile-modal .form-control:focus,
+  .catalog-mobile-modal select:focus,
+  .catalog-mobile-modal textarea:focus {
+    border-color: var(--system-primary, #32877f);
+    box-shadow: 0 0 0 0.18rem
+      color-mix(in srgb, var(--system-primary, #32877f) 16%, transparent);
+  }
+  .catalog-mobile-modal .modal-footer {
+    display: block;
+  }
+  .catalog-mobile-modal .modal-footer .btn-secondary {
+    display: none;
+  }
+  .catalog-mobile-modal .modal-footer .btn:not(.btn-secondary) {
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
+  }
+}

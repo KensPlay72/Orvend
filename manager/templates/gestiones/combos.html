@@ -3,8 +3,11 @@
 {% block title %}Combos{% endblock%} 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
-<link rel="stylesheet" href="{% static 'css/combos.css' %}?v=20260918-06" />
+<link rel="stylesheet" href="{% static 'css/combos.css' %}?v=20261006-05" />
 {% endblock %} 
+{% block page_css_overrides %}
+<link rel="stylesheet" href="{% static 'css/combos_mobile.css' %}?v=20261006-05" />
+{% endblock %}
 {% block titulo_content %}
 <div class="tituloscont">
   <img
@@ -22,7 +25,6 @@
   <div class="combos-intro">
     <div class="combos-intro__icon"><i class="bx bx-package"></i></div>
     <div>
-      <p class="combos-intro__eyebrow">Constructor de paquetes</p>
       <h1>Arma un combo con tu inventario</h1>
       <p>
         Agrega productos disponibles y define un precio de venta para el
@@ -38,8 +40,7 @@
       class="dv-header-search__button combos-list-trigger"
       aria-label="Ver combos registrados"
       title="Ver combos registrados"
-      ><i class="bx bx-list-ul" aria-hidden="true"></i
-    ></a>
+      ><i class="bx bx-list-ul" aria-hidden="true"></i></a>
     {% endif %}
   </div>
 
@@ -126,6 +127,7 @@
             </tbody>
           </table>
         </div>
+        <section class="combos-selected-mobile-list" id="detalleComboMobile" aria-live="polite"></section>
       </article>
     </div>
 
@@ -188,27 +190,30 @@
 </section>
 
 <div
-  class="modal fade"
+  class="modal fade modal-sheet-mobile combos-product-modal"
   id="modalProductosCombo"
   tabindex="-1"
   aria-labelledby="modalProductosComboTitulo"
   aria-hidden="true"
 >
-  <div class="modal-dialog modal-lg modal-dialog-centered">
+  <div class="modal-dialog modal-lg modal-dialog-centered combos-product-modal__dialog">
     <div class="modal-content combos-modal">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalProductosComboTitulo">
-          Agregar productos disponibles
-        </h5>
+      <div class="modal-header caja-mobile-modal-header">
+        <span class="modal-sheet-handle" aria-hidden="true"></span>
+        <div class="caja-mobile-modal-heading">
+          <span>INVENTARIO</span>
+          <h5 class="modal-title" id="modalProductosComboTitulo">Agregar productos</h5>
+        </div>
         <button
           type="button"
-          class="btn-close"
+          class="btn-close caja-mobile-modal-close"
           data-bs-dismiss="modal"
           aria-label="Cerrar"
         ></button>
       </div>
-      <div class="modal-body">
-        <form class="combos-search" id="formBuscarProductoCombo">
+      <div class="modal-body combos-product-modal__body">
+        <form class="combos-search caja-mobile-search" id="formBuscarProductoCombo">
+          <i class="bx bx-search" aria-hidden="true"></i>
           <input
             id="buscarProductoCombo"
             type="search"
@@ -230,7 +235,7 @@
           aria-label="Páginas de productos"
         ></nav>
       </div>
-      <div class="modal-footer combos-modal__footer">
+      <div class="modal-footer combos-modal__footer caja-mobile-modal-footer">
         <span id="productosSeleccionadosTexto">0 productos seleccionados</span
         ><button
           type="button"
@@ -248,5 +253,5 @@
 <script>
   const COMBOS_URLS = { guardar: "{% url 'guardar_combo' %}" };
 </script>
-<script src="{% static 'js/gestiones/combos.js' %}?v=20260929-01"></script>
+<script src="{% static 'js/gestiones/combos.js' %}?v=20261006-02"></script>
 {% endblock %}

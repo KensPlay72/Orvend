@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
   const tabla = document.getElementById("listaCombosRegistrados");
+  const listaMovil = document.getElementById("combosMobileList");
   const csrf = document.querySelector("[name=csrfmiddlewaretoken]")?.value;
   const detalleProductos = document.getElementById("detalleProductosCombo");
   const tituloDetalle = document.getElementById("modalDetalleComboTitulo");
@@ -18,12 +19,8 @@ document.addEventListener("DOMContentLoaded", () => {
         })[caracter],
     );
 
-  async function mostrarDetalle(comboId) {
-    tituloDetalle.textContent = "Productos del combo";
-    skuDetalle.textContent = "";
-    detalleProductos.innerHTML =
-      '<p class="text-center text-muted py-4">Cargando productos…</p>';
-    bootstrap.Modal.getOrCreateInstance(modalDetalle).show();
+  async function cargarDetalle(comboId, destino, actualizarTitulo = false) {
+    destino.innerHTML = '<p class="text-center text-muted py-4">Cargando productos…</p>';
     try {
       const respuesta = await fetch(
         COMBO_LIST_URLS.detalle.replace("/0/", `/${comboId}/`),
@@ -33,9 +30,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const datos = await respuesta.json();
       if (!datos.success)
         throw new Error("No fue posible obtener los productos del combo.");
-      tituloDetalle.textContent = datos.combo.nombre;
-      skuDetalle.textContent = `SKU: ${datos.combo.sku}`;
-      detalleProductos.innerHTML = datos.detalles.length
+      if (actualizarTitulo) {
+        tituloDetalle.textContent = datos.combo.nombre;
+        skuDetalle.textContent = `SKU: ${datos.combo.sku}`;
+      }
+      destino.innerHTML = datos.detalles.length
         ? datos.detalles
             .map(
               (producto) =>
@@ -44,18 +43,18 @@ document.addEventListener("DOMContentLoaded", () => {
             .join("")
         : '<p class="text-center text-muted py-4">Este combo no tiene productos.</p>';
     } catch (error) {
-      detalleProductos.innerHTML = `<p class="text-center text-danger py-4">${escapar(error.message)}</p>`;
+      destino.innerHTML = `<p class="text-center text-danger py-4">${escapar(error.message)}</p>`;
     }
   }
 
-  tabla.addEventListener("click", async (evento) => {
-    const boton = evento.target.closest("[data-activo]");
-    if (!boton) {
-      const fila = evento.target.closest(".combos-list-row");
-      if (fila) mostrarDetalle(fila.dataset.comboId);
-      return;
-    }
-    evento.stopPropagation();
+  async function mostrarDetalle(comboId) {
+    tituloDetalle.textContent = "Productos del combo";
+    skuDetalle.textContent = "";
+    bootstrap.Modal.getOrCreateInstance(modalDetalle).show();
+    await cargarDetalle(comboId, detalleProductos, true);
+  }
+
+  async function cambiarEstado(boton) {
     const activo = boton.dataset.activo === "true";
     const resultado = await Swal.fire({
       icon: "warning",
@@ -92,6 +91,38 @@ document.addEventListener("DOMContentLoaded", () => {
         confirmButtonText: "Aceptar",
         customClass: { confirmButton: "classbotones" },
       });
+    }
+  }
+
+  tabla?.addEventListener("click", (evento) => {
+    const boton = evento.target.closest("[data-activo]");
+    if (boton) {
+      evento.stopPropagation();
+      cambiarEstado(boton);
+      return;
+    }
+    const fila = evento.target.closest(".combos-list-row");
+    if (fila) mostrarDetalle(fila.dataset.comboId);
+  });
+
+  listaMovil?.addEventListener("click", (evento) => {
+    const botonEstado = evento.target.closest("[data-activo]");
+    if (botonEstado) {
+      evento.stopPropagation();
+      cambiarEstado(botonEstado);
+      return;
+    }
+    const encabezado = evento.target.closest(".combos-mobile-card__header");
+    if (!encabezado) return;
+    const tarjeta = encabezado.closest(".combos-mobile-card");
+    const abierta = tarjeta.classList.toggle("is-open");
+    encabezado.setAttribute("aria-expanded", String(abierta));
+    if (abierta) {
+      const destino = tarjeta.querySelector(".combos-mobile-card__products");
+      if (!destino.dataset.cargado) {
+        destino.dataset.cargado = "true";
+        cargarDetalle(tarjeta.dataset.comboId, destino);
+      }
     }
   });
 });

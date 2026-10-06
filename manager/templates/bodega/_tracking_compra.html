@@ -1,17 +1,26 @@
-<section class="purchase-tracker"
-         data-tracker-key="{{ tracking.clave }}"
-         data-current-step="{{ tracking.paso_actual }}"
-         data-tracker-version="{{ tracking.version }}"
-         aria-label="Estado de la compra">
+<section
+  class="purchase-tracker"
+  data-tracker-key="{{ tracking.clave }}"
+  data-current-step="{{ tracking.paso_actual }}"
+  data-tracker-version="{{ tracking.version }}"
+  aria-label="Estado de la compra"
+>
   <div class="purchase-tracker__steps">
     <div class="purchase-tracker__line"><span></span></div>
     {% for paso in tracking.pasos %}
-      <div class="purchase-tracker__step {% if forloop.counter0 <= tracking.paso_actual %}is-complete{% endif %}{% if forloop.counter0 == tracking.paso_actual %} is-current{% endif %}{% if paso.ayuda %} has-detail{% endif %}"
-           {% if paso.ayuda %}tabindex="0" role="button" aria-label="{{ paso.nombre }}. {{ paso.ayuda }}"{% endif %}>
-        <span class="purchase-tracker__node"><i class="bx {{ paso.icono }}"></i></span>
-        <span class="purchase-tracker__label">{{ paso.nombre }}{% if paso.detalle %} · {{ paso.detalle }}{% endif %}</span>
-        {% if paso.ayuda %}<span class="purchase-tracker__tooltip" role="tooltip">{{ paso.ayuda }}</span>{% endif %}
-      </div>
+    <div
+      class="purchase-tracker__step {% if forloop.counter0 <= tracking.paso_actual %}is-complete{% endif %}{% if forloop.counter0 == tracking.paso_actual %} is-current{% endif %}{% if paso.ayuda %} has-detail{% endif %}"
+      {% if paso.ayuda %}tabindex="0"
+      role="button"
+      aria-label="{{ paso.nombre }}. {{ paso.ayuda }}"
+      {% endif %}
+    >
+      <span class="purchase-tracker__node"
+        ><i class="bx {{ paso.icono }}"></i
+      ></span>
+      <span class="purchase-tracker__label">{{ paso.nombre }}{% if paso.detalle %} · {{ paso.detalle }}{% endif %}</span>
+      {% if paso.ayuda %}<span class="purchase-tracker__tooltip" role="tooltip">{{ paso.ayuda }}</span>{% endif %}
+    </div>
     {% endfor %}
   </div>
 </section>

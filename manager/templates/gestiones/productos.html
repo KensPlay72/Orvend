@@ -4,8 +4,11 @@
     Productos
 {% endblock title %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=productos-footer-20260930" />
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261005-number-inputs" />
 {% endblock extra_css %}
+{% block page_css_overrides %}
+    <link rel="stylesheet" href="{% static 'css/productos_mobile.css' %}?v=20261005-productos-movil-09" />
+{% endblock page_css_overrides %}
 {% block titulo_content %}
     <div class="tituloscont">
         <img class="logop"
@@ -17,7 +20,15 @@
     </div>
 {% endblock titulo_content %}
 {% block main_content %}
+    <section class="productos-mobile-search-card">
+        <div class="productos-mobile-search-card__intro"><span><i class="bx bx-package" aria-hidden="true"></i></span><div><strong>Buscar productos</strong><small>Consulta por nombre o código SKU.</small></div></div>
+        <form method="get" class="productos-mobile-search" role="search">
+            <div class="productos-mobile-search__field"><i class="bx bx-search" aria-hidden="true"></i><input type="search" name="search" value="{{ search }}" placeholder="Producto o SKU" autocomplete="off"></div>
+            <button type="submit"><i class="bx bx-search" aria-hidden="true"></i><span>Buscar</span></button>
+        </form>
+    </section>
     <div class="full2 productos-header">
+        <section class="productos-mobile-counters" aria-label="Resumen de productos">
         <div class="ventanas">
             <div class="ventanasi">
                 <p class="ventana-titulo">Total de productos</p>
@@ -51,6 +62,8 @@
                 </div>
             </div>
         </div>
+        </section>
+        <section class="productos-mobile-actions" aria-label="Acciones de productos">
         <div class="divbuttons10">
             {% if perms.manager.add_productos %}
                 <button id="toggleDropdownPanel"
@@ -66,6 +79,8 @@
             </a>
             {% endif %}
         </div>
+        </section>
+        <section class="productos-mobile-files" aria-label="Acciones de archivos">
         <div class="productos-header__export">
             <button type="button"
                     id="exportarProductosExcel"
@@ -77,17 +92,19 @@
             </button>
             {% if request.user.is_superuser %}
                 <div class="productos-header__file-actions">
-                    <button type="button" class="catalog-import-btn" data-bs-toggle="modal" data-bs-target="#modalImportarProductos"><i class="bx bx-upload"></i> Importar</button>
-                    <a class="catalog-template-btn" href="{% url 'descargar_plantilla_productos' %}"><i class="bx bx-download"></i> Plantilla</a>
+                    <button type="button" class="catalog-import-btn" data-bs-toggle="modal" data-bs-target="#modalImportarProductos"><i class="bx bx-import"></i> Importar</button>
+                    <a class="catalog-template-btn" href="{% url 'descargar_plantilla_productos' %}"><i class="bx bx-file-blank"></i> Plantilla</a>
                 </div>
             {% endif %}
         </div>
+        </section>
     </div>
     {% if request.user.is_superuser %}
         {% url 'importar_productos_excel' as import_url_productos %}
         {% include "gestiones/_modal_importar_excel.html" with modal_id="modalImportarProductos" titulo="productos" import_url=import_url_productos %}
     {% endif %}
-    <div class="modal fade"
+
+    <div class="modal fade modal-sheet-mobile"
          id="modalregis"
          tabindex="-1"
          aria-labelledby="exampleModalCenterTitle"
@@ -137,31 +154,34 @@
                                 <br>
                                 <div class="form-group">
                                     <label class="d-block">Precio de Venta</label>
-                                    <input type="text"
+                                    <input type="number"
                                            name="precioVenta"
                                            id="precioVenta"
                                            class="form-control mb-3"
                                            placeholder="Precio de venta"
+                                           min="0" step="0.01" inputmode="decimal"
                                            oninput="validateNumber(this)"
                                            required>
                                            <br>
                                     <div class="row g-2">
                                         <div class="col-md-6">
                                             <label for="precioVentaMin" class="form-label">Mínimo</label>
-                                            <input type="text"
+                                            <input type="number"
                                                    name="precioVentaMin"
                                                    id="precioVentaMin"
                                                    class="form-control"
                                                    placeholder="Precio mínimo"
+                                                   min="0" step="0.01" inputmode="decimal"
                                                    oninput="validateNumber(this)">
                                         </div>
                                         <div class="col-md-6">
                                             <label for="precioVentaMax" class="form-label">Máximo</label>
-                                            <input type="text"
+                                            <input type="number"
                                                    name="precioVentaMax"
                                                    id="precioVentaMax"
                                                    class="form-control"
                                                    placeholder="Precio máximo"
+                                                   min="0" step="0.01" inputmode="decimal"
                                                    oninput="validateNumber(this)">
                                         </div>
                                     </div>
@@ -169,17 +189,17 @@
                                 <br>
                                 <div class="form-group">
                                     <label for="impuesto">Impuesto</label>
-                                    <input type="text"
+                                    <input type="number"
                                            name="impuesto"
                                            id="impuesto"
                                            class="form-control"
                                            placeholder="Impuesto (%)"
+                                           min="0" step="0.01" inputmode="decimal"
                                            oninput="validateNumber(this)"
                                            required>
                                 </div>
-                                <br>
                                 <div class="divproductos">
-                                    <div class="form-group mb-3">
+                                    <div class="form-group mb-3 productos-modal-status">
                                         <label for="vencimiento" class="d-block">Vencimiento</label>
                                         <label class="d-flex align-items-center">
                                             <input type="checkbox" id="vencimiento" name="vencimiento" class="me-2">
@@ -285,15 +305,17 @@
                         </div>
                     </div>
                     <!-- Footer con botones -->
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                        <button type="submit" id="btnregis" class="btn classbotones">Guardar</button>
-                    </div>
                 </form>
+                <div class="modal-footer productos-modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" form="postregistro" id="btnregis" class="btn classbotones">Guardar</button>
+                </div>
             </div>
         </div>
     </div>
-    <div class="modal fade"
+
+
+    <div class="modal fade modal-sheet-mobile"
          id="modalput"
          tabindex="-1"
          aria-labelledby="exampleModalCenterTitle"
@@ -346,31 +368,34 @@
                                 <br>
                                 <div class="form-group">
                                     <label class="d-block">Precio de Venta</label>
-                                    <input type="text"
+                                    <input type="number"
                                            name="precioVentaedit"
                                            id="precioVentaedit"
                                            class="form-control mb-3"
                                            placeholder="Precio de venta"
+                                           min="0" step="0.01" inputmode="decimal"
                                            oninput="validateNumber(this)"
                                            required>
                                        <br> 
                                     <div class="row g-2">
                                         <div class="col-md-6">
                                             <label for="precioVentaMinedit" class="form-label">Mínimo</label>
-                                            <input type="text"
+                                            <input type="number"
                                                    name="precioVentaMinedit"
                                                    id="precioVentaMinedit"
                                                    class="form-control"
                                                    placeholder="Precio mínimo"
+                                                   min="0" step="0.01" inputmode="decimal"
                                                    oninput="validateNumber(this)">
                                         </div>
                                         <div class="col-md-6">
                                             <label for="precioVentaMaxedit" class="form-label">Máximo</label>
-                                            <input type="text"
+                                            <input type="number"
                                                    name="precioVentaMaxedit"
                                                    id="precioVentaMaxedit"
                                                    class="form-control"
                                                    placeholder="Precio máximo"
+                                                   min="0" step="0.01" inputmode="decimal"
                                                    oninput="validateNumber(this)">
                                         </div>
                                     </div>
@@ -378,11 +403,12 @@
                                 <br>
                                 <div class="form-group">
                                     <label for="impuestoedit">Impuesto</label>
-                                    <input type="text"
+                                    <input type="number"
                                            name="impuestoedit"
                                            id="impuestoedit"
                                            class="form-control"
                                            placeholder="Impuesto (%)"
+                                           min="0" step="0.01" inputmode="decimal"
                                            oninput="validateNumber(this)"
                                            required>
                                 </div>
@@ -516,16 +542,18 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Footer -->
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                        <button type="submit" id="btnput" class="btn classbotones">Guardar</button>
-                    </div>
                 </form>
+                <!-- Footer -->
+                <div class="modal-footer productos-modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" form="putregistro" id="btnput" class="btn classbotones">Guardar</button>
+                </div>
             </div>
         </div>
     </div>
-<div class="tabla-container">
+
+
+    <div class="tabla-container productos-desktop-table">
     <table class="tablas-todo" id="tablacont">
 
         <thead>
@@ -705,6 +733,46 @@
 
     </table>
 </div>
+<section class="productos-mobile-list" aria-label="Productos registrados">
+    {% for producto in page_obj %}
+        {% with imagen_principal=producto.imagenes_producto.first %}
+        <article class="productos-mobile-card" data-product-id="{{ producto.id }}">
+            <button type="button" class="productos-mobile-card__header" aria-expanded="false">
+                <span class="productos-mobile-card__icon"><i class="bx bx-package" aria-hidden="true"></i></span>
+                <span class="productos-mobile-card__title"><small>Producto #{{ producto.id }}</small><strong>{{ producto.nombre }}</strong><em>{{ producto.codigo_sku }}</em></span>
+                {% if producto.is_active %}<span class="productos-mobile-card__status is-active">Activo</span>{% else %}<span class="productos-mobile-card__status">Inactivo</span>{% endif %}
+                <i class="bx bx-chevron-down productos-mobile-card__chevron" aria-hidden="true"></i>
+            </button>
+            <div class="productos-mobile-card__detail">
+                <div class="productos-mobile-card__detail-inner">
+                    <div class="productos-mobile-card__image">
+                        {% if imagen_principal %}
+                        <img class="productos-mobile-card__lazy-image" data-src="{% url 'producto_imagen' imagen_principal.id %}" alt="{{ producto.nombre }}" width="120" height="120">
+                        {% else %}
+                        <img src="{% static 'img/default.webp' %}" alt="Producto sin imagen" width="120" height="120">
+                        {% endif %}
+                    </div>
+                    <div class="productos-mobile-card__data">
+                        <span><small>Categoría</small><strong>{{ producto.categoria.nombre }}</strong></span>
+                        <span><small>Presentación</small><strong>{{ producto.unidad_medida.abreviatura }}</strong></span>
+                        <span><small>Marca</small><strong>{{ producto.marca.nombre }}</strong></span>
+                        <span><small>Impuesto</small><strong>{{ producto.impuesto }}%</strong></span>
+                    </div>
+                    <div class="productos-mobile-card__price"><small>Precio de venta</small><strong>L. {{ producto.precio_venta|floatformat:2 }}</strong></div>
+                    {% if not producto.is_delete %}
+                    <footer class="productos-mobile-card__actions">
+                        {% if perms.manager.change_productos %}<button type="button" class="btn btn-primary btn-edit" data-id="{{ producto.id }}" data-bs-toggle="modal" data-bs-target="#modalput"><i class="bx bx-edit" aria-hidden="true"></i> Editar</button>{% endif %}
+                        {% if perms.manager.delete_productos %}<button type="button" class="btn btn-outline-danger btn-delete" data-id="{{ producto.id }}" data-producto-nombre="{{ producto.nombre }}"><i class="bx bx-trash" aria-hidden="true"></i> Eliminar</button>{% endif %}
+                    </footer>
+                    {% endif %}
+                </div>
+            </div>
+        </article>
+        {% endwith %}
+    {% empty %}
+        <div class="productos-mobile-empty"><i class="bx bx-package" aria-hidden="true"></i><strong>Sin productos</strong><span>No hay productos para mostrar.</span></div>
+    {% endfor %}
+</section>
     <nav class="d-flex justify-content-center mt-4">
         <ul class="pagination">
             <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
@@ -740,7 +808,7 @@
         input.value = input.value.replace(/[^0-9.+]/g, "");
         }
     </script>
-    <script type="module" src="{% static 'js/gestiones/productos.js' %}?v=20261003-default-webp"></script>
+    <script type="module" src="{% static 'js/gestiones/productos.js' %}?v=20261005-acordeon-simetrico"></script>
     <script src="{% static 'js/importar_excel.js' %}"></script>
     <script type="module" src="{% static 'js/chektext.js' %}"></script>
 {% endblock main_content %}

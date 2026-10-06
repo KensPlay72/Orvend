@@ -2730,6 +2730,52 @@ function finalizarVentaExitosa(respuesta) {
   limpiarCajaDespuesDeVenta();
 }
 
+function redibujarProductosCaja() {
+  const cuerpo = document.querySelector("#tablaProductos tbody");
+  if (!cuerpo) return;
+
+  cuerpo.replaceChildren();
+  datos.forEach((producto) => {
+    tabla_codigo(
+      producto.codigo,
+      producto.nombre,
+      `${producto.cantidad} / ${producto.stock}`,
+      Number(producto.precio_venta || 0).toFixed(2),
+      Number(producto.descuento || 0).toFixed(2),
+      totalLineaCaja(producto).toFixed(2),
+    );
+  });
+  tabla_detalle_total();
+}
+
+function reflejarStockInsuficiente(conflicto) {
+  if (!conflicto?.producto_id) return;
+
+  const disponible = Math.max(0, Number(conflicto.disponible) || 0);
+  const maximoVendible = Math.floor(disponible);
+  const productoId = Number(conflicto.producto_id);
+  let cambio = false;
+
+  datos = datos.flatMap((producto) => {
+    if (Number(producto.id) !== productoId || producto.combo_id) {
+      return [producto];
+    }
+
+    cambio = true;
+    if (maximoVendible < 1) return [];
+
+    producto.stock = disponible;
+    if (producto.cantidad > maximoVendible) {
+      producto.cantidad = maximoVendible;
+      recalcularDescuentoPorCantidad(producto);
+      recalcularLineaConIsvIncluido(producto);
+    }
+    return [producto];
+  });
+
+  if (cambio) redibujarProductosCaja();
+}
+
 function enviarVenta(data, tipoPago, cantidadDinero) {
   // ======================================================
   // BLOQUEAR DOBLE ENVÍO
@@ -2797,11 +2843,13 @@ function enviarVenta(data, tipoPago, cantidadDinero) {
       const respuesta = await response.json();
 
       if (!response.ok) {
-        throw new Error(
+        const error = new Error(
           respuesta.error ||
             respuesta.message ||
             "Ocurrió un error al realizar la venta",
         );
+        error.stockInsuficiente = respuesta.stock_insuficiente;
+        throw error;
       }
 
       return respuesta;
@@ -2935,6 +2983,7 @@ function enviarVenta(data, tipoPago, cantidadDinero) {
         botonCaja.disabled = false;
       }
 
+      reflejarStockInsuficiente(error.stockInsuficiente);
       mensaje(error.message, "error", "");
     });
 }

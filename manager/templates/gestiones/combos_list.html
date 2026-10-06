@@ -3,8 +3,11 @@
 {% block title %}Combos{% endblock %} 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
-<link rel="stylesheet" href="{% static 'css/combos.css' %}?v=20260918-06" />
+<link rel="stylesheet" href="{% static 'css/combos.css' %}?v=20261006-05" />
 {% endblock %} 
+{% block page_css_overrides %}
+<link rel="stylesheet" href="{% static 'css/combos_mobile.css' %}?v=20261006-05" />
+{% endblock %}
 {% block titulo_content %}
 <div class="tituloscont">
   <img class="logop" src="{% static 'img/LH.webp' %}" alt="" />
@@ -12,7 +15,14 @@
 </div>
 {% endblock %} 
 {% block main_content %}
-<div class="tabla-container">
+<section class="combos-list-mobile-search-card">
+  <div class="combos-list-mobile-search-card__intro"><span><i class="bx bx-package" aria-hidden="true"></i></span><div><strong>Buscar combos</strong><small>Consulta por nombre o código SKU.</small></div></div>
+  <form method="get" class="combos-list-mobile-search" role="search">
+    <div class="combos-list-mobile-search__field"><i class="bx bx-search" aria-hidden="true"></i><input type="search" name="search" value="{{ search }}" placeholder="Combo o SKU" autocomplete="off" /></div>
+    <button type="submit" aria-label="Buscar"><i class="bx bx-search" aria-hidden="true"></i><span>Buscar</span></button>
+  </form>
+</section>
+<div class="tabla-container combos-desktop-table">
   <table class="tablas-todo" id="tablaCombos">
     <thead>
       <tr>
@@ -77,6 +87,38 @@
   </table>
 </div>
 
+<section class="combos-mobile-list" id="combosMobileList" aria-label="Combos registrados">
+  {% for combo in combos %}
+  <article class="combos-mobile-card" data-combo-id="{{ combo.id }}">
+    <button type="button" class="combos-mobile-card__header" aria-expanded="false">
+      <span class="combos-mobile-card__image">
+        <img src="{% if combo.imagen and combo.imagen.imagen_archivo %}{% url 'combo_imagen' combo.imagen.id %}{% else %}{% static 'img/default.webp' %}{% endif %}" onerror="this.onerror=null;this.src='{% static 'img/default.webp' %}';" alt="" />
+      </span>
+      <span class="combos-mobile-card__title">
+        <small>COMBO #{{ combo.id }}</small>
+        <strong>{{ combo.nombre }}</strong>
+        <em>{{ combo.codigo_sku }}</em>
+      </span>
+      <span class="combos-mobile-card__status {% if combo.is_active %}is-active{% endif %}">{% if combo.is_active %}Activo{% else %}Inactivo{% endif %}</span>
+      <i class="bx bx-chevron-down combos-mobile-card__chevron" aria-hidden="true"></i>
+    </button>
+    <div class="combos-mobile-card__detail">
+      <div class="combos-mobile-card__detail-inner">
+        <div class="combos-mobile-card__price"><small>Precio de venta</small><strong>{{ moneda_simbolo }} {{ combo.precio_venta|floatformat:2 }}</strong></div>
+        <div class="combos-mobile-card__products" aria-live="polite"><p>Abre el registro para ver los productos.</p></div>
+        {% if perms.manager.change_combos %}
+        <button type="button" class="btn combos-mobile-card__action combos-state-button" data-combo-id="{{ combo.id }}" data-activo="{{ combo.is_active|yesno:'true,false' }}">
+          <i class="bx {% if combo.is_active %}bx-x-circle{% else %}bx-check-circle{% endif %}"></i>{% if combo.is_active %} Inactivar{% else %} Activar{% endif %}
+        </button>
+        {% endif %}
+      </div>
+    </div>
+  </article>
+  {% empty %}
+  <div class="combos-mobile-empty"><i class="bx bx-package"></i><span>No hay combos registrados.</span></div>
+  {% endfor %}
+</section>
+
 <nav class="d-flex justify-content-center mt-4" aria-label="Páginas de combos">
   <ul class="pagination">
     <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
@@ -131,5 +173,5 @@
     detalle: "/manager/combos/0/detalle/",
   };
 </script>
-<script src="{% static 'js/gestiones/combos-list.js' %}?v=20260918-03"></script>
+<script src="{% static 'js/gestiones/combos-list.js' %}?v=20261006-01"></script>
 {% endblock %}

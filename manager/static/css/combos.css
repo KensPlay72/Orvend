@@ -147,6 +147,7 @@
 .combos-add {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.3rem;
   padding: 0.42rem 0.65rem;
   font-size: 0.8rem;
@@ -576,6 +577,54 @@
   color: #fff;
   background: #604187;
 }
+
+/* Los colores de Combos siguen la configuración de Colores del sistema. */
+.combos-intro {
+  background: linear-gradient(120deg, var(--system-secondary, #256f68), var(--system-primary, #32877f));
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--system-primary, #32877f) 24%, transparent);
+}
+.combos-list-trigger,
+.combos-search .dv-header-search__button,
+.combos-pagination button.is-current {
+  border-color: var(--system-primary, #32877f);
+  background: var(--system-primary, #32877f);
+}
+.combos-list-trigger:hover,
+.combos-search .dv-header-search__button:hover {
+  background: var(--system-secondary, #256f68);
+}
+.combos-list-trigger > span,
+.combos-list-trigger__chevron { display: none; }
+.combos-card__head,
+.combos-stock,
+.combos-subtotal,
+.combos-note i,
+.combos-pagination button,
+.combos-product-option b {
+  color: var(--system-primary, #32877f);
+}
+.combos-fields input:focus,
+.combos-prices input:focus {
+  border-color: var(--system-primary, #32877f);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--system-primary, #32877f) 15%, transparent);
+}
+.combos-cost {
+  background: color-mix(in srgb, var(--system-primary, #32877f) 10%, #fff);
+}
+.combos-cost strong { color: var(--system-secondary, #256f68); }
+.combos-product-option:hover {
+  border-color: color-mix(in srgb, var(--system-primary, #32877f) 48%, #fff);
+  background: color-mix(in srgb, var(--system-primary, #32877f) 6%, #fff);
+}
+.combos-product-option.is-selected {
+  border-color: var(--system-primary, #32877f);
+  background: color-mix(in srgb, var(--system-primary, #32877f) 10%, #fff);
+  box-shadow: inset 3px 0 var(--system-primary, #32877f);
+}
+.combos-search > i { display: none; }
+.combos-list-mobile-search-card { display: none; }
+#tablaCombos .badge.bg-success { color: #fff !important; background-color: #198754 !important; }
+#tablaCombos .badge.bg-danger { color: #fff !important; background-color: #dc3545 !important; }
 .combos-table th {
   color: inherit;
   background: transparent;

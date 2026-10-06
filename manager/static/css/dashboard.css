@@ -559,8 +559,8 @@
 
     gap: 8px;
 
-    /* Espacio para tres alertas; el resto se consulta sin desplazar el panel. */
-    height: 190px;
+    /* Crece con el contenido y a partir de cinco alertas usa desplazamiento. */
+    max-height: 322px;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-gutter: stable;

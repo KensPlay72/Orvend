@@ -1,305 +1,368 @@
-    {% extends "menu.html" %}
+{% extends "menu.html" %} 
+{% load static %} 
+{% block title %} Cuadre de Caja {% endblock title %} 
+{% block extra_css %}
+<link
+  rel="stylesheet"
+  href="{% static 'css/manager.css' %}?v=20261004-cierre-sheet"
+/>
+<link
+  rel="stylesheet"
+  href="{% static 'css/cuadre_caja.css' %}?v=20261005-espacio-contenido"
+/>
+<link
+  rel="stylesheet"
+  href="{% static 'css/caja.css' %}?v=20261005-espacio-contenido"
+/>
+{% endblock extra_css %} 
+{% block titulo_content %}
+<div class="tituloscont">
+  d<img
+    class="logop"
+    src="{% static 'img/LH.webp' %}"
+    alt="logo"
+    width="0"
+    height="0"
+  />
 
-    {% load static %}
+  <p class="header__logo">| Cuadre de Caja</p>
+</div>
 
-    {% block title %}
-    Cuadre de Caja
-    {% endblock title %}
+{% endblock titulo_content %} 
+{% block main_content %}
 
-    {% block extra_css %} <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261004-cierre-sheet" /> <link rel="stylesheet" href="{% static 'css/cuadre_caja.css' %}?v=20261004-cierre-sheet" /> <link rel="stylesheet" href="{% static 'css/caja.css' %}?v=20261004-modales-movil" />
-    {% endblock extra_css %}
-
-    {% block titulo_content %} <div class="tituloscont"> <img
-            class="logop"
-            src="{% static 'img/LH.webp' %}"
-            alt="logo"
-            width="0"
-            height="0"
-        />
-
-        <p class="header__logo">| Cuadre de Caja</p>
+<div class="container-fluid mt-4 cuadre-caja-shell">
+  <div class="cuadre-caja-header">
+    <div>
+      <span class="cuadre-caja-kicker">Gestión de caja</span>
+      <h2 class="cuadre-caja-title">Cuadre de caja</h2>
+      <p class="cuadre-caja-subtitle">
+        Compara el efectivo contado con el total esperado y finaliza el cierre
+        del día.
+      </p>
     </div>
 
-    {% endblock titulo_content %}
+    <div class="cuadre-caja-status">
+      <span class="status-pill">En proceso</span>
+      <span class="status-text">Revisa cada denominación antes de cerrar</span>
+    </div>
+  </div>
 
-    {% block main_content %}
+  <!-- ========================= -->
+  <!-- RESUMEN DE CAJA -->
+  <!-- ========================= -->
 
-    <div class="container-fluid mt-4 cuadre-caja-shell">
-
-        <div class="cuadre-caja-header">
-            <div>
-                <span class="cuadre-caja-kicker">Gestión de caja</span>
-                <h2 class="cuadre-caja-title">Cuadre de caja</h2>
-                <p class="cuadre-caja-subtitle">
-                    Compara el efectivo contado con el total esperado y finaliza el cierre del día.
-                </p>
-            </div>
-
-            <div class="cuadre-caja-status">
-                <span class="status-pill">En proceso</span>
-                <span class="status-text">Revisa cada denominación antes de cerrar</span>
-            </div>
+  <div class="row g-3 mb-4 cuadre-summary-grid">
+    <div class="col-lg-3 col-md-6">
+      <div class="card summary-card summary-card--sales">
+        <div class="summary-card__icon">
+          <i class="bx bx-dollar-circle"></i>
         </div>
-
-        <!-- ========================= -->
-        <!-- RESUMEN DE CAJA -->
-        <!-- ========================= -->
-
-        <div class="row g-3 mb-4 cuadre-summary-grid">
-
-            <div class="col-lg-3 col-md-6">
-                <div class="card summary-card summary-card--sales">
-                    <div class="summary-card__icon">
-                        <i class='bx bx-dollar-circle'></i>
-                    </div>
-                    <div>
-                        <p class="summary-card__label">Ventas del día</p>
-                        <h3 id="totalVentas">L. {{ ventas_hoy|floatformat:2 }}</h3>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-3 col-md-6">
-                <div class="card summary-card summary-card--opening">
-                    <div class="summary-card__icon">
-                        <i class='bx bx-wallet-alt'></i>
-                    </div>
-                    <div>
-                        <p class="summary-card__label">Apertura</p>
-                        <h3 id="montoApertura">L. {{ caja.monto_apertura|floatformat:2 }}</h3>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-3 col-md-6">
-                <div class="card summary-card summary-card--expected">
-                    <div class="summary-card__icon">
-                        <i class='bx bx-briefcase-alt-2'></i>
-                    </div>
-                    <div>
-                        <p class="summary-card__label">Efectivo esperado</p>
-                        <h3 id="totalEsperado" data-total="{{ total_esperado }}">
-                            L. {{ total_esperado|floatformat:2 }}
-                        </h3>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-3 col-md-6">
-                <div class="card summary-card summary-card--withdrawals">
-                    <div class="summary-card__icon">
-                        <i class='bx bx-money-withdraw'></i>
-                    </div>
-                    <div>
-                        <p class="summary-card__label">Retiros de caja</p>
-                        <h3>L. {{ total_retiros|floatformat:2 }}</h3>
-                    </div>
-                </div>
-            </div>
-
+        <div>
+          <p class="summary-card__label">Ventas del día</p>
+          <h3 id="totalVentas">L. {{ ventas_hoy|floatformat:2 }}</h3>
         </div>
-
-        <!-- ========================= -->
-        <!-- DIFERENCIA -->
-        <!-- ========================= -->
-        <br>
-        <div class="difference-card mb-4">
-            <div class="difference-card__content">
-                <div>
-                    <p class="difference-card__label">Diferencia</p>
-                    <h2 id="diferencia">L. 0.00</h2>
-                </div>
-                <span class="difference-card__caption">Efectivo contado - Efectivo esperado</span>
-            </div>
-        </div>
-        <br>
-
-        <!-- ========================= -->
-        <!-- TABLA DE DENOMINACIONES -->
-        <!-- ========================= -->
-
-        <div class="card count-card">
-
-            <div class="count-card__header">
-                <div>
-                    <h5 class="mb-0">Conteo de efectivo (contado)</h5>
-                    <p>{{ descripcion_denominaciones }}</p>
-                </div>
-                <span class="count-card__hint">Se actualiza en tiempo real</span>
-            </div>
-
-            <div class="card-body">
-
-                <div class="table-responsive">
-
-                    <table class="table table-bordered align-middle text-center cuadre-table" data-denominaciones="{{ denominaciones_efectivo|join:',' }}">
-
-                        <thead>
-                            <tr>
-                                <th>Denominación</th>
-                                <th>Cantidad</th>
-                                <th>Subtotal</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            {% for denominacion in denominaciones_efectivo %}
-                            <tr>
-                                <td data-label="Denominación">{{ moneda_simbolo }} {{ denominacion|floatformat:2 }}</td>
-                                <td data-label="Cantidad"><input type="text" class="form-control cantidad-billete" inputmode="numeric" autocomplete="off" oninput="validateNumber(this)"></td>
-                                <td data-label="Subtotal" class="subtotal">{{ moneda_simbolo }} 0.00</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-
-                        <tfoot>
-                            <tr>
-                                <th colspan="2" class="text-end">Total contado:</th>
-                                <th id="totalContado">{{ moneda_simbolo }} 0.00</th>
-                            </tr>
-                        </tfoot>
-
-                    </table>
-
-                </div>
-
-                <div class="cuadre-total-mobile" aria-live="polite">
-                    <span>Total contado</span>
-                    <strong id="totalContadoMobile">{{ moneda_simbolo }} 0.00</strong>
-                </div>
-
-            </div>
-
-        </div>
-
-        {% if ventas_deposito > 0 or ventas_tarjeta > 0 or ventas_cheque > 0 %}
-        <!-- ========================= -->
-        <!-- CUADRE DE OTROS PAGOS -->
-        <!-- ========================= -->
-        <section class="payment-reconciliation mt-4">
-            <div class="payment-reconciliation__heading">
-                <span class="payment-reconciliation__heading-icon"><i class="bx bx-transfer-alt"></i></span>
-                <div>
-                    <span class="payment-reconciliation__eyebrow">Conciliación</span>
-                    <h5>Otros métodos de pago</h5>
-                    <p>Estos montos se calculan con las ventas registradas durante el día.</p>
-                </div>
-            </div>
-
-            <div class="payment-reconciliation__grid">
-                {% if ventas_deposito > 0 %}
-                <article class="payment-reconciliation__card" data-payment-type="deposito" data-expected="{{ ventas_deposito }}">
-                    <span class="payment-reconciliation__icon"><i class="bx bx-building-house"></i></span>
-                    <div class="payment-reconciliation__content">
-                        <p class="payment-reconciliation__label">Depósitos bancarios</p>
-                        <span class="payment-reconciliation__expected-label">Monto esperado</span>
-                        <strong>L. {{ ventas_deposito|floatformat:2 }}</strong>
-                        <label for="monto_deposito">Monto recibido</label>
-                        <input
-                            id="monto_deposito"
-                            name="monto_deposito"
-                            type="text"
-                            inputmode="decimal"
-                            autocomplete="off"
-                            class="form-control monto-otro-pago"
-                            placeholder="0.00"
-                            aria-label="Monto recibido por depósitos bancarios"
-                        >
-                        <small>Diferencia: <span class="payment-difference">L. 0.00</span></small>
-                    </div>
-                </article>
-                {% endif %}
-
-                {% if ventas_tarjeta > 0 %}
-                <article class="payment-reconciliation__card" data-payment-type="tarjeta" data-expected="{{ ventas_tarjeta }}">
-                    <span class="payment-reconciliation__icon"><i class="bx bx-credit-card"></i></span>
-                    <div class="payment-reconciliation__content">
-                        <p class="payment-reconciliation__label">Pagos con tarjeta</p>
-                        <span class="payment-reconciliation__expected-label">Monto esperado</span>
-                        <strong>L. {{ ventas_tarjeta|floatformat:2 }}</strong>
-                        <label for="monto_tarjeta">Monto recibido</label>
-                        <input
-                            id="monto_tarjeta"
-                            name="monto_tarjeta"
-                            type="text"
-                            inputmode="decimal"
-                            autocomplete="off"
-                            class="form-control monto-otro-pago"
-                            placeholder="0.00"
-                            aria-label="Monto recibido por tarjeta"
-                        >
-                        <small>Diferencia: <span class="payment-difference">L. 0.00</span></small>
-                    </div>
-                </article>
-                {% endif %}
-
-                {% if ventas_cheque > 0 %}
-                <article class="payment-reconciliation__card" data-payment-type="cheque" data-expected="{{ ventas_cheque }}">
-                    <span class="payment-reconciliation__icon"><i class="bx bx-receipt"></i></span>
-                    <div class="payment-reconciliation__content">
-                        <p class="payment-reconciliation__label">Pagos con cheque</p>
-                        <span class="payment-reconciliation__expected-label">Monto esperado</span>
-                        <strong>L. {{ ventas_cheque|floatformat:2 }}</strong>
-                        <label for="monto_cheque">Monto recibido</label>
-                        <input
-                            id="monto_cheque"
-                            name="monto_cheque"
-                            type="text"
-                            inputmode="decimal"
-                            autocomplete="off"
-                            class="form-control monto-otro-pago"
-                            placeholder="0.00"
-                            aria-label="Monto recibido por cheque"
-                        >
-                        <small>Diferencia: <span class="payment-difference">L. 0.00</span></small>
-                    </div>
-                </article>
-                {% endif %}
-            </div>
-        </section>
-        {% endif %}
-
-        <!-- ========================= -->
-        <!-- BOTÓN FINALIZAR -->
-        <!-- ========================= -->
-
-        <div class="footer-actions mt-4 mb-5">
-            <button type="button" id="btnCerrarCuadre" class="btn btn-success btn-lg">
-                Cerrar Cuadre
-            </button>
-        </div>
-
+      </div>
     </div>
 
-    <div class="modal fade modal-sheet-mobile modal-sheet-mobile--auto" id="modalConfirmarCuadre" tabindex="-1" aria-labelledby="modalConfirmarCuadreTitulo" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content cuadre-confirmacion-modal">
-                <div class="modal-header">
-                    <span class="modal-sheet-handle" aria-hidden="true"></span>
-                    <h5 class="modal-title" id="modalConfirmarCuadreTitulo">¿Cerrar cuadre de caja?</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                </div>
-                <div class="modal-body" id="contenidoConfirmarCuadre"></div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn classbotones" id="confirmarCierreCuadre">Sí, cerrar caja</button>
-                </div>
-            </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card summary-card summary-card--opening">
+        <div class="summary-card__icon">
+          <i class="bx bx-wallet-alt"></i>
         </div>
+        <div>
+          <p class="summary-card__label">Apertura</p>
+          <h3 id="montoApertura">L. {{ caja.monto_apertura|floatformat:2 }}</h3>
+        </div>
+      </div>
     </div>
 
-    <!-- CSRF -->
+    <div class="col-lg-3 col-md-6">
+      <div class="card summary-card summary-card--expected">
+        <div class="summary-card__icon">
+          <i class="bx bx-briefcase-alt-2"></i>
+        </div>
+        <div>
+          <p class="summary-card__label">Efectivo esperado</p>
+          <h3 id="totalEsperado" data-total="{{ total_esperado }}">
+            L. {{ total_esperado|floatformat:2 }}
+          </h3>
+        </div>
+      </div>
+    </div>
 
-    <form style="display:none;">
-        {% csrf_token %}
-    </form>
-    {% comment %} <script>
-        function validateNumber(input) {
-    input.value = input.value.replace(/[^0-9.+]/g, '');
-    }
-    </script> {% endcomment %}
+    <div class="col-lg-3 col-md-6">
+      <div class="card summary-card summary-card--withdrawals">
+        <div class="summary-card__icon">
+          <i class="bx bx-money-withdraw"></i>
+        </div>
+        <div>
+          <p class="summary-card__label">Retiros de caja</p>
+          <h3>L. {{ total_retiros|floatformat:2 }}</h3>
+        </div>
+      </div>
+    </div>
+  </div>
 
+  <!-- ========================= -->
+  <!-- DIFERENCIA -->
+  <!-- ========================= -->
+  <br />
+  <div class="difference-card mb-4">
+    <div class="difference-card__content">
+      <div>
+        <p class="difference-card__label">Diferencia</p>
+        <h2 id="diferencia">L. 0.00</h2>
+      </div>
+      <span class="difference-card__caption"
+        >Efectivo contado - Efectivo esperado</span
+      >
+    </div>
+  </div>
+  <br />
 
-    <script src="{% static 'js/caja/cuadre.js' %}?v=20261004-modal"></script>
+  <!-- ========================= -->
+  <!-- TABLA DE DENOMINACIONES -->
+  <!-- ========================= -->
 
-    {% endblock main_content %}
+  <div class="card count-card">
+    <div class="count-card__header">
+      <div>
+        <h5 class="mb-0">Conteo de efectivo (contado)</h5>
+        <p>{{ descripcion_denominaciones }}</p>
+      </div>
+      <span class="count-card__hint">Se actualiza en tiempo real</span>
+    </div>
+
+    <div class="card-body">
+      <div class="table-responsive">
+        <table
+          class="table table-bordered align-middle text-center cuadre-table"
+          data-denominaciones="{{ denominaciones_efectivo|join:',' }}"
+        >
+          <thead>
+            <tr>
+              <th>Denominación</th>
+              <th>Cantidad</th>
+              <th>Subtotal</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for denominacion in denominaciones_efectivo %}
+            <tr>
+              <td data-label="Denominación">
+                {{ moneda_simbolo }} {{ denominacion|floatformat:2 }}
+              </td>
+              <td data-label="Cantidad">
+                <input
+                  type="text"
+                  class="form-control cantidad-billete"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  oninput="validateNumber(this)"
+                />
+              </td>
+              <td data-label="Subtotal" class="subtotal">
+                {{ moneda_simbolo }} 0.00
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+
+          <tfoot>
+            <tr>
+              <th colspan="2" class="text-end">Total contado:</th>
+              <th id="totalContado">{{ moneda_simbolo }} 0.00</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="cuadre-total-mobile" aria-live="polite">
+        <span>Total contado</span>
+        <strong id="totalContadoMobile">{{ moneda_simbolo }} 0.00</strong>
+      </div>
+    </div>
+  </div>
+
+  {% if ventas_deposito > 0 or ventas_tarjeta > 0 or ventas_cheque > 0 %}
+  <!-- ========================= -->
+  <!-- CUADRE DE OTROS PAGOS -->
+  <!-- ========================= -->
+  <section class="payment-reconciliation mt-4">
+    <div class="payment-reconciliation__heading">
+      <span class="payment-reconciliation__heading-icon"
+        ><i class="bx bx-transfer-alt"></i
+      ></span>
+      <div>
+        <span class="payment-reconciliation__eyebrow">Conciliación</span>
+        <h5>Otros métodos de pago</h5>
+        <p>
+          Estos montos se calculan con las ventas registradas durante el día.
+        </p>
+      </div>
+    </div>
+
+    <div class="payment-reconciliation__grid">
+      {% if ventas_deposito > 0 %}
+      <article
+        class="payment-reconciliation__card"
+        data-payment-type="deposito"
+        data-expected="{{ ventas_deposito }}"
+      >
+        <span class="payment-reconciliation__icon"
+          ><i class="bx bx-building-house"></i
+        ></span>
+        <div class="payment-reconciliation__content">
+          <p class="payment-reconciliation__label">Depósitos bancarios</p>
+          <span class="payment-reconciliation__expected-label"
+            >Monto esperado</span
+          >
+          <strong>L. {{ ventas_deposito|floatformat:2 }}</strong>
+          <label for="monto_deposito">Monto recibido</label>
+          <input
+            id="monto_deposito"
+            name="monto_deposito"
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
+            class="form-control monto-otro-pago"
+            placeholder="0.00"
+            aria-label="Monto recibido por depósitos bancarios"
+          />
+          <small
+            >Diferencia: <span class="payment-difference">L. 0.00</span></small
+          >
+        </div>
+      </article>
+      {% endif %} {% if ventas_tarjeta > 0 %}
+      <article
+        class="payment-reconciliation__card"
+        data-payment-type="tarjeta"
+        data-expected="{{ ventas_tarjeta }}"
+      >
+        <span class="payment-reconciliation__icon"
+          ><i class="bx bx-credit-card"></i
+        ></span>
+        <div class="payment-reconciliation__content">
+          <p class="payment-reconciliation__label">Pagos con tarjeta</p>
+          <span class="payment-reconciliation__expected-label"
+            >Monto esperado</span
+          >
+          <strong>L. {{ ventas_tarjeta|floatformat:2 }}</strong>
+          <label for="monto_tarjeta">Monto recibido</label>
+          <input
+            id="monto_tarjeta"
+            name="monto_tarjeta"
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
+            class="form-control monto-otro-pago"
+            placeholder="0.00"
+            aria-label="Monto recibido por tarjeta"
+          />
+          <small
+            >Diferencia: <span class="payment-difference">L. 0.00</span></small
+          >
+        </div>
+      </article>
+      {% endif %} {% if ventas_cheque > 0 %}
+      <article
+        class="payment-reconciliation__card"
+        data-payment-type="cheque"
+        data-expected="{{ ventas_cheque }}"
+      >
+        <span class="payment-reconciliation__icon"
+          ><i class="bx bx-receipt"></i
+        ></span>
+        <div class="payment-reconciliation__content">
+          <p class="payment-reconciliation__label">Pagos con cheque</p>
+          <span class="payment-reconciliation__expected-label"
+            >Monto esperado</span
+          >
+          <strong>L. {{ ventas_cheque|floatformat:2 }}</strong>
+          <label for="monto_cheque">Monto recibido</label>
+          <input
+            id="monto_cheque"
+            name="monto_cheque"
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
+            class="form-control monto-otro-pago"
+            placeholder="0.00"
+            aria-label="Monto recibido por cheque"
+          />
+          <small
+            >Diferencia: <span class="payment-difference">L. 0.00</span></small
+          >
+        </div>
+      </article>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ========================= -->
+  <!-- BOTÓN FINALIZAR -->
+  <!-- ========================= -->
+
+  <div class="footer-actions mt-4 mb-5">
+    <button type="button" id="btnCerrarCuadre" class="btn btn-success btn-lg">
+      Cerrar Cuadre
+    </button>
+  </div>
+</div>
+
+<div
+  class="modal fade modal-sheet-mobile modal-sheet-mobile--auto"
+  id="modalConfirmarCuadre"
+  tabindex="-1"
+  aria-labelledby="modalConfirmarCuadreTitulo"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content cuadre-confirmacion-modal">
+      <div class="modal-header">
+        <span class="modal-sheet-handle" aria-hidden="true"></span>
+        <h5 class="modal-title" id="modalConfirmarCuadreTitulo">
+          ¿Cerrar cuadre de caja?
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Cerrar"
+        ></button>
+      </div>
+      <div class="modal-body" id="contenidoConfirmarCuadre"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn classbotones"
+          id="confirmarCierreCuadre"
+        >
+          Sí, cerrar caja
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CSRF -->
+
+<form style="display: none">{% csrf_token %}</form>
+{% comment %}
+<script>
+  function validateNumber(input) {
+    input.value = input.value.replace(/[^0-9.+]/g, "");
+  }
+</script>
+{% endcomment %}
+
+<script src="{% static 'js/caja/cuadre.js' %}?v=20261004-modal"></script>
+
+{% endblock main_content %}

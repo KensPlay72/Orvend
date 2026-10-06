@@ -5,8 +5,9 @@
 {% endblock title %}
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
-  <link rel="stylesheet" href="{% static 'css/descuentos.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/descuentos.css' %}?v=20261006-margen-modal-pc" />
 {% endblock extra_css %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/descuentos_mobile.css' %}?v=20261006-sin-auto" />{% endblock page_css_overrides %}
 {% block titulo_content %}
   <div class="tituloscont">
     <img class="logop"
@@ -18,34 +19,37 @@
   </div>
 {% endblock titulo_content %}
 {% block main_content %}
+  <form method="get" class="catalog-mobile-search descuentos-mobile-search">
+    <div class="catalog-mobile-search__field"><i class="bx bx-search"></i><input type="search" name="search" value="{{ search }}" placeholder="Buscar descuento" autocomplete="off"></div>
+    <button type="submit"><i class="bx bx-search"></i><span>Buscar</span></button>
+  </form>
   {% if perms.manager.add_descuento %}
     <button id="toggleDropdownPanel"
-            class="btn-dropdown"
+            class="btn-dropdown catalog-mobile-add"
             data-bs-toggle="modal"
             data-bs-target="#modalregis">
       <i class="bx bx-plus-circle"></i> Agregar
     </button>
   {% endif %}
-  <div class="modal fade"
-       id="modalregis"
-       tabindex="-1"
-       aria-labelledby="modalRegistroDescuento"
-       aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable descuento-modal">
-      <div class="modal-content descuento-modal__content">
-        <div class="modal-header descuento-modal__header">
-          <div>
-            <span class="descuento-modal__eyebrow">GESTIÓN DE PRECIOS</span>
-            <h5 class="modal-title" id="modalRegistroDescuento"><i class="bx bx-purchase-tag-alt"></i> Registrar descuento</h5>
-          </div>
-          <button type="button"
-                  class="btn-close"
-                  data-bs-dismiss="modal"
-                  aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
+
+
+    <div class="modal fade modal-sheet-mobile"
+         id="modalregis"
+         tabindex="-1"
+         aria-labelledby="exampleModalCenterTitle"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl productos-modal-dialog descuento-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Registrar descuento</h5>
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"></button>
+                </div>
           <form id="postregistro" enctype="multipart/form-data">
             {% csrf_token %}
+            <div class="modal-body">
             <div class="row g-3 descuento-modal__grid">
               <!-- ========================= -->
               <!-- INFORMACION GENERAL -->
@@ -263,39 +267,35 @@
                 </div>
               </div>
             </div>
+            </div>
+                <div class="modal-footer productos-modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" id="btnregis" class="btn classbotones">Guardar</button>
+                </div>
           </form>
+            </div>
         </div>
-        <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-              <button type="submit"  form="postregistro"  id="btnregis" class="btn classbotones">Guardar</button>
-        </div>
-      </div>
     </div>
-  </div>
-  <!-- ========================= -->
-  <!-- MODAL PUT -->
-  <!-- ========================= -->
-  <div class="modal fade"
-       id="modalput"
-       tabindex="-1"
-       aria-labelledby="modalEditarDescuento"
-       aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable descuento-modal">
-      <div class="modal-content descuento-modal__content">
-        <div class="modal-header descuento-modal__header">
-          <div>
-            <span class="descuento-modal__eyebrow">GESTIÓN DE PRECIOS</span>
-            <h5 class="modal-title" id="modalEditarDescuento"><i class="bx bx-edit-alt"></i> Editar descuento</h5>
-          </div>
-          <button type="button"
-                  class="btn-close"
-                  data-bs-dismiss="modal"
-                  aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
+
+
+    <div class="modal fade modal-sheet-mobile"
+         id="modalput"
+         tabindex="-1"
+         aria-labelledby="exampleModalCenterTitle"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl productos-modal-dialog descuento-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar descuento</h5>
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"></button>
+                </div>
           <form id="putregistro">
             {% csrf_token %}
             <input type="hidden" id="idedit">
+            <div class="modal-body">
             <div class="row g-3 descuento-modal__grid">
               <!-- ========================= -->
               <!-- INFORMACION GENERAL -->
@@ -471,17 +471,24 @@
                 </div>
               </div>
             </div>
+            </div>
+                <!-- Footer -->
+                <div class="modal-footer productos-modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="submit" id="btnput" class="btn classbotones">Guardar</button>
+                </div>
           </form>
+            </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-          <button type="submit" form="putregistro"  class="btn classbotones">Actualizar</button>
-        </div>
-      </div>
     </div>
-  </div>
+
+
+
+
+
+
   <div class="tabla-container">
-    <table class="tablas-todo" id="tablacont">
+    <table class="tablas-todo catalog-mobile-table" id="tablacont">
       <thead>
         <tr>
           <th>#</th>
@@ -563,9 +570,9 @@
             <!-- ESTADO -->
             <td>
               {% if descuento.is_active %}
-                <span class="estado-circulo estado-activo"></span>
+                <span class="badge bg-success">Activo</span>
               {% else %}
-                <span class="estado-circulo estado-inactivo"></span>
+                <span class="badge bg-danger">Inactivo</span>
               {% endif %}
             </td>
             <!-- ACCIONES -->

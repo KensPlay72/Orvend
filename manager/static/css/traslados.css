@@ -16,6 +16,12 @@
   background: color-mix(in srgb, var(--system-primary) 9%, #fff) !important;
 }
 
+@media (min-width: 1033px) {
+  .divbuttons2.compra-toolbar .compra-toolbar__action:last-child {
+    margin-left: 0.45rem;
+  }
+}
+
 .traslado-detalle__observaciones {
   display: flex;
   align-items: center;

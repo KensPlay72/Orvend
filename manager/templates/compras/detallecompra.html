@@ -2,10 +2,11 @@
 {% load static %}
 {% block title %}Detalle Compra{% endblock %}
 {% block extra_css %}
-        <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/compras.css' %}?v=20261005-detalle-movil" />
         <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261004-tracker-space" />
-        <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}?v=20261003-mobile-cards" />
+        <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}?v=20261005-tabla-lateral-tablet" />
 {% endblock %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/detallecompra_mobile.css' %}?v=20261005-alineacion-paginador" />{% endblock page_css_overrides %}
 {% block titulo_content %}
     <div class="tituloscont">
         <img class="logop" src="{% static 'img/LH.webp' %}" alt="">
@@ -21,10 +22,10 @@
                     <span>Información de la compra</span>
                 </span>
                 <div class="compra-detalle__acciones">
-                    <label class="compra-detalle__buscador" for="buscarProductoCompra">
+                    <form method="get" class="compra-detalle__buscador" role="search">
                         <i class="bx bx-search" aria-hidden="true"></i>
-                        <input type="text" id="buscarProductoCompra" placeholder="Buscar producto, presentación o SKU..." autocomplete="off">
-                    </label>
+                        <input type="search" id="buscarProductoCompra" name="search" value="{{ search }}" placeholder="Buscar producto, presentación o SKU..." autocomplete="off">
+                    </form>
                     {% if compra.puede_marcar_llegada %}
                     <button type="button"
                             id="btnMarcarLlegadaDetalle"
@@ -133,7 +134,6 @@
                     {% endfor %}
                 </section>
 
-                <nav id="paginadordecom" class="d-flex justify-content-center mt-4"></nav>
             </div>
             <aside class="compra-detalle__totales" aria-label="Resumen de la compra">
                 <div class="compra-detalle__tarjeta">
@@ -167,6 +167,17 @@
                 {% endif %}
             </aside>
         </div>
+        {% if page_obj.paginator.num_pages > 1 %}
+        <nav id="paginadordecom" class="d-flex justify-content-center mt-4" aria-label="Paginación de productos">
+            <ul class="pagination">
+                <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}"><a class="page-link" href="?page={% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}&search={{ search|urlencode }}">«</a></li>
+                {% for pagina in page_obj.paginator.page_range %}
+                <li class="page-item {% if pagina == page_obj.number %}active{% endif %}"><a class="page-link" href="?page={{ pagina }}&search={{ search|urlencode }}">{{ pagina }}</a></li>
+                {% endfor %}
+                <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}"><a class="page-link" href="?page={% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ page_obj.paginator.num_pages }}{% endif %}&search={{ search|urlencode }}">»</a></li>
+            </ul>
+        </nav>
+        {% endif %}
 
         <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -212,113 +223,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    const filasPorPagina = 10;
-    let paginaActual = parseInt(new URLSearchParams(window.location.search).get("page")) || 1;
-
-    function obtenerFilas() {
-        return Array.from(document.querySelectorAll("#tabladecom tbody tr"));
-    }
-
-    function obtenerTarjetasMoviles() {
-        return Array.from(document.querySelectorAll(".detalle-compra-mobile-card"));
-    }
-
-    function obtenerFilasFiltradas() {
-        const termino = document.getElementById("buscarProductoCompra").value.trim().toLowerCase();
-        return obtenerFilas().filter(fila => !termino || fila.textContent.toLowerCase().includes(termino));
-    }
-
-    function mostrarPagina(pagina) {
-        const todasLasFilas = obtenerFilas();
-        const filas = obtenerFilasFiltradas();
-        const termino = document.getElementById("buscarProductoCompra").value.trim().toLowerCase();
-        const todasLasTarjetas = obtenerTarjetasMoviles();
-        const tarjetas = todasLasTarjetas.filter(tarjeta => !termino || tarjeta.textContent.toLowerCase().includes(termino));
-        const totalPaginas = Math.ceil(filas.length / filasPorPagina);
-        if (pagina < 1) pagina = 1;
-        if (pagina > totalPaginas) pagina = totalPaginas || 1;
-
-        const inicio = (pagina - 1) * filasPorPagina;
-        const fin = inicio + filasPorPagina;
-
-        todasLasFilas.forEach(fila => fila.style.display = "none");
-        filas.slice(inicio, fin).forEach(fila => fila.style.display = "");
-        todasLasTarjetas.forEach(tarjeta => tarjeta.style.display = "none");
-        tarjetas.slice(inicio, fin).forEach(tarjeta => tarjeta.style.display = "");
-
-        paginaActual = pagina;
-        renderPaginador(filas.length, pagina);
-        actualizarUrl();
-    }
-
-    function renderPaginador(totalFilas, pagina) {
-        const totalPaginas = Math.ceil(totalFilas / filasPorPagina);
-        const paginador = document.getElementById("paginadordecom");
-        paginador.innerHTML = "";
-
-        if (totalPaginas <= 1) return;
-
-        const ul = document.createElement("ul");
-        ul.className = "pagination";
-
-        const hrefPagina = numeroPagina => {
-            const url = new URL(window.location.href);
-            url.searchParams.set("page", Math.max(1, numeroPagina));
-            return `${url.pathname}${url.search}${url.hash}`;
-        };
-
-        // Botón anterior
-        const liPrev = document.createElement("li");
-        liPrev.className = `page-item ${pagina === 1 ? "disabled" : ""}`;
-        liPrev.innerHTML = `<a class="page-link" href="${hrefPagina(pagina - 1)}">«</a>`;
-        ul.appendChild(liPrev);
-
-        // Rango dinámico
-        let start = Math.max(1, pagina - 2);
-        let end = Math.min(totalPaginas, pagina + 2);
-
-        for (let i = start; i <= end; i++) {
-            const li = document.createElement("li");
-            li.className = `page-item ${i === pagina ? "active" : ""}`;
-            li.innerHTML = `<a class="page-link" href="${hrefPagina(i)}">${i}</a>`;
-            ul.appendChild(li);
-        }
-
-        // Botón siguiente
-        const liNext = document.createElement("li");
-        liNext.className = `page-item ${pagina === totalPaginas ? "disabled" : ""}`;
-        liNext.innerHTML = `<a class="page-link" href="${hrefPagina(pagina + 1)}">»</a>`;
-        ul.appendChild(liNext);
-
-        paginador.appendChild(ul);
-
-        // Interceptar clicks
-        ul.querySelectorAll("a").forEach(a => {
-            a.addEventListener("click", e => {
-                e.preventDefault();
-                const newPage = parseInt(new URL(a.href).searchParams.get("page"));
-                mostrarPagina(newPage);
-            });
-        });
-    }
-
-    function actualizarUrl() {
-        const url = new URL(window.location.href);
-        url.searchParams.set("page", paginaActual);
-        window.history.replaceState({}, "", url);
-    }
-
-    // Exponer funciones globalmente por si las necesitas
-    window.mostrarPaginaDecom = mostrarPagina;
-    window.paginaActualDecom = paginaActual;
-
-    document.getElementById("buscarProductoCompra").addEventListener("input", () => {
-        paginaActual = 1;
-        mostrarPagina(paginaActual);
-    });
-
-    // Inicializar
-    mostrarPagina(paginaActual);
 });
 </script>
 

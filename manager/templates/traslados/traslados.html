@@ -5,9 +5,10 @@
 {% endblock title %}
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/compras.css' %}?v=20260918-02" />
-  <link rel="stylesheet" href="{% static 'css/traslados.css' %}?v=20260921-01" />
+  <link rel="stylesheet" href="{% static 'css/traslados.css' %}?v=20261005-paginador-stock" />
   <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261003-mobile-sheet" />
 {% endblock extra_css %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/traslados_mobile.css' %}?v=20261005-paginador-stock" />{% endblock page_css_overrides %}
 {% block titulo_content %}
   <div class="tituloscont">
     <img class="logop"
@@ -71,7 +72,7 @@
   <!-- Selector reutilizable de productos -->
   {% include "components/_selector_productos_movil.html" %}
   <!-- ================= CONFIRMAR ================= -->
-  <div class="modal fade"
+  <div class="modal fade modal-sheet-mobile traslado-mobile-modal"
        id="completartraslado"
        tabindex="-1"
        aria-hidden="true">
@@ -96,7 +97,6 @@
               <input type="text" id="previewDestino" class="form-control" readonly>
             </div>
           </div>
-          <br>
           <div class="form-group mb-3">
             <label for="observacionesTraslado">Observaciones</label>
             <textarea id="observacionesTraslado"
@@ -120,6 +120,7 @@
               </tbody>
             </table>
           </div>
+          <section class="traslados-confirmar-mobile-list" aria-label="Resumen de productos a trasladar"></section>
           <nav id="paginadorPreviewTraslado"
                class="d-flex justify-content-center mt-4">
           </nav>
@@ -132,7 +133,7 @@
     </div>
   </div>
   <!-- ================= TABLA ================= -->
-  <div class="tabla-container">
+  <div class="tabla-container traslado-editor-mobile">
     <table class="tablas-todo">
       <thead>
         <tr>
@@ -148,5 +149,6 @@
       </tbody>
     </table>
   </div>
-  <script src="{% static 'js/gestiones/traslados.js' %}?v=20261003-default-webp"></script>
+  <script src="{% static 'js/gestiones/traslados.js' %}?v=20261005-paginador-stock"></script>
+  <script src="{% static 'js/compras/editor_mobile_cards.js' %}?v=20261005-paginador-stock"></script>
 {% endblock main_content %}

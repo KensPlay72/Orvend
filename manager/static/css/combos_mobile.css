@@ -1,0 +1,626 @@
+/* La versión de escritorio permanece en combos.css. */
+.combos-mobile-list,
+.combos-selected-mobile-list {
+  display: none;
+}
+
+@media (max-width: 1032px) {
+  .combos-desktop-table,
+  .combos-card--productos .combos-table-wrap {
+    display: none !important;
+  }
+
+  .combos-mobile-list,
+  .combos-selected-mobile-list {
+    display: grid;
+    gap: 12px;
+    width: min(100%, 680px);
+    margin: 18px auto 0;
+  }
+
+  .combos-mobile-card,
+  .combos-selected-mobile-card,
+  .combos-mobile-empty,
+  .combos-selected-mobile-empty {
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 18%, #dce8e7);
+    border-radius: 16px;
+    background: var(--bs-body-bg, #fff);
+    box-shadow: 0 7px 18px rgba(21, 67, 66, 0.07);
+    overflow: hidden;
+  }
+
+  .combos-mobile-card__header {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto 20px;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 13px;
+    border: 0;
+    background: transparent;
+    text-align: left;
+  }
+
+  .combos-mobile-card__image {
+    width: 48px;
+    height: 48px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 10%, #fff);
+  }
+
+  .combos-mobile-card__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .combos-mobile-card__title,
+  .combos-mobile-card__title small,
+  .combos-mobile-card__title strong,
+  .combos-mobile-card__title em {
+    display: block;
+    min-width: 0;
+  }
+
+  .combos-mobile-card__title small,
+  .combos-selected-mobile-card small {
+    color: var(--system-primary, #32877f);
+    font-size: 0.67rem;
+    font-style: normal;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+  }
+
+  .combos-mobile-card__title strong {
+    overflow: hidden;
+    color: #173d3d;
+    font-size: 0.94rem;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .combos-mobile-card__title em {
+    overflow: hidden;
+    color: #6c7e80;
+    font-size: 0.73rem;
+    font-style: normal;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .combos-mobile-card__status {
+    border-radius: 999px;
+    padding: 4px 7px;
+    color: #a22f36;
+    background: #ffe5e6;
+    font-size: 0.68rem;
+    font-weight: 700;
+  }
+
+  .combos-mobile-card__status.is-active {
+    color: #147345;
+    background: #dff6e8;
+  }
+
+  .combos-mobile-card__chevron {
+    color: var(--system-primary, #32877f);
+    font-size: 1.25rem;
+    transition: transform 760ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .combos-mobile-card.is-open .combos-mobile-card__chevron {
+    transform: rotate(180deg);
+  }
+
+  .combos-mobile-card.is-open .combos-mobile-card__header {
+    background: color-mix(in srgb, var(--system-primary, #32877f) 7%, #fff);
+  }
+
+  .combos-mobile-card__detail {
+    display: grid;
+    grid-template-rows: 0fr;
+    border-top: 0 solid #e8eeee;
+    transition:
+      grid-template-rows 760ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-width 760ms ease;
+  }
+
+  .combos-mobile-card.is-open .combos-mobile-card__detail {
+    grid-template-rows: 1fr;
+    border-top-width: 1px;
+  }
+
+  .combos-mobile-card__detail-inner {
+    min-height: 0;
+    overflow: hidden;
+    padding: 0 13px;
+  }
+
+  .combos-mobile-card.is-open .combos-mobile-card__detail-inner {
+    padding-top: 13px;
+    padding-bottom: 13px;
+  }
+
+  .combos-mobile-card__price,
+  .combos-selected-mobile-card__total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .combos-mobile-card__price small,
+  .combos-selected-mobile-card__total span {
+    color: #718182;
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+
+  .combos-mobile-card__price strong,
+  .combos-selected-mobile-card__total strong {
+    color: #123f40;
+    font-size: 1rem;
+  }
+
+  .combos-mobile-card__products {
+    display: grid;
+    gap: 8px;
+    margin-top: 11px;
+  }
+
+  .combos-mobile-card__products > p {
+    margin: 0;
+    color: #718182;
+    font-size: 0.78rem;
+  }
+
+  .combos-mobile-card__products .combos-product-option {
+    min-height: 0;
+    padding: 8px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 6%, #fff);
+  }
+
+  .combos-mobile-card__products .combos-product-option__state {
+    white-space: nowrap;
+  }
+
+  .combos-mobile-card__action {
+    width: 100%;
+    margin-top: 12px;
+    color: #fff;
+    background: var(--system-primary, #32877f);
+  }
+
+  .combos-mobile-card__action[data-activo="true"] {
+    background: #b33b42;
+  }
+  .combos-mobile-card__action[data-activo="false"] {
+    background: var(--system-primary, #32877f);
+  }
+
+  .combos-mobile-empty,
+  .combos-selected-mobile-empty {
+    display: grid;
+    place-items: center;
+    gap: 7px;
+    min-height: 130px;
+    padding: 20px;
+    color: #718182;
+    text-align: center;
+  }
+
+  .combos-mobile-empty i,
+  .combos-selected-mobile-empty i {
+    color: var(--system-primary, #32877f);
+    font-size: 2rem;
+  }
+
+.combos-intro {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 16px;
+}
+
+/* Icono de caja */
+.combos-intro__icon {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+/* Título */
+.combos-intro > div:nth-child(2) {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.combos-intro > div:nth-child(2) p {
+  display: none;
+}
+
+.combos-intro h1 {
+  margin: 0;
+  font-size: clamp(1.15rem, 4vw, 1.45rem);
+}
+
+/* Contador oculto */
+.combos-intro__counter {
+  display: none;
+}
+
+/* Botón de la derecha */
+.combos-list-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  grid-column: 3;
+  grid-row: 1;
+
+  width: 42px;
+  height: 42px;
+  margin: 0;
+  padding: 0;
+
+  border-radius: 8px;
+
+  color: var(--system-primary, #32877f);
+  background: transparent;
+  box-shadow: none;
+
+  font-size: 1.25rem;
+  text-align: center;
+}
+
+.combos-list-trigger:hover {
+  color: var(--system-primary, #32877f);
+  background: rgba(50, 135, 127, 0.08);
+}
+
+/* Icono de hamburguesa/lista */
+.combos-list-trigger > .bx-list-ul {
+  font-size: 1.25rem;
+  margin: 0;
+}
+}
+
+.combos-card__head--between {
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.combos-card--productos .combos-selected-mobile-list {
+  margin-top: 0;
+}
+
+.combos-add {
+  flex: 1;
+  min-height: 44px;
+  padding-right: 1rem;
+  padding-left: 1rem;
+  white-space: nowrap;
+}
+
+.combos-selected-mobile-card {
+  padding: 13px;
+}
+
+.combos-selected-mobile-card__head {
+  display: grid;
+  grid-template-columns: 39px minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+}
+
+.combos-selected-mobile-card__icon {
+  display: grid;
+  width: 39px;
+  height: 39px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--system-primary, #32877f);
+}
+
+.combos-selected-mobile-card__head div,
+.combos-selected-mobile-card__head small,
+.combos-selected-mobile-card__head strong,
+.combos-selected-mobile-card__head em {
+  display: block;
+  min-width: 0;
+}
+
+.combos-selected-mobile-card__head strong {
+  overflow: hidden;
+  color: #173d3d;
+  font-size: 0.92rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combos-selected-mobile-card__head em {
+  color: #6c7e80;
+  font-size: 0.72rem;
+  font-style: normal;
+}
+
+.combos-selected-mobile-card .combos-remove {
+  width: 35px;
+  height: 35px;
+  border-radius: 9px;
+}
+
+.combos-selected-mobile-card__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 13px 0;
+}
+
+.combos-selected-mobile-card__facts span {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--system-primary, #32877f) 7%, #fff);
+}
+
+.combos-selected-mobile-card__facts span:last-child {
+  grid-column: 1 / -1;
+}
+
+.combos-selected-mobile-card__facts small {
+  color: #708183;
+}
+
+.combos-selected-mobile-card__facts b {
+  color: var(--system-secondary, #10463e);
+  font-size: 0.8rem;
+}
+
+.combos-selected-mobile-card__quantity {
+  display: grid;
+  gap: 6px;
+  color: #1b4e4f;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.combos-selected-mobile-card__quantity .combos-qty {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #d6e3e2;
+  border-radius: 10px;
+  padding: 8px 11px;
+  background: #fff;
+}
+
+.combos-selected-mobile-card__total {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #e7eeee;
+}
+
+.combos-product-modal .modal-dialog {
+  width: 100%;
+  max-width: none;
+  margin: auto 0 0;
+}
+
+.combos-product-modal .caja-mobile-modal-header {
+  display: flex;
+  align-items: center;
+  min-height: 67px;
+  padding: 1.25rem 1rem 0.7rem;
+}
+
+.combos-product-modal .caja-mobile-modal-heading {
+  min-width: 0;
+  flex: 1;
+}
+
+.combos-product-modal .caja-mobile-modal-heading span {
+  display: block;
+  color: var(--system-primary, #32877f);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+}
+
+.combos-product-modal .caja-mobile-modal-heading h5 {
+  margin: 1px 0 0;
+  color: #173d3d;
+  font-size: 1.03rem;
+  font-weight: 800;
+}
+
+.combos-product-modal .caja-mobile-modal-close {
+  flex: 0 0 auto;
+  margin-left: 12px;
+}
+
+.combos-product-modal__body {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.combos-product-modal .caja-mobile-search {
+  display: flex;
+  align-items: center;
+  min-height: 46px;
+  margin: 0;
+  padding: 0 5px 0 12px;
+  border: 1px solid #d7e5e4;
+  border-radius: 12px;
+  background: #f8fbfb;
+}
+
+.combos-product-modal .caja-mobile-search > i {
+  color: var(--system-primary, #32877f);
+  font-size: 1.18rem;
+}
+
+.combos-product-modal .combos-search > i {
+  display: block;
+}
+
+.combos-product-modal .caja-mobile-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  padding: 8px;
+}
+
+.combos-product-modal .caja-mobile-search button {
+  min-width: 67px;
+  padding: 0 10px;
+}
+
+.combos-product-modal .combos-product-list {
+  min-height: 0;
+  overflow: auto;
+}
+
+.combos-product-modal .combos-modal__footer {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+}
+
+.combos-product-modal .combos-modal__footer span {
+  display: none;
+}
+
+.combos-product-modal .combos-modal__footer button {
+  width: 100%;
+  min-height: 44px;
+}
+
+.combos-list-mobile-search-card {
+  position: relative;
+  display: block;
+  margin: 0 0 0.85rem;
+  padding: 0.85rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff);
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 0.3rem 0.9rem
+    color-mix(in srgb, var(--system-secondary, #10463e) 8%, transparent);
+}
+.combos-list-mobile-search-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 0.22rem;
+  background: linear-gradient(
+    90deg,
+    var(--system-primary, #32877f),
+    var(--system-button, var(--system-primary, #32877f))
+  );
+}
+.combos-list-mobile-search-card__intro {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.7rem;
+}
+.combos-list-mobile-search-card__intro > span {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 0.7rem;
+  color: var(--system-primary, #32877f);
+  background: color-mix(in srgb, var(--system-primary, #32877f) 10%, #fff);
+  font-size: 1.15rem;
+}
+.combos-list-mobile-search-card__intro strong,
+.combos-list-mobile-search-card__intro small {
+  display: block;
+}
+.combos-list-mobile-search-card__intro strong {
+  color: var(--system-secondary, #10463e);
+  font-size: 0.88rem;
+}
+.combos-list-mobile-search-card__intro small {
+  margin-top: 0.1rem;
+  color: color-mix(in srgb, var(--system-secondary, #10463e) 55%, #fff);
+  font-size: 0.68rem;
+}
+.combos-list-mobile-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+.combos-list-mobile-search__field {
+  position: relative;
+  min-width: 0;
+}
+.combos-list-mobile-search__field > i {
+  position: absolute;
+  top: 50%;
+  left: 0.75rem;
+  color: var(--system-primary, #32877f);
+  font-size: 1.05rem;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.combos-list-mobile-search input {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0.6rem 0.7rem 0.6rem 2.2rem;
+  border: 1px solid
+    color-mix(in srgb, var(--system-primary, #32877f) 18%, #dce7e5);
+  border-radius: 0.65rem;
+  outline: 0;
+  background: color-mix(in srgb, var(--system-primary, #32877f) 4%, #fff);
+}
+.combos-list-mobile-search button {
+  display: inline-flex;
+  min-width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0.65rem;
+  color: #fff;
+  background: var(--system-primary, #32877f);
+}
+.combos-list-mobile-search button span {
+  display: none;
+}
+
+@media (max-width: 520px) {
+  .combos-mobile-card__header {
+    grid-template-columns: 45px minmax(0, 1fr) auto 20px;
+  }
+
+  .combos-mobile-card__status {
+    width: max-content;
+  }
+
+  .combos-card__head--between {
+    flex-wrap: wrap;
+  }
+
+  .combos-add {
+    width: 100%;
+  }
+}

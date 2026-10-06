@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let paginaActual = 1;
   let terminoBusqueda = "";
   const detalle = document.getElementById("detalleCombo");
+  const detalleMobile = document.getElementById("detalleComboMobile");
   const lista = document.getElementById("listaProductosCombo");
   const paginador = document.getElementById("paginadorProductosCombo");
   const buscador = document.getElementById("buscarProductoCombo");
@@ -26,6 +27,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let imagenCombo = null;
   const formato = (valor) =>
     `${window.MONEDA_SISTEMA || "L."} ${Number(valor || 0).toLocaleString("es-HN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const stockDosDecimales = (valor) =>
+    (Math.trunc(Number(valor || 0) * 100) / 100).toFixed(2);
   const escapar = (valor) =>
     String(valor ?? "").replace(
       /[&<>'"]/g,
@@ -53,15 +56,27 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!seleccionados.size) {
       detalle.innerHTML =
         '<tr class="combos-empty"><td colspan="6"><i class="bx bx-package"></i><span>Aún no has agregado productos al combo.</span></td></tr>';
+      if (detalleMobile) {
+        detalleMobile.innerHTML =
+          '<div class="combos-selected-mobile-empty"><i class="bx bx-package"></i><span>Aún no has agregado productos al combo.</span></div>';
+      }
       calcular();
       return;
     }
     detalle.innerHTML = [...seleccionados.values()]
       .map(
         (item) =>
-          `<tr data-id="${item.id}"><td><div class="combos-product-name"><strong>${escapar(item.nombre)}</strong><span>${escapar(item.sku)} · ${escapar(item.presentacion)}</span></div></td><td class="combos-stock">${item.stock}</td><td><input class="combos-qty" type="text" inputmode="numeric" oninput="validateNumber(this)" value="${item.cantidad}" aria-label="Cantidad de ${escapar(item.nombre)}"></td><td>${formato(item.costo)}</td><td class="combos-subtotal">${formato(item.costo * item.cantidad)}</td><td><button type="button" class="combos-remove" aria-label="Quitar ${escapar(item.nombre)}"><i class="bx bx-trash"></i></button></td></tr>`,
+          `<tr data-id="${item.id}"><td><div class="combos-product-name"><strong>${escapar(item.nombre)}</strong><span>${escapar(item.sku)} · ${escapar(item.presentacion)}</span></div></td><td class="combos-stock">${item.stock}</td><td><input class="combos-qty" type="text" inputmode="numeric" oninput="validateNumber(this)" value="${item.cantidad === 1 ? "" : item.cantidad}" placeholder="1" aria-label="Cantidad de ${escapar(item.nombre)}"></td><td>${formato(item.costo)}</td><td class="combos-subtotal">${formato(item.costo * item.cantidad)}</td><td><button type="button" class="combos-remove" aria-label="Quitar ${escapar(item.nombre)}"><i class="bx bx-trash"></i></button></td></tr>`,
       )
       .join("");
+    if (detalleMobile) {
+      detalleMobile.innerHTML = [...seleccionados.values()]
+        .map(
+          (item) =>
+            `<article class="combos-selected-mobile-card" data-id="${item.id}"><div class="combos-selected-mobile-card__head"><span class="combos-selected-mobile-card__icon"><i class="bx bx-package"></i></span><div><small>PRODUCTO</small><strong>${escapar(item.nombre)}</strong><em>${escapar(item.sku)}</em></div><button type="button" class="combos-remove" aria-label="Quitar ${escapar(item.nombre)}"><i class="bx bx-trash"></i></button></div><div class="combos-selected-mobile-card__facts"><span><small>Presentación</small><b>${escapar(item.presentacion)}</b></span><span><small>Disponible</small><b>${item.stock}</b></span><span><small>Costo unit.</small><b>${formato(item.costo)}</b></span></div><label class="combos-selected-mobile-card__quantity">Cantidad incluida <input class="combos-qty" type="text" inputmode="numeric" oninput="validateNumber(this)" value="${item.cantidad === 1 ? "" : item.cantidad}" placeholder="1" aria-label="Cantidad de ${escapar(item.nombre)}"></label><div class="combos-selected-mobile-card__total"><span>Subtotal</span><strong>${formato(item.costo * item.cantidad)}</strong></div></article>`,
+        )
+        .join("");
+    }
     calcular();
   }
 
@@ -99,7 +114,7 @@ document.addEventListener("DOMContentLoaded", () => {
               : pendiente
                 ? '<i class="bx bx-check-circle"></i> Seleccionado'
                 : '<i class="bx bx-plus-circle"></i> Seleccionar';
-            return `<button type="button" class="combos-product-option ${agregado || pendiente ? "is-selected" : ""}" data-id="${producto.id}" aria-pressed="${agregado || pendiente}"><img src="${escapar(producto.imagen)}" alt="" class="combos-product-image" onerror="this.src='/static/img/default.png'"><span class="combos-product-option__info"><strong>${escapar(producto.nombre)}</strong><span>Existencias en inventario: <b>${producto.stock}</b></span></span><b class="combos-product-option__state">${estado}</b></button>`;
+            return `<button type="button" class="combos-product-option ${agregado || pendiente ? "is-selected" : ""}" data-id="${producto.id}" aria-pressed="${agregado || pendiente}"><img src="${escapar(producto.imagen)}" alt="" class="combos-product-image" onerror="this.src='/static/img/default.png'"><span class="combos-product-option__info"><strong>${escapar(producto.nombre)}</strong><span>Existencia: <b>${stockDosDecimales(producto.stock)}</b></span></span><b class="combos-product-option__state">${estado}</b></button>`;
           })
           .join("")
       : '<p class="text-center text-muted py-4">No se encontraron productos disponibles.</p>';
@@ -150,16 +165,45 @@ document.addEventListener("DOMContentLoaded", () => {
       renderProductos();
       bootstrap.Modal.getInstance(modalProductos)?.hide();
     });
+  function actualizarCantidad(contenedor, objetivo, finalizar = false) {
+    const item = seleccionados.get(Number(contenedor.dataset.id));
+    if (!item) return;
+    if (!objetivo.value.trim()) {
+      if (finalizar) {
+        item.cantidad = 1;
+        renderDetalle();
+      }
+      return;
+    }
+    item.cantidad = Math.min(item.stock, Math.max(1, Number(objetivo.value || 1)));
+    renderDetalle();
+  }
+
   detalle.addEventListener("input", (evento) => {
     if (!evento.target.classList.contains("combos-qty")) return;
-    const item = seleccionados.get(
-      Number(evento.target.closest("tr").dataset.id),
-    );
-    item.cantidad = Math.min(
-      item.stock,
-      Math.max(1, Number(evento.target.value || 1)),
-    );
-    renderDetalle();
+    actualizarCantidad(evento.target.closest("tr"), evento.target);
+  });
+  detalleMobile?.addEventListener("input", (evento) => {
+    if (evento.target.classList.contains("combos-qty")) {
+      actualizarCantidad(evento.target.closest(".combos-selected-mobile-card"), evento.target);
+    }
+  });
+  [detalle, detalleMobile].filter(Boolean).forEach((contenedor) => {
+    contenedor.addEventListener("change", (evento) => {
+      if (!evento.target.classList.contains("combos-qty")) return;
+      actualizarCantidad(
+        evento.target.closest(contenedor === detalle ? "tr" : ".combos-selected-mobile-card"),
+        evento.target,
+        true,
+      );
+    });
+  });
+  detalleMobile?.addEventListener("click", (evento) => {
+    const boton = evento.target.closest(".combos-remove");
+    if (boton) {
+      seleccionados.delete(Number(boton.closest(".combos-selected-mobile-card").dataset.id));
+      renderDetalle();
+    }
   });
   detalle.addEventListener("click", (evento) => {
     const boton = evento.target.closest(".combos-remove");
@@ -169,6 +213,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
   document.getElementById("precioVenta").addEventListener("input", calcular);
+
+  renderDetalle();
 
   inputImagenCombo.addEventListener("change", () => {
     const archivo = inputImagenCombo.files?.[0];

@@ -5,7 +5,9 @@
   <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
   <link rel="stylesheet" href="{% static 'css/traslados.css' %}" />
   <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}?v=20261005-detalle-traslado" />
 {% endblock %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/detalletraslado_mobile.css' %}?v=20261005-detalle-movil" />{% endblock page_css_overrides %}
 {% block titulo_content %}
   <div class="tituloscont">
     <img class="logop" src="{% static 'img/LH.webp' %}" alt="logo" width="0" height="0" />
@@ -49,6 +51,7 @@
 
   <div class="divbuttons3 compra-detalle-layout">
     <div class="tablaencompras">
+      <div class="detalle-traslado-table-desktop">
       <table class="tablas-todo" id="tablaDetalleTraslado">
         <thead>
           <tr><th>#</th><th>Nombre</th><th>Presentación</th><th>Marca</th><th>SKU</th><th>Solicitado</th><th>Trasladado</th></tr>
@@ -64,6 +67,28 @@
           {% endfor %}
         </tbody>
       </table>
+      </div>
+      <section class="detalle-compra-mobile-list" aria-label="Productos del traslado">
+        {% for detalle in traslado.detalles %}
+          <article class="detalle-compra-mobile-card">
+            <header class="detalle-compra-mobile-card__header">
+              <span class="detalle-compra-mobile-card__icono"><i class="bx bx-package" aria-hidden="true"></i></span>
+              <span class="detalle-compra-mobile-card__registro">Producto {{ forloop.counter }}</span>
+              <span class="detalle-compra-mobile-card__cantidad">{{ detalle.cantidad_solicitada|floatformat:2 }} unidades</span>
+            </header>
+            <div class="detalle-compra-mobile-card__producto">{{ detalle.nombre }}</div>
+            <div class="detalle-compra-mobile-card__datos">
+              <div><span>Presentación</span><strong>{{ detalle.presentacion }}</strong></div>
+              <div><span>Marca</span><strong>{{ detalle.marca }}</strong></div>
+              <div><span>SKU</span><strong>{{ detalle.sku }}</strong></div>
+              <div><span>Solicitado</span><strong>{{ detalle.cantidad_solicitada|floatformat:2 }}</strong></div>
+              <div><span>Trasladado</span><strong>{{ detalle.cantidad_trasladada|floatformat:2 }}</strong></div>
+            </div>
+          </article>
+        {% empty %}
+          <div class="recepcion-mobile-empty"><i class="bx bx-package"></i><strong>Sin productos</strong><span>Este traslado no tiene productos registrados.</span></div>
+        {% endfor %}
+      </section>
       <nav id="paginadorDetalleTraslado" class="d-flex justify-content-center mt-4"></nav>
     </div>
     <aside class="compra-detalle__totales" aria-label="Resumen del traslado">

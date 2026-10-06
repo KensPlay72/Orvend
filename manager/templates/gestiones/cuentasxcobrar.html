@@ -6,6 +6,7 @@
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}">
 {% endblock %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/catalogos_mobile.css' %}?v=20261005-movil-solo" />{% endblock page_css_overrides %}
 
 {% block titulo_content %}
     <div class="tituloscont">
@@ -15,8 +16,9 @@
 {% endblock %}
 
 {% block main_content %}
+<form method="get" class="catalog-mobile-search"><div class="catalog-mobile-search__field"><i class="bx bx-search"></i><input type="search" name="search" value="{{ search }}" placeholder="Buscar cuentas por cobrar" autocomplete="off"></div><button type="submit"><i class="bx bx-search"></i><span>Buscar</span></button></form>
  
-<div class="modal fade"
+<div class="modal fade modal-sheet-mobile modal-sheet-mobile--auto catalog-mobile-modal"
      id="modalAbonoCobrar"
      tabindex="-1"
      aria-labelledby="modalAbonoCobrarLabel"
@@ -142,7 +144,7 @@
     </div>
 
     <div class="tabla-container">
-        <table class="tablas-todo">
+        <table class="tablas-todo catalog-mobile-table catalog-mobile-table--cobrar">
             <thead>
                 <tr>
                     <th>#</th>

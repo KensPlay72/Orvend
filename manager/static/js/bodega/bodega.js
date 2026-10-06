@@ -1,13 +1,12 @@
 document.addEventListener("DOMContentLoaded", function () {
-  document.querySelectorAll("[data-detail-url]").forEach((fila) => {
-    fila.addEventListener("click", (event) => {
-      if (event.target.closest("button, a, input, select, textarea")) return;
-      sessionStorage.setItem(
-        "orvend:recepcion:return-url",
-        `${window.location.pathname}${window.location.search}`,
-      );
-      window.location.href = fila.dataset.detailUrl;
-    });
+  document.addEventListener("click", (event) => {
+    const fila = event.target.closest("[data-detail-url]");
+    if (!fila || event.target.closest("button, a, input, select, textarea")) return;
+    sessionStorage.setItem(
+      "orvend:recepcion:return-url",
+      `${window.location.pathname}${window.location.search}`,
+    );
+    window.location.assign(fila.dataset.detailUrl);
   });
 
   document.querySelectorAll(".btn-edit").forEach((btn) => {

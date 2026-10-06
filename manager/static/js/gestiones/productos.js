@@ -803,13 +803,16 @@ document.getElementById("putregistro").addEventListener("submit", async (e) => {
 // ELIMINACION
 //----------------------
 document.addEventListener("DOMContentLoaded", () => {
-  const tabla = document.getElementById("tablacont");
+  const tabla = document;
 
   tabla.addEventListener("click", async (e) => {
     if (e.target.closest(".btn-delete")) {
       const btn = e.target.closest(".btn-delete");
       const userId = btn.getAttribute("data-id");
-      const nombre = btn.closest("tr").children[1].textContent;
+      const nombre =
+        btn.dataset.productoNombre ||
+        btn.closest("tr")?.children[1]?.textContent?.trim() ||
+        "este producto";
 
       const result = await Swal.fire({
         title: `¿Eliminar la marca "${nombre}"?`,
@@ -866,6 +869,36 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
     }
+  });
+});
+
+// Tarjetas de Productos: el detalle y su imagen se cargan únicamente al abrirlo.
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".productos-mobile-card__header").forEach((header) => {
+    header.addEventListener("click", () => {
+      const card = header.closest(".productos-mobile-card");
+      const isOpen = card.classList.toggle("is-open");
+      const detail = card.querySelector(".productos-mobile-card__detail");
+      header.setAttribute("aria-expanded", String(isOpen));
+
+      if (detail) {
+        detail.style.maxHeight = isOpen ? `${detail.scrollHeight}px` : "0px";
+      }
+
+      if (isOpen) {
+        const image = card.querySelector(".productos-mobile-card__lazy-image[data-src]");
+        if (image) {
+          image.src = image.dataset.src;
+          image.removeAttribute("data-src");
+          image.onerror = () => { image.src = DEFAULT_PRODUCT_IMAGE; };
+          image.onload = () => {
+            if (card.classList.contains("is-open") && detail) {
+              detail.style.maxHeight = `${detail.scrollHeight}px`;
+            }
+          };
+        }
+      }
+    });
   });
 });
 

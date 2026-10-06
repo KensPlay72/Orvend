@@ -106,7 +106,8 @@
   align-items: center;
   gap: 0.55rem;
   padding: 1rem 1.15rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
   color: var(--system-primary, #286f68);
 }
 .detalle-card__title i {
@@ -136,10 +137,12 @@
   padding: 0.9rem 1.15rem;
 }
 .detalle-info div:nth-child(odd) {
-  border-right: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 9%, #fff);
+  border-right: 1px solid
+    color-mix(in srgb, var(--system-primary, #32877f) 9%, #fff);
 }
 .detalle-info div:nth-child(n + 3) {
-  border-top: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 9%, #fff);
+  border-top: 1px solid
+    color-mix(in srgb, var(--system-primary, #32877f) 9%, #fff);
 }
 .detalle-info dt {
   margin-bottom: 0.25rem;
@@ -303,6 +306,7 @@
     border-right: 0;
   }
   .detalle-info div:not(:first-child) {
-    border-top: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 9%, #fff);
+    border-top: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 9%, #fff);
   }
 }

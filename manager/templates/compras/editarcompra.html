@@ -2,9 +2,10 @@
 {% load static %}
 {% block title %}Editar Compra{% endblock %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/compras.css' %}?v=20261004-modal-tema" />
+    <link rel="stylesheet" href="{% static 'css/compras.css' %}?v=20261005-nombres-completos" />
     <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261004-sheet-max" />
 {% endblock %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/compras_mobile.css' %}?v=20261005-acciones-inline" />{% endblock page_css_overrides %}
 {% block titulo_content %}
     <div class="tituloscont">
         <img class="logop" src="{% static 'img/LH.webp' %}" alt="">
@@ -91,7 +92,7 @@
     <!-- Selector reutilizable de productos -->
     {% include "components/_selector_productos_movil.html" %}
     <!-- Modal Completar compra -->
-    <div class="modal fade"
+    <div class="modal fade modal-sheet-mobile compras-mobile-modal"
          id="completarcompra"
          tabindex="-1"
          aria-hidden="true">
@@ -152,6 +153,7 @@
                             </tbody>
                         </table>
                     </div>
+                    <section class="compras-confirmar-mobile-list" aria-label="Resumen de productos"></section>
                     <div class="compras-modal-summary" aria-label="Resumen de importes">
                         <div class="compras-modal-summary__item"><span>Antes imp.</span><strong id="subtotalModalCompra">L. 0.00</strong></div>
                         <div class="compras-modal-summary__item"><span>Impuestos</span><strong id="impuestoModalCompra">L. 0.00</strong></div>
@@ -170,8 +172,14 @@
             </div>
         </div>
     </div>
-    <br>
-    <div class="divbuttons3">
+    <div class="divbuttons3 compra-editor-mobile">
+        <div class="total">
+            <div class="totalcompleto"><span class="compra-total__icono"><i class="bx bx-calculator"></i></span><span class="compra-total__contenido"><small>Antes de impuesto</small><strong id="subtotal-compra">L. 0.00</strong></span></div>
+            <div class="totalcompleto"><span class="compra-total__icono"><i class="bx bx-receipt"></i></span><span class="compra-total__contenido"><small>Impuestos</small><strong id="impuesto-compra">L. 0.00</strong></span></div>
+            <div class="totalcompleto"><span class="compra-total__icono"><i class="bx bx-wallet"></i></span><span class="compra-total__contenido"><small>Después de impuesto</small><strong id="total-compra">L. 0.00</strong></span></div>
+            <div class="totalcompleto"><span class="compra-total__icono"><i class="bx bx-package"></i></span><span class="compra-total__contenido"><small>Total de productos</small><strong id="cantidad-productos">0</strong></span></div>
+            <div class="totalcompleto"><span class="compra-total__icono"><i class="bx bx-list-check"></i></span><span class="compra-total__contenido"><small>Productos</small><strong id="contador-productos">0</strong></span></div>
+        </div>
         <div class="tablaencompras">
             <table class="tablas-todo" id="tablacont">
                 <thead>
@@ -193,15 +201,9 @@
             </nav>
             <br>
         </div>
-        <div class="total">
-            <div class="totalcompleto" id="subtotal-compra">Antes imp.: L. 0.00</div>
-            <div class="totalcompleto" id="impuesto-compra">Impuestos: L. 0.00</div>
-            <div class="totalcompleto" id="total-compra">Después imp.: L. 0.00</div>
-            <div class="totalcompleto" id="cantidad-productos">Total de productos: 0</div>
-            <div class="totalcompleto" id="contador-productos">Productos: 0</div>
-        </div>
     </div>
     {{ compra|json_script:"compraData" }}
     <script>const compra = JSON.parse(document.getElementById("compraData").textContent);</script>
-    <script type="module" src="{% static 'js/compras/editcompras.js' %}?v=20261004-pagina-url"></script>
+    <script type="module" src="{% static 'js/compras/editcompras.js' %}?v=20261005-marca-tarjetas"></script>
+    <script src="{% static 'js/compras/editor_mobile_cards.js' %}?v=20261005-paginador-movil"></script>
 {% endblock %}

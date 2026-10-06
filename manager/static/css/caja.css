@@ -17,17 +17,27 @@
     display: block;
   }
 
-  #modalagregar.modal-sheet-mobile .modal-footer > .btn-secondary[data-bs-dismiss="modal"],
-  #modalDescuento.modal-sheet-mobile .modal-footer > .btn-secondary[data-bs-dismiss="modal"],
-  #modalPago.modal-sheet-mobile .modal-footer > .btn-secondary[data-bs-dismiss="modal"],
-  #modalRegistrarClienteCaja.modal-sheet-mobile .modal-footer > .btn-secondary[data-bs-dismiss="modal"] {
+  #modalagregar.modal-sheet-mobile
+    .modal-footer
+    > .btn-secondary[data-bs-dismiss="modal"],
+  #modalDescuento.modal-sheet-mobile
+    .modal-footer
+    > .btn-secondary[data-bs-dismiss="modal"],
+  #modalPago.modal-sheet-mobile
+    .modal-footer
+    > .btn-secondary[data-bs-dismiss="modal"],
+  #modalRegistrarClienteCaja.modal-sheet-mobile
+    .modal-footer
+    > .btn-secondary[data-bs-dismiss="modal"] {
     display: none;
   }
 
   #modalagregar.modal-sheet-mobile .modal-footer > .btn:not(.btn-secondary),
   #modalDescuento.modal-sheet-mobile .modal-footer > .btn:not(.btn-secondary),
   #modalPago.modal-sheet-mobile .modal-footer > .btn:not(.btn-secondary),
-  #modalRegistrarClienteCaja.modal-sheet-mobile .modal-footer > .btn:not(.btn-secondary) {
+  #modalRegistrarClienteCaja.modal-sheet-mobile
+    .modal-footer
+    > .btn:not(.btn-secondary) {
     width: 100%;
     min-height: 44px;
     margin: 0;
@@ -431,7 +441,8 @@ th {
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--system-primary) 22%, #fff);
   border-radius: 12px;
-  box-shadow: 0 12px 32px color-mix(in srgb, var(--system-secondary) 20%, transparent);
+  box-shadow: 0 12px 32px
+    color-mix(in srgb, var(--system-secondary) 20%, transparent);
   transition: height 0.24s ease;
 }
 
@@ -473,7 +484,8 @@ th {
 
 .caja-product-search input:focus {
   border-color: var(--system-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--system-primary) 13%, transparent);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--system-primary) 13%, transparent);
 }
 
 .caja-product-search button {
@@ -518,7 +530,9 @@ th {
   max-height: 390px;
   overflow-y: auto;
   padding-right: 0.15rem;
-  transition: height 0.24s ease, opacity 0.16s ease;
+  transition:
+    height 0.24s ease,
+    opacity 0.16s ease;
 }
 
 .caja-product-list-wrap.is-loading {
@@ -562,11 +576,11 @@ th {
 }
 
 .caja-product-option__info strong {
-  overflow: hidden;
   color: var(--system-secondary);
   font-size: 0.9rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .caja-product-option__info small,
@@ -613,7 +627,8 @@ th {
   font-weight: 700;
   text-align: center;
   background: #fff;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--system-primary) 12%, transparent);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--system-primary) 12%, transparent);
 }
 
 .caja-product-modal__footer {
@@ -648,7 +663,10 @@ th {
 
 .pago-campo-animado {
   will-change: max-height, opacity, transform;
-  transition: max-height 0.28s ease, opacity 0.2s ease, transform 0.28s ease;
+  transition:
+    max-height 0.28s ease,
+    opacity 0.2s ease,
+    transform 0.28s ease;
 }
 
 @media (max-width: 1032px) {
@@ -848,7 +866,7 @@ th {
 
 @media (max-width: 1032px) {
   body {
-    padding: 4rem 0 1rem !important;
+    padding: calc(3.45rem + var(--mobile-content-top-space, 0.65rem)) 0 1rem !important;
   }
   .header {
     position: fixed;
@@ -892,7 +910,8 @@ th {
     background: var(--system-button);
     font-size: 1rem;
     font-weight: 700;
-    box-shadow: 0 5px 14px color-mix(in srgb, var(--system-primary) 24%, transparent);
+    box-shadow: 0 5px 14px
+      color-mix(in srgb, var(--system-primary) 24%, transparent);
   }
   .tabla-container {
     width: 100%;
@@ -1316,7 +1335,7 @@ th {
 /* En tableta Caja conserva exactamente la navegación compacta del teléfono. */
 @media (min-width: 768px) and (max-width: 1032px) {
   body:has(#tablaProductos) {
-    padding: 4rem 0 1rem !important;
+    padding: calc(3.45rem + var(--mobile-content-top-space, 0.65rem)) 0 1rem !important;
   }
   body:has(#tablaProductos) .header {
     position: fixed;
@@ -1448,6 +1467,35 @@ th {
     font-size: 16px;
   }
 
+  #modalRegistrarClienteCaja .form-group {
+    margin: 0;
+    padding: .65rem;
+    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+    border-radius: .75rem;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 3%, #fff);
+  }
+
+  #modalRegistrarClienteCaja .form-group label {
+    margin-bottom: .35rem;
+    color: var(--system-secondary, #10463e);
+    font-size: .74rem;
+    font-weight: 750;
+  }
+
+  #modalRegistrarClienteCaja .form-control {
+    min-height: 43px;
+    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 20%, #fff);
+    border-radius: .6rem;
+    color: var(--system-secondary, #10463e);
+    background: #fff;
+    box-shadow: none;
+  }
+
+  #modalRegistrarClienteCaja .form-control:focus {
+    border-color: var(--system-primary, #32877f);
+    box-shadow: 0 0 0 .18rem color-mix(in srgb, var(--system-primary, #32877f) 16%, transparent);
+  }
+
   #modalNotasCredito.modal-sheet-mobile--auto .modal-body {
     max-height: calc(82dvh - 5.7rem);
   }
@@ -1489,8 +1537,13 @@ th {
     border: 1px solid color-mix(in srgb, var(--system-primary) 18%, #fff);
     border-left: 4px solid var(--system-primary);
     border-radius: 0.9rem;
-    background: linear-gradient(135deg, color-mix(in srgb, var(--system-primary) 7%, #fff), #fff 48%);
-    box-shadow: 0 7px 18px color-mix(in srgb, var(--system-secondary) 9%, transparent);
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--system-primary) 7%, #fff),
+      #fff 48%
+    );
+    box-shadow: 0 7px 18px
+      color-mix(in srgb, var(--system-secondary) 9%, transparent);
   }
 
   #modalNotasCredito .nota-credito-card td {

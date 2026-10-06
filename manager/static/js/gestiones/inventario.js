@@ -6,6 +6,39 @@ document.addEventListener("DOMContentLoaded", () => {
   const sinImagen = document.getElementById("sinImagenProducto");
   let solicitudActual = 0;
   let controladorBusqueda = null;
+  const detallesMovil = new Map();
+  const solicitudesMovil = new Map();
+
+  const obtenerDetalleMovil = async (idProducto) => {
+    if (detallesMovil.has(idProducto)) return detallesMovil.get(idProducto);
+    if (solicitudesMovil.has(idProducto)) return solicitudesMovil.get(idProducto);
+    const solicitud = fetch(`/manager/inventario/${idProducto}/`, {
+      headers: { Accept: "application/json" },
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error("No se pudo obtener el producto");
+        return response.json();
+      })
+      .then((data) => {
+        detallesMovil.set(idProducto, data);
+        return data;
+      })
+      .finally(() => solicitudesMovil.delete(idProducto));
+    solicitudesMovil.set(idProducto, solicitud);
+    return solicitud;
+  };
+
+  const precargarDetallesMovil = () => {
+    if (!window.matchMedia("(max-width: 1032px)").matches) return;
+    listaMovil?.querySelectorAll(".inventario-mobile-card").forEach(async (tarjeta) => {
+      try {
+        const data = await obtenerDetalleMovil(tarjeta.dataset.id);
+        renderDetalleMovil(tarjeta, data);
+      } catch (_) {
+        // La tarjeta conserva su estado de carga y podrá reintentarse al abrirla.
+      }
+    });
+  };
 
   const ocultarEstadosImagen = () => {
     cargando.classList.add("d-none");
@@ -89,6 +122,8 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll(".inventario-mobile-card.is-open").forEach((item) => {
       item.classList.remove("is-open");
       item.querySelector(".inventario-mobile-card__header")?.setAttribute("aria-expanded", "false");
+      const detalle = item.querySelector(".inventario-mobile-card__detail");
+      if (detalle) detalle.style.maxHeight = "0px";
     });
     if (estabaAbierta) {
       solicitudActual += 1;
@@ -99,15 +134,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const solicitud = ++solicitudActual;
     tarjeta.classList.add("is-open");
     tarjeta.querySelector(".inventario-mobile-card__header")?.setAttribute("aria-expanded", "true");
+    const detalle = tarjeta.querySelector(".inventario-mobile-card__detail");
+    if (detalle) detalle.style.maxHeight = `${detalle.scrollHeight}px`;
     try {
-      controladorBusqueda?.abort();
-      controladorBusqueda = new AbortController();
-      const response = await fetch(`/manager/inventario/${tarjeta.dataset.id}/`, {
-        headers: { Accept: "application/json" },
-        signal: controladorBusqueda.signal,
-      });
-      if (!response.ok) throw new Error("No se pudo obtener el producto");
-      const data = await response.json();
+      const data = await obtenerDetalleMovil(tarjeta.dataset.id);
       if (solicitud !== solicitudActual) return;
       renderDetalleMovil(tarjeta, data);
     } catch (error) {
@@ -117,6 +147,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   });
+
+  precargarDetallesMovil();
 });
 
 function renderInventario(data) {
@@ -144,6 +176,7 @@ function renderDetalleMovil(tarjeta, data) {
         imagen.hidden = true;
         iconoImagen.hidden = false;
       };
+      imagen.onload = () => ajustarAlturaDetalleMovil(tarjeta);
       imagen.src = data.producto.imagenUrl;
     } else imagen.removeAttribute("src");
   }
@@ -168,5 +201,16 @@ function renderDetalleMovil(tarjeta, data) {
     cantidad.textContent = item.cantidad;
     fila.append(nombre, cantidad);
     lista.appendChild(fila);
+  });
+  ajustarAlturaDetalleMovil(tarjeta);
+}
+
+function ajustarAlturaDetalleMovil(tarjeta) {
+  const detalle = tarjeta.querySelector(".inventario-mobile-card__detail");
+  if (!detalle || !tarjeta.classList.contains("is-open")) return;
+  requestAnimationFrame(() => {
+    if (tarjeta.classList.contains("is-open")) {
+      detalle.style.maxHeight = `${detalle.scrollHeight}px`;
+    }
   });
 }

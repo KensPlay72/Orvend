@@ -181,8 +181,9 @@ img {
 }
 .notifications-panel {
   width: 350px;
-  height: min(520px, calc(100dvh - 5.5rem));
-  max-height: none;
+  height: auto;
+  /* La altura acompaña el contenido; cinco avisos marcan el límite visual. */
+  max-height: min(460px, calc(100dvh - 5.5rem));
   padding: 0 0.35rem 0.35rem;
   /* Mantiene accesibles las notificaciones cuando se acumulan. */
   overflow: hidden;
@@ -210,7 +211,8 @@ img {
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--system-primary) 45%, #fff) transparent;
+  scrollbar-color: color-mix(in srgb, var(--system-primary) 45%, #fff)
+    transparent;
 }
 .notification-item {
   align-items: flex-start;
@@ -249,7 +251,12 @@ img {
   opacity: 0;
   overflow: hidden;
   transform: translateX(12px);
-  transition: max-height .46s ease, margin .46s ease, padding .46s ease, opacity .34s ease, transform .34s ease !important;
+  transition:
+    max-height 0.46s ease,
+    margin 0.46s ease,
+    padding 0.46s ease,
+    opacity 0.34s ease,
+    transform 0.34s ease !important;
 }
 .notification-item--action:hover,
 .notification-item--action:focus {
@@ -395,7 +402,7 @@ Modal Inner Content
   background-color: var(--container-color);
   box-shadow: 0 1px 0 rgba(22, 8, 43, 0.1);
   padding: 0 1rem;
-  z-index: var(--z-fixed);
+  z-index: 1050;
 }
 .header__container {
   display: flex;
@@ -457,7 +464,9 @@ Modal Inner Content
   color: #fff;
   background: linear-gradient(135deg, #217346 0%, #185c37 100%);
   box-shadow: 0 4px 10px rgba(33, 115, 70, 0.18);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .header__export-btn:hover {
@@ -481,13 +490,17 @@ Modal Inner Content
   border-radius: 10px;
   color: var(--system-primary);
   background: #fff;
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--system-primary) 12%, transparent);
+  box-shadow: 0 2px 8px
+    color-mix(in srgb, var(--system-primary) 12%, transparent);
   font: inherit;
   font-size: 0.88rem;
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
 .header__product-picker i {
@@ -497,7 +510,8 @@ Modal Inner Content
 .header__product-picker:hover {
   border-color: var(--system-primary);
   color: var(--system-primary);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--system-primary) 22%, transparent);
+  box-shadow: 0 4px 12px
+    color-mix(in srgb, var(--system-primary) 22%, transparent);
   transform: translateY(-1px);
 }
 
@@ -617,7 +631,7 @@ Modal Inner Content
   padding: 1rem 1rem 0;
   background-color: var(--container-color);
   box-shadow: 1px 0 0 rgba(22, 8, 43, 0.1);
-  z-index: var(--z-fixed);
+  z-index: 1050;
   transition: 0.4s;
 }
 .nav__container {
@@ -728,9 +742,19 @@ Modal Inner Content
   }
 }
 @media screen and (max-width: 1032px) {
+  :root {
+    /* Separación única entre el navbar fijo y el contenido de cada vista. */
+    --mobile-content-top-space: 0.65rem;
+  }
+
   body {
     /* El encabezado es fijo: todas las vistas comienzan debajo de él. */
-    padding-top: 4.75rem;
+    padding-top: calc(4rem + var(--mobile-content-top-space));
+  }
+
+  .main {
+    /* El offset vive en body para que no se duplique por página. */
+    padding-top: 0;
   }
   .header {
     height: 4rem;
@@ -749,17 +773,17 @@ Modal Inner Content
   }
   .header__container > .tituloscont {
     display: flex;
-    position: absolute;
-    left: 50%;
-    grid-area: auto;
-    width: auto;
-    max-width: calc(100% - 5.25rem);
+    position: relative;
+    left: auto;
+    grid-area: title;
+    width: 100%;
+    max-width: none;
     min-width: 0;
-    justify-content: center;
+    justify-content: flex-start;
     margin: 0;
     overflow: hidden;
     pointer-events: none;
-    transform: translateX(-50%);
+    transform: none;
     z-index: 0;
   }
   .header__container > .tituloscont .logop {
@@ -823,8 +847,8 @@ Modal Inner Content
     top: 4.55rem;
     right: 0.75rem;
     width: min(350px, calc(100vw - 1.5rem));
-    height: min(520px, calc(100dvh - 5.3rem));
-    max-height: none;
+    height: auto;
+    max-height: min(460px, calc(100dvh - 5.3rem));
   }
   .header__container > .header-notifications .notifications-panel__list {
     max-height: none;

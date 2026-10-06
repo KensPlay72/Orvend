@@ -1,6 +1,9 @@
 let inventarioSeleccionadoGlobal = {};
 let trasladoPreviewArray = [];
 const TRASLADO_PAGE_SIZE = 10;
+let ubicacionInventarioActual = null;
+let paginaInventarioModal = 1;
+let busquedaInventarioModal = "";
 
 /*========================================
 =            VALIDAR MODAL               =
@@ -20,6 +23,12 @@ document.getElementById("modalregis").addEventListener("show.bs.modal", (e) => {
     });
   }
 });
+
+function formatoStockVisible(valor) {
+  const numero = Number(String(valor).replace(",", "."));
+  if (!Number.isFinite(numero)) return valor;
+  return (Math.trunc(numero * 100) / 100).toFixed(2);
+}
 
 /*========================================
 =               DEBOUNCE                 =
@@ -161,7 +170,7 @@ initDropdown("ubicacion_destino", (term, contenedor) =>
 /*========================================
 =       CARGAR INVENTARIO EN MODAL       =
 ========================================*/
-async function cargarInventarioEnModal(ubicacionId) {
+async function cargarInventarioEnModal(ubicacionId, pagina = 1, busqueda = "") {
   const contenedor = document.getElementById("contenedorProductosAjax");
 
   contenedor.innerHTML = `
@@ -170,17 +179,21 @@ async function cargarInventarioEnModal(ubicacionId) {
     </div>
   `;
 
-  inventarioSeleccionadoGlobal = {};
-
-  const res = await fetch(
-    `/manager/inventario/ubicacion/${ubicacionId}/`
-  );
-
+  if (String(ubicacionInventarioActual) !== String(ubicacionId)) {
+    inventarioSeleccionadoGlobal = {};
+    ubicacionInventarioActual = ubicacionId;
+  }
+  paginaInventarioModal = pagina;
+  busquedaInventarioModal = busqueda;
+  const params = new URLSearchParams({ page: pagina, limit: 10 });
+  if (busqueda) params.set("search", busqueda);
+  const res = await fetch(`/manager/inventario/ubicacion/${ubicacionId}/?${params}`);
+  if (!res.ok) throw new Error("No se pudo cargar el inventario");
   const data = await res.json();
 
   contenedor.innerHTML = "";
 
-  data.forEach((prod) => {
+  data.results.forEach((prod) => {
 
     const div = document.createElement("div");
 
@@ -192,7 +205,7 @@ async function cargarInventarioEnModal(ubicacionId) {
       <img class="compras-product-option__image" src="${imagen || '/static/img/default.webp'}" alt="" onerror="this.src='/static/img/default.webp'">
       <div class="compras-product-option__info datos-producto" data-sku="${prod.sku}" data-stock="${prod.stock}">
         <strong>${prod.nombre}</strong>
-        <small>SKU: ${prod.sku} · Existencias: ${prod.stock}</small>
+        <small>SKU: ${prod.sku} · Existencias: ${formatoStockVisible(prod.stock)}</small>
       </div>
       <span class="compras-product-option__action"><i class="bx bx-plus-circle"></i> Seleccionar</span>
       <input type="checkbox" class="form-check-input producto-checkbox d-none" value="${prod.producto_id}">
@@ -202,6 +215,31 @@ async function cargarInventarioEnModal(ubicacionId) {
   });
 
   inicializarSeleccion();
+  renderPaginacionInventarioModal(data.page, data.totalPages, ubicacionId);
+}
+
+function renderPaginacionInventarioModal(pagina, totalPaginas, ubicacionId) {
+  const paginador = document.getElementById("paginacionProductos");
+  if (!paginador) return;
+  paginador.replaceChildren();
+  if (totalPaginas <= 1) return;
+  const crearBoton = (texto, destino, deshabilitado, activo = false) => {
+    const item = document.createElement("li");
+    item.className = `page-item${deshabilitado ? " disabled" : ""}${activo ? " active" : ""}`;
+    const boton = document.createElement("button");
+    boton.type = "button";
+    boton.className = "page-link";
+    boton.textContent = texto;
+    boton.disabled = deshabilitado;
+    boton.addEventListener("click", () => cargarInventarioEnModal(ubicacionId, destino, busquedaInventarioModal));
+    item.appendChild(boton);
+    paginador.appendChild(item);
+  };
+  crearBoton("«", pagina - 1, pagina === 1);
+  for (let p = Math.max(1, pagina - 2); p <= Math.min(totalPaginas, pagina + 2); p += 1) {
+    crearBoton(String(p), p, false, p === pagina);
+  }
+  crearBoton("»", pagina + 1, pagina === totalPaginas);
 }
 
 /*========================================
@@ -252,6 +290,13 @@ document.getElementById("toggleDropdownPanel").addEventListener("click", () => {
   modal.show();
 });
 
+document.getElementById("formBuscarProductosCompra")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (!ubicacionInventarioActual) return;
+  const busqueda = document.getElementById("buscadorProductos")?.value.trim() || "";
+  cargarInventarioEnModal(ubicacionInventarioActual, 1, busqueda);
+});
+
 /*========================================
 =        GUARDAR PRODUCTOS A TABLA       =
 ========================================*/
@@ -265,17 +310,20 @@ document
 
       const tr = document.createElement("tr");
       tr.id = `traslado-${id}`;
+      tr.dataset.stock = data.stock;
 
       tr.innerHTML = `
         <td></td>
         <td>${data.nombre}</td>
         <td>${data.sku}</td>
-        <td>${data.stock}</td>
+        <td>${formatoStockVisible(data.stock)}</td>
         <td>
           <input type="number"
                  class="form-control cantidad-final"
                  min="1"
-                 max="${data.stock}"
+                 max="${Math.floor(Number(data.stock))}"
+                 step="1"
+                 inputmode="numeric"
                  value="1">
         </td>
         <td>
@@ -435,8 +483,8 @@ document
 
     document.querySelectorAll("#tablaTraslados tr").forEach((fila) => {
       const productoId = parseInt(fila.id.replace("traslado-", ""));
-      const cantidad = parseFloat(fila.querySelector(".cantidad-final").value);
-      const stockDisponible = parseFloat(fila.children[3].textContent);
+      const cantidad = parseInt(fila.querySelector(".cantidad-final").value, 10);
+      const stockDisponible = parseFloat(fila.dataset.stock || fila.children[3].textContent);
 
       detalles.push({
         productoId,
@@ -496,36 +544,32 @@ document.addEventListener("DOMContentLoaded", () => {
     rows.forEach((row) => {
       const input = row.querySelector(".cantidad-final");
       if (!input) return;
+      if (input.dataset.trasladoValidado) return;
+      input.dataset.trasladoValidado = "true";
 
-      const stock = parseFloat(row.children[3].textContent) || 0;
+      const stock = parseFloat(row.dataset.stock || row.children[3].textContent) || 0;
+      const maximoEntero = Math.floor(stock);
 
-      // 🔥 SOLO validar mientras escribe (sin forzar mínimo)
+      const normalizarCantidad = (usarMinimo = false) => {
+        if (input.value === "") {
+          if (usarMinimo) input.value = "1";
+          return;
+        }
+        let valor = Math.trunc(Number(input.value));
+        if (!Number.isFinite(valor) || valor < 1) {
+          input.value = usarMinimo ? "1" : "";
+          return;
+        }
+        if (valor > maximoEntero) valor = maximoEntero;
+        input.value = String(valor);
+      };
+
       input.addEventListener("input", () => {
-        let valor = parseFloat(input.value);
-
-        // si está vacío, no hacemos nada
-        if (input.value === "") return;
-
-        if (valor > stock) {
-          input.value = stock;
-        }
-
-        if (valor < 0) {
-          input.value = "";
-        }
+        normalizarCantidad(false);
       });
 
-      // 🔥 aquí sí corregimos el valor final
       input.addEventListener("blur", () => {
-        let valor = parseFloat(input.value);
-
-        if (isNaN(valor) || valor <= 0) {
-          input.value = 1; // valor por defecto al salir
-        }
-
-        if (valor > stock) {
-          input.value = stock;
-        }
+        normalizarCantidad(true);
       });
     });
   }

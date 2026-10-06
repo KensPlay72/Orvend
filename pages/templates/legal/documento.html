@@ -1,48 +1,59 @@
 {% load static %}
 <!doctype html>
 <html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="robots" content="index,follow">
-  <title>{{ documento.titulo }} | OrvendMart</title>
-  <link rel="icon" href="{% static 'img/logo-card.ico' %}" type="image/x-icon">
-  <link rel="stylesheet" href="{% static 'plugins/css/boxicons.min.css' %}">
-  <link rel="stylesheet" href="{% static 'css/legal.css' %}">
-</head>
-<body class="legal-body">
-  <header class="legal-nav">
-    <a class="legal-brand" href="{% url 'home' %}">
-      <img src="{% static 'img/LH1.webp' %}" alt="OrvendMart">
-    </a>
-    <a class="legal-back" href="{% url 'home' %}"><i class="bx bx-left-arrow-alt"></i> Volver al inicio</a>
-  </header>
-  <main class="legal-main">
-    <article class="legal-document">
-      <header class="legal-hero">
-        <span><i class="bx bx-shield-quarter"></i> INFORMACIÓN LEGAL</span>
-        <h1>{{ documento.titulo }}</h1>
-        <p>{{ documento.resumen }}</p>
-        <small>Última actualización: {{ documento.actualizado }}</small>
-      </header>
-      <div class="legal-content">
-        {% for seccion in documento.secciones %}
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="index,follow" />
+    <title>{{ documento.titulo }} | OrvendMart</title>
+    <link
+      rel="icon"
+      href="{% static 'img/logo-card.ico' %}"
+      type="image/x-icon"
+    />
+    <link rel="stylesheet" href="{% static 'plugins/css/boxicons.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/legal.css' %}" />
+  </head>
+  <body class="legal-body">
+    <header class="legal-nav">
+      <a class="legal-brand" href="{% url 'home' %}">
+        <img src="{% static 'img/LH1.webp' %}" alt="OrvendMart" />
+      </a>
+      <a class="legal-back" href="{% url 'home' %}"
+        ><i class="bx bx-left-arrow-alt"></i> Volver al inicio</a
+      >
+    </header>
+    <main class="legal-main">
+      <article class="legal-document">
+        <header class="legal-hero">
+          <span><i class="bx bx-shield-quarter"></i> INFORMACIÓN LEGAL</span>
+          <h1>{{ documento.titulo }}</h1>
+          <p>{{ documento.resumen }}</p>
+          <small>Última actualización: {{ documento.actualizado }}</small>
+        </header>
+        <div class="legal-content">
+          {% for seccion in documento.secciones %}
           <section>
             <h2>{{ seccion.titulo }}</h2>
-            {% for parrafo in seccion.parrafos %}<p>{{ parrafo }}</p>{% endfor %}
-            {% if seccion.lista %}
-              <ul>{% for item in seccion.lista %}<li>{{ item }}</li>{% endfor %}</ul>
+            {% for parrafo in seccion.parrafos %}
+            <p>{{ parrafo }}</p>
+            {% endfor %} {% if seccion.lista %}
+            <ul>
+              {% for item in seccion.lista %}
+              <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
             {% endif %}
           </section>
-        {% endfor %}
-      </div>
-    </article>
-  </main>
-  <footer class="legal-footer">
-    <a href="{% url 'politica_privacidad' %}">Privacidad</a>
-    <a href="{% url 'politica_cookies' %}">Cookies</a>
-    <a href="{% url 'terminos_condiciones' %}">Términos</a>
-    <a href="{% url 'politica_reembolsos' %}">Reembolsos</a>
-  </footer>
-</body>
+          {% endfor %}
+        </div>
+      </article>
+    </main>
+    <footer class="legal-footer">
+      <a href="{% url 'politica_privacidad' %}">Privacidad</a>
+      <a href="{% url 'politica_cookies' %}">Cookies</a>
+      <a href="{% url 'terminos_condiciones' %}">Términos</a>
+      <a href="{% url 'politica_reembolsos' %}">Reembolsos</a>
+    </footer>
+  </body>
 </html>

@@ -13,7 +13,7 @@
         <!--========== BOX ICONS ==========-->
         <link rel="stylesheet" href="{% static 'plugins/css/boxicons.min.css' %}">
         <!--========== CSS ==========-->
-        <link rel="stylesheet" href="{% static 'css/menu.css' %}?v=20261004-notificaciones-altura">
+        <link rel="stylesheet" href="{% static 'css/menu.css' %}?v=20261005-menu-sobre-tracker">
         <link rel="stylesheet" href="{% static 'css/carga_manager.css' %}?v=20260920">
         <link rel="stylesheet" href="{% static 'css/tema_sistema.css' %}">
         {% block page_css_overrides %}
@@ -347,7 +347,7 @@
                             {% endif %}
                             {% if perms.manager.view_traslados %}
                                 <a href="{% url 'traslados_list' %}"
-                                   class="nav__link {% if request.resolver_match.url_name == 'traslados_list' or request.resolver_match.url_name == 'detalle_traslado' %}active{% endif %}">
+                                   class="nav__link {% if request.resolver_match.url_name == 'traslados_list' or request.resolver_match.url_name == 'detalle_traslado' or request.resolver_match.url_name == 'traslados_create'%}active{% endif %}">
                                     <i class="bx bx-transfer-alt nav__icon"></i>
                                     <span class="nav__name">Traslados</span>
                                 </a>
@@ -487,11 +487,12 @@
             </div>
         </div>
         <!--========== MAIN JS ==========-->
-        <script src="{% static 'js/menu.js' %}?v=20261003-auth-ws"></script>
+        <script src="{% static 'js/menu.js' %}?v=20261005-cerrar-fuera-movil-number-wheel"></script>
+        <script src="{% static 'js/catalogos_mobile.js' %}?v=20261005-tarjetas-detalle"></script>
         <script src="{% static 'plugins/jwt-decode.min.js' %}"></script>
         <script src="{% static 'plugins/jquery.min.js' %}"></script>
         <script src="{% static 'plugins/bootstrap.min.js' %}"></script>
-        <script src="{% static 'js/modal_sheet_mobile.js' %}?v=20261004-01"></script>
+        <script src="{% static 'js/modal_sheet_mobile.js' %}?v=20261006-modal-anclaje-restaurado"></script>
         <script src="{% static 'plugins/sweetalert2.min.js' %}"></script>
         <script src="{% static 'js/carga_manager.js' %}?v=20260924"></script>
     </body>
