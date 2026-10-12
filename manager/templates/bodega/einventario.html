@@ -5,7 +5,7 @@
 {% endblock title %}
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
-    <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}?v=20261004-sheet-max" />
+    <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}?v=20261009-detalle-integrado" />
 {% endblock extra_css %}
 {% block search_content %}
     <div class="header__search">
@@ -227,6 +227,15 @@
                         </button>
                     {% endif %}
                 </footer>
+                {% endif %}
+                {% if item.detalle_url %}
+                    <footer class="recepcion-mobile-card__detalle">
+                        <a class="recepcion-mobile-card__detalle-link"
+                           href="{{ item.detalle_url }}">
+                            <span>Ver detalle</span>
+                            <i class="bx bx-right-arrow-alt" aria-hidden="true"></i>
+                        </a>
+                    </footer>
                 {% endif %}
             </article>
         {% empty %}

@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 <link
   rel="stylesheet"
-  href="{% static 'css/configuracion.css' %}?v=20261004-responsive"
+  href="{% static 'css/configuracion.css' %}?v=20261010-swal-radius-fix"
 />
 {% endblock %} 
 {% block titulo_content %}
@@ -169,6 +169,7 @@
           <label
             >Correo electrónico<input
               id="emailEmpresa"
+              name="email"
               type="email"
               maxlength="100"
               value="{{ configuracion.email|default:'' }}"
@@ -296,5 +297,5 @@
   </form>
 </section>
 
-<script src="{% static 'js/gestiones/configuracion.js' %}?v=20261005-guardar-produccion"></script>
+<script src="{% static 'js/gestiones/configuracion.js' %}?v=20261010-loader-dismiss-fix"></script>
 {% endblock %}

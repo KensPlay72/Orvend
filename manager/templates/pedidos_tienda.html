@@ -1,0 +1,112 @@
+{% extends "menu.html" %}
+{% load static pagination_tags %}
+{% block title %}Pedidos{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/manager.css' %}">
+<link rel="stylesheet" href="{% static 'css/pedidos_tienda.css' %}?v=20261010-pedidos-theme-v2">
+{% endblock %}
+{% block titulo_content %}
+<div class="tituloscont">
+  <img class="logop" src="{% static 'img/LH.webp' %}" alt="">
+  <p class="header__logo">| Pedidos</p>
+</div>
+{% endblock %}
+{% block main_content %}
+<section class="pedidos-tienda">
+  <header class="config-hero pedidos-tienda__hero">
+    <div class="config-hero__icon"><i class="bx bx-shopping-bag" aria-hidden="true"></i></div>
+    <div>
+      <p>Reservas de la tienda en línea</p>
+      <h1>Pedidos de clientes</h1>
+      <span>Acepta los pedidos para descontar las unidades o recházalos para liberar la reserva.</span>
+    </div>
+    <form method="get" class="pedidos-tienda__filtro">
+      <label for="estadoPedido">Estado</label>
+      <select id="estadoPedido" name="estado">
+        <option value="">Todos</option>
+        {% for valor, etiqueta in estados_pedido %}
+          <option value="{{ valor }}" {% if estado_seleccionado == valor %}selected{% endif %}>{{ etiqueta }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Filtrar</button>
+    </form>
+  </header>
+
+  {% if messages %}
+    <div class="pedidos-tienda__mensajes" aria-live="polite">
+      {% for message in messages %}<p class="pedidos-tienda__mensaje pedidos-tienda__mensaje--{{ message.tags }}">{{ message }}</p>{% endfor %}
+    </div>
+  {% endif %}
+
+  <section class="pedidos-tienda__lista" aria-label="Pedidos recibidos">
+    {% for pedido in pedidos %}
+      <article class="pedido-manager">
+        <header class="pedido-manager__cabecera">
+          <div><span class="pedido-manager__numero">Pedido #{{ pedido.id }}</span><small>{{ pedido.creado|date:"d/m/Y H:i" }}</small></div>
+          <span class="pedido-manager__estado pedido-manager__estado--{{ pedido.estado|lower }}">{{ pedido.get_estado_display }}</span>
+        </header>
+        <div class="pedido-manager__cliente">
+          <strong>{{ pedido.cliente.nombre }}</strong>
+          <span>{{ pedido.cliente.email }}</span>
+          {% if pedido.cliente.telefono %}<span>{{ pedido.cliente.telefono }}</span>{% endif %}
+          <span><i class="bx bx-store" aria-hidden="true"></i> {{ pedido.ubicacion.nombre }}</span>
+        </div>
+        <div class="pedido-manager__productos">
+          {% for detalle in pedido.detalles.all %}
+            <div class="pedido-manager__producto">
+              <span><b>{{ detalle.cantidad|floatformat:"-2" }} × {{ detalle.nombre_producto }}</b><small>SKU: {{ detalle.codigo_sku }} · {{ detalle.precio_unitario|floatformat:2 }} c/u</small></span>
+              <strong>{{ moneda_simbolo }} {{ detalle.subtotal|floatformat:2 }}</strong>
+            </div>
+          {% endfor %}
+        </div>
+        <footer class="pedido-manager__pie">
+          <div><span>Total del pedido</span><strong>{{ moneda_simbolo }} {{ pedido.total|floatformat:2 }}</strong></div>
+          {% if pedido.estado == "PENDIENTE" %}
+            <div class="pedido-manager__acciones">
+              <form method="post" action="{% url 'procesar_pedido_tienda' pedido.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="rechazar">
+                <button class="pedido-manager__rechazar" type="submit"><i class="bx bx-x" aria-hidden="true"></i> Rechazar</button>
+              </form>
+              <form method="post" action="{% url 'procesar_pedido_tienda' pedido.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="aceptar">
+                <button class="pedido-manager__aceptar" type="submit"><i class="bx bx-check" aria-hidden="true"></i> Aceptar y descontar</button>
+              </form>
+            </div>
+          {% elif pedido.procesado %}
+            <small>Procesado {{ pedido.procesado|date:"d/m/Y H:i" }}{% if pedido.procesado_por %} por {{ pedido.procesado_por.get_full_name|default:pedido.procesado_por.username }}{% endif %}</small>
+          {% endif %}
+        </footer>
+      </article>
+    {% empty %}
+      <div class="pedido-manager__vacio">
+        <i class="bx bx-receipt" aria-hidden="true"></i>
+        <strong>No hay pedidos para mostrar</strong>
+        <span>Los nuevos pedidos reservados por los clientes aparecerán aquí.</span>
+      </div>
+    {% endfor %}
+  </section>
+
+  {% if pedidos.paginator.num_pages > 1 %}
+    <nav class="d-flex justify-content-center mt-4" aria-label="Páginas de pedidos">
+      <ul class="pagination">
+        <li class="page-item {% if not pedidos.has_previous %}disabled{% endif %}">
+          {% if pedidos.has_previous %}
+            <a class="page-link" href="?estado={{ estado_seleccionado }}&page={{ pedidos.previous_page_number }}">«</a>
+          {% else %}<span class="page-link">«</span>{% endif %}
+        </li>
+        {% paginas_cercanas pedidos.number pedidos.paginator.num_pages as paginas_visibles %}
+        {% for numero in paginas_visibles %}
+          <li class="page-item {% if numero == pedidos.number %}active{% endif %}"><a class="page-link" href="?estado={{ estado_seleccionado }}&page={{ numero }}">{{ numero }}</a></li>
+        {% endfor %}
+        <li class="page-item {% if not pedidos.has_next %}disabled{% endif %}">
+          {% if pedidos.has_next %}
+            <a class="page-link" href="?estado={{ estado_seleccionado }}&page={{ pedidos.next_page_number }}">»</a>
+          {% else %}<span class="page-link">»</span>{% endif %}
+        </li>
+      </ul>
+    </nav>
+  {% endif %}
+</section>
+{% endblock %}

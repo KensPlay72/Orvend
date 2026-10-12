@@ -20,7 +20,12 @@ urlpatterns = [
     # login/logout
     path('accounts/', include('accounts.urls')),
     path('manager/', include('manager.urls')),
+]
 
+if getattr(settings, "TIENDAV_HABILITADA", False):
+    urlpatterns.append(path('tienda/', include('tiendav.urls')))
+
+urlpatterns += [
     path('', include('pages.urls')),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

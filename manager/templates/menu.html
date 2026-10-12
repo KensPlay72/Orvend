@@ -13,7 +13,7 @@
         <!--========== BOX ICONS ==========-->
         <link rel="stylesheet" href="{% static 'plugins/css/boxicons.min.css' %}">
         <!--========== CSS ==========-->
-        <link rel="stylesheet" href="{% static 'css/menu.css' %}?v=20261005-menu-sobre-tracker">
+        <link rel="stylesheet" href="{% static 'css/menu.css' %}?v=20261012-notificaciones-menu-v4">
         <link rel="stylesheet" href="{% static 'css/carga_manager.css' %}?v=20260920">
         <link rel="stylesheet" href="{% static 'css/tema_sistema.css' %}">
         {% block page_css_overrides %}
@@ -164,7 +164,29 @@
                         <i class="bx bx-bell"></i>
                     </button>
                     <div id="notifications-panel" class="notifications-panel">
-                        <div class="notifications-panel__header"><strong>Notificaciones</strong></div>
+                        <div class="notifications-panel__header">
+                            <strong>Notificaciones</strong>
+                            <button type="button" id="notifications-options-toggle"
+                                    class="notifications-options-toggle"
+                                    aria-label="Opciones de notificaciones"
+                                    aria-haspopup="menu" aria-controls="notifications-options"
+                                    aria-expanded="false">
+                                <i class="bx bx-dots-horizontal-rounded" aria-hidden="true"></i>
+                            </button>
+                            <div id="notifications-options" class="notifications-options"
+                                 role="menu" aria-label="Opciones de notificaciones" hidden>
+                                <button type="button" id="notifications-mark-all" role="menuitem"
+                                        data-url="{% url 'marcar_todas_notificaciones_leidas' %}"
+                                        data-state-url="{% url 'estado_notificaciones' %}">
+                                    <i class="bx bx-check" aria-hidden="true"></i>
+                                    <span>Marcar todas como leídas</span>
+                                </button>
+                                <a href="{% url 'notificaciones' %}" role="menuitem">
+                                    <i class="bx bx-desktop" aria-hidden="true"></i>
+                                    <span>Abrir notificaciones</span>
+                                </a>
+                            </div>
+                        </div>
                         <div class="notifications-panel__list">
                             <p class="notifications-empty">No tienes notificaciones.</p>
                         </div>
@@ -234,7 +256,7 @@
                             </div>
                             <br>
                         {% endif %}
-                        {% if request.user.is_superuser or perms.manager.ver_dashboard or perms.manager.view_inventarios or perms.manager.view_ventas or perms.manager.view_descuento or perms.manager.view_cajaac or perms.manager.view_productos or perms.manager.view_combos or perms.manager.view_proveedores or perms.manager.view_marcas or perms.manager.view_umedidas or perms.manager.view_categorias or perms.manager.view_compras or perms.manager.view_ubicaciones or perms.manager.view_cuentasporpagar or perms.manager.view_cuentasporcobrar or perms.manager.view_traslados or perms.manager.view_clientes or perms.manager.view_datos_sat or perms.manager.gestionar_configuracion %}
+                        {% if request.user.is_superuser or perms.manager.ver_dashboard or perms.manager.view_inventarios or perms.manager.view_ventas or perms.manager.view_descuento or perms.manager.view_cajaac or perms.manager.view_productos or perms.manager.view_combos or perms.manager.view_proveedores or perms.manager.view_marcas or perms.manager.view_umedidas or perms.manager.view_categorias or perms.manager.view_compras or perms.manager.view_ubicaciones or perms.manager.view_cuentasporpagar or perms.manager.view_cuentasporcobrar or perms.manager.view_traslados or perms.manager.view_clientes or perms.manager.view_datos_sat or perms.manager.gestionar_configuracion or perms.manager.gestionar_tienda_virtual %}
                             <div class="nav__items">
                                 <h3 class="nav__subtitle">Gestiones</h3>
                                 {% if request.user.is_superuser or perms.manager.ver_dashboard %}
@@ -256,6 +278,13 @@
                                        class="nav__link {% if request.resolver_match.url_name == 'ventas' %}active{% endif %}">
                                         <i class="bx bx-cart nav__icon"></i>
                                         <span class="nav__name">Ventas</span>
+                                    </a>
+                                {% endif %}
+                                {% if tiendav_habilitada and request.user.is_superuser or tiendav_habilitada and perms.manager.gestionar_tienda_virtual %}
+                                    <a href="{% url 'pedidos_tienda' %}"
+                                       class="nav__link {% if request.resolver_match.url_name == 'pedidos_tienda' %}active{% endif %}">
+                                        <i class="bx bx-shopping-bag nav__icon"></i>
+                                        <span class="nav__name">Pedidos</span>
                                     </a>
                                 {% endif %}
                                 {% if perms.manager.view_descuento %}
@@ -350,6 +379,13 @@
                                    class="nav__link {% if request.resolver_match.url_name == 'traslados_list' or request.resolver_match.url_name == 'detalle_traslado' or request.resolver_match.url_name == 'traslados_create'%}active{% endif %}">
                                     <i class="bx bx-transfer-alt nav__icon"></i>
                                     <span class="nav__name">Traslados</span>
+                                </a>
+                            {% endif %}
+                            {% if perms.manager.view_merma %}
+                                <a href="{% url 'merma' %}"
+                                   class="nav__link {% if request.resolver_match.url_name == 'merma' or request.resolver_match.url_name == 'merma_create' or request.resolver_match.url_name == 'detalle_merma' %}active{% endif %}">
+                                    <i class="bx bx-trash nav__icon"></i>
+                                    <span class="nav__name">Merma</span>
                                 </a>
                             {% endif %}
                             {% if perms.manager.view_clientes %}
@@ -487,8 +523,8 @@
             </div>
         </div>
         <!--========== MAIN JS ==========-->
-        <script src="{% static 'js/menu.js' %}?v=20261005-cerrar-fuera-movil-number-wheel"></script>
-        <script src="{% static 'js/catalogos_mobile.js' %}?v=20261005-tarjetas-detalle"></script>
+        <script src="{% static 'js/menu.js' %}?v=20261009-cerrar-notificaciones-fuera"></script>
+        <script src="{% static 'js/catalogos_mobile.js' %}?v=20261009-detalle-integrado"></script>
         <script src="{% static 'plugins/jwt-decode.min.js' %}"></script>
         <script src="{% static 'plugins/jquery.min.js' %}"></script>
         <script src="{% static 'plugins/bootstrap.min.js' %}"></script>

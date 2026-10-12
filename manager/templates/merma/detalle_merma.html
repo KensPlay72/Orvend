@@ -1,0 +1,158 @@
+{% extends "menu.html" %} 
+{% load static %} 
+{% block title %}Detalle Merma #{{merma.id }}{% endblock title %} 
+{% block extra_css %}
+<link
+  rel="stylesheet"
+  href="{% static 'css/compras.css' %}?v=20261006-llegada-btn"
+/>
+<link rel="stylesheet" href="{% static 'css/traslados.css' %}" />
+<link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+{% endblock extra_css %} 
+{% block page_css_overrides %}
+<link
+  rel="stylesheet"
+  href="{% static 'css/detalletraslado_mobile.css' %}?v=20261006-llegada-btn"
+/>
+<link
+  rel="stylesheet"
+  href="{% static 'css/merma_detalle_mobile.css' %}?v=20261009-merma-detalle"
+/>
+{% endblock page_css_overrides %} 
+{% block titulo_content %}
+<div class="tituloscont">
+  <img
+    class="logop"
+    src="{% static 'img/LH.webp' %}"
+    alt=""
+    width="0"
+    height="0"
+  />
+  <p class="header__logo">| Detalle Merma #{{ merma.id }}</p>
+</div>
+{% endblock titulo_content %} 
+{% block main_content %}
+<section class="compra-resumen" aria-label="Información de la merma">
+  <div class="compra-resumen__encabezado">
+    <span class="compra-resumen__titulo">
+      <i class="bx bx-trash" aria-hidden="true"></i
+      ><span>Información de la merma</span>
+    </span>
+  </div>
+  <div class="compra-resumen__datos traslado-resumen__datos">
+    <div class="compra-resumen__dato">
+      <span class="compra-resumen__icono"
+        ><i class="bx bx-store" aria-hidden="true"></i
+      ></span>
+      <div>
+        <span class="compra-resumen__etiqueta">Sucursal</span
+        ><strong>{{ merma.ubicacion.nombre }}</strong>
+      </div>
+    </div>
+    <div class="compra-resumen__dato">
+      <span class="compra-resumen__icono"
+        ><i class="bx bx-error-circle" aria-hidden="true"></i
+      ></span>
+      <div>
+        <span class="compra-resumen__etiqueta">Motivo</span
+        ><strong>{{ merma.get_motivo_display }}</strong>
+      </div>
+    </div>
+    <div class="compra-resumen__dato">
+      <span class="compra-resumen__icono"
+        ><i class="bx bx-user" aria-hidden="true"></i
+      ></span>
+      <div>
+        <span class="compra-resumen__etiqueta">Registrado por</span
+        ><strong>{{ merma.usuario.username }}</strong>
+      </div>
+    </div>
+    <div class="compra-resumen__dato">
+      <span class="compra-resumen__icono"
+        ><i class="bx bx-calendar" aria-hidden="true"></i
+      ></span>
+      <div>
+        <span class="compra-resumen__etiqueta">Fecha</span
+        ><strong>{{ merma.f_creacion|date:"d/m/Y H:i" }}</strong>
+      </div>
+    </div>
+  </div>
+  {% if merma.observaciones %}
+  <p class="traslado-detalle__observaciones">
+    <i class="bx bx-message-detail" aria-hidden="true"></i> {{
+    merma.observaciones }}
+  </p>
+  {% endif %}
+</section>
+<div class="tabla-container detalle-merma-tabla">
+  <table class="tablas-todo">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Producto</th>
+        <th>SKU</th>
+        <th>Cantidad retirada</th>
+        <th>Stock anterior</th>
+        <th>Stock resultante</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for detalle in merma.detalles.all %}
+      <tr>
+        <td>{{ forloop.counter }}</td>
+        <td>{{ detalle.producto.nombre }}</td>
+        <td>{{ detalle.producto.codigo_sku|default:"N/A" }}</td>
+        <td>{{ detalle.cantidad|floatformat:2 }}</td>
+        <td>{{ detalle.stock_anterior|floatformat:2 }}</td>
+        <td>{{ detalle.stock_resultante|floatformat:2 }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6" class="text-center">No hay productos en esta merma.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<section class="merma-detalle-mobile-list" aria-label="Productos retirados">
+  {% for detalle in merma.detalles.all %}
+  <article class="merma-detalle-mobile-card">
+    <header>
+      <span class="merma-detalle-mobile-card__icon"
+        ><i class="bx bx-package" aria-hidden="true"></i
+      ></span>
+      <div>
+        <small>Producto {{ forloop.counter }}</small
+        ><strong>{{ detalle.producto.nombre }}</strong>
+      </div>
+      <span class="merma-detalle-mobile-card__quantity"
+        >{{ detalle.cantidad|floatformat:2 }}</span
+      >
+    </header>
+    <div class="merma-detalle-mobile-card__data">
+      <div>
+        <span>SKU</span
+        ><strong>{{ detalle.producto.codigo_sku|default:"N/A" }}</strong>
+      </div>
+      <div>
+        <span>Cantidad retirada</span
+        ><strong>{{ detalle.cantidad|floatformat:2 }}</strong>
+      </div>
+      <div>
+        <span>Stock anterior</span
+        ><strong>{{ detalle.stock_anterior|floatformat:2 }}</strong>
+      </div>
+      <div>
+        <span>Stock resultante</span
+        ><strong>{{ detalle.stock_resultante|floatformat:2 }}</strong>
+      </div>
+    </div>
+  </article>
+  {% empty %}
+  <div class="traslados-mobile-empty">
+    <i class="bx bx-package"></i><strong>Sin productos</strong
+    ><span>Esta merma no tiene productos registrados.</span>
+  </div>
+  {% endfor %}
+</section>
+{% endblock main_content %}

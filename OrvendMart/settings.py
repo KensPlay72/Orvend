@@ -42,6 +42,9 @@ if not DEBUG and any(origin == "*" for origin in _csrf_origins):
         "DJANGO_CSRF_TRUSTED_ORIGINS no puede ser '*'. Usa las URLs HTTPS del dominio."
     )
 
+# MÓDULOS OPCIONALES
+TIENDAV_HABILITADA = (BASE_DIR / "tiendav").is_dir() and (BASE_DIR / "tiendav" / "apps.py").exists()
+
 # APPLICATIONS
 INSTALLED_APPS = [
     "daphne",
@@ -56,6 +59,9 @@ INSTALLED_APPS = [
     "accounts",
     "manager.apps.ManagerConfig",
 ]
+
+if TIENDAV_HABILITADA:
+    INSTALLED_APPS.append("tiendav.apps.TiendavConfig")
 
 
 # MIDDLEWARE
@@ -96,7 +102,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "manager.context_processors.tema_empresa",
-            ],
+            ] + (["tiendav.context_processors.categorias_navegacion"] if TIENDAV_HABILITADA else []),
         },
     },
 ]

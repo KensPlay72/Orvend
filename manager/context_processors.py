@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.cache import cache
 
 from .models import ConfiguracionEmpresa
@@ -50,13 +51,15 @@ def _tema_empresa_cacheado():
 def tema_empresa(request):
     """Expone tema cacheado; las notificaciones llegan por WebSocket."""
     try:
-        return _tema_empresa_cacheado()
+        tema = dict(_tema_empresa_cacheado())
     except Exception:
         # Una página de error debe seguir renderizando sin depender de cache/BD.
-        return {
+        tema = {
             "tema_principal": "#32877F",
             "tema_secundario": "#10463E",
             "tema_botones": "#3F8886",
             "moneda_sistema": ConfiguracionEmpresa.MONEDA_LEMPIRA,
             "moneda_simbolo": "L.",
         }
+    tema["tiendav_habilitada"] = getattr(settings, "TIENDAV_HABILITADA", False)
+    return tema

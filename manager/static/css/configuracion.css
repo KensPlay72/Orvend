@@ -704,3 +704,40 @@
     height: 132px;
   }
 }
+
+/* SweetAlert: Asegurar z-index por encima de cargadores y botón Aceptar con el color del sistema (#3f8886 / #10463e) */
+.swal2-container {
+  z-index: 25000 !important;
+}
+
+.swal2-container .swal2-actions button.swal2-confirm,
+.swal2-container .swal2-actions button.classbotones {
+  background-color: #3f8886 !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 4px !important;
+  padding: 0.55rem 1.4rem !important;
+  font-size: 0.92rem !important;
+  font-weight: 600 !important;
+  transition: background-color 0.2s ease !important;
+}
+.swal2-container .swal2-actions button.swal2-confirm:hover,
+.swal2-container .swal2-actions button.classbotones:hover {
+  background-color: #10463e !important;
+  color: #ffffff !important;
+}
+.swal2-container .swal2-actions button.swal2-cancel {
+  background-color: #6c757d !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 4px !important;
+  padding: 0.55rem 1.3rem !important;
+  font-size: 0.92rem !important;
+  font-weight: 600 !important;
+}
+.swal2-container .swal2-actions button.swal2-cancel:hover {
+  background-color: #565e64 !important;
+}
+

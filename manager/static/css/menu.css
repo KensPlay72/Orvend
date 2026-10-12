@@ -186,9 +186,10 @@ img {
   max-height: min(460px, calc(100dvh - 5.5rem));
   padding: 0 0.35rem 0.35rem;
   /* Mantiene accesibles las notificaciones cuando se acumulan. */
-  overflow: hidden;
+  overflow: visible;
 }
 .notifications-panel__header {
+  position: relative;
   flex: 0 0 auto;
   width: calc(100% + 0.7rem);
   margin: 0 -0.35rem;
@@ -201,6 +202,107 @@ img {
   background: color-mix(in srgb, var(--system-primary) 8%, #fff);
   color: var(--system-primary);
   font-size: 0.92rem;
+  line-height: 1.2;
+}
+.notifications-panel__header > strong {
+  flex: 1;
+  line-height: 1.2;
+}
+.notifications-options-toggle {
+  display: grid;
+  flex: 0 0 2rem;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--system-primary) 12%, #fff);
+  color: color-mix(in srgb, var(--system-primary) 72%, #263238);
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+.notifications-options-toggle i {
+  display: block;
+  font-size: 1.3rem;
+  line-height: 1;
+}
+.notifications-options-toggle:hover,
+.notifications-options-toggle[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--system-primary) 20%, #fff);
+}
+.notifications-options {
+  position: absolute;
+  z-index: 10010;
+  top: calc(100% + 0.85rem);
+  right: 0;
+  display: grid;
+  width: min(320px, calc(100vw - 1.5rem));
+  gap: 0.2rem;
+  padding: 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--system-primary) 22%, #dce6e4);
+  border-radius: 0.9rem;
+  background: #fff;
+  box-shadow:
+    0 14px 32px color-mix(in srgb, var(--system-secondary) 16%, transparent),
+    0 3px 8px color-mix(in srgb, var(--system-primary) 8%, transparent);
+}
+.notifications-options::before {
+  position: absolute;
+  top: -0.48rem;
+  right: 1.08rem;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-top: 1px solid color-mix(in srgb, var(--system-primary) 22%, #dce6e4);
+  border-left: 1px solid color-mix(in srgb, var(--system-primary) 22%, #dce6e4);
+  background: #fff;
+  transform: rotate(45deg);
+  content: "";
+}
+.notifications-options[hidden] {
+  display: none;
+}
+.notifications-options button,
+.notifications-options a {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 2.55rem;
+  padding: 0.55rem 0.7rem;
+  border: 0;
+  border-radius: 0.55rem;
+  background: transparent;
+  color: var(--system-secondary);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.notifications-options button:hover,
+.notifications-options a:hover {
+  background: color-mix(in srgb, var(--system-primary) 8%, #fff);
+}
+.notifications-options button:focus-visible,
+.notifications-options a:focus-visible {
+  outline: 2px solid var(--system-primary);
+  outline-offset: 2px;
+}
+.notifications-options-toggle:focus-visible {
+  outline: 2px solid var(--system-primary);
+  outline-offset: 2px;
+}
+.notifications-options button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.notifications-options i {
+  flex: 0 0 1.5rem;
+  color: var(--system-primary);
+  font-size: 1.35rem;
+  text-align: center;
 }
 .notifications-panel__list {
   min-height: 0;

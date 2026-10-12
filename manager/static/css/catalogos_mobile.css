@@ -409,6 +409,33 @@
     font-size: 0.75rem;
     font-weight: 750;
   }
+  .catalog-mobile-card__detail-footer {
+    padding: 0;
+    border-top: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+    background: color-mix(in srgb, var(--system-primary, #32877f) 3%, #fff);
+  }
+  .catalog-mobile-card__detail {
+    display: flex;
+    width: 100%;
+    min-height: 42px;
+    padding: 0.62rem 0.85rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    color: var(--system-primary, #32877f) !important;
+    font-size: 0.75rem;
+    font-weight: 750;
+    text-decoration: none;
+  }
+  .catalog-mobile-card__detail:hover,
+  .catalog-mobile-card__detail:focus {
+    color: var(--system-secondary, #10463e) !important;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 7%, #fff);
+  }
+  .catalog-mobile-card__detail i {
+    font-size: 1.15rem;
+  }
   .catalog-mobile-empty {
     display: grid;
     min-height: 9rem;

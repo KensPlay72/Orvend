@@ -1,0 +1,111 @@
+{% extends "menu.html" %}
+{% load static pagination_tags %}
+{% block title %}Merma{% endblock title %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/traslados.css' %}" />
+{% endblock extra_css %}
+{% block page_css_overrides %}
+  <link rel="stylesheet" href="{% static 'css/traslados_mobile.css' %}?v=20261009-lista-merma" />
+  <link rel="stylesheet" href="{% static 'css/merma.css' %}?v=20261009-ojo-verde" />
+{% endblock page_css_overrides %}
+{% block titulo_content %}
+  <div class="tituloscont">
+    <img class="logop" src="{% static 'img/LH.webp' %}" alt="" width="0" height="0">
+    <p class="header__logo">| Merma</p>
+  </div>
+{% endblock titulo_content %}
+{% block main_content %}
+  <form method="get" class="catalog-mobile-search traslados-mobile-search">
+    <div class="catalog-mobile-search__field">
+      <i class="bx bx-search"></i>
+      <input type="search" name="search" value="{{ search }}" placeholder="Buscar merma" autocomplete="off">
+    </div>
+    <button type="submit"><i class="bx bx-search"></i><span>Buscar</span></button>
+  </form>
+  {% if perms.manager.add_merma %}
+    <button class="btn-dropdown catalog-mobile-add" type="button"
+            onclick="location.href='{% url 'merma_create' %}'">
+      <i class="bx bx-plus-circle"></i> Registrar Merma
+    </button>
+  {% endif %}
+  <div class="tabla-container">
+    <table class="tablas-todo catalog-mobile-table--traslados">
+      <thead>
+        <tr>
+          <th>#</th><th>Sucursal</th><th>Motivo</th><th>Productos</th>
+          <th>Cantidad retirada</th><th>Registrado por</th><th>Fecha</th><th>Detalle</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for merma in page_obj %}
+          <tr>
+            <td>{{ merma.id }}</td>
+            <td>{{ merma.ubicacion.nombre }}</td>
+            <td>{{ merma.get_motivo_display }}</td>
+            <td>{{ merma.cantidad_productos }}</td>
+            <td>{{ merma.cantidad_total|default:0|floatformat:2 }}</td>
+            <td>{{ merma.usuario.username }}</td>
+            <td>{{ merma.f_creacion|date:"d/m/Y H:i" }}</td>
+            <td>
+              <a class="btn btn-sm merma-ver-detalle"
+                 href="{% url 'detalle_merma' merma.documento_token %}"
+                 aria-label="Ver detalle de la merma {{ merma.id }}"
+                 title="Ver detalle">
+                <i class="bx bx-show" aria-hidden="true"></i>
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="8" class="text-center">No hay mermas registradas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <section class="traslados-mobile-list" aria-label="Mermas registradas">
+    {% for merma in page_obj %}
+      <a class="traslados-mobile-card" href="{% url 'detalle_merma' merma.documento_token %}">
+        <header>
+          <span class="traslados-mobile-card__icono"><i class="bx bx-trash" aria-hidden="true"></i></span>
+          <span class="traslados-mobile-card__titulo">
+            <small>Merma #{{ merma.id }}</small>
+            <strong>{{ merma.ubicacion.nombre }}</strong>
+          </span>
+          <i class="bx bx-chevron-right traslados-mobile-card__flecha" aria-hidden="true"></i>
+        </header>
+        <div class="traslados-mobile-card__datos">
+          <div><span>Motivo</span><strong>{{ merma.get_motivo_display }}</strong></div>
+          <div><span>Productos / Cantidad</span><strong>{{ merma.cantidad_productos }} / {{ merma.cantidad_total|default:0|floatformat:2 }}</strong></div>
+          <div><span>Registrado por</span><strong>{{ merma.usuario.username }}</strong></div>
+          <div><span>Fecha</span><strong>{{ merma.f_creacion|date:"d/m/Y H:i" }}</strong></div>
+        </div>
+        <footer><span>Ver detalle</span><i class="bx bx-right-arrow-alt" aria-hidden="true"></i></footer>
+      </a>
+    {% empty %}
+      <div class="traslados-mobile-empty">
+        <i class="bx bx-trash"></i><strong>Sin mermas</strong>
+        <span>No hay mermas registradas.</span>
+      </div>
+    {% endfor %}
+  </section>
+  <nav class="d-flex justify-content-center mt-4" aria-label="Paginación de mermas">
+    <ul class="pagination">
+      <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+        {% if page_obj.has_previous %}
+          <a class="page-link" href="?page={{ page_obj.previous_page_number }}&search={{ search|urlencode }}">«</a>
+        {% else %}<span class="page-link">«</span>{% endif %}
+      </li>
+      {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
+      {% for numero in paginas_visibles %}
+        <li class="page-item {% if numero == page_obj.number %}active{% endif %}">
+          <a class="page-link" href="?page={{ numero }}&search={{ search|urlencode }}">{{ numero }}</a>
+        </li>
+      {% endfor %}
+      <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+        {% if page_obj.has_next %}
+          <a class="page-link" href="?page={{ page_obj.next_page_number }}&search={{ search|urlencode }}">»</a>
+        {% else %}<span class="page-link">»</span>{% endif %}
+      </li>
+    </ul>
+  </nav>
+{% endblock main_content %}

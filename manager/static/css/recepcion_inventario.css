@@ -826,20 +826,22 @@
 
   .recepcion-mobile-card__origen > div {
     min-width: 0;
+    flex: 1 1 0;
   }
 
   .recepcion-mobile-card__origen strong {
     display: block;
-    overflow: hidden;
     margin-top: 0.14rem;
     color: var(--system-secondary, #243531);
     font-size: 0.9rem;
     font-weight: 750;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    white-space: normal;
   }
 
   .recepcion-mobile-card__tipo {
+    flex: 0 0 auto;
     margin-left: auto;
   }
 
@@ -907,6 +909,36 @@
     border-radius: 9px;
     background: color-mix(in srgb, var(--system-primary, #32877f) 9%, #fff);
     text-align: center;
+  }
+
+  .recepcion-mobile-card__detalle {
+    padding: 0;
+    border-top: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+    background: color-mix(in srgb, var(--system-primary, #32877f) 3%, #fff);
+  }
+
+  .recepcion-mobile-card__detalle-link {
+    display: flex;
+    min-height: 42px;
+    padding: 0.62rem 0.9rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    color: var(--system-primary, #32877f) !important;
+    font-size: 0.78rem;
+    font-weight: 750;
+    text-decoration: none;
+  }
+
+  .recepcion-mobile-card__detalle-link:hover,
+  .recepcion-mobile-card__detalle-link:focus {
+    color: var(--system-secondary, #10463e) !important;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 7%, #fff);
+  }
+
+  .recepcion-mobile-card__detalle-link i {
+    font-size: 1.15rem;
   }
 
   .recepcion-mobile-empty {

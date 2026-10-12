@@ -1,0 +1,106 @@
+.merma-detalle-mobile-list {
+  display: none;
+}
+
+@media (max-width: 1032px) {
+  .detalle-merma-tabla {
+    display: none;
+  }
+
+  .merma-detalle-mobile-list {
+    display: grid;
+    gap: 0.75rem;
+    width: 100%;
+    margin-top: 0.85rem;
+  }
+
+  .merma-detalle-mobile-card {
+    overflow: hidden;
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff);
+    border-radius: 15px;
+    background: #fff;
+    box-shadow: 0 7px 18px
+      color-mix(in srgb, var(--system-secondary, #10463e) 11%, transparent);
+  }
+
+  .merma-detalle-mobile-card > header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.72rem 0.85rem;
+    border-bottom: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff);
+    background: linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--system-primary, #32877f) 9%, #fff),
+      #fff 66%
+    );
+  }
+
+  .merma-detalle-mobile-card__icon {
+    display: grid;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 10px;
+    color: var(--system-primary, #32877f);
+    background: color-mix(in srgb, var(--system-primary, #32877f) 13%, #fff);
+    font-size: 1.12rem;
+  }
+
+  .merma-detalle-mobile-card > header > div {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .merma-detalle-mobile-card small {
+    display: block;
+    color: color-mix(in srgb, var(--system-secondary, #10463e) 55%, #fff);
+    font-size: 0.61rem;
+    font-weight: 750;
+    text-transform: uppercase;
+  }
+
+  .merma-detalle-mobile-card strong {
+    display: block;
+    overflow: hidden;
+    color: var(--system-secondary, #10463e);
+    font-size: 0.86rem;
+    text-overflow: ellipsis;
+  }
+
+  .merma-detalle-mobile-card__quantity {
+    flex: 0 0 auto;
+    padding: 0.3rem 0.5rem;
+    border-radius: 999px;
+    color: var(--system-primary, #32877f);
+    background: color-mix(in srgb, var(--system-primary, #32877f) 10%, #fff);
+  }
+
+  .merma-detalle-mobile-card__data {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+    padding: 0.78rem 0.85rem;
+  }
+
+  .merma-detalle-mobile-card__data > div {
+    display: grid;
+    min-width: 0;
+    gap: 0.16rem;
+    padding: 0.58rem;
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 11%, #fff);
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 4%, #fff);
+  }
+
+  .merma-detalle-mobile-card__data span {
+    color: color-mix(in srgb, var(--system-secondary, #10463e) 60%, #fff);
+    font-size: 0.61rem;
+    font-weight: 750;
+    text-transform: uppercase;
+  }
+}

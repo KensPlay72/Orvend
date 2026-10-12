@@ -2,6 +2,57 @@ function validarSoloNumeros(input) {
   input.value = input.value.replace(/\D/g, "");
 }
 
+function convertImageToWebP(file, quality = 0.85) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = function (event) {
+      const img = new Image();
+
+      img.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) return reject(new Error("Error de conversión"));
+
+            const webpFile = new File(
+              [blob],
+              file.name.replace(/\.[^/.]+$/, ".webp"),
+              { type: "image/webp" },
+            );
+
+            resolve(webpFile);
+          },
+          "image/webp",
+          quality,
+        );
+      };
+
+      img.onerror = () => reject(new Error("Error al cargar la imagen"));
+      img.src = event.target.result;
+    };
+
+    reader.onerror = () => reject(new Error("Error al leer el archivo"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function mostrarAlerta({ icon = "warning", title = "", text = "" }) {
+  return Swal.fire({
+    icon,
+    title,
+    text,
+    confirmButtonText: "Aceptar",
+    customClass: { confirmButton: "classbotones" },
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("formConfiguracion");
   const inputLogo = document.getElementById("logoEmpresa");
@@ -12,7 +63,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const bannersEliminar = new Set();
   const inputBanner = document.getElementById("bannerPrincipal");
   const inputCarrusel = document.getElementById("carruselTienda");
+  let bannerPrincipalArchivo = null;
   let carruselArchivos = [];
+
   const validarMedida = (file) =>
     new Promise((resolve) => {
       const imagen = new Image();
@@ -23,6 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
       imagen.onerror = () => resolve(false);
       imagen.src = URL.createObjectURL(file);
     });
+
   const activarCarrusel = () => {
     const vista = document.getElementById("carruselPreview"),
       dots = document.getElementById("carruselDots"),
@@ -86,7 +140,10 @@ document.addEventListener("DOMContentLoaded", () => {
         customClass: { confirmButton: "classbotones" },
       });
       if (!resultado.isConfirmed) return;
-      bannersEliminar.add(Number(boton.dataset.bannerId));
+      bannerPrincipalArchivo = null;
+      if (boton.dataset.bannerId) {
+        bannersEliminar.add(Number(boton.dataset.bannerId));
+      }
       document.getElementById("bannerPreviewBox").innerHTML =
         '<div class="config-banner-default" id="bannerPreview">Vista predeterminada de la tienda</div>';
     });
@@ -107,21 +164,43 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   inputBanner?.addEventListener("change", async () => {
-    if (!inputBanner.files[0]) return;
-    if (!(await validarMedida(inputBanner.files[0]))) {
+    const file = inputBanner.files[0];
+    if (!file) return;
+    const ext = file.name.split(".").pop().toLowerCase();
+    if (!["jpg", "jpeg", "png", "webp"].includes(ext)) {
       inputBanner.value = "";
-      Swal.fire(
-        "Medida incorrecta",
-        "El banner debe medir 1920 × 640 píxeles.",
-        "warning",
-      );
+      mostrarAlerta({
+        icon: "warning",
+        title: "Formato inválido",
+        text: "El banner debe ser JPG, PNG o WEBP.",
+      });
       return;
     }
-    const box = document.getElementById("bannerPreviewBox");
-    box.innerHTML = '<img id="bannerPreview" alt="Vista previa del banner">';
-    document.getElementById("bannerPreview").src = URL.createObjectURL(
-      inputBanner.files[0],
-    );
+    if (!(await validarMedida(file))) {
+      inputBanner.value = "";
+      mostrarAlerta({
+        icon: "warning",
+        title: "Medida incorrecta",
+        text: "El banner debe medir 1920 × 640 píxeles.",
+      });
+      return;
+    }
+
+    try {
+      bannerPrincipalArchivo = await convertImageToWebP(file);
+      const box = document.getElementById("bannerPreviewBox");
+      box.innerHTML = '<img id="bannerPreview" alt="Vista previa del banner">';
+      document.getElementById("bannerPreview").src = URL.createObjectURL(
+        bannerPrincipalArchivo,
+      );
+    } catch (e) {
+      inputBanner.value = "";
+      mostrarAlerta({
+        icon: "error",
+        title: "Error",
+        text: "No se pudo procesar la imagen del banner.",
+      });
+    }
   });
 
   const carruselVista = document.getElementById("carruselPreview");
@@ -137,40 +216,73 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }, 3500);
   }
+
   inputCarrusel?.addEventListener("change", async () => {
-    for (const file of inputCarrusel.files)
-      if (!(await validarMedida(file))) {
-        inputCarrusel.value = "";
-        Swal.fire(
-          "Medida incorrecta",
-          "Cada imagen debe medir 1920 × 640 píxeles.",
-          "warning",
-        );
+    const archivos = Array.from(inputCarrusel.files || []);
+    inputCarrusel.value = "";
+    if (!archivos.length) return;
+
+    for (const file of archivos) {
+      const ext = file.name.split(".").pop().toLowerCase();
+      if (!["jpg", "jpeg", "png", "webp"].includes(ext)) {
+        mostrarAlerta({
+          icon: "warning",
+          title: "Formato inválido",
+          text: "Cada imagen del carrusel debe ser JPG, PNG o WEBP.",
+        });
         return;
       }
-    carruselArchivos.push(...inputCarrusel.files);
-    inputCarrusel.value = "";
-    renderCarruselPendiente();
+      if (!(await validarMedida(file))) {
+        mostrarAlerta({
+          icon: "warning",
+          title: "Medida incorrecta",
+          text: "Cada imagen debe medir 1920 × 640 píxeles.",
+        });
+        return;
+      }
+    }
+
+    try {
+      for (const file of archivos) {
+        const webpFile = await convertImageToWebP(file);
+        carruselArchivos.push(webpFile);
+      }
+      renderCarruselPendiente();
+    } catch (e) {
+      mostrarAlerta({
+        icon: "error",
+        title: "Error",
+        text: "No se pudo procesar una de las imágenes del carrusel.",
+      });
+    }
   });
   activarCarrusel();
 
-  inputLogo?.addEventListener("change", () => {
+  inputLogo?.addEventListener("change", async () => {
     const archivo = inputLogo.files?.[0];
     if (!archivo) return;
-    if (!["image/jpeg", "image/png", "image/webp"].includes(archivo.type)) {
+    const ext = archivo.name.split(".").pop().toLowerCase();
+    if (!["jpg", "jpeg", "png", "webp"].includes(ext)) {
       inputLogo.value = "";
-      Swal.fire({
+      mostrarAlerta({
         icon: "warning",
         title: "Formato inválido",
         text: "Selecciona un logo JPG, PNG o WEBP.",
-        confirmButtonText: "Aceptar",
-        customClass: { confirmButton: "classbotones" },
       });
       return;
     }
-    logo = archivo;
-    quitarLogo = false;
-    logoPreview.src = URL.createObjectURL(archivo);
+    try {
+      logo = await convertImageToWebP(archivo);
+      quitarLogo = false;
+      logoPreview.src = URL.createObjectURL(logo);
+    } catch (e) {
+      inputLogo.value = "";
+      mostrarAlerta({
+        icon: "error",
+        title: "Error",
+        text: "No se pudo procesar la imagen del logo a WebP.",
+      });
+    }
   });
 
   document.getElementById("quitarLogo")?.addEventListener("click", () => {
@@ -180,18 +292,29 @@ document.addEventListener("DOMContentLoaded", () => {
     logoPreview.src = "/static/img/LH.webp";
   });
 
+  const ocultarLoaderCompleto = () => {
+    const loader = document.getElementById("managerGlobalLoader");
+    if (loader) {
+      loader.hidden = true;
+      loader.setAttribute("hidden", "");
+    }
+    document.body.classList.remove("manager-loader-active");
+    if (window.managerLoader) {
+      window.managerLoader.ocultar();
+      window.managerLoader.ocultar();
+    }
+  };
+
   if (!form || !botonGuardar) return;
 
   form.addEventListener("submit", async (evento) => {
     evento.preventDefault();
     const nombre = document.getElementById("nombreComercial").value.trim();
     if (!nombre) {
-      Swal.fire({
+      mostrarAlerta({
         icon: "warning",
         title: "Dato requerido",
         text: "Ingresa el nombre comercial del negocio.",
-        confirmButtonText: "Aceptar",
-        customClass: { confirmButton: "classbotones" },
       });
       return;
     }
@@ -238,12 +361,19 @@ document.addEventListener("DOMContentLoaded", () => {
       );
     }
     datos.append("eliminar_banners", JSON.stringify([...bannersEliminar]));
-    if (inputBanner?.files[0])
-      datos.append("banner_principal", inputBanner.files[0]);
+    if (bannerPrincipalArchivo) {
+      datos.append("banner_principal", bannerPrincipalArchivo);
+    } else if (inputBanner?.files[0]) {
+      // Fallback si no fue procesado por el change
+      const webpBanner = await convertImageToWebP(inputBanner.files[0]);
+      datos.append("banner_principal", webpBanner);
+    }
     carruselArchivos.forEach((banner) => datos.append("carrusel", banner));
     if (logo) datos.append("logo", logo);
+
     try {
       botonGuardar.disabled = true;
+      window.managerLoader?.mostrar();
       const respuesta = await fetch(form.dataset.saveUrl || form.action, {
         method: "POST",
         headers: {
@@ -251,8 +381,10 @@ document.addEventListener("DOMContentLoaded", () => {
             .value,
         },
         body: datos,
+        skipManagerLoader: true,
       });
       const resultado = await respuesta.json();
+      ocultarLoaderCompleto();
       if (!respuesta.ok || !resultado.success)
         throw new Error(
           resultado.message || "No fue posible guardar la configuración.",
@@ -260,12 +392,14 @@ document.addEventListener("DOMContentLoaded", () => {
       await Swal.fire({
         icon: "success",
         title: "Configuración guardada",
-        text: resultado.message,
+        text: resultado.message || "Configuración actualizada correctamente.",
         confirmButtonText: "Aceptar",
         customClass: { confirmButton: "classbotones" },
+        allowOutsideClick: false,
       });
       window.location.reload();
     } catch (error) {
+      ocultarLoaderCompleto();
       Swal.fire({
         icon: "error",
         title: "No se pudo guardar",
@@ -274,6 +408,7 @@ document.addEventListener("DOMContentLoaded", () => {
         customClass: { confirmButton: "classbotones" },
       });
     } finally {
+      ocultarLoaderCompleto();
       botonGuardar.disabled = false;
     }
   });

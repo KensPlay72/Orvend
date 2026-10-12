@@ -11,12 +11,13 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from django.urls import reverse
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.core import signing
 from django.db import transaction
-from django.db.models import Q, Sum, OuterRef, Subquery, F, Min, Max, Prefetch, Value, DecimalField, Count
+from django.db.models import Q, Sum, OuterRef, Subquery, F, Min, Max, Prefetch, Value, DecimalField, Count, BooleanField, Case, When, Exists
 from django.http import Http404, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.templatetags.static import static
@@ -61,12 +62,15 @@ from .models import (
     RegistroAbonosCobrar,
     DetalleCompra,
     DetalleTraslado,
+    DetalleMerma,
     DevolucionCompra,
     DevolucionCompraDetalle,
     HAutorizarCompra,
     Inventarios,
     Marcas,
     MovimientoInventario,
+    Merma,
+    MotivoMerma,
     Productos,
     Proveedores,
     ProveedoresContactos,
@@ -96,10 +100,15 @@ from .models import (
     DetalleCuadreCaja,
     RetiroCaja,
     Notificacion,
+    NotificacionLectura,
     DetalleCombo,
     ProductosRel,
     ReservaInventario,
 )
+try:
+    from tiendav.models import PedidoTienda
+except (ImportError, ModuleNotFoundError):
+    PedidoTienda = None
 
 
 ZONA_HONDURAS = ZoneInfo("America/Tegucigalpa")
@@ -284,20 +293,50 @@ def _validar_color_tienda(valor, etiqueta):
 
 def _validar_banner_tienda(archivo):
     formatos = {"image/jpeg", "image/png", "image/webp"}
-    if archivo.content_type not in formatos:
+    extension = archivo.name.rsplit(".", 1)[-1].lower() if "." in archivo.name else ""
+    if archivo.content_type not in formatos and extension not in {"jpg", "jpeg", "png", "webp"}:
         raise ValueError("Cada banner debe ser JPG, PNG o WEBP")
     if archivo.size > 5 * 1024 * 1024:
         raise ValueError("Cada banner puede pesar como máximo 5 MB")
     try:
+        archivo.seek(0)
         imagen = Image.open(archivo)
         ancho, alto = imagen.size
-        imagen.verify()
     except (UnidentifiedImageError, OSError) as error:
         raise ValueError("Uno de los banners no es una imagen válida") from error
     finally:
         archivo.seek(0)
     if (ancho, alto) != (1920, 640):
         raise ValueError("Cada banner debe medir exactamente 1920 × 640 píxeles")
+
+
+def _guardar_imagen_como_webp(archivo, prefijo, carpeta):
+    """
+    Convierte la imagen subida a formato .webp usando PIL y la sube a Nextcloud.
+    Retorna (nombre_original_webp, nombre_archivo_webp, url_remota).
+    """
+    nombre_base = archivo.name.rsplit(".", 1)[0].replace(" ", "_")
+    nombre_original = f"{nombre_base}.webp"
+    nombre_archivo = f"{prefijo}_{uuid.uuid4().hex[:8]}.webp"
+
+    archivo.seek(0)
+    try:
+        imagen = Image.open(archivo)
+        if imagen.mode in ("RGBA", "LA", "P"):
+            imagen_conv = imagen.convert("RGBA")
+        else:
+            imagen_conv = imagen.convert("RGB")
+
+        salida = BytesIO()
+        imagen_conv.save(salida, format="WEBP", quality=85)
+        salida.seek(0)
+        archivo_a_subir = salida
+    except Exception:
+        archivo.seek(0)
+        archivo_a_subir = archivo
+
+    url = subir_archivo(archivo_a_subir, nombre_archivo, carpeta)
+    return nombre_original, nombre_archivo, url
 
 
 @login_required
@@ -1923,14 +1962,12 @@ def guardar_configuracion(request):
         logo = request.FILES.get("logo")
         quitar_logo = request.POST.get("quitar_logo") == "true"
         if logo:
-            extension = logo.name.rsplit(".", 1)[-1].lower()
+            extension = logo.name.rsplit(".", 1)[-1].lower() if "." in logo.name else ""
             if extension not in {"jpg", "jpeg", "png", "webp"}:
                 raise ValueError("El logo debe ser JPG, PNG o WEBP")
-            nombre_original = logo.name.replace(" ", "_")
-            nombre_archivo = f"empresa_{uuid.uuid4().hex[:8]}_{nombre_original}"
-            logo_url = subir_archivo(
+            nombre_original, nombre_archivo, logo_url = _guardar_imagen_como_webp(
                 logo,
-                nombre_archivo,
+                "empresa",
                 settings.NEXTCLOUD_FOLDER_CONFI,
             )
             logo_anterior = configuracion.logo_archivo
@@ -1938,13 +1975,11 @@ def guardar_configuracion(request):
             configuracion.logo_archivo = nombre_archivo
             configuracion.logo_url = logo_url
             configuracion.save()
-            if logo_anterior:
+            if logo_anterior and logo_anterior != nombre_archivo:
                 eliminar_archivo(logo_anterior, settings.NEXTCLOUD_FOLDER_CONFI)
 
-        # La primera configuración puede no traer logo. Debe persistirse antes
-        # de consultar o crear BannerTienda, que tiene una FK obligatoria.
-        if configuracion.pk is None:
-            configuracion.save()
+        # Guardar siempre la configuración para persistir todos los campos modificados (email, teléfono, etc.)
+        configuracion.save()
 
         if not puede_gestionar_tienda:
             banners_eliminar = []
@@ -1986,12 +2021,10 @@ def guardar_configuracion(request):
         )
         for indice, (banner, tipo_banner) in enumerate(banners, start=1):
             _validar_banner_tienda(banner)
-            extension = banner.name.rsplit(".", 1)[-1].lower()
-            nombre_original = banner.name.replace(" ", "_")
-            nombre_archivo = f"banner_{uuid.uuid4().hex[:10]}.{extension}"
-            banner_url = subir_archivo(
+            prefijo = "banner_main" if tipo_banner == BannerTienda.TIPO_BANNER else "banner_carrusel"
+            nombre_original, nombre_archivo, banner_url = _guardar_imagen_como_webp(
                 banner,
-                nombre_archivo,
+                prefijo,
                 settings.NEXTCLOUD_FOLDER_CONFI,
             )
             BannerTienda.objects.create(
@@ -2002,12 +2035,12 @@ def guardar_configuracion(request):
                 orden=orden_inicial + indice,
                 tipo=tipo_banner,
             )
-        else:
-            logo_anterior = configuracion.logo_archivo if quitar_logo else ""
-            if quitar_logo:
-                configuracion.logo_nombre = ""
-                configuracion.logo_archivo = ""
-                configuracion.logo_url = ""
+
+        if quitar_logo:
+            logo_anterior = configuracion.logo_archivo
+            configuracion.logo_nombre = ""
+            configuracion.logo_archivo = ""
+            configuracion.logo_url = ""
             configuracion.save()
             if logo_anterior:
                 eliminar_archivo(logo_anterior, settings.NEXTCLOUD_FOLDER_CONFI)
@@ -2040,9 +2073,14 @@ def configuracion_logo(request):
             configuracion.logo_archivo,
             settings.NEXTCLOUD_FOLDER_CONFI,
         )
+        content_type = (
+            "image/webp"
+            if configuracion.logo_archivo.lower().endswith(".webp")
+            else archivo.headers.get("Content-Type", "image/png")
+        )
         return HttpResponse(
             archivo.content,
-            content_type=archivo.headers.get("Content-Type", "application/octet-stream"),
+            content_type=content_type,
         )
     except Exception:
         return HttpResponse("No fue posible obtener el logo", status=500)
@@ -2058,12 +2096,177 @@ def configuracion_banner(request, banner_id):
             banner.imagen_archivo,
             settings.NEXTCLOUD_FOLDER_CONFI,
         )
+        content_type = (
+            "image/webp"
+            if banner.imagen_archivo.lower().endswith(".webp")
+            else archivo.headers.get("Content-Type", "image/jpeg")
+        )
         return HttpResponse(
             archivo.content,
-            content_type=archivo.headers.get("Content-Type", "image/jpeg"),
+            content_type=content_type,
         )
     except Exception:
         return HttpResponse("No fue posible obtener el banner", status=500)
+
+
+@login_required
+def pedidos_tienda_view(request):
+    if PedidoTienda is None:
+        messages.info(request, "El módulo de tienda virtual no está disponible.")
+        return redirect("dashboard")
+    if not _puede_gestionar_tienda(request.user):
+        raise PermissionDenied
+    estado = request.GET.get("estado", "").strip()
+    estados_validos = {opcion for opcion, _ in PedidoTienda.Estado.choices}
+    pedidos = (
+        PedidoTienda.objects.select_related("cliente", "ubicacion", "procesado_por")
+        .prefetch_related("detalles__reserva")
+        .order_by("-creado", "-id")
+    )
+    if estado in estados_validos:
+        pedidos = pedidos.filter(estado=estado)
+    else:
+        estado = ""
+    page_obj = Paginator(pedidos, 10).get_page(request.GET.get("page"))
+    return render(
+        request,
+        "pedidos_tienda.html",
+        {
+            "pedidos": page_obj,
+            "page_obj": page_obj,
+            "estado_seleccionado": estado,
+            "estados_pedido": PedidoTienda.Estado.choices,
+            "mostrar_buscador": False,
+        },
+    )
+
+
+@login_required
+@require_POST
+def procesar_pedido_tienda(request, pedido_id):
+    if PedidoTienda is None:
+        messages.info(request, "El módulo de tienda virtual no está disponible.")
+        return redirect("dashboard")
+    if not _puede_gestionar_tienda(request.user):
+        raise PermissionDenied
+    accion = request.POST.get("accion", "")
+    if accion not in {"aceptar", "rechazar"}:
+        messages.error(request, "La acción seleccionada no es válida.")
+        return redirect("pedidos_tienda")
+
+    try:
+        with transaction.atomic():
+            pedido = get_object_or_404(
+                PedidoTienda.objects.select_for_update(),
+                id=pedido_id,
+            )
+            if pedido.estado != PedidoTienda.Estado.PENDIENTE:
+                messages.warning(request, "Este pedido ya fue procesado.")
+                return redirect("pedidos_tienda")
+
+            detalles = list(
+                pedido.detalles.select_related(
+                    "producto",
+                    "reserva",
+                ).order_by("producto_id", "id")
+            )
+            if not detalles:
+                raise ValueError("Este pedido no tiene productos reservados.")
+
+            if accion == "rechazar":
+                for detalle in detalles:
+                    reserva = detalle.reserva
+                    if reserva.estado != ReservaInventario.Estado.RESERVADA:
+                        raise ValueError(
+                            f"La reserva de {detalle.nombre_producto} ya no está activa."
+                        )
+                    reserva.estado = ReservaInventario.Estado.CANCELADA
+                    reserva.save(update_fields=["estado"])
+                pedido.estado = PedidoTienda.Estado.RECHAZADO
+            else:
+                for detalle in detalles:
+                    reserva = ReservaInventario.objects.select_for_update().get(
+                        id=detalle.reserva_id
+                    )
+                    if reserva.estado != ReservaInventario.Estado.RESERVADA:
+                        raise ValueError(
+                            f"La reserva de {detalle.nombre_producto} ya no está activa."
+                        )
+                    capas = list(
+                        Inventarios.objects.select_for_update()
+                        .filter(
+                            producto_id=detalle.producto_id,
+                            ubicacion_id=pedido.ubicacion_id,
+                            is_active=True,
+                            is_delete=False,
+                            cantidad__gt=0,
+                        )
+                        .order_by("fvencimiento", "id")
+                    )
+                    stock_fisico = sum(
+                        (capa.cantidad for capa in capas),
+                        Decimal("0"),
+                    )
+                    stock_reservado = (
+                        ReservaInventario.objects.filter(
+                            producto_id=detalle.producto_id,
+                            ubicacion_id=pedido.ubicacion_id,
+                            estado=ReservaInventario.Estado.RESERVADA,
+                            is_active=True,
+                            is_delete=False,
+                        ).aggregate(total=Sum("cantidad"))["total"]
+                        or Decimal("0")
+                    )
+                    if stock_fisico < stock_reservado:
+                        raise ValueError(
+                            f"El inventario de {detalle.nombre_producto} ya no cubre "
+                            "todas las reservas pendientes."
+                        )
+
+                    restante = reserva.cantidad
+                    stock_restante = stock_fisico
+                    for capa in capas:
+                        if restante <= 0:
+                            break
+                        consumir = min(capa.cantidad, restante)
+                        stock_anterior = capa.cantidad
+                        capa.cantidad -= consumir
+                        capa.save(update_fields=["cantidad"])
+                        restante -= consumir
+                        stock_restante -= consumir
+                        MovimientoInventario.objects.create(
+                            tipo_movimiento=TipoMovimientoInventario.SALIDA_VENTA,
+                            producto=detalle.producto,
+                            ubicacion_origen_id=pedido.ubicacion_id,
+                            cantidad=consumir,
+                            stock_anterior=stock_anterior,
+                            stock_resultante=stock_restante,
+                        )
+                    if restante > 0:
+                        raise ValueError(
+                            f"No fue posible completar la salida de "
+                            f"{detalle.nombre_producto}."
+                        )
+                    reserva.estado = ReservaInventario.Estado.CONSUMIDA
+                    reserva.save(update_fields=["estado"])
+                pedido.estado = PedidoTienda.Estado.ACEPTADO
+
+            pedido.procesado = timezone.now()
+            pedido.procesado_por = request.user
+            pedido.save(
+                update_fields=["estado", "procesado", "procesado_por"]
+            )
+    except ValueError as error:
+        messages.error(request, str(error))
+        return redirect("pedidos_tienda")
+
+    messages.success(
+        request,
+        "Pedido aceptado e inventario actualizado."
+        if accion == "aceptar"
+        else "Pedido rechazado; las unidades se liberaron nuevamente.",
+    )
+    return redirect("pedidos_tienda")
 
 
 @login_required
@@ -9496,6 +9699,358 @@ def inventario_por_ubicacion(request, ubicacion_id):
 
 
 @login_required
+@permission_required("manager.view_merma", raise_exception=True)
+@require_GET
+def inventario_para_merma(request, ubicacion_id):
+    try:
+        page = max(1, int(request.GET.get("page", 1)))
+        limit = min(20, max(1, int(request.GET.get("limit", 10))))
+    except ValueError:
+        return JsonResponse({"error": "Paginación inválida"}, status=400)
+
+    search = request.GET.get("search", "").strip()
+    ubicacion = Ubicaciones.objects.filter(
+        id=ubicacion_id, is_active=True, is_delete=False
+    ).first()
+    if not ubicacion:
+        return JsonResponse({"error": "Ubicación inválida"}, status=404)
+
+    imagen_subquery = (
+        ProductosImagenes.objects.filter(
+            producto_id=OuterRef("producto_id"),
+            imagen_archivo__isnull=False,
+        )
+        .exclude(imagen_archivo="")
+        .values("id")[:1]
+    )
+    reserva_subquery = (
+        ReservaInventario.objects.filter(
+            producto_id=OuterRef("producto_id"),
+            ubicacion_id=ubicacion_id,
+            estado=ReservaInventario.Estado.RESERVADA,
+            is_active=True,
+            is_delete=False,
+        )
+        .values("producto_id")
+        .annotate(total=Sum("cantidad"))
+        .values("total")[:1]
+    )
+    inventario = (
+        Inventarios.objects.filter(
+            ubicacion_id=ubicacion_id,
+            is_active=True,
+            is_delete=False,
+            cantidad__gt=0,
+            producto__is_active=True,
+            producto__is_delete=False,
+        )
+        .values(
+            "producto_id",
+            "producto__nombre",
+            "producto__codigo_sku",
+            "producto__unidad_medida__nombre",
+        )
+        .annotate(
+            total_stock=Sum("cantidad"),
+            imagen_id=Subquery(imagen_subquery),
+        )
+        .annotate(
+            total_reservado=Coalesce(
+                Subquery(reserva_subquery),
+                Value(
+                    Decimal("0"),
+                    output_field=DecimalField(max_digits=18, decimal_places=6),
+                ),
+            ),
+            stock_disponible=F("total_stock") - F("total_reservado"),
+        )
+        .filter(stock_disponible__gt=0)
+        .order_by("producto__nombre", "producto_id")
+    )
+    if search:
+        inventario = inventario.filter(
+            Q(producto__nombre__icontains=search)
+            | Q(producto__codigo_sku__icontains=search)
+        )
+
+    page_obj = Paginator(inventario, limit).get_page(page)
+    results = []
+    for item in page_obj:
+        imagen_url = ""
+        if item["imagen_id"]:
+            imagen_url = request.build_absolute_uri(
+                reverse("producto_imagen", args=[item["imagen_id"]])
+            )
+        results.append(
+            {
+                "producto_id": item["producto_id"],
+                "nombre": item["producto__nombre"],
+                "sku": item["producto__codigo_sku"],
+                "imagen": imagen_url,
+                "unidad": item["producto__unidad_medida__nombre"],
+                "stock": str(item["stock_disponible"]),
+            }
+        )
+    return JsonResponse(
+        {
+            "results": results,
+            "page": page_obj.number,
+            "totalPages": page_obj.paginator.num_pages,
+            "total": page_obj.paginator.count,
+        }
+    )
+
+
+@login_required
+@permission_required("manager.view_merma", raise_exception=True)
+def merma_view(request):
+    search = request.GET.get("search", "").strip()
+    mermas = (
+        Merma.objects.select_related("ubicacion", "usuario")
+        .annotate(
+            cantidad_productos=Count(
+                "detalles",
+                filter=Q(detalles__is_active=True, detalles__is_delete=False),
+            ),
+            cantidad_total=Sum(
+                "detalles__cantidad",
+                filter=Q(detalles__is_active=True, detalles__is_delete=False),
+            ),
+        )
+        .filter(is_delete=False)
+        .order_by("-id")
+    )
+    if search:
+        coincidencia_directa = (
+            Q(ubicacion__nombre__icontains=search)
+            | Q(usuario__username__icontains=search)
+            | Q(motivo__icontains=search)
+            | Q(observaciones__icontains=search)
+        )
+        if search.isdigit():
+            coincidencia_directa |= Q(id=int(search))
+        motivos_coincidentes = [
+            Q(motivo=valor)
+            for valor, etiqueta in MotivoMerma.choices
+            if search.casefold() in etiqueta.casefold()
+        ]
+        for coincidencia_motivo in motivos_coincidentes:
+            coincidencia_directa |= coincidencia_motivo
+        productos_coincidentes = DetalleMerma.objects.filter(
+            is_active=True,
+            is_delete=False,
+        ).filter(
+            Q(producto__nombre__icontains=search)
+            | Q(producto__codigo_sku__icontains=search)
+        ).values("merma_id")
+        mermas = mermas.filter(
+            coincidencia_directa | Q(id__in=productos_coincidentes)
+        )
+
+    page_obj = Paginator(mermas, 10).get_page(request.GET.get("page"))
+    return render(
+        request,
+        "merma/merma_list.html",
+        {"page_obj": page_obj, "search": search},
+    )
+
+
+@login_required
+@permission_required("manager.add_merma", raise_exception=True)
+def merma_create_view(request):
+    return render(
+        request,
+        "merma/merma.html",
+        {"motivos_merma": MotivoMerma.choices},
+    )
+
+
+@login_required
+@permission_required("manager.view_merma", raise_exception=True)
+def detalle_merma_view(request, token):
+    merma = get_object_or_404(
+        Merma.objects.select_related("ubicacion", "usuario")
+        .prefetch_related(
+            Prefetch(
+                "detalles",
+                queryset=DetalleMerma.objects.filter(
+                    is_active=True, is_delete=False
+                ).select_related("producto", "producto__unidad_medida"),
+            )
+        )
+        .filter(is_delete=False),
+        documento_token=token,
+    )
+    return render(request, "merma/detalle_merma.html", {"merma": merma})
+
+
+@login_required
+@permission_required("manager.add_merma", raise_exception=True)
+@require_POST
+def post_merma(request):
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse(
+            {"success": False, "message": "JSON inválido"}, status=400
+        )
+    if not isinstance(data, dict):
+        return JsonResponse(
+            {"success": False, "message": "La solicitud debe ser un objeto JSON."},
+            status=400,
+        )
+
+    ubicacion_id = data.get("ubicacionId")
+    motivo = data.get("motivo")
+    observaciones = str(data.get("observaciones", "")).strip()
+    detalles = data.get("detalles")
+
+    if not ubicacion_id or not motivo or not isinstance(detalles, list) or not detalles:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Ubicación, motivo y al menos un producto son obligatorios.",
+            },
+            status=400,
+        )
+    if motivo not in MotivoMerma.values:
+        return JsonResponse(
+            {"success": False, "message": "El motivo seleccionado no es válido."},
+            status=400,
+        )
+    if len(observaciones) > 255:
+        return JsonResponse(
+            {"success": False, "message": "Las observaciones no pueden exceder 255 caracteres."},
+            status=400,
+        )
+
+    try:
+        ubicacion_id = int(ubicacion_id)
+        productos_cantidades = []
+        productos_vistos = set()
+        for item in detalles:
+            producto_id = int(item.get("productoId"))
+            cantidad = Decimal(str(item.get("cantidad")))
+            if producto_id in productos_vistos:
+                raise ValueError("No repitas el mismo producto en la solicitud.")
+            if not cantidad.is_finite() or cantidad <= 0:
+                raise ValueError("Todas las cantidades deben ser mayores que cero.")
+            if cantidad.as_tuple().exponent < -6 or cantidad.adjusted() > 11:
+                raise ValueError("Las cantidades admiten hasta seis decimales.")
+            productos_vistos.add(producto_id)
+            productos_cantidades.append((producto_id, cantidad))
+    except (InvalidOperation, TypeError, ValueError, AttributeError) as error:
+        return JsonResponse(
+            {"success": False, "message": str(error) or "Producto o cantidad inválida."},
+            status=400,
+        )
+
+    ubicacion = Ubicaciones.objects.filter(
+        id=ubicacion_id, is_active=True, is_delete=False
+    ).first()
+    if not ubicacion:
+        return JsonResponse(
+            {"success": False, "message": "La ubicación seleccionada no es válida."},
+            status=400,
+        )
+    productos = {
+        producto.id: producto
+        for producto in Productos.objects.filter(
+            id__in=[producto_id for producto_id, _ in productos_cantidades],
+            is_active=True,
+            is_delete=False,
+        )
+    }
+    if len(productos) != len(productos_cantidades):
+        return JsonResponse(
+            {"success": False, "message": "Uno de los productos ya no está disponible."},
+            status=400,
+        )
+
+    with transaction.atomic():
+        inventarios_por_producto = {}
+        for producto_id, cantidad in sorted(productos_cantidades):
+            capas = list(
+                Inventarios.objects.select_for_update()
+                .filter(
+                    producto_id=producto_id,
+                    ubicacion=ubicacion,
+                    is_active=True,
+                    is_delete=False,
+                    cantidad__gt=0,
+                )
+                .order_by("fvencimiento", "id")
+            )
+            stock_total = sum((capa.cantidad for capa in capas), Decimal("0"))
+            stock_reservado = (
+                ReservaInventario.objects.filter(
+                    producto_id=producto_id,
+                    ubicacion=ubicacion,
+                    estado=ReservaInventario.Estado.RESERVADA,
+                    is_active=True,
+                    is_delete=False,
+                ).aggregate(total=Sum("cantidad"))["total"]
+                or Decimal("0")
+            )
+            if stock_total - stock_reservado < cantidad:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": (
+                            f"Inventario insuficiente para retirar el producto "
+                            f"{productos[producto_id].nombre}. "
+                            f"Disponible: {stock_total - stock_reservado}."
+                        ),
+                    },
+                    status=400,
+                )
+            inventarios_por_producto[producto_id] = (capas, stock_total, cantidad)
+
+        merma = Merma.objects.create(
+            ubicacion=ubicacion,
+            usuario=request.user,
+            motivo=motivo,
+            observaciones=observaciones,
+            u_creo_id=request.user.id,
+        )
+        for producto_id, (capas, stock_anterior, cantidad) in inventarios_por_producto.items():
+            producto = productos[producto_id]
+
+            DetalleMerma.objects.create(
+                merma=merma,
+                producto=producto,
+                cantidad=cantidad,
+                stock_anterior=stock_anterior,
+                stock_resultante=stock_anterior - cantidad,
+                u_creo_id=request.user.id,
+            )
+            restante = cantidad
+            stock_actual = stock_anterior
+            for capa in capas:
+                if restante <= 0:
+                    break
+                retirar = min(capa.cantidad, restante)
+                capa.cantidad -= retirar
+                capa.save(update_fields=["cantidad"])
+                stock_resultante = stock_actual - retirar
+                MovimientoInventario.objects.create(
+                    tipo_movimiento=TipoMovimientoInventario.DESCARTE,
+                    producto=producto,
+                    ubicacion_origen=ubicacion,
+                    cantidad=retirar,
+                    stock_anterior=stock_actual,
+                    stock_resultante=stock_resultante,
+                    merma=merma,
+                )
+                restante -= retirar
+                stock_actual = stock_resultante
+
+    return JsonResponse(
+        {"success": True, "message": "Merma registrada correctamente.", "mermaId": merma.id}
+    )
+
+
+@login_required
 @permission_required(
     "manager.add_traslados",
     raise_exception=True
@@ -9991,25 +10546,96 @@ def completar_retiro_caja(request, id):
 @login_required
 @require_POST
 def marcar_notificacion_leida(request, id):
-    """Marca un aviso propio como visto sin recargar la vista actual."""
+    """Marca como vista para este usuario una notificación personal o global."""
     notificacion = get_object_or_404(
-        Notificacion,
+        Notificacion.objects.filter(Q(usuario=request.user) | Q(para_todos=True)),
         id=id,
-        usuario=request.user,
-        leida=False,
         is_active=True,
         is_delete=False,
     )
-    notificacion.leida = True
-    notificacion.u_modifico_id = request.user.id
-    notificacion.f_modificacion = timezone.now()
-    notificacion.save(update_fields=["leida", "u_modifico_id", "f_modificacion"])
-    pendientes = Notificacion.objects.filter(
+    if (
+        notificacion.tipo == Notificacion.Tipo.RETIRO_CAJA
+        and notificacion.retiro_caja
+        and notificacion.retiro_caja.estado == RetiroCaja.Estado.PENDIENTE
+    ):
+        return JsonResponse(
+            {"ok": False, "mensaje": "Completa el retiro antes de marcarlo como leído."},
+            status=409,
+        )
+    if notificacion.para_todos:
+        NotificacionLectura.objects.get_or_create(
+            notificacion=notificacion,
+            usuario=request.user,
+            defaults={"u_creo_id": request.user.id},
+        )
+    elif notificacion.usuario_id == request.user.id and notificacion.leida is False:
+        notificacion.leida = True
+        notificacion.u_modifico_id = request.user.id
+        notificacion.f_modificacion = timezone.now()
+        notificacion.save(update_fields=["leida", "u_modifico_id", "f_modificacion"])
+    transaction.on_commit(
+        lambda: publicar_actualizacion_usuarios([request.user.id])
+    )
+    pendientes = estado_notificaciones_usuario(request.user)["pendientes"]
+    return JsonResponse({"ok": True, "pendientes": pendientes})
+
+
+@login_required
+@require_POST
+@transaction.atomic
+def marcar_todas_notificaciones_leidas(request):
+    """Marca notificaciones personales y registra la lectura propia de las globales."""
+    ahora = timezone.now()
+    Notificacion.objects.filter(
         usuario=request.user,
+        para_todos=False,
         leida=False,
         is_active=True,
         is_delete=False,
-    ).count()
+    ).update(
+        leida=True,
+        u_modifico_id=request.user.id,
+        f_modificacion=ahora,
+    )
+    globales_no_leidas = Notificacion.objects.filter(
+        para_todos=True,
+        is_active=True,
+        is_delete=False,
+    ).exclude(
+        pk__in=Subquery(
+            NotificacionLectura.objects.filter(usuario=request.user).values(
+                "notificacion_id"
+            )
+        )
+    )
+    lecturas = []
+    for notificacion_id in globales_no_leidas.values_list("id", flat=True).iterator(
+        chunk_size=1000
+    ):
+        lecturas.append(
+            NotificacionLectura(
+                notificacion_id=notificacion_id,
+                usuario=request.user,
+                u_creo_id=request.user.id,
+            )
+        )
+        if len(lecturas) == 1000:
+            NotificacionLectura.objects.bulk_create(
+                lecturas,
+                batch_size=1000,
+                ignore_conflicts=True,
+            )
+            lecturas.clear()
+    if lecturas:
+        NotificacionLectura.objects.bulk_create(
+            lecturas,
+            batch_size=1000,
+            ignore_conflicts=True,
+        )
+    transaction.on_commit(
+        lambda: publicar_actualizacion_usuarios([request.user.id])
+    )
+    pendientes = estado_notificaciones_usuario(request.user)["pendientes"]
     return JsonResponse({"ok": True, "pendientes": pendientes})
 
 
@@ -10018,6 +10644,47 @@ def marcar_notificacion_leida(request, id):
 def estado_notificaciones(request):
     """Devuelve el panel vigente; las alertas se sincronizan por eventos/tarea."""
     return JsonResponse(estado_notificaciones_usuario(request.user))
+
+
+@login_required
+@require_GET
+def notificaciones_view(request):
+    estado = request.GET.get("estado", "no_leidas")
+    if estado not in {"no_leidas", "leidas"}:
+        estado = "no_leidas"
+
+    lecturas_globales = NotificacionLectura.objects.filter(
+        usuario=request.user,
+        notificacion_id=OuterRef("pk"),
+    )
+    notificaciones = (
+        Notificacion.objects.filter(
+            Q(usuario=request.user) | Q(para_todos=True),
+            is_active=True,
+            is_delete=False,
+        )
+        .annotate(
+            leida_global=Exists(lecturas_globales),
+        )
+        .annotate(
+            leida_usuario=Case(
+                When(para_todos=True, then=F("leida_global")),
+                default=F("leida"),
+                output_field=BooleanField(),
+            )
+        )
+        .select_related("retiro_caja")
+        .order_by("-f_creacion", "-id")
+    )
+    notificaciones = notificaciones.filter(
+        leida_usuario=(estado == "leidas")
+    )
+    page_obj = Paginator(notificaciones, 10).get_page(request.GET.get("page"))
+    return render(
+        request,
+        "notificaciones/notificaciones.html",
+        {"page_obj": page_obj, "estado_notificaciones": estado},
+    )
 
 
 @login_required

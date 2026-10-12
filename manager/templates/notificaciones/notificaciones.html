@@ -1,0 +1,90 @@
+{% extends "menu.html" %}
+{% load static pagination_tags %}
+{% block title %}Notificaciones{% endblock title %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/notificaciones.css' %}?v=20261012-paginador-estilo-sistema">
+{% endblock extra_css %}
+{% block titulo_content %}
+  <div class="tituloscont">
+    <img class="logop" src="{% static 'img/LH.webp' %}" alt="" width="0" height="0">
+    <p class="header__logo">| Notificaciones</p>
+  </div>
+{% endblock titulo_content %}
+{% block main_content %}
+  <main class="notifications-page">
+    <header class="notifications-page__hero">
+      <span class="notifications-page__hero-icon"><i class="bx bx-bell" aria-hidden="true"></i></span>
+      <div>
+        <p>Centro de actividad</p>
+        <h1>Notificaciones</h1>
+        <span>Consulta los avisos enviados a tu cuenta y su estado.</span>
+      </div>
+    </header>
+
+    <nav class="notifications-page__filters" aria-label="Filtrar notificaciones">
+      <a href="?estado=no_leidas"
+         class="notifications-page__filter {% if estado_notificaciones == 'no_leidas' %}is-active{% endif %}"
+         {% if estado_notificaciones == 'no_leidas' %}aria-current="page"{% endif %}>
+        No leídos
+      </a>
+      <a href="?estado=leidas"
+         class="notifications-page__filter {% if estado_notificaciones == 'leidas' %}is-active{% endif %}"
+         {% if estado_notificaciones == 'leidas' %}aria-current="page"{% endif %}>
+        Leídos
+      </a>
+    </nav>
+
+    <section class="notifications-page__list" aria-label="Historial de notificaciones">
+      {% for notificacion in page_obj %}
+        <article class="notifications-page__item {% if notificacion.leida_usuario %}is-read{% else %}is-unread{% endif %}">
+          <span class="notifications-page__icon" aria-hidden="true">
+            <i class="bx {% if notificacion.tipo == 'RETIRO_CAJA' %}bx-money-withdraw{% elif notificacion.tipo == 'STOCK_BAJO' %}bx-error-circle{% elif notificacion.tipo == 'VENCIMIENTO' %}bx-calendar-exclamation{% elif notificacion.tipo == 'CUENTA_COBRAR' %}bx-wallet{% elif notificacion.tipo == 'CUENTA_PAGAR' %}bx-credit-card{% else %}bx-bell{% endif %}"></i>
+          </span>
+          <div class="notifications-page__content">
+            <div class="notifications-page__title">
+              <h2>{{ notificacion.titulo }}</h2>
+              <span class="notifications-page__status">
+                {% if notificacion.leida_usuario %}Leída{% else %}Sin leer{% endif %}
+              </span>
+            </div>
+            <p>{{ notificacion.mensaje|default:"Sin detalles adicionales." }}</p>
+            <footer>
+              <span>{{ notificacion.get_tipo_display }}</span>
+              <time datetime="{{ notificacion.f_creacion|date:'c' }}">{{ notificacion.f_creacion|date:"d/m/Y H:i" }}</time>
+              {% if notificacion.para_todos %}<span>Notificación general · estado personal</span>{% endif %}
+            </footer>
+          </div>
+        </article>
+      {% empty %}
+        <div class="notifications-page__empty">
+          <i class="bx bx-bell-off" aria-hidden="true"></i>
+          <strong>{% if estado_notificaciones == 'no_leidas' %}No hay notificaciones sin leer{% else %}No hay notificaciones leídas{% endif %}</strong>
+          <span>{% if estado_notificaciones == 'no_leidas' %}Cuando recibas avisos nuevos, aparecerán aquí.{% else %}Las notificaciones que marques como leídas aparecerán aquí.{% endif %}</span>
+        </div>
+      {% endfor %}
+    </section>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+      <nav class="notifications-page__pagination d-flex justify-content-center mt-4" aria-label="Paginación de notificaciones">
+        <ul class="pagination">
+          <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+            {% if page_obj.has_previous %}
+              <a class="page-link" href="?estado={{ estado_notificaciones }}&page={{ page_obj.previous_page_number }}">«</a>
+            {% else %}<span class="page-link">«</span>{% endif %}
+          </li>
+          {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
+          {% for numero in paginas_visibles %}
+            <li class="page-item {% if numero == page_obj.number %}active{% endif %}">
+              <a class="page-link" href="?estado={{ estado_notificaciones }}&page={{ numero }}">{{ numero }}</a>
+            </li>
+          {% endfor %}
+          <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+            {% if page_obj.has_next %}
+              <a class="page-link" href="?estado={{ estado_notificaciones }}&page={{ page_obj.next_page_number }}">»</a>
+            {% else %}<span class="page-link">»</span>{% endif %}
+          </li>
+        </ul>
+      </nav>
+    {% endif %}
+  </main>
+{% endblock main_content %}

@@ -1,0 +1,73 @@
+.merma-toolbar .compra-toolbar__action:first-child {
+  justify-content: flex-start;
+}
+
+.merma-toolbar .compra-toolbar__action:last-child {
+  justify-content: flex-end;
+}
+
+.merma-ver-detalle,
+.merma-ver-detalle:hover,
+.merma-ver-detalle:focus,
+.merma-ver-detalle:active {
+  color: #fff !important;
+  border-color: #198754 !important;
+  background: #198754 !important;
+  box-shadow: none !important;
+}
+
+.merma-ver-detalle {
+  min-width: 36px;
+  min-height: 34px;
+  padding: 0.3rem 0.55rem;
+}
+
+.merma-ver-detalle i {
+  font-size: 1.1rem;
+}
+
+@media (min-width: 1033px) {
+  .divbuttons2.compra-toolbar.merma-toolbar {
+    grid-template-columns: max-content minmax(300px, 1fr) max-content;
+    justify-content: stretch;
+    column-gap: 1.25rem;
+  }
+
+  .merma-toolbar .compra-toolbar__field {
+    justify-self: center;
+  }
+
+  .merma-toolbar .select-container {
+    width: 100% !important;
+    max-width: 280px !important;
+    flex: 1 1 260px;
+  }
+
+  #tablaMerma .cantidad-final {
+    width: 84px;
+    min-width: 84px;
+    height: 38px;
+    margin: 0 auto;
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 32%, #dce7e5);
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 5%, #fff);
+    color: var(--system-text, #31443f);
+    font-weight: 600;
+    text-align: center;
+    box-shadow: 0 2px 6px
+      color-mix(in srgb, var(--system-secondary, #708984) 10%, transparent);
+    transition:
+      border-color 0.18s ease,
+      background-color 0.18s ease,
+      box-shadow 0.18s ease;
+  }
+
+  #tablaMerma .cantidad-final:focus {
+    border-color: var(--system-primary, #32877f);
+    background: #fff;
+    box-shadow: 0 0 0 3px
+      color-mix(in srgb, var(--system-primary, #32877f) 16%, transparent);
+    outline: none;
+  }
+}

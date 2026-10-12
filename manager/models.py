@@ -1096,10 +1096,65 @@ class MovimientoInventario(models.Model):
         Traslados, on_delete=models.SET_NULL, null=True, blank=True
     )
 
+    merma = models.ForeignKey(
+        "Merma",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="movimientos_merma",
+    )
+
     venta_id = models.IntegerField(null=True, blank=True)  # futura tabla ventas
 
     def __str__(self):
         return f"Movimiento {self.id} - {self.get_tipo_movimiento_display()}"
+
+
+class MotivoMerma(models.TextChoices):
+    PRODUCTO_VENCIDO = "VENCIDO", "Producto vencido"
+    PRODUCTO_DANADO = "DANADO", "Producto dañado"
+    PRODUCTO_CONTAMINADO = "CONTAMINADO", "Producto contaminado"
+    ERROR_OPERATIVO = "ERROR_OPERATIVO", "Error operativo"
+    OTRO = "OTRO", "Otro"
+
+
+class Merma(Abstracto):
+    documento_token = models.UUIDField(
+        default=uuid.uuid4, unique=True, editable=False
+    )
+    ubicacion = models.ForeignKey(
+        Ubicaciones, on_delete=models.PROTECT, related_name="mermas"
+    )
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="mermas"
+    )
+    motivo = models.CharField(max_length=20, choices=MotivoMerma.choices)
+    observaciones = models.CharField(max_length=255, blank=True, default="")
+
+    def __str__(self):
+        return f"Merma #{self.id}"
+
+
+class DetalleMerma(Abstracto):
+    merma = models.ForeignKey(
+        Merma, on_delete=models.CASCADE, related_name="detalles"
+    )
+    producto = models.ForeignKey(
+        Productos, on_delete=models.PROTECT, related_name="detalles_merma"
+    )
+    cantidad = models.DecimalField(max_digits=18, decimal_places=6)
+    stock_anterior = models.DecimalField(max_digits=18, decimal_places=6)
+    stock_resultante = models.DecimalField(max_digits=18, decimal_places=6)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["merma", "producto"], name="unique_producto_merma"
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.producto} - {self.cantidad}"
 
 
 
@@ -1754,6 +1809,27 @@ class Notificacion(Abstracto):
 
     class Meta:
         ordering = ["-f_creacion"]
+
+
+class NotificacionLectura(Abstracto):
+    notificacion = models.ForeignKey(
+        Notificacion,
+        on_delete=models.CASCADE,
+        related_name="lecturas",
+    )
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="lecturas_notificaciones",
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["notificacion", "usuario"],
+                name="uniq_notif_lectura_user",
+            )
+        ]
 
 
 class ReservaInventario(Abstracto):

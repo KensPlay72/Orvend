@@ -1,0 +1,118 @@
+{% extends "menu.html" %}
+{% load static %}
+{% block title %}Registrar Merma{% endblock title %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/compras.css' %}?v=20260918-02" />
+  <link rel="stylesheet" href="{% static 'css/traslados.css' %}?v=20261006-input-cantidad" />
+  <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261003-mobile-sheet" />
+{% endblock extra_css %}
+{% block page_css_overrides %}
+  <link rel="stylesheet" href="{% static 'css/traslados_mobile.css' %}?v=20261005-paginador-stock" />
+  <link rel="stylesheet" href="{% static 'css/merma.css' %}?v=20261009-merma-listado" />
+{% endblock page_css_overrides %}
+{% block titulo_content %}
+  <div class="tituloscont">
+    <img class="logop" src="{% static 'img/LH.webp' %}" alt="logo" width="0" height="0" />
+    <p class="header__logo">| Registrar Merma</p>
+  </div>
+{% endblock titulo_content %}
+{% block main_content %}
+  <div class="divbuttons2 compra-toolbar merma-toolbar">
+    <div class="compra-toolbar__action">
+      <button id="toggleDropdownPanel" class="btn-dropdown" type="button">
+        <i class="bx bx-cart-add"></i> Agregar Producto
+      </button>
+    </div>
+    <div class="ubicacionselect compra-toolbar__field">
+      <p>Sucursal:</p>
+      <div class="form-group mb-3">
+        <input type="hidden" id="ubicacion_merma" required />
+        <div class="dropdown select-container w-100">
+          <button type="button" class="btn w-100 text-start form-control">Escriba para buscar...</button>
+          <div class="dropdown-menu w-100 p-0">
+            <div class="search-box p-2">
+              <input type="text" class="form-control" placeholder="Buscar ubicación..." />
+            </div>
+            <div class="options list-group list-group-flush"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="compra-toolbar__action">
+      <button id="btnPreviewMerma" class="btn-dropdown" type="button">
+        <i class="bx bx-check-circle"></i> Registrar merma
+      </button>
+    </div>
+  </div>
+
+  {% include "components/_selector_productos_movil.html" %}
+
+  <div class="modal fade modal-sheet-mobile traslado-mobile-modal"
+       id="confirmarMerma"
+       tabindex="-1"
+       aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Confirmar Merma</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+          <div class="form-group mb-3">
+            <label for="previewUbicacionMerma">Sucursal</label>
+            <input type="text" id="previewUbicacionMerma" class="form-control" readonly>
+          </div>
+          <br>
+          <div class="form-group mb-3">
+            <label for="motivoMerma">Motivo del retiro</label>
+            <select id="motivoMerma" class="form-select" required>
+              <option value="">Seleccione un motivo</option>
+              {% for value, label in motivos_merma %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <br>
+          <div class="form-group mb-3">
+            <label for="observacionesMerma">Observaciones (opcional)</label>
+            <textarea id="observacionesMerma"
+                      rows="2"
+                      maxlength="255"
+                      class="form-control"
+                      placeholder="Agregue detalles del retiro"></textarea>
+          </div>
+          <div class="tabla-container">
+            <table class="tablas-todo">
+              <thead>
+                <tr><th>#</th><th>Producto</th><th>SKU</th><th>Stock Disponible</th><th>Cantidad a Retirar</th></tr>
+              </thead>
+              <tbody id="tablaPreviewMerma"></tbody>
+            </table>
+          </div>
+          <section class="traslados-confirmar-mobile-list"
+                   aria-label="Resumen de productos a retirar"></section>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button"
+                  class="btn classbotones"
+                  id="confirmarMermaBtn"
+                  data-list-url="{% url 'merma' %}">Confirmar retiro</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabla-container traslado-editor-mobile">
+    <table class="tablas-todo">
+      <thead>
+        <tr><th>#</th><th>Producto</th><th>SKU</th><th>Stock Disponible</th><th>Cantidad a retirar</th><th>Acción</th></tr>
+      </thead>
+      <tbody id="tablaMerma"></tbody>
+    </table>
+    <section class="traslados-editor-mobile-list"
+             aria-label="Productos agregados a la merma"></section>
+  </div>
+  <script src="{% static 'js/gestiones/merma.js' %}?v=20261009-merma-listado-carga"></script>
+{% endblock main_content %}

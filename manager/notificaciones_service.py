@@ -1,9 +1,9 @@
 """Consultas y serialización compartidas por HTTP y WebSocket."""
 
-from django.db.models import Q
+from django.db.models import Q, Subquery
 from django.urls import reverse
 
-from .models import Notificacion, RetiroCaja
+from .models import Notificacion, NotificacionLectura, RetiroCaja
 
 
 def estado_notificaciones_usuario(usuario):
@@ -12,8 +12,14 @@ def estado_notificaciones_usuario(usuario):
         Q(usuario_id=usuario_id) | Q(para_todos=True),
         is_active=True,
         is_delete=False,
-        leida=False,
-    )
+    ).exclude(
+        para_todos=True,
+        pk__in=Subquery(
+            NotificacionLectura.objects.filter(usuario_id=usuario_id).values(
+                "notificacion_id"
+            )
+        ),
+    ).filter(Q(para_todos=True) | Q(leida=False))
     notificaciones = list(
         pendientes.select_related("retiro_caja").order_by("-f_creacion")
     )

@@ -85,6 +85,20 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         card.appendChild(footer);
       }
+      if (
+        row.dataset.detailUrl &&
+        table.matches(".catalog-mobile-table--compras, .recepcion-table-desktop")
+      ) {
+        const detailFooter = document.createElement("footer");
+        detailFooter.className = "catalog-mobile-card__detail-footer";
+        const detailLink = document.createElement("a");
+        detailLink.className = "catalog-mobile-card__detail";
+        detailLink.href = row.dataset.detailUrl;
+        detailLink.innerHTML =
+          '<span>Ver detalle</span><i class="bx bx-right-arrow-alt" aria-hidden="true"></i>';
+        detailFooter.appendChild(detailLink);
+        card.appendChild(detailFooter);
+      }
       if (card.dataset.detailUrl) {
         const abrirDetalle = (event) => {
           if (event.target.closest("button, a, input, select, textarea")) return;

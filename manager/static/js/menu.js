@@ -1,4 +1,6 @@
 /*==================== SHOW NAVBAR ====================*/
+const menuScriptUrl = document.currentScript?.src;
+
 const showMenu = (headerToggle, navbarId) => {
   const toggleBtn = document.getElementById(headerToggle),
     nav = document.getElementById(navbarId);
@@ -66,6 +68,11 @@ if (notificationsToggle && notificationsPanel && notificacionesHabilitadas) {
     event.stopPropagation();
     notificationsPanel.classList.toggle("show");
   });
+  document.addEventListener("click", (event) => {
+    if (!notificationsPanel.classList.contains("show")) return;
+    if (notificationsPanel.contains(event.target) || notificationsToggle.contains(event.target)) return;
+    notificationsPanel.classList.remove("show");
+  });
   const confirmarEntrega = (notification) => {
     Swal.fire({
       title: "¿Confirmar entrega de efectivo?",
@@ -106,20 +113,24 @@ if (notificationsToggle && notificationsPanel && notificacionesHabilitadas) {
   };
 
   const actualizarContadorNotificaciones = (pendientes) => {
+    const cantidad = Number(pendientes) || 0;
     let badge = notificationsToggle.querySelector(".notifications-badge");
-    if (pendientes > 0) {
+    if (cantidad > 0) {
       if (!badge) {
         badge = document.createElement("span");
         badge.className = "notifications-badge";
         notificationsToggle.appendChild(badge);
       }
-      badge.textContent = pendientes;
+      badge.textContent = cantidad > 99 ? "99+" : String(cantidad);
+      badge.setAttribute("aria-label", `${cantidad} notificaciones sin leer`);
     } else {
       badge?.remove();
     }
   };
 
   const retirarNotificacion = (notification, pendientes) => {
+    if (notification.dataset.removing === "true") return;
+    notification.dataset.removing = "true";
     const restantes = [...notificationsPanel.querySelectorAll(".notification-item")]
       .filter((item) => item !== notification);
     const posiciones = new Map(restantes.map((item) => [item, item.getBoundingClientRect().top]));
@@ -196,6 +207,72 @@ if (notificationsToggle && notificationsPanel && notificacionesHabilitadas) {
     const notification = event.target.closest(".notification-item");
     if (notification) event.preventDefault();
     manejarAccionNotificacion(notification);
+  });
+
+  const optionsToggle = document.getElementById("notifications-options-toggle");
+  const optionsMenu = document.getElementById("notifications-options");
+  const markAllButton = document.getElementById("notifications-mark-all");
+  const cerrarOpciones = () => {
+    if (!optionsMenu || !optionsToggle) return;
+    optionsMenu.hidden = true;
+    optionsToggle.setAttribute("aria-expanded", "false");
+  };
+
+  optionsToggle?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (!optionsMenu) return;
+    optionsMenu.hidden = !optionsMenu.hidden;
+    optionsToggle.setAttribute("aria-expanded", String(!optionsMenu.hidden));
+  });
+  optionsMenu?.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+  optionsMenu?.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      cerrarOpciones();
+      optionsToggle?.focus();
+    }
+  });
+  document.addEventListener("click", (event) => {
+    if (!optionsMenu?.contains(event.target) && !optionsToggle?.contains(event.target)) {
+      cerrarOpciones();
+    }
+  });
+  markAllButton?.addEventListener("click", async () => {
+    if (markAllButton.disabled) return;
+    markAllButton.disabled = true;
+    try {
+      const response = await fetch(markAllButton.dataset.url, {
+        method: "POST",
+        headers: { "X-CSRFToken": getCookie("csrftoken") },
+        skipManagerLoader: true,
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) {
+        throw new Error(result.mensaje || "No fue posible marcar las notificaciones.");
+      }
+      const estadoResponse = await fetch(markAllButton.dataset.stateUrl);
+      const estado = await estadoResponse.json();
+      if (!estadoResponse.ok || !estado.ok) {
+        throw new Error("Las notificaciones fueron actualizadas, pero no se pudo refrescar el panel.");
+      }
+      if (document.querySelector(".notifications-page")) {
+        window.location.reload();
+        return;
+      }
+      aplicarEstadoNotificaciones(estado);
+      cerrarOpciones();
+    } catch (error) {
+      Swal.fire({
+        title: "No se pudo actualizar",
+        text: error.message || "Inténtalo nuevamente.",
+        icon: "error",
+        confirmButtonText: "Aceptar",
+        customClass: { confirmButton: "classbotones" },
+      });
+    } finally {
+      markAllButton.disabled = false;
+    }
   });
 
   const iconosNotificacion = {
@@ -275,11 +352,17 @@ if (notificationsToggle && notificationsPanel && notificacionesHabilitadas) {
     if (!removidas.length) actualizarContadorNotificaciones(data.pendientes);
   };
 
+  const procesarMensajeNotificaciones = (mensaje) => {
+    if (mensaje?.tipo === "estado_notificaciones") {
+      aplicarEstadoNotificaciones(mensaje.estado);
+    }
+  };
+
   let socketNotificaciones;
   let reintentoSocket = 0;
   let temporizadorReconexion;
 
-  const conectarNotificaciones = () => {
+  const conectarSocketDirecto = () => {
     if (socketNotificaciones?.readyState === WebSocket.OPEN) return;
     const protocolo = window.location.protocol === "https:" ? "wss" : "ws";
     socketNotificaciones = new WebSocket(
@@ -291,12 +374,9 @@ if (notificationsToggle && notificationsPanel && notificacionesHabilitadas) {
     });
     socketNotificaciones.addEventListener("message", (event) => {
       try {
-        const mensaje = JSON.parse(event.data);
-        if (mensaje.tipo === "estado_notificaciones") {
-          aplicarEstadoNotificaciones(mensaje.estado);
-        }
+        procesarMensajeNotificaciones(JSON.parse(event.data));
       } catch (_) {
-        // Un mensaje inválido no debe afectar la navegación del usuario.
+        return;
       }
     });
     socketNotificaciones.addEventListener("close", (event) => {
@@ -307,11 +387,30 @@ if (notificationsToggle && notificationsPanel && notificacionesHabilitadas) {
       const espera = Math.min(1000 * 2 ** reintentoSocket, 15000);
       reintentoSocket += 1;
       window.clearTimeout(temporizadorReconexion);
-      temporizadorReconexion = window.setTimeout(conectarNotificaciones, espera);
+      temporizadorReconexion = window.setTimeout(conectarSocketDirecto, espera);
     });
   };
 
-  conectarNotificaciones();
+  const conectarSharedWorker = () => {
+    try {
+      const workerUrl = new URL("./notificaciones_worker.js?v=20261009-nav-persistente", menuScriptUrl);
+      const worker = new SharedWorker(workerUrl, { name: "orvend-notificaciones" });
+      const puertoNotificaciones = worker.port;
+      puertoNotificaciones.addEventListener("message", (event) => {
+        procesarMensajeNotificaciones(event.data);
+      });
+      puertoNotificaciones.start();
+      puertoNotificaciones.postMessage({ tipo: "conectar" });
+    } catch (_) {
+      conectarSocketDirecto();
+    }
+  };
+
+  if (menuScriptUrl && "SharedWorker" in window) {
+    conectarSharedWorker();
+  } else {
+    conectarSocketDirecto();
+  }
 }
 
 /* ──────────────────────────────────────────────────────────
