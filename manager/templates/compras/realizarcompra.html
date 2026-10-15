@@ -4,10 +4,10 @@
     Realizar Compra
 {% endblock title %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/compras.css' %}?v=20261006-precio-input" />
-    <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261004-sheet-max" />
+    <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 {% endblock extra_css %}
-{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/compras_mobile.css' %}?v=20261005-acciones-inline" />{% endblock page_css_overrides %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/compras_mobile.css' %}" />{% endblock page_css_overrides %}
 {% block titulo_content %}
     <div class="tituloscont">
         <img class="logop"
@@ -183,6 +183,6 @@
             <br>
         </div>
     </div>
-    <script type="module" src="{% static 'js/compras/realcompra.js' %}?v=20261006-preservar-selector"></script>
-    <script src="{% static 'js/compras/editor_mobile_cards.js' %}?v=20261005-paginador-movil"></script>
+    <script type="module" src="{% static 'js/compras/realcompra.js' %}"></script>
+    <script src="{% static 'js/compras/editor_mobile_cards.js' %}"></script>
 {% endblock main_content %}

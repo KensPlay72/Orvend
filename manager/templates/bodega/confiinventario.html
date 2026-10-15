@@ -5,11 +5,11 @@
 <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
 <link
   rel="stylesheet"
-  href="{% static 'css/manager.css' %}?v=20261004-tracker-space"
+  href="{% static 'css/manager.css' %}"
 />
 <link
   rel="stylesheet"
-  href="{% static 'css/recepcion_inventario.css' %}?v=20261005-boton-confirmar"
+  href="{% static 'css/recepcion_inventario.css' %}"
 />
 {% endblock extra_css %} 
 {% block titulo_content %}
@@ -78,7 +78,7 @@
 <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}" />
 {% if compra.tipo == "Compra" or compra.tipo == "Traslado" %}
 {% include "bodega/_tracking_compra.html" with tracking=tracking only %}
-<script src="{% static 'js/bodega/tracking_compra.js' %}?v=20261006-fix-include"></script>
+<script src="{% static 'js/bodega/tracking_compra.js' %}"></script>
 {% endif %}
 <!-- ===================================================== -->
 <!-- MODAL CONFIRMACION -->
@@ -413,6 +413,17 @@
           value="{{ detalle.productoId }}"
         />
       </tr>
+      {% empty %}
+      <tr>
+        <td
+          colspan="{% if compra.mostrar_vencimiento %}8{% else %}7{% endif %}"
+          class="text-center table-empty-state py-4"
+        >
+          <i class="bx bx-package fs-2 text-muted d-block mb-2"></i>
+          <strong>No hay productos para confirmar en esta página.</strong>
+          <p class="text-muted small m-0">Los productos pendientes de recepción aparecerán aquí.</p>
+        </td>
+      </tr>
       {% endfor %}
     </tbody>
   </table>
@@ -493,9 +504,10 @@
     <input type="hidden" class="producto-id" value="{{ detalle.productoId }}" />
   </article>
   {% empty %}
-  <div class="recepcion-mobile-empty">
-    <i class="bx bx-package"></i><strong>Sin productos pendientes</strong
-    ><span>No hay productos para confirmar en esta página.</span>
+  <div class="mobile-empty-state">
+    <i class="bx bx-package fs-2 text-muted d-block mb-2"></i>
+    <strong>No hay productos para confirmar en esta página.</strong>
+    <p class="text-muted small m-0">Los productos pendientes de recepción aparecerán aquí.</p>
   </div>
   {% endfor %}
 </section>
@@ -529,6 +541,6 @@
 <br />
 <script
   type="module"
-  src="{% static 'js/bodega/entradainventario.js' %}?v=20261006-confirmar-todo"
+  src="{% static 'js/bodega/entradainventario.js' %}"
 ></script>
 {% endblock main_content %}

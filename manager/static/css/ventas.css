@@ -236,10 +236,35 @@
   .ventas-mobile-card__metric strong { overflow: hidden; margin-top: .06rem; color: var(--system-secondary, #10463e); font-size: .77rem; text-overflow: ellipsis; white-space: nowrap; }
   .ventas-mobile-card__metric--discount > i { color: #c47712; }
   .ventas-mobile-card__metric--profit > i { color: #13855a; }
-  .ventas-mobile-empty { display: grid; grid-column: 1 / -1; justify-items: center; gap: .3rem; padding: 2rem 1rem; border: 1px dashed color-mix(in srgb, var(--system-primary, #32877f) 30%, #fff); border-radius: 14px; color: color-mix(in srgb, var(--system-secondary, #10463e) 62%, #fff); background: #fff; text-align: center; }
-  .ventas-mobile-empty i { color: var(--system-primary, #32877f); font-size: 2rem; }
-  .ventas-mobile-empty strong { color: var(--system-secondary, #10463e); }
-  .ventas-mobile-empty span { font-size: .8rem; }
+  .ventas-mobile-empty,
+  .ventas-mobile-list .mobile-empty-state {
+    grid-column: 1 / -1;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 2.2rem 1rem;
+    text-align: center;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px dashed #d6e0dd;
+    margin: 0.5rem 0;
+  }
+  .ventas-mobile-empty i,
+  .ventas-mobile-list .mobile-empty-state i {
+    color: #8da29c;
+  }
+  .ventas-mobile-empty strong,
+  .ventas-mobile-list .mobile-empty-state strong {
+    display: block;
+    font-size: 0.95rem;
+    color: var(--system-secondary, #243531);
+    margin-bottom: 0.25rem;
+  }
+  .ventas-mobile-empty p,
+  .ventas-mobile-list .mobile-empty-state p {
+    color: #71827d;
+    font-size: 0.84rem;
+    margin: 0;
+  }
 }
 
 @media (max-width: 700px) {

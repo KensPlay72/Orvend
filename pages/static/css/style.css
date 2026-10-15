@@ -1040,6 +1040,40 @@ html {
   border-top: 1px solid rgba(255, 255, 255, 0.14);
   color: #9cbab3;
   font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.site-footer .footer-credit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background: rgba(38, 59, 54, 0.04);
+  border: 1px solid rgba(38, 59, 54, 0.08);
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #556763;
+}
+.site-footer .footer-company-logo {
+  height: 18px;
+  width: auto;
+  max-width: 90px;
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: middle;
+}
+.site-footer .footer-colaboracion-x {
+  font-size: 10px;
+  font-weight: 800;
+  color: #84938f;
+  line-height: 1;
+  user-select: none;
+  display: inline-block;
+  vertical-align: middle;
 }
 @media (max-width: 760px) {
   .site-footer__content {
@@ -1057,6 +1091,9 @@ html {
   .site-footer .footer-copy {
     padding: 16px 22px;
     font-size: 12px;
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
   }
   .erp-copy div {
     display: flex;

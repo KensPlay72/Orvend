@@ -6,7 +6,7 @@
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 {% endblock extra_css %}
-{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/catalogos_mobile.css' %}?v=20261005-movil-solo" />{% endblock page_css_overrides %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/catalogos_mobile.css' %}" />{% endblock page_css_overrides %}
 {% block titulo_content %}
     <div class="tituloscont">
         <img class="logop"
@@ -220,7 +220,13 @@
                         </td>
                     </tr>
                 {% empty %}
-                    <tr><td colspan="6" class="text-center table-empty-state">No hay presentaciones registradas.</td></tr>
+                    <tr>
+                        <td colspan="6" class="text-center table-empty-state py-4">
+                            <i class="bx bx-ruler fs-2 text-muted d-block mb-2"></i>
+                            <strong>No hay presentaciones registradas para mostrar.</strong>
+                            <p class="text-muted small m-0">Las unidades de medida y presentaciones configuradas aparecerán aquí.</p>
+                        </td>
+                    </tr>
                 {% endfor %}
             </tbody>
         </table>

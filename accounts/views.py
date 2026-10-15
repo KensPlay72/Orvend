@@ -59,10 +59,16 @@ def login_view(request):
             redirect_url = "/manager/caja/cuadre/"
         elif user.is_superuser:
             redirect_url = "/manager/dashboard/"
-        elif user.has_perm("manager.operar_caja") or user.has_perm("manager.generar_cotizaciones"):
+        elif (
+            user.has_perm("manager.operar_caja")
+            or user.has_perm("manager.generar_cotizaciones")
+            or user.has_perm("manager.generar_pedidos_caja")
+        ):
             redirect_url = "/manager/caja/"
         elif user.has_perm("manager.view_cotizacion"):
             redirect_url = "/manager/cotizaciones/"
+        elif user.has_perm("manager.gestionar_tienda_virtual"):
+            redirect_url = "/manager/pedidos-tienda/"
         elif user.has_perm("manager.gestionar_retiros_caja"):
             redirect_url = "/manager/caja/retiros/"
         elif user.has_perm("manager.gestionar_recepcion_inventario"):

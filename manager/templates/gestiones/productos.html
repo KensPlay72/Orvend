@@ -4,13 +4,13 @@
 {% block extra_css %}
 <link
   rel="stylesheet"
-  href="{% static 'css/manager.css' %}?v=20261005-number-inputs"
+  href="{% static 'css/manager.css' %}"
 />
 {% endblock extra_css %} 
 {% block page_css_overrides %}
 <link
   rel="stylesheet"
-  href="{% static 'css/productos_mobile.css' %}?v=20261006-productos-movil-10"
+  href="{% static 'css/productos_mobile.css' %}"
 />
 {% endblock page_css_overrides %}
  {% block titulo_content %}
@@ -420,7 +420,7 @@
                     hidden
                   />
                 </div>
-                <small class="text-muted">Máximo 5 imágenes</small>
+                <small class="text-muted">Máximo 5 imágenes (máx. 5 MB por imagen)</small>
               </div>
             </div>
           </div>
@@ -756,7 +756,7 @@
                     hidden
                   />
                 </div>
-                <small class="text-muted">Máximo 5 imágenes</small>
+                <small class="text-muted">Máximo 5 imágenes (máx. 5 MB por imagen)</small>
               </div>
             </div>
           </div>
@@ -915,7 +915,14 @@
           {% endif %}
         </td>
       </tr>
-
+      {% empty %}
+      <tr>
+        <td colspan="11" class="text-center table-empty-state py-4">
+          <i class="bx bx-package fs-2 text-muted d-block mb-2"></i>
+          <strong>No hay productos registrados para mostrar.</strong>
+          <p class="text-muted small m-0">Los productos creados en el catálogo del sistema aparecerán aquí.</p>
+        </td>
+      </tr>
       {% endfor %}
     </tbody>
   </table>
@@ -1019,9 +1026,10 @@
   </article>
   {% endwith %}
   {% empty %}
-  <div class="productos-mobile-empty">
-    <i class="bx bx-package" aria-hidden="true"></i
-    ><strong>Sin productos</strong><span>No hay productos para mostrar.</span>
+  <div class="mobile-empty-state">
+    <i class="bx bx-package fs-2 text-muted d-block mb-2"></i>
+    <strong>No hay productos registrados para mostrar.</strong>
+    <p class="text-muted small m-0">Los productos creados en el catálogo del sistema aparecerán aquí.</p>
   </div>
   {% endfor %}
 </section>
@@ -1068,7 +1076,7 @@
 </script>
 <script
   type="module"
-  src="{% static 'js/gestiones/productos.js' %}?v=20261005-acordeon-simetrico"
+  src="{% static 'js/gestiones/productos.js' %}"
 ></script>
 <script src="{% static 'js/importar_excel.js' %}"></script>
 <script type="module" src="{% static 'js/chektext.js' %}"></script>

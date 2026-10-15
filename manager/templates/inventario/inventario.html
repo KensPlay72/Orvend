@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 {% endblock extra_css %}
 {% block page_css_overrides %}
-<link rel="stylesheet" href="{% static 'css/inventario.css' %}?v=20261006-nombre-multilinea" />
+<link rel="stylesheet" href="{% static 'css/inventario.css' %}" />
 {% endblock page_css_overrides %}
 {% block titulo_content %}
     <div class="tituloscont">
@@ -49,7 +49,11 @@
                     </div>
                 </article>
                 {% empty %}
-                <p class="inventario-mobile-empty">No se encontraron productos.</p>
+                <div class="mobile-empty-state">
+                    <i class="bx bx-box fs-2 text-muted d-block mb-2"></i>
+                    <strong>No hay productos en inventario para mostrar.</strong>
+                    <p class="text-muted small m-0">Los productos con existencias en las ubicaciones aparecerán aquí.</p>
+                </div>
                 {% endfor %}
             </section>
             <div class="tabla-container">
@@ -80,6 +84,14 @@
                                     {% else %}
                                         <span>L. {{ producto.precioVenta|floatformat:2 }}</span>
                                     {% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center table-empty-state py-4">
+                                    <i class="bx bx-box fs-2 text-muted d-block mb-2"></i>
+                                    <strong>No hay productos en inventario para mostrar.</strong>
+                                    <p class="text-muted small m-0">Los productos con existencias en las ubicaciones aparecerán aquí.</p>
                                 </td>
                             </tr>
                         {% endfor %}
@@ -146,5 +158,5 @@
         </div>
     </div>
     <br>
-    <script type="module" src="{% static 'js/gestiones/inventario.js' %}?v=20261005-precarga-movil"></script>
+    <script type="module" src="{% static 'js/gestiones/inventario.js' %}"></script>
 {% endblock main_content %}

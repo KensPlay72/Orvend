@@ -13,8 +13,8 @@
         <!--========== BOX ICONS ==========-->
         <link rel="stylesheet" href="{% static 'plugins/css/boxicons.min.css' %}">
         <!--========== CSS ==========-->
-        <link rel="stylesheet" href="{% static 'css/menu.css' %}?v=20261012-notificaciones-menu-v4">
-        <link rel="stylesheet" href="{% static 'css/carga_manager.css' %}?v=20260920">
+        <link rel="stylesheet" href="{% static 'css/menu.css' %}">
+        <link rel="stylesheet" href="{% static 'css/carga_manager.css' %}">
         <link rel="stylesheet" href="{% static 'css/tema_sistema.css' %}">
         {% block page_css_overrides %}
         {% endblock page_css_overrides %}
@@ -226,10 +226,10 @@
                     <i class="bx bx-x" aria-hidden="true"></i>
                 </button>
                 <div>
-                        {% if perms.manager.operar_caja or perms.manager.generar_cotizaciones or perms.manager.view_cotizacion or perms.manager.add_devolucionventa or perms.manager.gestionar_retiros_caja %}
+                        {% if perms.manager.operar_caja or perms.manager.generar_cotizaciones or perms.manager.generar_pedidos_caja or perms.manager.view_cotizacion or perms.manager.add_devolucionventa or perms.manager.gestionar_retiros_caja %}
                             <div class="nav__items">
                                 <h3 class="nav__subtitle">Caja</h3>
-                                {% if perms.manager.operar_caja or perms.manager.generar_cotizaciones %}
+                                {% if perms.manager.operar_caja or perms.manager.generar_cotizaciones or perms.manager.generar_pedidos_caja %}
                                 <a href="{% url 'caja' %}"
                                 class="nav__link {% if request.path == '/manager/caja/' %}active{% endif %}">
                                     <i class="bx bx-store nav__icon"></i>
@@ -260,11 +260,11 @@
                             <div class="nav__items">
                                 <h3 class="nav__subtitle">Gestiones</h3>
                                 {% if request.user.is_superuser or perms.manager.ver_dashboard %}
-            <a href="{% url 'dashboard' %}"
-               class="nav__link {% if request.resolver_match.url_name  == 'dashboard' %}active{% endif %}">
-                <i class="bx bx-home nav__icon"></i>
-                <span class="nav__name">Dashboard</span>
-            </a>
+                                <a href="{% url 'dashboard' %}"
+                                class="nav__link {% if request.resolver_match.url_name  == 'dashboard' %}active{% endif %}">
+                                    <i class="bx bx-home nav__icon"></i>
+                                    <span class="nav__name">Dashboard</span>
+                                </a>
                                 {% endif %}
                                 {% if perms.manager.view_inventarios %}
                                     <a href="{% url 'inventario' %}"
@@ -280,9 +280,9 @@
                                         <span class="nav__name">Ventas</span>
                                     </a>
                                 {% endif %}
-                                {% if tiendav_habilitada and request.user.is_superuser or tiendav_habilitada and perms.manager.gestionar_tienda_virtual %}
+                                {% if request.user.is_superuser or perms.tiendav.view_pedidotienda or perms.manager.gestionar_tienda_virtual %}
                                     <a href="{% url 'pedidos_tienda' %}"
-                                       class="nav__link {% if request.resolver_match.url_name == 'pedidos_tienda' %}active{% endif %}">
+                                       class="nav__link {% if request.resolver_match.url_name == 'pedidos_tienda' or request.resolver_match.url_name == 'detalle_pedido_manager' %}active{% endif %}">
                                         <i class="bx bx-shopping-bag nav__icon"></i>
                                         <span class="nav__name">Pedidos</span>
                                     </a>
@@ -523,13 +523,13 @@
             </div>
         </div>
         <!--========== MAIN JS ==========-->
-        <script src="{% static 'js/menu.js' %}?v=20261009-cerrar-notificaciones-fuera"></script>
-        <script src="{% static 'js/catalogos_mobile.js' %}?v=20261009-detalle-integrado"></script>
+        <script src="{% static 'js/menu.js' %}"></script>
+        <script src="{% static 'js/catalogos_mobile.js' %}"></script>
         <script src="{% static 'plugins/jwt-decode.min.js' %}"></script>
         <script src="{% static 'plugins/jquery.min.js' %}"></script>
         <script src="{% static 'plugins/bootstrap.min.js' %}"></script>
-        <script src="{% static 'js/modal_sheet_mobile.js' %}?v=20261006-modal-anclaje-restaurado"></script>
+        <script src="{% static 'js/modal_sheet_mobile.js' %}"></script>
         <script src="{% static 'plugins/sweetalert2.min.js' %}"></script>
-        <script src="{% static 'js/carga_manager.js' %}?v=20260924"></script>
+        <script src="{% static 'js/carga_manager.js' %}"></script>
     </body>
 {% endblock content %}

@@ -36,8 +36,13 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!cells.length) return;
       if (cells.length === 1 && cells[0].hasAttribute("colspan")) {
         const empty = document.createElement("div");
-        empty.className = "catalog-mobile-empty";
-        empty.innerHTML = `<i class="bx bx-package" aria-hidden="true"></i><strong>${cells[0].textContent.trim()}</strong>`;
+        empty.className = "mobile-empty-state";
+        const emptySource = cells[0].querySelector(".table-empty-state") || (cells[0].classList.contains("table-empty-state") ? cells[0] : null);
+        if (emptySource) {
+          empty.innerHTML = emptySource.innerHTML;
+        } else {
+          empty.innerHTML = cells[0].innerHTML;
+        }
         list.appendChild(empty);
         return;
       }

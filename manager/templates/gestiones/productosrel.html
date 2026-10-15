@@ -4,12 +4,12 @@
 {% block extra_css %}
 <link
   rel="stylesheet"
-  href="{% static 'css/manager.css' %}?v=productosrel-select-20260930"
+  href="{% static 'css/manager.css' %}"
 />
 {% endblock %} {% block page_css_overrides %}
 <link
   rel="stylesheet"
-  href="{% static 'css/productos_mobile.css' %}?v=20261006-productosrel-escritorio"
+  href="{% static 'css/productos_mobile.css' %}"
 />
 {% endblock page_css_overrides %}
 {% block titulo_content %}
@@ -399,8 +399,10 @@
       {% empty %}
 
       <tr>
-        <td colspan="7" class="text-center text-muted">
-          No hay relaciones de productos registradas.
+        <td colspan="7" class="text-center table-empty-state py-4">
+          <i class="bx bx-transfer-alt fs-2 text-muted d-block mb-2"></i>
+          <strong>No hay relaciones de productos registradas para mostrar.</strong>
+          <p class="text-muted small m-0">Las relaciones entre productos master y derivados aparecerán aquí.</p>
         </td>
       </tr>
 
@@ -445,10 +447,10 @@
     {% endif %}
   </article>
   {% empty %}
-  <div class="productos-mobile-empty">
-    <i class="bx bx-transfer-alt" aria-hidden="true"></i
-    ><strong>Sin relaciones</strong
-    ><span>No hay relaciones de productos registradas.</span>
+  <div class="mobile-empty-state">
+    <i class="bx bx-transfer-alt fs-2 text-muted d-block mb-2"></i>
+    <strong>No hay relaciones de productos registradas para mostrar.</strong>
+    <p class="text-muted small m-0">Las relaciones entre productos master y derivados aparecerán aquí.</p>
   </div>
   {% endfor %}
 </section>
@@ -496,7 +498,7 @@
 <br />
 <script
   type="module"
-  src="{% static 'js/gestiones/productosrel.js' %}?v=productosrel-suggestions-20260930"
+  src="{% static 'js/gestiones/productosrel.js' %}"
 ></script>
 <script type="module" src="{% static 'js/chektext.js' %}"></script>
 {% endblock %}

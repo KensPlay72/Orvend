@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
     <link rel="stylesheet" href="{% static 'css/traslados.css' %}" />
 {% endblock extra_css %}
-{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/traslados_mobile.css' %}?v=20261005-lista-detalle" />{% endblock page_css_overrides %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/traslados_mobile.css' %}" />{% endblock page_css_overrides %}
 {% block titulo_content %}
     <div class="tituloscont">
         <img class="logop"
@@ -58,7 +58,11 @@
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="7">No hay traslados registrados</td>
+                        <td colspan="6" class="text-center table-empty-state py-4">
+                            <i class="bx bx-transfer-alt fs-2 text-muted d-block mb-2"></i>
+                            <strong>No hay traslados registrados para mostrar.</strong>
+                            <p class="text-muted small m-0">Los traslados entre sucursales o bodegas aparecerán aquí.</p>
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>
@@ -88,7 +92,11 @@
                 </footer>
             </a>
         {% empty %}
-            <div class="traslados-mobile-empty"><i class="bx bx-transfer-alt"></i><strong>Sin traslados</strong><span>No hay traslados registrados.</span></div>
+            <div class="mobile-empty-state">
+                <i class="bx bx-transfer-alt fs-2 text-muted d-block mb-2"></i>
+                <strong>No hay traslados registrados para mostrar.</strong>
+                <p class="text-muted small m-0">Los traslados entre sucursales o bodegas aparecerán aquí.</p>
+            </div>
         {% endfor %}
     </section>
     <nav class="d-flex justify-content-center mt-4">
@@ -117,5 +125,5 @@
             </li>
         </ul>
     </nav>
-    <script type="module" src="{% static 'js/gestiones/traslados_list.js' %}?v=20261005-detalle-movil"></script>
+    <script type="module" src="{% static 'js/gestiones/traslados_list.js' %}"></script>
 {% endblock main_content %}

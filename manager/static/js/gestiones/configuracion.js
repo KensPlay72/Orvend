@@ -106,7 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
     [...dots.children].forEach((d, i) => (d.onclick = () => mover(i)));
     if (items.length > 1 && !vista.dataset.auto) {
       vista.dataset.auto = "true";
-      setInterval(() => siguiente.click(), 3500);
+      setInterval(() => siguiente.click(), 3000);
     }
   };
 
@@ -124,6 +124,12 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
       tarjeta.remove();
+      const vista = document.getElementById("carruselPreview");
+      if (vista && !vista.querySelector("figure")) {
+        vista.innerHTML =
+          '<span id="carruselVacio">Aún no has agregado imágenes.</span>';
+      }
+      activarCarrusel();
     });
 
   document
@@ -150,18 +156,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const renderCarruselPendiente = () => {
     const grid = document.getElementById("carruselPreview");
-    grid.innerHTML = "";
+    if (!grid) return;
+    grid
+      .querySelectorAll("figure[data-archivo-indice]")
+      .forEach((fig) => fig.remove());
+    const vacio = document.getElementById("carruselVacio");
+    if (vacio) vacio.remove();
+
     carruselArchivos.forEach((file, indice) => {
       const figure = document.createElement("figure");
       figure.dataset.archivoIndice = indice;
       figure.innerHTML = `<img src="${URL.createObjectURL(file)}" alt="Vista previa"><button type="button" class="config-banner-remove" aria-label="Quitar imagen"><i class="bx bx-x"></i></button>`;
       grid.appendChild(figure);
     });
-    if (!carruselArchivos.length)
+    if (!grid.querySelectorAll("figure").length)
       grid.innerHTML =
         '<span id="carruselVacio">Aún no has agregado imágenes.</span>';
     activarCarrusel();
   };
+
+  const MAX_CONFIG_IMAGE_BYTES = 5 * 1024 * 1024;
 
   inputBanner?.addEventListener("change", async () => {
     const file = inputBanner.files[0];
@@ -173,6 +187,15 @@ document.addEventListener("DOMContentLoaded", () => {
         icon: "warning",
         title: "Formato inválido",
         text: "El banner debe ser JPG, PNG o WEBP.",
+      });
+      return;
+    }
+    if (file.size > MAX_CONFIG_IMAGE_BYTES) {
+      inputBanner.value = "";
+      mostrarAlerta({
+        icon: "warning",
+        title: "Imagen demasiado pesada",
+        text: "El banner no debe superar los 5 MB.",
       });
       return;
     }
@@ -214,13 +237,26 @@ document.addEventListener("DOMContentLoaded", () => {
             : carruselVista.scrollLeft + carruselVista.clientWidth,
         behavior: "smooth",
       });
-    }, 3500);
+    }, 3000);
   }
 
   inputCarrusel?.addEventListener("change", async () => {
     const archivos = Array.from(inputCarrusel.files || []);
     inputCarrusel.value = "";
     if (!archivos.length) return;
+
+    const grid = document.getElementById("carruselPreview");
+    const existentesEnVista = grid
+      ? grid.querySelectorAll("figure[data-banner-id]").length
+      : 0;
+    if (existentesEnVista + carruselArchivos.length + archivos.length > 5) {
+      mostrarAlerta({
+        icon: "warning",
+        title: "Límite superado",
+        text: `El carrusel permite un máximo de 5 imágenes. Ya tienes ${existentesEnVista + carruselArchivos.length} configuradas.`,
+      });
+      return;
+    }
 
     for (const file of archivos) {
       const ext = file.name.split(".").pop().toLowerCase();
@@ -229,6 +265,14 @@ document.addEventListener("DOMContentLoaded", () => {
           icon: "warning",
           title: "Formato inválido",
           text: "Cada imagen del carrusel debe ser JPG, PNG o WEBP.",
+        });
+        return;
+      }
+      if (file.size > MAX_CONFIG_IMAGE_BYTES) {
+        mostrarAlerta({
+          icon: "warning",
+          title: "Imagen demasiado pesada",
+          text: "Cada imagen del carrusel puede pesar como máximo 5 MB.",
         });
         return;
       }
@@ -268,6 +312,15 @@ document.addEventListener("DOMContentLoaded", () => {
         icon: "warning",
         title: "Formato inválido",
         text: "Selecciona un logo JPG, PNG o WEBP.",
+      });
+      return;
+    }
+    if (archivo.size > MAX_CONFIG_IMAGE_BYTES) {
+      inputLogo.value = "";
+      mostrarAlerta({
+        icon: "warning",
+        title: "Imagen demasiado pesada",
+        text: "El logo no debe superar los 5 MB.",
       });
       return;
     }
@@ -315,6 +368,25 @@ document.addEventListener("DOMContentLoaded", () => {
         icon: "warning",
         title: "Dato requerido",
         text: "Ingresa el nombre comercial del negocio.",
+      });
+      return;
+    }
+    const totalFigurasCarrusel = document.querySelectorAll(
+      "#carruselPreview figure",
+    ).length;
+    if (totalFigurasCarrusel === 1) {
+      mostrarAlerta({
+        icon: "warning",
+        title: "Carrusel incompleto",
+        text: "El carrusel debe tener de 2 a 5 imágenes (o ninguna si deseas desactivarlo).",
+      });
+      return;
+    }
+    if (totalFigurasCarrusel > 5) {
+      mostrarAlerta({
+        icon: "warning",
+        title: "Límite excedido",
+        text: "El carrusel solo permite un máximo de 5 imágenes.",
       });
       return;
     }

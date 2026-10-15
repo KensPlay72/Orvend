@@ -4,7 +4,7 @@
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 {% endblock %}
-{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/catalogos_mobile.css' %}?v=20261005-movil-solo" />{% endblock page_css_overrides %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/catalogos_mobile.css' %}" />{% endblock page_css_overrides %}
 {% block titulo_content %}
     <div class="tituloscont">
         <img class="logop" src="{% static 'img/LH.webp' %}" alt="">
@@ -211,7 +211,11 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="9" class="text-center table-empty-state">No hay cuentas por pagar registradas</td>
+                <td colspan="9" class="text-center table-empty-state py-4">
+                    <i class="bx bx-credit-card fs-2 text-muted d-block mb-2"></i>
+                    <strong>No hay cuentas por pagar registradas para mostrar.</strong>
+                    <p class="text-muted small m-0">Las obligaciones y saldos pendientes de pago a proveedores aparecerán aquí.</p>
+                </td>
             </tr>
             {% endfor %}
         </tbody>

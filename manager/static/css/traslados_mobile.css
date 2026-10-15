@@ -1,4 +1,4 @@
-@import url("catalogos_mobile.css?v=20261005-compras-traslados-02");
+@import url("catalogos_mobile.css");
 
 .traslados-editor-mobile-list {
   display: none;
@@ -21,8 +21,35 @@
   .traslados-mobile-card__datos span { color: color-mix(in srgb, var(--system-secondary, #10463e) 60%, #fff); font-size: .61rem; font-weight: 750; letter-spacing: .035em; text-transform: uppercase; }
   .traslados-mobile-card__datos strong { overflow: hidden; color: var(--system-secondary, #10463e); font-size: .79rem; text-overflow: ellipsis; white-space: nowrap; }
   .traslados-mobile-card > footer { display: flex; align-items: center; justify-content: space-between; padding: .62rem .85rem; border-top: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff); color: var(--system-primary, #32877f); background: color-mix(in srgb, var(--system-primary, #32877f) 3%, #fff); font-size: .75rem; font-weight: 800; }
-  .traslados-mobile-empty { display: grid; place-items: center; gap: .35rem; min-height: 150px; padding: 1rem; border: 1px dashed color-mix(in srgb, var(--system-primary, #32877f) 30%, #fff); border-radius: 14px; color: var(--system-secondary, #10463e); text-align: center; }
-  .traslados-mobile-empty i { color: var(--system-primary, #32877f); font-size: 1.8rem; }
+  .traslados-mobile-empty,
+  .traslados-mobile-list .mobile-empty-state {
+    grid-column: 1 / -1;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 2.2rem 1rem;
+    text-align: center;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px dashed #d6e0dd;
+    margin: 0.5rem 0;
+  }
+  .traslados-mobile-empty i,
+  .traslados-mobile-list .mobile-empty-state i {
+    color: #8da29c;
+  }
+  .traslados-mobile-empty strong,
+  .traslados-mobile-list .mobile-empty-state strong {
+    display: block;
+    font-size: 0.95rem;
+    color: var(--system-secondary, #243531);
+    margin-bottom: 0.25rem;
+  }
+  .traslados-mobile-empty p,
+  .traslados-mobile-list .mobile-empty-state p {
+    color: #71827d;
+    font-size: 0.84rem;
+    margin: 0;
+  }
   .traslado-editor-mobile {
     min-width: 0;
     overflow-x: auto;

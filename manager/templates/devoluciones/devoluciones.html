@@ -74,7 +74,11 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="8" class="text-center">No hay devoluciones pendientes</td>
+                <td colspan="8" class="text-center table-empty-state py-4">
+                    <i class="bx bx-revision fs-2 text-muted d-block mb-2"></i>
+                    <strong>No hay devoluciones registradas para mostrar.</strong>
+                    <p class="text-muted small m-0">Las devoluciones sobre compras registradas aparecerán aquí.</p>
+                </td>
             </tr>
             {% endfor %}
         </tbody>

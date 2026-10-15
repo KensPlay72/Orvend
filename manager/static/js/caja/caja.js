@@ -46,6 +46,10 @@ let clienteSeleccionado = null;
 
 let cotizacionPendienteCliente = false;
 
+let pedidoPendienteCliente = false;
+
+let pedidoCargadoEnCaja = null;
+
 let controlador = null;
 
 let codex = 0;
@@ -259,6 +263,11 @@ async function sin_codigo(codigo) {
 
     if (data.es_cotizacion) {
       cargarCotizacionEnCaja(data);
+      return;
+    }
+
+    if (data.es_pedido) {
+      cargarPedidoEnCaja(data);
       return;
     }
 
@@ -1070,25 +1079,39 @@ function aplicarPrecioCaja(indice, celda, valor) {
     return;
   }
 
-  if (nuevoPrecio < producto.precio_venta_min) {
-    Swal.fire(
-      "Precio no permitido",
-      `El precio mínimo es L. ${producto.precio_venta_min.toFixed(2)}`,
-      "warning",
-    );
-    restaurarPrecioCelda(celda, producto);
-    return;
-  }
+if (nuevoPrecio < producto.precio_venta_min) {
+  Swal.fire(
+    "Precio no permitido",
+    `El precio mínimo es L. ${producto.precio_venta_min.toFixed(2)}`,
+    "warning",
+    {
+      confirmButtonText: "Aceptar",
+      customClass: {
+        popup: "cuadre-confirmacion-popup",
+        confirmButton: "classbotones",
+      },
+    },
+  );
+  restaurarPrecioCelda(celda, producto);
+  return;
+}
 
-  if (producto.precio_venta_max && nuevoPrecio > producto.precio_venta_max) {
-    Swal.fire(
-      "Precio no permitido",
-      `El precio máximo es L. ${producto.precio_venta_max.toFixed(2)}`,
-      "warning",
-    );
-    restaurarPrecioCelda(celda, producto);
-    return;
-  }
+if (producto.precio_venta_max && nuevoPrecio > producto.precio_venta_max) {
+  Swal.fire(
+    "Precio no permitido",
+    `El precio máximo es L. ${producto.precio_venta_max.toFixed(2)}`,
+    "warning",
+    {
+      confirmButtonText: "Aceptar",
+      customClass: {
+        popup: "cuadre-confirmacion-popup",
+        confirmButton: "classbotones",
+      },
+    },
+  );
+  restaurarPrecioCelda(celda, producto);
+  return;
+}
 
   producto.precio_venta = nuevoPrecio;
   recalcularLineaConIsvIncluido(producto);
@@ -1542,6 +1565,13 @@ function cargarCotizacionEnCaja(cotizacion) {
     return;
   }
 
+  if (cotizacion.cliente && typeof seleccionarCliente === "function") {
+    if (document.getElementById("clienteConRtn")) {
+      document.getElementById("clienteConRtn").checked = Boolean(cotizacion.con_rtn);
+    }
+    seleccionarCliente(cotizacion.cliente);
+  }
+
   productos.forEach((item) => {
     const cantidad = Number(item.cantidad) || 1;
     const impuesto15 = Number(item.isv_15) || 0;
@@ -1663,6 +1693,153 @@ if (btnGenerarCotizacion) {
       mensaje(error.message, "error", "");
     } finally {
       btnGenerarCotizacion.disabled = false;
+    }
+  });
+}
+
+function cargarPedidoEnCaja(pedido) {
+  const productos = pedido.productos || [];
+  if (!productos.length) {
+    mensaje("El pedido no contiene productos disponibles para cobrar", "warning", "");
+    return;
+  }
+
+  pedidoCargadoEnCaja = pedido.pedido_id;
+
+  if (pedido.cliente && typeof seleccionarCliente === "function") {
+    if (document.getElementById("clienteConRtn")) {
+      document.getElementById("clienteConRtn").checked = Boolean(pedido.con_rtn);
+    }
+    seleccionarCliente(pedido.cliente);
+  } else if (pedido.cliente_nombre) {
+    const clienteVisible = document.getElementById("clienteSeleccionado");
+    const clienteNombreInput = document.getElementById("cliente_nombre");
+    const detalleCliente = document.getElementById("detalleClienteSeleccionado");
+    if (clienteVisible) clienteVisible.value = pedido.cliente_nombre;
+    if (clienteNombreInput) clienteNombreInput.value = pedido.cliente_nombre;
+    if (detalleCliente) detalleCliente.textContent = `Cliente: ${pedido.cliente_nombre}`;
+    clienteSeleccionado = { id: null, nombre: pedido.cliente_nombre, con_rtn: false };
+  }
+
+  productos.forEach((item) => {
+    const cantidad = Number(item.cantidad) || 1;
+    const impuesto15 = Number(item.isv_15) || 0;
+    const impuesto18 = Number(item.isv_18) || 0;
+    const producto = {
+      id: item.id,
+      combo_id: item.combo_id || null,
+      es_combo: Boolean(item.es_combo),
+      codigo: item.codigo_sku,
+      nombre: item.nombre,
+      precio_venta: Number(item.precio_venta) || 0,
+      precio_venta_min: 0,
+      precio_venta_max: 0,
+      tipos_isv: impuesto15 > 0 ? 15 : impuesto18 > 0 ? 18 : 0,
+      stock: cantidad,
+      cantidad: cantidad,
+      descuento: Number(item.descuento) || 0,
+      subtotal: Number(item.subtotal) || 0,
+      valor_descuento: 0,
+      acumulable: false,
+      estado: 0,
+      isv_15: impuesto15 / cantidad,
+      isv_18: impuesto18 / cantidad,
+      isv15_acumulable: impuesto15,
+      isv18_acumulable: impuesto18,
+      lleva: 0,
+      paga: 0,
+      restarlleva: 0,
+    };
+    recalcularLineaConIsvIncluido(producto);
+    datos.push(producto);
+    tabla_codigo(
+      producto.codigo,
+      producto.nombre,
+      `${cantidad} / ${cantidad}`,
+      producto.precio_venta.toFixed(2),
+      producto.descuento.toFixed(2),
+      totalLineaCaja(producto).toFixed(2),
+    );
+  });
+
+  tabla_detalle_total();
+  mensaje(
+    `Pedido ${pedido.numero_pedido} cargado en caja para cobro`,
+    "success",
+    "",
+  );
+}
+
+const btnGenerarPedido = document.getElementById("btnGenerarPedido");
+
+if (btnGenerarPedido) {
+  btnGenerarPedido.addEventListener("click", async () => {
+    if (!datos.length) {
+      mensaje(
+        "Agregue productos antes de generar el pedido",
+        "warning",
+        "",
+      );
+      return;
+    }
+
+    if (!btnGenerarPedido.dataset.clienteConfirmado && !clienteSeleccionado) {
+      pedidoPendienteCliente = true;
+      abrirSelectorClienteParaCotizacion();
+      return;
+    }
+    delete btnGenerarPedido.dataset.clienteConfirmado;
+
+    const confirmacion = await Swal.fire({
+      title: "Generar pedido",
+      text: "Se generará un pedido para ruta con los productos y precios seleccionados.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Generar",
+      cancelButtonText: "Cancelar",
+      customClass: { confirmButton: "classbotones" },
+    });
+    if (!confirmacion.isConfirmed) return;
+
+    const csrf = document.querySelector("[name=csrfmiddlewaretoken]");
+    if (!csrf) {
+      mensaje("No se encontró el token de seguridad", "error", "");
+      return;
+    }
+
+    btnGenerarPedido.disabled = true;
+    try {
+      const respuesta = await fetch(btnGenerarPedido.dataset.url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrf.value,
+        },
+        body: JSON.stringify({
+          productos: datos,
+          cliente_id: document.getElementById("cliente_id")?.value || null,
+          cliente_nombre:
+            document.getElementById("cliente_nombre")?.value || "",
+        }),
+      });
+      const data = await respuesta.json();
+      if (!respuesta.ok || !data.success) {
+        throw new Error(data.message || "No fue posible generar el pedido");
+      }
+
+      await Swal.fire({
+        title: "Pedido generado",
+        html: `Número de pedido: <b>${data.numero_pedido}</b><br><small class="text-muted">El pedido fue registrado y está listo para gestión.</small>`,
+        icon: "success",
+        confirmButtonText: "Aceptar",
+        allowOutsideClick: false,
+        customClass: { confirmButton: "classbotones" },
+      });
+      limpiarCajaDespuesDeVenta();
+    } catch (error) {
+      mensaje(error.message, "error", "");
+    } finally {
+      btnGenerarPedido.disabled = false;
     }
   });
 }
@@ -2322,6 +2499,15 @@ function seleccionarCliente(cliente) {
     }
   }
 
+  if (pedidoPendienteCliente) {
+    pedidoPendienteCliente = false;
+    const botonPedido = document.getElementById("btnGenerarPedido");
+    if (botonPedido) {
+      botonPedido.dataset.clienteConfirmado = "true";
+      botonPedido.click();
+    }
+  }
+
   // ------------------------------------------------------
   // ACTUALIZAR PAGO
   // ------------------------------------------------------
@@ -2531,12 +2717,12 @@ if (postPagar) {
     // CLIENTE
     // ------------------------------------------------
 
-    if (!clienteSeleccionado) {
+    if (!clienteSeleccionado && !pedidoCargadoEnCaja) {
       mensaje("Seleccione un cliente antes de realizar la venta", "error", "");
       return;
     }
 
-    if (!clienteId) {
+    if (!clienteId && !pedidoCargadoEnCaja) {
       mensaje("Seleccione un cliente antes de realizar la venta", "error", "");
       return;
     }
@@ -2613,6 +2799,7 @@ if (postPagar) {
       pagos: pagos,
       tarjeta: tarjeta,
       nota_credito_id: notaCreditoSeleccionada?.id || null,
+      pedido_tienda_id: pedidoCargadoEnCaja || null,
       cliente: {
         id: clienteId,
         nombre: clienteNombre,
@@ -2678,6 +2865,8 @@ function limpiarCajaDespuesDeVenta() {
   notaCreditoSeleccionada = null;
   clienteSeleccionado = null;
   cotizacionPendienteCliente = false;
+  pedidoPendienteCliente = false;
+  pedidoCargadoEnCaja = null;
   total_m = 0;
   codex = 0;
 
@@ -3496,12 +3685,17 @@ document.addEventListener("DOMContentLoaded", () => {
       );
       actualizarListaConAnimacion(
         data.results
-          .map(
-            (p) =>
-              `<article class="caja-product-option ${seleccionados.has(p.codigoSKU) ? "seleccionado" : ""}" data-codigo="${p.codigoSKU}"><img class="caja-product-option__image" src="${p.imagenUrl || "/static/img/default.webp"}" onerror="this.src='/static/img/default.webp'"><div class="caja-product-option__info"><strong>${p.nombre}</strong><small>Existencia: ${truncarExistencia(p.stock)} ${p.unidad || ""}</small></div><span class="caja-product-option__action"><i class="bx ${seleccionados.has(p.codigoSKU) ? "bx-check-circle" : "bx-plus-circle"}"></i> ${seleccionados.has(p.codigoSKU) ? "Seleccionado" : "Seleccionar"}</span></article>`,
-          )
+          .map((p) => {
+            if (p.esCotizacion) {
+              return `<article class="caja-product-option ${seleccionados.has(p.codigoSKU) ? "seleccionado" : ""}" data-codigo="${p.codigoSKU}"><div class="caja-product-option__image caja-product-option__icon"><i class="bx bx-file-blank"></i></div><div class="caja-product-option__info"><strong>${p.nombre}</strong><small>Cliente: ${p.clienteNombre || "Consumidor Final"}</small></div><span class="caja-product-option__action"><i class="bx ${seleccionados.has(p.codigoSKU) ? "bx-check-circle" : "bx-plus-circle"}"></i> ${seleccionados.has(p.codigoSKU) ? "Seleccionado" : "Seleccionar"}</span></article>`;
+            }
+            if (p.esPedido) {
+              return `<article class="caja-product-option ${seleccionados.has(p.codigoSKU) ? "seleccionado" : ""}" data-codigo="${p.codigoSKU}"><div class="caja-product-option__image caja-product-option__icon"><i class="bx bx-package"></i></div><div class="caja-product-option__info"><strong>${p.nombre}</strong><small>Cliente: ${p.clienteNombre || "Consumidor Final"}</small></div><span class="caja-product-option__action"><i class="bx ${seleccionados.has(p.codigoSKU) ? "bx-check-circle" : "bx-plus-circle"}"></i> ${seleccionados.has(p.codigoSKU) ? "Seleccionado" : "Seleccionar"}</span></article>`;
+            }
+            return `<article class="caja-product-option ${seleccionados.has(p.codigoSKU) ? "seleccionado" : ""}" data-codigo="${p.codigoSKU}"><img class="caja-product-option__image" src="${p.imagenUrl || "/static/img/default.webp"}" onerror="this.src='/static/img/default.webp'"><div class="caja-product-option__info"><strong>${p.nombre}</strong><small>Existencia: ${truncarExistencia(p.stock)} ${p.unidad || ""}</small></div><span class="caja-product-option__action"><i class="bx ${seleccionados.has(p.codigoSKU) ? "bx-check-circle" : "bx-plus-circle"}"></i> ${seleccionados.has(p.codigoSKU) ? "Seleccionado" : "Seleccionar"}</span></article>`;
+          })
           .join("") ||
-          '<p class="text-center py-4">No se encontraron productos.</p>',
+          '<p class="text-center py-4">No se encontraron productos, pedidos ni cotizaciones.</p>',
       );
       lista.classList.remove("is-loading");
       lista.querySelectorAll("[data-codigo]").forEach(
@@ -3509,14 +3703,16 @@ document.addEventListener("DOMContentLoaded", () => {
           (item.onclick = () => {
             const codigo = item.dataset.codigo;
             const producto = productosPagina.get(codigo);
-            const stockVendible = Math.floor(Number(producto?.stock) || 0);
-            if (stockVendible < 1) {
-              mensaje(
-                `${producto?.nombre || "El producto"} no tiene unidades completas disponibles. Existencia: ${truncarExistencia(producto?.stock)} ${producto?.unidad || ""}.`,
-                "warning",
-                "",
-              );
-              return;
+            if (!producto?.esCotizacion && !producto?.esPedido) {
+              const stockVendible = Math.floor(Number(producto?.stock) || 0);
+              if (stockVendible < 1) {
+                mensaje(
+                  `${producto?.nombre || "El producto"} no tiene unidades completas disponibles. Existencia: ${truncarExistencia(producto?.stock)} ${producto?.unidad || ""}.`,
+                  "warning",
+                  "",
+                );
+                return;
+              }
             }
             seleccionados.has(codigo)
               ? seleccionados.delete(codigo)

@@ -1,4 +1,4 @@
-@import url("catalogos_mobile.css?v=20261005-tarjetas-detalle");
+@import url("catalogos_mobile.css");
 
 @media (max-width: 1032px) {
   /* Aísla Descuentos de las reglas centradas de Bootstrap para conservar la

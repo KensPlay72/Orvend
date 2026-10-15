@@ -5,7 +5,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/manager.css' %}">
 <link rel="stylesheet" href="{% static 'css/devoluciones_venta.css' %}">
-<link rel="stylesheet" href="{% static 'css/cotizaciones.css' %}?v=20261004-recepcion-style">
+<link rel="stylesheet" href="{% static 'css/cotizaciones.css' %}">
 {% endblock extra_css %}
 
 {% block titulo_content %}
@@ -65,10 +65,10 @@
         </footer>
     </article>
     {% empty %}
-    <div class="cotizaciones-mobile-empty">
-        <i class="bx bx-file-blank" aria-hidden="true"></i>
-        <strong>Sin cotizaciones</strong>
-        <span>Aún no hay cotizaciones generadas.</span>
+    <div class="mobile-empty-state">
+        <i class="bx bx-file-blank fs-2 text-muted d-block mb-2"></i>
+        <strong>No hay cotizaciones registradas para mostrar.</strong>
+        <p class="text-muted small m-0">Las cotizaciones generadas desde Caja aparecerán aquí.</p>
     </div>
     {% endfor %}
 </section>
@@ -101,7 +101,13 @@
                     <td><a class="btn classbotones" target="_blank" href="{% url 'imprimir_cotizacion' cotizacion.documento_token %}" title="Descargar cotización"><i class="bx bx-download"></i></a></td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="8" class="text-center py-3 table-empty-state">Aún no hay cotizaciones generadas.</td></tr>
+                <tr>
+                    <td colspan="8" class="text-center table-empty-state py-4">
+                        <i class="bx bx-file-blank fs-2 text-muted d-block mb-2"></i>
+                        <strong>No hay cotizaciones registradas para mostrar.</strong>
+                        <p class="text-muted small m-0">Las cotizaciones generadas desde Caja aparecerán aquí.</p>
+                    </td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>

@@ -3,8 +3,8 @@
 {% block title %} Caja {% endblock title %} 
 {% block extra_css %}
 
-<link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261005-number-inputs" />
-<link rel="stylesheet" href="{% static 'css/caja.css' %}?v=20261005-espacio-contenido" />
+<link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+<link rel="stylesheet" href="{% static 'css/caja.css' %}" />
 
 {% endblock extra_css %} 
 {% block titulo_content %}
@@ -136,6 +136,13 @@
                 <button type="button" id="btnGenerarCotizacion" class="btn-cotizacion" data-url="{% url 'crear_cotizacion' %}">
                     <i class="bx bx-file-blank" aria-hidden="true"></i>
                     <span>Generar cotización</span>
+                </button>
+                {% endif %}
+
+                {% if puede_generar_pedidos %}
+                <button type="button" id="btnGenerarPedido" class="btn-pedido" data-url="{% url 'crear_pedido_caja' %}">
+                    <i class="bx bx-package" aria-hidden="true"></i>
+                    <span>Generar Pedido</span>
                 </button>
                 {% endif %}
 
@@ -1003,7 +1010,7 @@
 
 <script
   type="module"
-  src="{% static 'js/caja/caja.js' %}?v=20261006-stock-concurrente"
+  src="{% static 'js/caja/caja.js' %}"
 ></script>
 
 <!-- ========================================================= -->

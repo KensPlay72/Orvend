@@ -1,0 +1,80 @@
+{% load static tienda_extras %}
+{% for bloque in categorias_con_carrusel %}
+  <div class="tienda-seccion-categoria" id="categoria-bloque-{{ bloque.categoria.id }}">
+    <div class="tienda-categoria-titulo-fila">
+      <span class="tienda-categoria-linea" aria-hidden="true"></span>
+      <h2 class="tienda-categoria-titulo">
+        <a class="tienda-categoria-titulo__enlace" href="?catalogo=1&amp;categoria={{ bloque.categoria|categoria_token }}#catalogo" title="Ver todo en {{ bloque.categoria.nombre }}">
+          <span>{{ bloque.categoria.nombre }}</span>
+        </a>
+      </h2>
+      <span class="tienda-categoria-linea" aria-hidden="true"></span>
+    </div>
+
+    <div class="tienda-carrusel-wrapper">
+      <button type="button" class="tienda-carrusel-nav-btn tienda-carrusel-nav-btn--prev"
+              data-carousel-nav="prev" data-target="#track-cat-{{ bloque.categoria.id }}"
+              aria-label="Desplazar {{ bloque.categoria.nombre }} a la izquierda">
+        <i class="bx bx-chevron-left" aria-hidden="true"></i>
+      </button>
+
+      <div class="tienda-carrusel-track" id="track-cat-{{ bloque.categoria.id }}" tabindex="0" role="region" aria-label="Productos en {{ bloque.categoria.nombre }}">
+        {% for producto in bloque.productos %}
+          {% with imagen=producto.imagenes_producto.all|first %}
+            <article class="tienda-producto tienda-producto--compacto {% if not producto.existencia|tiene_stock_entero %}tienda-producto--agotado{% endif %}">
+              <a class="tienda-producto__enlace" href="{% url 'tiendav:detalle_producto' producto.tienda_token %}" aria-label="Ver detalles de {{ producto.nombre }}">
+                <div class="tienda-producto__imagen">
+                  {% if imagen and imagen.imagen_archivo %}
+                    <img src="{% url 'tiendav:producto_imagen' imagen.id %}" alt="{{ producto.nombre }}" loading="lazy">
+                  {% else %}
+                    <img src="{% static 'img/default.webp' %}" alt="{{ producto.nombre }}" loading="lazy">
+                  {% endif %}
+
+                  {% if producto.tiene_oferta %}
+                    <span class="tienda-producto__etiqueta tienda-producto__etiqueta--oferta"><i class="bx bx-purchase-tag" aria-hidden="true"></i> En oferta</span>
+                  {% elif producto.existencia|tiene_stock_entero %}
+                    <span class="tienda-producto__etiqueta"><i class="bx bx-check" aria-hidden="true"></i> Disponible</span>
+                  {% else %}
+                    <span class="tienda-producto__etiqueta tienda-producto__etiqueta--sin-stock"><i class="bx bx-x" aria-hidden="true"></i> Sin stock</span>
+                  {% endif %}
+                </div>
+
+                <div class="tienda-producto__contenido">
+                  <span class="tienda-producto__categoria">{{ producto.categoria.nombre }}</span>
+                  <h3 class="tienda-producto__titulo">{{ producto.nombre }}</h3>
+                  {% if producto.marca %}
+                    <p class="tienda-producto__marca">{{ producto.marca.nombre }}</p>
+                  {% endif %}
+                </div>
+              </a>
+
+              <div class="tienda-producto__pie">
+                <div class="tienda-producto__precio-wrapper">
+                  <small>Precio</small>
+                  {% if producto.tiene_oferta %}<del class="tienda-producto__precio-anterior">{{ moneda_simbolo }} {{ producto.precio_venta|floatformat:2 }}</del>{% endif %}
+                  <strong class="tienda-producto__precio">{{ moneda_simbolo }} {{ producto.precio_oferta|floatformat:2 }}</strong>
+                </div>
+
+                <a href="{% url 'tiendav:detalle_producto' producto.tienda_token %}"
+                   class="tienda-producto__agregar {% if not producto.existencia|tiene_stock_entero %}is-disabled{% endif %}"
+                   aria-label="Comprar {{ producto.nombre }}"
+                   data-product-token="{{ producto.tienda_token }}"
+                   data-btn-card
+                   data-stock="{% if producto.existencia|tiene_stock_entero %}1{% else %}0{% endif %}">
+                  <i class="bx {% if producto.existencia|tiene_stock_entero %}bx-shopping-bag{% else %}bx-block{% endif %}" aria-hidden="true"></i>
+                  <span>{% if producto.existencia|tiene_stock_entero %}Comprar{% else %}Agotado{% endif %}</span>
+                </a>
+              </div>
+            </article>
+          {% endwith %}
+        {% endfor %}
+      </div>
+
+      <button type="button" class="tienda-carrusel-nav-btn tienda-carrusel-nav-btn--next"
+              data-carousel-nav="next" data-target="#track-cat-{{ bloque.categoria.id }}"
+              aria-label="Desplazar {{ bloque.categoria.nombre }} a la derecha">
+        <i class="bx bx-chevron-right" aria-hidden="true"></i>
+      </button>
+    </div>
+  </div>
+{% endfor %}

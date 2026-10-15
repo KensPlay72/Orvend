@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% load static pagination_tags %}
+{% block title %}Mis pedidos | {{ configuracion.nombre_comercial|default:"Tienda" }}{% endblock %}
+{% block content %}
+<main class="tienda-historial" id="contenido-principal">
+  <div class="tienda-historial__contenedor">
+    <header class="tienda-historial__encabezado">
+      <div class="tienda-historial__titulos">
+        <p class="tienda-eyebrow"><i class="bx bx-receipt" aria-hidden="true"></i> Registro de reservas</p>
+        <h1>Mis pedidos</h1>
+        <p>Hola, <strong>{{ cliente_tienda.nombre }}</strong>. Aquí puedes consultar el estado y detalle de tus pedidos.</p>
+      </div>
+      <div class="tienda-historial__acciones-header">
+        <a class="tienda-btn-secundario" href="{% url 'tiendav:perfil' %}">
+          <i class="bx bx-user" aria-hidden="true"></i>
+          <span>Mi perfil</span>
+        </a>
+      </div>
+    </header>
+
+    <div class="tienda-historial__info-banner">
+      <div class="tienda-historial__info-icono"><i class="bx bx-info-circle"></i></div>
+      <div>
+        <strong>¿Cómo funcionan las reservas?</strong>
+        <p>El personal de la tienda revisa tu pedido y confirma cuando esté listo para recoger. El inventario se descuenta al momento de entregar los productos.</p>
+      </div>
+    </div>
+
+    <section class="tienda-historial__lista" aria-label="Historial de pedidos">
+      {% for pedido in pedidos %}
+        <article class="tienda-pedido-card">
+          <header class="tienda-pedido-card__header">
+            <div class="tienda-pedido-card__id-bloque">
+              <span class="tienda-pedido-card__badge-icono"><i class="bx bx-receipt"></i></span>
+              <div>
+                <strong>Pedido #{{ pedido.id }}</strong>
+                <small><i class="bx bx-calendar"></i> {{ pedido.creado|date:"d/m/Y · h:i a" }}</small>
+              </div>
+            </div>
+            <span class="tienda-pedido-estado tienda-pedido-estado--{{ pedido.estado|lower }}">
+              {% if pedido.estado == "PENDIENTE" %}
+                <i class="bx bx-time-five" aria-hidden="true"></i>
+              {% elif pedido.estado == "EN_REVISION" %}
+                <i class="bx bx-refresh" aria-hidden="true"></i>
+              {% elif pedido.estado == "ACEPTADO" %}
+                <i class="bx bx-check-circle" aria-hidden="true"></i>
+              {% elif pedido.estado == "ENTREGADO" %}
+                <i class="bx bx-package" aria-hidden="true"></i>
+              {% else %}
+                <i class="bx bx-x-circle" aria-hidden="true"></i>
+              {% endif %}
+              {{ pedido.get_estado_display }}
+            </span>
+          </header>
+
+          <div class="tienda-pedido-card__sucursal">
+            <i class="bx bx-store-alt" aria-hidden="true"></i>
+            <div>
+              <small>Tienda para recoger</small>
+              <strong>{{ pedido.ubicacion.nombre }}</strong>
+            </div>
+          </div>
+
+          <div class="tienda-pedido-card__detalles">
+            <h4><i class="bx bx-package"></i> Productos reservados</h4>
+            {% with total_items=pedido.total_detalles %}
+              {% if total_items <= 5 %}
+                <ul class="tienda-pedido-card__items">
+                  {% for detalle in pedido.detalles_historial %}
+                    {% with prod_img=detalle.producto.imagenes_producto.all|first prod_cambio_img=detalle.producto_cambio.imagenes_producto.all|first %}
+                      <li class="tienda-pedido-item">
+                        <div class="tienda-pedido-item__img-wrap">
+                          {% if detalle.rev_estado == "CAMBIADO" and prod_cambio_img and prod_cambio_img.imagen_archivo %}
+                            <img src="{% url 'tiendav:producto_imagen' prod_cambio_img.id %}" alt="{{ detalle.producto_cambio.nombre }}" loading="lazy">
+                          {% elif prod_img and prod_img.imagen_archivo %}
+                            <img src="{% url 'tiendav:producto_imagen' prod_img.id %}" alt="{{ detalle.nombre_producto }}" loading="lazy">
+                          {% else %}
+                            <img src="{% static 'img/default.webp' %}" alt="{{ detalle.nombre_producto }}" loading="lazy">
+                          {% endif %}
+                        </div>
+                        <div class="tienda-pedido-item__info">
+                          {% if detalle.rev_estado == "CAMBIADO" and detalle.producto_cambio %}
+                            <a href="{% url 'tiendav:detalle_producto' detalle.producto_cambio.tienda_token %}" class="tienda-pedido-item__nombre">
+                              {{ detalle.producto_cambio.nombre }}
+                            </a>
+                            <div class="tienda-pedido-item__meta">
+                              <span class="tienda-pedido-item__cant">{{ detalle.rev_cantidad_aprobada|floatformat:"-2" }} ud{{ detalle.rev_cantidad_aprobada|floatformat:"-2"|pluralize:"s" }}</span>
+                              <span class="tienda-pedido-item__precio-u">× {{ moneda_simbolo }} {{ detalle.rev_precio_unitario|floatformat:2 }}</span>
+                              {% if detalle.producto_cambio.codigo_sku %}
+                                <span class="tienda-pedido-item__sku">SKU: {{ detalle.producto_cambio.codigo_sku }}</span>
+                              {% endif %}
+                            </div>
+                            <span class="tienda-item-estado tienda-item-estado--cambiado mt-1">
+                              <i class="bx bx-sync" aria-hidden="true"></i> Cambio
+                            </span>
+                          {% else %}
+                            <a href="{% url 'tiendav:detalle_producto' detalle.producto.tienda_token %}" class="tienda-pedido-item__nombre">
+                              {{ detalle.nombre_producto }}
+                            </a>
+                            <div class="tienda-pedido-item__meta">
+                              <span class="tienda-pedido-item__cant">{{ detalle.cantidad|floatformat:"-2" }} ud{{ detalle.cantidad|floatformat:"-2"|pluralize:"s" }}</span>
+                              <span class="tienda-pedido-item__precio-u">× {{ moneda_simbolo }} {{ detalle.precio_unitario|floatformat:2 }}</span>
+                              {% if detalle.codigo_sku %}
+                                <span class="tienda-pedido-item__sku">SKU: {{ detalle.codigo_sku }}</span>
+                              {% endif %}
+                            </div>
+                          {% endif %}
+                          {% if detalle.rev_estado == "DEVUELTO" %}
+                            <span class="tienda-item-estado tienda-item-estado--rechazado mt-2">
+                              <i class="bx bx-undo" aria-hidden="true"></i> Devuelto
+                            </span>
+                            {% if detalle.rev_justificacion_devolucion %}
+                              <div class="tienda-item-justificacion tienda-item-justificacion--rechazado">
+                                <i class="bx bx-info-circle" aria-hidden="true"></i>
+                                <span><strong>Motivo:</strong> {{ detalle.rev_justificacion_devolucion }}</span>
+                              </div>
+                            {% endif %}
+                          {% elif detalle.rev_estado == "RECHAZADO" and detalle.rev_justificacion %}
+                            <div class="tienda-item-justificacion tienda-item-justificacion--rechazado">
+                              <i class="bx bx-info-circle" aria-hidden="true"></i>
+                              <span><strong>Motivo:</strong> {{ detalle.rev_justificacion }}</span>
+                            </div>
+                          {% elif detalle.rev_estado == "CAMBIADO" and detalle.rev_justificacion %}
+                            <div class="tienda-item-justificacion tienda-item-justificacion--cambiado">
+                              <i class="bx bx-info-circle" aria-hidden="true"></i>
+                              <span><strong>Motivo:</strong> {{ detalle.rev_justificacion }}</span>
+                            </div>
+                          {% endif %}
+                        </div>
+                        <strong class="tienda-pedido-item__subtotal">{{ moneda_simbolo }} {{ detalle.rev_subtotal|floatformat:2 }}</strong>
+                      </li>
+                    {% endwith %}
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <div class="tienda-pedido-preview">
+                  <div class="tienda-pedido-preview__fila">
+                    {% for detalle in pedido.detalles_historial|slice:":4" %}
+                      {% with prod_img=detalle.producto.imagenes_producto.all|first prod_cambio_img=detalle.producto_cambio.imagenes_producto.all|first %}
+                        <div class="tienda-pedido-preview__thumb" title="{% if detalle.rev_estado == 'CAMBIADO' and detalle.producto_cambio %}{{ detalle.producto_cambio.nombre }}{% else %}{{ detalle.nombre_producto }}{% endif %}">
+                          {% if detalle.rev_estado == "CAMBIADO" and prod_cambio_img and prod_cambio_img.imagen_archivo %}
+                            <img src="{% url 'tiendav:producto_imagen' prod_cambio_img.id %}" alt="{{ detalle.producto_cambio.nombre }}" loading="lazy">
+                          {% elif prod_img and prod_img.imagen_archivo %}
+                            <img src="{% url 'tiendav:producto_imagen' prod_img.id %}" alt="{{ detalle.nombre_producto }}" loading="lazy">
+                          {% else %}
+                            <img src="{% static 'img/default.webp' %}" alt="{{ detalle.nombre_producto }}" loading="lazy">
+                          {% endif %}
+                        </div>
+                      {% endwith %}
+                    {% endfor %}
+                    <div class="tienda-pedido-preview__mas" title="Ver los demás productos">
+                      +{{ total_items|add:"-4" }}
+                    </div>
+                  </div>
+                  <p class="tienda-pedido-preview__resumen">
+                    Llevas <strong>{{ total_items }} productos</strong> en este pedido.
+                  </p>
+                </div>
+              {% endif %}
+            {% endwith %}
+
+            <div class="tienda-pedido-card__accion-detalle">
+              <a href="{% url 'tiendav:detalle_pedido' pedido.token %}" class="tienda-btn-detalle-pedido">
+                <i class="bx bx-show"></i>
+                <span>Ver detalle del pedido</span>
+              </a>
+            </div>
+          </div>
+
+          <footer class="tienda-pedido-card__footer">
+            <div class="tienda-pedido-card__total">
+              <span>Total a pagar al recoger:</span>
+              <strong>{{ moneda_simbolo }} {{ pedido.total|floatformat:2 }}</strong>
+            </div>
+            <div class="tienda-pedido-card__nota tienda-pedido-card__nota--{{ pedido.estado|lower }}">
+              {% if pedido.estado == "PENDIENTE" %}
+                <i class="bx bx-time" aria-hidden="true"></i>
+                <span>Tu reserva está pendiente de revisión por el personal de la tienda.</span>
+              {% elif pedido.estado == "EN_REVISION" %}
+                <i class="bx bx-refresh" aria-hidden="true"></i>
+                <span>Tu reserva está en revisión en tienda. Entra al detalle para ver los productos aceptados.</span>
+              {% elif pedido.estado == "ACEPTADO" %}
+                <i class="bx bx-check-shield" aria-hidden="true"></i>
+                <span>¡Pedido confirmado! Tus productos están apartados listos para entrega en la sucursal.</span>
+              {% elif pedido.estado == "ENTREGADO" %}
+                <i class="bx bx-package" aria-hidden="true"></i>
+                <span>Este pedido ya fue entregado. Revisa el detalle para consultar devoluciones y sus motivos.</span>
+              {% else %}
+                <i class="bx bx-x" aria-hidden="true"></i>
+                <span>La tienda no pudo aceptar esta reserva y las unidades fueron liberadas.</span>
+              {% endif %}
+            </div>
+          </footer>
+        </article>
+      {% empty %}
+        <div class="tienda-vacio tienda-historial__vacio">
+          <div class="tienda-vacio__icono"><i class="bx bx-shopping-bag" aria-hidden="true"></i></div>
+          <h2>Aún no has realizado pedidos</h2>
+          <p>Explora nuestro catálogo y agrega los productos que deseas reservar en tu tienda más cercana.</p>
+          <a class="tienda-btn-primario" href="{% url 'tiendav:inicio' %}?catalogo=1#catalogo">
+            <i class="bx bx-store"></i> Explorar catálogo
+          </a>
+        </div>
+      {% endfor %}
+    </section>
+    {% if page_obj.paginator.num_pages > 1 %}
+      <nav class="tienda-paginador" aria-label="Paginación de pedidos">
+        <ul class="tienda-paginador__lista">
+          <li class="tienda-paginador__item {% if not page_obj.has_previous %}is-disabled{% endif %}">
+            {% if page_obj.has_previous %}
+              <a class="tienda-paginador__link" href="?page={{ page_obj.previous_page_number }}" aria-label="Página anterior">«</a>
+            {% else %}
+              <span class="tienda-paginador__link" aria-hidden="true">«</span>
+            {% endif %}
+          </li>
+          {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
+          {% for p in paginas_visibles %}
+            <li class="tienda-paginador__item {% if p == page_obj.number %}is-active{% endif %}">
+              <a class="tienda-paginador__link" href="?page={{ p }}" {% if p == page_obj.number %}aria-current="page"{% endif %}>{{ p }}</a>
+            </li>
+          {% endfor %}
+          <li class="tienda-paginador__item {% if not page_obj.has_next %}is-disabled{% endif %}">
+            {% if page_obj.has_next %}
+              <a class="tienda-paginador__link" href="?page={{ page_obj.next_page_number }}" aria-label="Página siguiente">»</a>
+            {% else %}
+              <span class="tienda-paginador__link" aria-hidden="true">»</span>
+            {% endif %}
+          </li>
+        </ul>
+      </nav>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}

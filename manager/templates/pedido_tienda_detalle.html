@@ -1,0 +1,971 @@
+{% extends "menu.html" %} 
+{% load static pagination_tags %} 
+{% block title %}Detalle del Pedido {% if pedido.numero_pedido %}{{ pedido.numero_pedido }}{%else %}#{{ pedido.id }}{% endif %}{% endblock %} 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+<link rel="stylesheet" href="{% static 'css/pedidos_tienda.css' %}" />
+<link rel="stylesheet" href="{% static 'css/tienda.css' %}" />
+{% endblock %} 
+{% block page_css_overrides %}
+<link rel="stylesheet" href="{% static 'css/catalogos_mobile.css' %}" />
+{% endblock page_css_overrides %} 
+{% block titulo_content %}
+<div class="tituloscont">
+  <img class="logop" src="{% static 'img/LH.webp' %}" alt="" />
+  <p class="header__logo">
+    | Detalle de Pedido {% if pedido.numero_pedido %}{{ pedido.numero_pedido}}{% else %}#{{ pedido.id }}{% endif %}
+  </p>
+</div>
+{% endblock %} 
+{% block main_content %}
+<div
+  class="pedido-manager-detalle"
+  id="pedidoManagerDetalle"
+  data-url-buscar="{% url 'buscar_productos_pedido' %}"
+  data-sucursal-id="{{ pedido.ubicacion_id }}"
+  data-url-cambiar="{% url 'cambiar_item_pedido_tienda' pedido.token %}?page={{ page_obj.number }}"
+  data-url-anexar="{% url 'anexar_item_pedido_tienda' pedido.token %}?page={{ page_obj.number }}"
+  data-puede-modificar-precio="{% if puede_modificar_precio %}true{% else %}false{% endif %}"
+  data-moneda-simbolo="{{ moneda_simbolo }}"
+>
+  <div class="pedido-detalle-header">
+    <div class="pedido-detalle-hero">
+      <div class="pedido-detalle-hero__top">
+        <h1 class="pedido-detalle-hero__id">
+          Pedido {% if pedido.numero_pedido %}{{ pedido.numero_pedido }}{% else %}#{{ pedido.id }}{% endif %}
+        </h1>
+        <div class="pedido-detalle-hero__estado">
+          {% if pedido.estado == "PENDIENTE" %}
+          <span class="badge bg-warning text-dark px-3 py-2 fs-6"
+            ><i class="bx bx-time-five"></i> Pendiente</span
+          >
+          {% elif pedido.estado == "EN_REVISION" %}
+          <span class="badge bg-info text-dark px-3 py-2 fs-6"
+            ><i class="bx bx-refresh"></i> En revisión</span
+          >
+          {% elif pedido.estado == "ACEPTADO" %}
+          <span
+            class="badge pedido-estado pedido-estado--aceptado px-3 py-2 fs-6"
+            ><i class="bx bx-check-circle"></i> Aceptado</span
+          >
+          {% elif pedido.estado == "PAGADO" %}
+          <span class="badge bg-info text-white px-3 py-2 fs-6"
+            ><i class="bx bx-wallet"></i> Pagado</span
+          >
+          {% elif pedido.estado == "ENTREGADO" %}
+          <span
+            class="badge pedido-estado pedido-estado--entregado px-3 py-2 fs-6"
+            ><i class="bx bx-package"></i> Entregado</span
+          >
+          {% elif pedido.estado == "RECHAZADO" %}
+          <span class="badge bg-danger px-3 py-2 fs-6"
+            ><i class="bx bx-x-circle"></i> Rechazado</span
+          >
+          {% endif %}
+        </div>
+      </div>
+      <div class="pedido-detalle-hero__fecha">
+        <small class="text-muted"><i class="bx bx-calendar"></i> {{ pedido.creado|date:"d/m/Y · h:i a" }}</small>
+      </div>
+    </div>
+  </div>
+
+  {% if messages %}
+  <div class="pedido-flash-messages" data-pedido-flash-messages hidden>
+    {% for message in messages %}
+    <span
+      data-message="{{ message }}"
+      data-type="{{ message.tags|default:'info' }}"
+    ></span>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Tarjetas de datos del cliente y sucursal -->
+  <div class="pedido-detalle-info-grid">
+    <div class="pedido-info-card pedido-info-card--sucursal">
+      <h3>
+        <i class="bx bx-user color-sistema-primario"></i> Datos del Cliente
+      </h3>
+      <p><strong>Nombre:</strong> {{ pedido.nombre_cliente }}</p>
+      {% if pedido.rtn_cliente %}
+      <p><strong>RTN / DNI:</strong> {{ pedido.rtn_cliente }}</p>
+      {% endif %} {% if pedido.email_cliente %}
+      <p><strong>Correo:</strong> {{ pedido.email_cliente }}</p>
+      {% endif %} {% if pedido.telefono_cliente %}
+      <p>
+        <strong>Teléfono:</strong>
+        <a
+          href="tel:{{ pedido.telefono_cliente }}"
+          class="text-decoration-none fw-bold color-sistema-primario"
+          ><i class="bx bx-phone"></i> {{ pedido.telefono_cliente }}</a
+        >
+      </p>
+      {% endif %} {% if pedido.direccion_cliente %}
+      <p><strong>Dirección:</strong> {{ pedido.direccion_cliente }}</p>
+      {% endif %} {% if pedido.cliente and pedido.cliente.indicaciones_entrega%}
+      <p>
+        <strong>Notas del cliente:</strong>
+        <em>{{ pedido.cliente.indicaciones_entrega }}</em>
+      </p>
+      {% endif %} {% if pedido.origen == "CAJA_RUTA" or pedido.cliente_pos %}
+      <p>
+        <span class="badge bg-light text-dark border"
+          ><i class="bx bx-car"></i> Pedido generado en Caja (Ruta)</span
+        >
+      </p>
+      {% else %}
+      <p>
+        <span class="badge bg-light text-dark border"
+          ><i class="bx bx-globe"></i> Pedido Tienda Virtual</span
+        >
+      </p>
+      {% endif %}
+    </div>
+
+    <div class="pedido-info-card">
+      <h3>
+        <i class="bx bx-store-alt color-sistema-primario"></i> Sucursal de
+        Retiro
+      </h3>
+      <p><strong>Sucursal:</strong> {{ pedido.ubicacion.nombre }}</p>
+      {% if pedido.ubicacion.direccion %}
+      <p><strong>Dirección:</strong> {{ pedido.ubicacion.direccion }}</p>
+      {% endif %} {% if pedido.ubicacion.telefono %}
+      <p>
+        <strong>Teléfono:</strong>
+        <span class="color-sistema-primario fw-bold"
+          >{{ pedido.ubicacion.telefono }}</span
+        >
+      </p>
+      {% endif %}
+      <div class="mt-3 pt-2 border-top">
+        <small class="text-muted d-block fw-bold"
+          >Total a pagar al retirar:</small
+        >
+        <strong class="fs-4 color-sistema-primario"
+          >{{ moneda_simbolo }} {{ total_calculado|floatformat:2 }}</strong
+        >
+      </div>
+    </div>
+  </div>
+
+  <!-- Sección de productos del pedido con acciones -->
+  <section class="pedido-productos-section">
+    <div class="pedido-productos-header">
+      <h2>
+        <i class="bx bx-package color-sistema-primario"></i> Productos del
+        Pedido
+      </h2>
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        {% if puede_anexar and pedido.estado == "PENDIENTE" or puede_anexar and pedido.estado == "EN_REVISION" %}
+        <button
+          type="button"
+          class="btn btn-sistema-primario btn-sm d-inline-flex align-items-center gap-1"
+          id="btnAbrirAnexarPedido"
+        >
+          <i class="bx bx-plus-circle"></i> Anexar producto
+        </button>
+        {% endif %} 
+        {% if puede_aprobar and pedido.estado == "PENDIENTE" or puede_aprobar and pedido.estado == "EN_REVISION" %} {% if hay_pendientes or not todos_revisados %}
+        <form
+          method="post"
+          action="{% url 'revisar_item_pedido_tienda' pedido.token %}?page={{ page_obj.number }}"
+          id="formConfirmarTodosPendientes"
+          class="m-0"
+        >
+          {% csrf_token %}
+          <input type="hidden" name="accion" value="aceptar_todos" />
+          <button
+            type="submit"
+            class="btn btn-sistema-primario btn-sm d-inline-flex align-items-center gap-1"
+            id="btnConfirmarTodo"
+          >
+            <i class="bx bx-check-double"></i> Confirmar todo
+          </button>
+        </form>
+        {% endif %} {% endif %}
+      </div>
+    </div>
+
+    <ul class="manager-pedido-items">
+      {% for detalle in detalles %} 
+    {% with img=detalle.producto.imagenes_producto.first img_cambio=detalle.producto_cambio.imagenes_producto.first %}
+      <li class="manager-pedido-item">
+        <div class="manager-pedido-item__main">
+          <!-- Imagen del producto solicitado por el cliente (producto antiguo) -->
+          <div class="manager-pedido-item__img-wrap">
+            {% if img and img.id %}
+            <img
+              src="{% url 'producto_imagen' img.id %}"
+              alt="{{ detalle.nombre_producto }}"
+              onerror="this.onerror=null; this.src='{% static 'img/default.webp' %}';"
+              loading="lazy"
+            />
+            {% else %}
+            <img
+              src="{% static 'img/default.webp' %}"
+              alt="{{ detalle.nombre_producto }}"
+              loading="lazy"
+            />
+            {% endif %}
+          </div>
+
+          <!-- Datos del producto y estado de revisión -->
+          <div class="manager-pedido-item__info">
+            {% if detalle.rev_estado == "CAMBIADO" and detalle.producto_cambio %}
+            <div class="pedido-producto-original text-muted">
+              <span
+                class="manager-pedido-item__nombre text-decoration-line-through text-muted"
+                >{{ detalle.nombre_producto }}</span
+              >
+              <div class="manager-pedido-item__meta small text-muted">
+                <span>{{ detalle.cantidad|floatformat:"-2" }} ud{{ detalle.cantidad|pluralize:"s" }}</span>
+                <span>× {{ moneda_simbolo }} {{ detalle.precio_unitario|floatformat:2 }}</span>
+                {% if detalle.codigo_sku %}
+                <span class="manager-pedido-item__sku"
+                  >SKU: {{ detalle.codigo_sku }}</span
+                >
+                {% endif %}
+              </div>
+            </div>
+
+            <div
+              class="pedido-cambio-divisor my-2 d-flex align-items-center gap-2"
+            >
+              <i class="bx bx-down-arrow-alt color-sistema-primario fs-4"></i>
+              <span class="tienda-item-estado tienda-item-estado--cambiado">
+                <i class="bx bx-sync"></i> Cambio
+              </span>
+            </div>
+
+            <!-- Recuadro del cambio del producto con la foto del nuevo producto -->
+            <div class="pedido-producto-nuevo d-flex align-items-center gap-3">
+              <div class="pedido-cambio-thumb flex-shrink-0">
+                {% if img_cambio and img_cambio.id %}
+                <img
+                  src="{% url 'producto_imagen' img_cambio.id %}"
+                  alt="{{ detalle.producto_cambio.nombre }}"
+                  onerror="this.onerror=null; this.src='{% static 'img/default.webp' %}';"
+                  loading="lazy"
+                />
+                {% else %}
+                <img
+                  src="{% static 'img/default.webp' %}"
+                  alt="{{ detalle.producto_cambio.nombre }}"
+                  loading="lazy"
+                />
+                {% endif %}
+              </div>
+
+              <div class="pedido-producto-nuevo__detalles flex-grow-1 min-w-0">
+                <span class="manager-pedido-item__nombre fw-bold text-dark"
+                  >{{ detalle.producto_cambio.nombre }}</span
+                >
+                <div class="manager-pedido-item__meta">
+                  <span class="manager-pedido-item__cant fw-bold color-sistema-primario">
+                    {{ detalle.rev_cantidad_aprobada|floatformat:"-2" }} ud{{ detalle.rev_cantidad_aprobada|pluralize:"s" }}
+                  </span>
+                  <span>× {{ moneda_simbolo }} {{ detalle.rev_precio_unitario|floatformat:2 }}</span>
+                  {% if detalle.producto_cambio.codigo_sku %}
+                  <span class="manager-pedido-item__sku"
+                    >SKU: {{ detalle.producto_cambio.codigo_sku }}</span
+                  >
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            {% if detalle.rev_justificacion %}
+            <div
+              class="tienda-item-justificacion tienda-item-justificacion--cambiado mt-2"
+            >
+              <i class="bx bx-info-circle"></i>
+              <span><strong>Motivo del cambio:</strong> {{ detalle.rev_justificacion }}</span>
+            </div>
+            {% endif %}
+            {% else %}
+            <span class="manager-pedido-item__nombre"
+              >{{ detalle.nombre_producto }}</span
+            >
+            <div class="manager-pedido-item__meta">
+              <span class="manager-pedido-item__cant">
+                {{ detalle.cantidad|floatformat:"-2" }} ud{{ detalle.cantidad|pluralize:"s" }}
+              </span>
+              <span>× {{ moneda_simbolo }} {{ detalle.precio_unitario|floatformat:2 }}</span>
+              {% if detalle.codigo_sku %}
+              <span class="manager-pedido-item__sku"
+                >SKU: {{ detalle.codigo_sku }}</span
+              >
+              {% endif %}
+            </div>
+
+            <!-- Estado individual del producto -->
+            <div class="mt-2">
+              {% if detalle.rev_estado == "DEVUELTO" %}
+              <span class="tienda-item-estado tienda-item-estado--rechazado">
+                <i class="bx bx-undo"></i> Producto devuelto
+              </span>
+              {% if detalle.rev_justificacion_devolucion %}
+              <div
+                class="tienda-item-justificacion tienda-item-justificacion--rechazado"
+              >
+                <i class="bx bx-info-circle"></i>
+                <span><strong>Motivo de devolución:</strong> {{ detalle.rev_justificacion_devolucion }}</span>
+              </div>
+              {% endif %} {% elif detalle.rev_estado == "ACEPTADO" %}
+              <span class="tienda-item-estado tienda-item-estado--aceptado">
+                <i class="bx bx-check-circle"></i>
+                {% if detalle.rev_entregado %}Entregado{% else %}Aceptado{%endif %}
+              </span>
+              {% elif detalle.rev_estado == "AJUSTADO" %}
+              <span class="tienda-item-estado tienda-item-estado--ajustado">
+                <i class="bx bx-transfer"></i>
+                {% if detalle.rev_entregado %}Entregado · {% endif %} Cantidad
+                ajustada a
+                <b>{{ detalle.rev_cantidad_aprobada|floatformat:"-2" }}</b> ud
+                (solicitó {{ detalle.rev_cantidad_original|floatformat:"-2" }})
+              </span>
+              {% if detalle.rev_justificacion %}
+              <div class="tienda-item-justificacion">
+                <i class="bx bx-info-circle"></i>
+                <span><strong>Motivo:</strong> {{ detalle.rev_justificacion }}</span>
+              </div>
+              {% endif %} {% elif detalle.rev_estado == "RECHAZADO" %}
+              <span class="tienda-item-estado tienda-item-estado--rechazado">
+                <i class="bx bx-x-circle"></i> Rechazado
+              </span>
+              {% if detalle.rev_justificacion %}
+              <div
+                class="tienda-item-justificacion tienda-item-justificacion--rechazado"
+              >
+                <i class="bx bx-info-circle"></i>
+                <span><strong>Motivo:</strong> {{ detalle.rev_justificacion }}</span>
+              </div>
+              {% endif %} {% else %}
+              <span class="tienda-item-estado tienda-item-estado--pendiente">
+                <i class="bx bx-time"></i> Pendiente de revisión
+              </span>
+              {% endif %}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="manager-pedido-item__bottom">
+          <!-- Subtotal de la línea -->
+          <div class="manager-pedido-item__subtotal">
+            <small>Subtotal</small>
+            {% if detalle.rev_estado == "RECHAZADO" %}
+            <strong class="text-muted text-decoration-line-through"
+              >{{ moneda_simbolo }} 0.00</strong
+            >
+            {% else %}
+            <strong
+              >{{ moneda_simbolo }} {{ detalle.rev_subtotal|floatformat:2 }}</strong
+            >
+            {% endif %}
+          </div>
+
+          <!-- Acciones individuales alineadas -->
+          {% if pedido.estado == "PENDIENTE" or pedido.estado == "EN_REVISION"%}
+          <div class="manager-item-acciones">
+            {% if detalle.rev_estado == "ACEPTADO" %}
+            <span
+              class="btn-item-accion btn-item-check is-confirmed"
+              title="Producto aceptado"
+            >
+              <i class="bx bx-check"></i>
+            </span>
+            {% if puede_cambiar %}
+            <button
+              type="button"
+              class="btn-item-accion btn-item-change btn-abrir-cambio-pedido"
+              data-detalle-id="{{ detalle.id }}"
+              data-nombre="{{ detalle.nombre_producto|escape }}"
+              data-cantidad="{{ detalle.cantidad|floatformat:'-2' }}"
+              data-precio="{{ detalle.precio_unitario|floatformat:2 }}"
+              data-imagen="{% if img and img.id %}{% url 'producto_imagen' img.id %}{% else %}{% static 'img/default.webp' %}{% endif %}"
+              title="Cambiar por otro producto"
+            >
+              <i class="bx bx-sync"></i>
+            </button>
+            {% endif %} 
+            {% elif detalle.rev_estado == "CAMBIADO" %}
+            <span
+              class="btn-item-accion btn-item-change is-confirmed"
+              title="Producto cambiado"
+            >
+              <i class="bx bx-sync"></i>
+            </span>
+            {% if puede_cambiar %}
+            <button
+              type="button"
+              class="btn-item-accion btn-item-change btn-abrir-cambio-pedido"
+              data-detalle-id="{{ detalle.id }}"
+              data-nombre="{{ detalle.nombre_producto|escape }}"
+              data-cantidad="{{ detalle.cantidad|floatformat:'-2' }}"
+              data-precio="{{ detalle.precio_unitario|floatformat:2 }}"
+              data-imagen="{% if img and img.id %}{% url 'producto_imagen' img.id %}{% else %}{% static 'img/default.webp' %}{% endif %}"
+              title="Modificar sustituto"
+            >
+              <i class="bx bx-edit-alt"></i>
+            </button>
+            {% endif %} 
+            {% if puede_aprobar %}
+            <button
+              type="button"
+              class="btn-item-accion btn-item-reject"
+              data-bs-toggle="modal"
+              data-bs-target="#modalRechazarItem{{ detalle.id }}"
+              title="Rechazar este producto"
+            >
+              <i class="bx bx-x"></i>
+            </button>
+            {% endif %} 
+            {% elif detalle.rev_estado == "RECHAZADO" %}
+            <span
+              class="btn-item-accion btn-item-reject is-confirmed"
+              title="Producto rechazado"
+            >
+              <i class="bx bx-x"></i>
+            </span>
+            {% if puede_cambiar %}
+            <button
+              type="button"
+              class="btn-item-accion btn-item-change btn-abrir-cambio-pedido"
+              data-detalle-id="{{ detalle.id }}"
+              data-nombre="{{ detalle.nombre_producto|escape }}"
+              data-cantidad="{{ detalle.cantidad|floatformat:'-2' }}"
+              data-precio="{{ detalle.precio_unitario|floatformat:2 }}"
+              data-imagen="{% if img and img.id %}{% url 'producto_imagen' img.id %}{% else %}{% static 'img/default.webp' %}{% endif %}"
+              title="Cambiar por otro producto"
+            >
+              <i class="bx bx-sync"></i>
+            </button>
+            {% endif %} 
+            {% elif detalle.rev_estado == "AJUSTADO" %} 
+            {% if puede_aprobar %}
+            <button
+              type="button"
+              class="btn-item-accion btn-item-adjust"
+              data-bs-toggle="modal"
+              data-bs-target="#modalAjustarItem{{ detalle.id }}"
+              title="Editar cantidad o justificación"
+            >
+              <i class="bx bx-transfer"></i>
+            </button>
+            {% endif %} 
+            {% if puede_cambiar %}
+            <button
+              type="button"
+              class="btn-item-accion btn-item-change btn-abrir-cambio-pedido"
+              data-detalle-id="{{ detalle.id }}"
+              data-nombre="{{ detalle.nombre_producto|escape }}"
+              data-cantidad="{{ detalle.cantidad|floatformat:'-2' }}"
+              data-precio="{{ detalle.precio_unitario|floatformat:2 }}"
+              data-imagen="{% if img and img.id %}{% url 'producto_imagen' img.id %}{% else %}{% static 'img/default.webp' %}{% endif %}"
+              title="Cambiar por otro producto"
+            >
+              <i class="bx bx-sync"></i>
+            </button>
+            {% endif %} 
+            {% else %} 
+            {% if puede_aprobar %}
+            <form
+              method="post"
+              action="{% url 'revisar_item_pedido_tienda' pedido.token %}?page={{ page_obj.number }}"
+              class="form-aceptar-item"
+              data-nombre="{{ detalle.nombre_producto|escape }}"
+              data-cantidad="{{ detalle.cantidad|floatformat:'-2' }}"
+            >
+              {% csrf_token %}
+              <input type="hidden" name="detalle_id" value="{{ detalle.id }}" />
+              <input type="hidden" name="accion" value="aceptar" />
+              <button
+                type="submit"
+                class="btn-item-accion btn-item-check btn-sweet-aceptar"
+                title="Aceptar producto con cantidad completa"
+              >
+                <i class="bx bx-check"></i>
+              </button>
+            </form>
+
+            <button
+              type="button"
+              class="btn-item-accion btn-item-adjust"
+              data-bs-toggle="modal"
+              data-bs-target="#modalAjustarItem{{ detalle.id }}"
+              title="Modificar cantidad disponible"
+            >
+              <i class="bx bx-transfer"></i>
+            </button>
+            {% endif %} 
+            {% if puede_cambiar %}
+            <button
+              type="button"
+              class="btn-item-accion btn-item-change btn-abrir-cambio-pedido"
+              data-detalle-id="{{ detalle.id }}"
+              data-nombre="{{ detalle.nombre_producto|escape }}"
+              data-cantidad="{{ detalle.cantidad|floatformat:'-2' }}"
+              data-precio="{{ detalle.precio_unitario|floatformat:2 }}"
+              data-imagen="{% if img and img.id %}{% url 'producto_imagen' img.id %}{% else %}{% static 'img/default.webp' %}{% endif %}"
+              title="Cambiar por otro producto"
+            >
+              <i class="bx bx-sync"></i>
+            </button>
+            {% endif %} {% if puede_aprobar %}
+            <button
+              type="button"
+              class="btn-item-accion btn-item-reject"
+              data-bs-toggle="modal"
+              data-bs-target="#modalRechazarItem{{ detalle.id }}"
+              title="Rechazar este producto"
+            >
+              <i class="bx bx-x"></i>
+            </button>
+            {% endif %} 
+            {% endif %}
+          </div>
+          {% elif pedido.estado == "ACEPTADO" or pedido.estado == "PAGADO" or pedido.estado == "ENTREGADO" %} {% if puede_aprobar and detalle.rev_estado == "ACEPTADO" or puede_aprobar and detalle.rev_estado == "AJUSTADO" or puede_aprobar and detalle.rev_estado == "CAMBIADO" %}
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-danger btn-devolver-item"
+            data-bs-toggle="modal"
+            data-bs-target="#modalDevolverItem{{ detalle.id }}"
+          >
+            <i class="bx bx-undo"></i> Devolver producto
+          </button>
+          {% endif %} 
+        {% endif %}
+        </div>
+      </li>
+      {% endwith %} 
+    {% endfor %}
+    </ul>
+  </section>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <nav
+    class="pedido-detalle-paginacion"
+    aria-label="Paginación de productos del pedido"
+  >
+    <ul class="pagination">
+      <li
+        class="page-item {% if not page_obj.has_previous %}disabled{% endif %}"
+      >
+        {% if page_obj.has_previous %}
+        <a
+          class="page-link"
+          href="?page={{ page_obj.previous_page_number }}"
+          aria-label="Página anterior"
+          >«</a
+        >
+        {% else %}
+        <span class="page-link" aria-hidden="true">«</span>
+        {% endif %}
+      </li>
+      {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
+      {% for pagina in paginas_visibles %}
+      <li class="page-item {% if pagina == page_obj.number %}active{% endif %}">
+        <a
+          class="page-link"
+          href="?page={{ pagina }}"
+          {% if pagina == page_obj.number %}aria-current="page"{% endif %}
+        >{{ pagina }}</a>
+      </li>
+      {% endfor %}
+      <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+        {% if page_obj.has_next %}
+        <a
+          class="page-link"
+          href="?page={{ page_obj.next_page_number }}"
+          aria-label="Página siguiente"
+          >»</a
+        >
+        {% else %}
+        <span class="page-link" aria-hidden="true">»</span>
+        {% endif %}
+      </li>
+    </ul>
+  </nav>
+  {% endif %}
+  <br />
+  <!-- Resumen y acciones globales -->
+  <div class="pedido-detalle-footer">
+    <div class="pedido-detalle-footer__total">
+      <small>Total a cobrar:</small>
+      <strong>{{ moneda_simbolo }} {{ total_calculado|floatformat:2 }}</strong>
+    </div>
+
+    {% if pedido.estado == "PENDIENTE" or pedido.estado == "EN_REVISION" %}
+    <div class="pedido-detalle-footer__acciones">
+      {% if puede_aprobar %}
+      <form
+        method="post"
+        action="{% url 'procesar_pedido_tienda' pedido.token %}?page={{ page_obj.number }}"
+        id="formRechazarPedidoCompleto"
+      >
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="rechazar" />
+        <button
+          type="submit"
+          class="btn d-inline-flex align-items-center gap-1"
+          id="btnRechazarPedidoCompleto"
+        >
+          <i class="bx bx-x-circle"></i> Rechazar pedido
+        </button>
+      </form>
+
+      {% if todos_revisados %}
+      <form
+        method="post"
+        action="{% url 'procesar_pedido_tienda' pedido.token %}?page={{ page_obj.number }}"
+        id="formAceptarPedidoCompleto"
+      >
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="aceptar" />
+        <button
+          type="submit"
+          class="btn btn-sistema-primario d-inline-flex align-items-center gap-1"
+          id="btnAceptarPedidoCompleto"
+          data-total="{{ moneda_simbolo }} {{ total_calculado|floatformat:2 }}"
+        >
+          <i class="bx bx-check-shield"></i> Aceptar pedido
+        </button>
+      </form>
+      {% else %}
+      <button
+        type="button"
+        class="btn pedido-accion-pendiente d-inline-flex align-items-center gap-1"
+        disabled
+        title="Debes definir un estado a todos los productos antes de aceptar el pedido"
+      >
+        <i class="bx bx-lock-alt"></i> Aceptar pedido (Revisión pendiente)
+      </button>
+      {% endif %} {% endif %}
+    </div>
+    {% elif pedido.estado == "ACEPTADO" %}
+    <div class="pedido-detalle-footer__seguimiento">
+      <small>Aceptado el {{ pedido.procesado|date:"d/m/Y H:i" }}{% if pedido.procesado_por %} por {{ pedido.procesado_por.get_full_name|default:pedido.procesado_por.username }}{% endif %}</small
+      >
+      <div
+        class="d-flex align-items-center gap-2 flex-wrap justify-content-end"
+      >
+        <span class="badge bg-warning text-dark py-2 px-3"
+          ><i class="bx bx-lock-alt"></i> Pendiente de cobro en caja</span
+        >
+        <button
+          type="button"
+          class="btn btn-secondary"
+          disabled
+          title="El pedido debe ser cobrado en caja antes de entregarlo"
+        >
+          <i class="bx bx-package"></i> Entregar pedido
+        </button>
+      </div>
+    </div>
+        {% elif pedido.estado == "PAGADO" %}
+    <div class="pedido-detalle-footer__seguimiento">
+      <small>Pagado en caja. Listo para entrega al cliente.</small>
+      <div
+        class="d-flex align-items-center gap-2 flex-wrap justify-content-end"
+      >
+        {% if venta_relacionada and venta_relacionada.id_factura_cai %}
+        <a
+          href="{% url 'imprimir_factura' venta_relacionada.id_factura_cai.documento_token %}"
+          target="_blank"
+          class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
+        >
+          <i class="bx bx-printer"></i> Ver Factura #{{ venta_relacionada.id_factura_cai.numero_factura }}
+        </a>
+        {% endif %}
+        <form
+          method="post"
+          action="{% url 'procesar_pedido_tienda' pedido.token %}?page={{ page_obj.number }}"
+          id="formEntregarPedido"
+        >
+          {% csrf_token %}
+          <input type="hidden" name="accion" value="entregar" />
+          <button
+            type="submit"
+            class="btn btn-sistema-primario"
+            id="btnEntregarPedido"
+          >
+            <i class="bx bx-package"></i> Entregar pedido
+          </button>
+        </form>
+      </div>
+    </div>
+    {% elif pedido.estado == "ENTREGADO" %}
+    <div class="pedido-detalle-footer__seguimiento">
+      <small>Entregado el {{ pedido.entregado_en|date:"d/m/Y H:i" }}{% if pedido.entregado_por %} por {{ pedido.entregado_por.get_full_name|default:pedido.entregado_por.username }}{% endif %}</small
+      >
+      {% if venta_relacionada and venta_relacionada.id_factura_cai %}
+      <div class="mt-1">
+        <a
+          href="{% url 'imprimir_factura' venta_relacionada.id_factura_cai.documento_token %}"
+          target="_blank"
+          class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
+        >
+          <i class="bx bx-printer"></i> Ver Factura #{{ venta_relacionada.id_factura_cai.numero_factura }}
+        </a>
+      </div>
+      {% endif %}
+    </div>
+    {% elif pedido.procesado %}
+    <div class="pedido-detalle-footer__seguimiento">
+      <small>Procesado el {{ pedido.procesado|date:"d/m/Y H:i" }}{% if pedido.procesado_por %} por {{ pedido.procesado_por.get_full_name|default:pedido.procesado_por.username }}{% endif %}</small
+      >
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ========================================================
+     MODALES BOOTSTRAP PARA CADA PRODUCTO (MÓVIL SLIDE BOTTOM)
+     ======================================================== -->
+{% for detalle in detalles %} {% if puede_aprobar %}
+<!-- Modal para RECHAZAR producto -->
+<div
+  class="modal fade modal-sheet-mobile modal-sheet-mobile--auto catalog-mobile-modal"
+  id="modalRechazarItem{{ detalle.id }}"
+  tabindex="-1"
+  aria-labelledby="rechazarTitle{{ detalle.id }}"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-danger" id="rechazarTitle{{ detalle.id }}">
+          <i class="bx bx-x-circle me-1"></i> Rechazar Producto
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Cerrar"
+        ></button>
+      </div>
+      <form
+        method="post"
+        id="formRechazar{{ detalle.id }}"
+        action="{% url 'revisar_item_pedido_tienda' pedido.token %}?page={{ page_obj.number }}"
+        data-nombre="{{ detalle.nombre_producto|escape }}"
+      >
+        {% csrf_token %}
+        <input type="hidden" name="detalle_id" value="{{ detalle.id }}" />
+        <input type="hidden" name="accion" value="rechazar" />
+        <div class="modal-body">
+          <p class="mb-2">
+            ¿Por qué motivo deseas rechazar
+            <strong>{{ detalle.nombre_producto }}</strong>?
+          </p>
+          <br />
+          <div class="mb-3">
+            <label class="form-label fw-bold"
+              >Justificación obligatoria
+              <span class="text-danger">*</span></label
+            >
+            <textarea
+              name="justificacion"
+              class="form-control"
+              rows="3"
+              placeholder="Ej: El producto en estante presenta daños en el empaque / averiado / sin existencia..."
+              required
+            ></textarea>
+          </div>
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          form="formRechazar{{ detalle.id }}"
+          class="btn btn-danger"
+        >
+          <i class="bx bx-x"></i> Confirmar rechazo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para AJUSTAR CANTIDAD -->
+<div
+  class="modal fade modal-sheet-mobile modal-sheet-mobile--auto catalog-mobile-modal"
+  id="modalAjustarItem{{ detalle.id }}"
+  tabindex="-1"
+  aria-labelledby="ajustarTitle{{ detalle.id }}"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5
+          class="modal-title color-sistema-primario"
+          id="ajustarTitle{{ detalle.id }}"
+        >
+          <i class="bx bx-transfer me-1"></i> {% if detalle.rev_estado == 'AJUSTADO' %}Modificar Ajuste de Cantidad{% else %}Modificar Cantidad a Entregar{% endif %}
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Cerrar"
+        ></button>
+      </div>
+      <form
+        method="post"
+        id="form-ajustar-{{ detalle.id }}"
+        action="{% url 'revisar_item_pedido_tienda' pedido.token %}?page={{ page_obj.number }}"
+        data-nombre="{{ detalle.nombre_producto|escape }}"
+      >
+        {% csrf_token %}
+        <input type="hidden" name="detalle_id" value="{{ detalle.id }}" />
+        <input type="hidden" name="accion" value="ajustar" />
+        <div class="modal-body">
+          <div class="alert alert-light border mb-3">
+            <strong>{{ detalle.nombre_producto }}</strong>
+            <div class="small text-muted mt-1">
+              Cantidad pedida por el cliente:
+              <b class="text-dark">{{ detalle.cantidad|floatformat:"-2" }}</b>
+              unidad{{ detalle.cantidad|floatformat:"-2"|pluralize:"es" }}
+            </div>
+          </div>
+          <br />
+          <div class="mb-3">
+            <label class="form-label fw-bold"
+              >Nueva cantidad disponible
+              <span class="text-danger">*</span></label
+            >
+            <input
+              type="number"
+              name="nueva_cantidad"
+              class="form-control"
+              step="any"
+              min="1"
+              max="{{ detalle.cantidad }}"
+              value="{% if detalle.rev_estado == 'AJUSTADO' %}{{ detalle.rev_cantidad_aprobada|floatformat:'-2' }}{% endif %}"
+              placeholder="Ej: 3"
+              required
+            />
+          </div>
+          <br />
+          <div class="mb-3">
+            <label class="form-label fw-bold"
+              >Justificación obligatoria
+              <span class="text-danger">*</span></label
+            >
+            <textarea
+              name="justificacion"
+              class="form-control"
+              rows="3"
+              placeholder="Ej: El cliente solicitó {{ detalle.cantidad|floatformat:'-2' }} pero 2 unidades estaban dañadas en la tienda..."
+              required
+            >{% if detalle.rev_estado == 'AJUSTADO' %}{{ detalle.rev_justificacion }}{% endif %}</textarea>
+          </div>
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          form="form-ajustar-{{ detalle.id }}"
+          class="btn btn-sistema-primario"
+        >
+          <i class="bx bx-check"></i> Guardar cambio
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+
+{% if puede_anexar or puede_cambiar %}
+{% include "components/_modales_producto_pedido.html" %}
+{% endif %}
+
+{% if pedido.estado == "ACEPTADO" or pedido.estado == "PAGADO" or pedido.estado == "ENTREGADO" %}
+{% for detalle in detalles %} {% if puede_aprobar and detalle.rev_estado == "ACEPTADO" or puede_aprobar and detalle.rev_estado == "AJUSTADO" or puede_aprobar and detalle.rev_estado == "CAMBIADO" %}
+<div
+  class="modal fade modal-sheet-mobile modal-sheet-mobile--auto catalog-mobile-modal"
+  id="modalDevolverItem{{ detalle.id }}"
+  tabindex="-1"
+  aria-labelledby="devolverTitle{{ detalle.id }}"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-danger" id="devolverTitle{{ detalle.id }}">
+          <i class="bx bx-undo me-1"></i> Devolver producto
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Cerrar"
+        ></button>
+      </div>
+      <form
+        method="post"
+        id="formDevolver{{ detalle.id }}"
+        action="{% url 'revisar_item_pedido_tienda' pedido.token %}?page={{ page_obj.number }}"
+        data-nombre="{{ detalle.rev_nombre_producto|escape }}"
+        data-cantidad="{{ detalle.rev_cantidad_aprobada|floatformat:'-2' }}"
+      >
+        {% csrf_token %}
+        <input type="hidden" name="detalle_id" value="{{ detalle.id }}" />
+        <input type="hidden" name="accion" value="devolver" />
+        <div class="modal-body">
+          <p>
+            Se devolverán las
+            <strong
+              >{{ detalle.rev_cantidad_aprobada|floatformat:"-2" }}</strong
+            >
+            unidades de <strong>{{ detalle.rev_nombre_producto }}</strong>.
+          </p>
+          <div class="mb-3">
+            <label
+              for="justificacionDevolucion{{ detalle.id }}"
+              class="form-label fw-bold"
+              >Motivo de la devolución <span class="text-danger">*</span></label
+            >
+            <textarea
+              id="justificacionDevolucion{{ detalle.id }}"
+              name="justificacion"
+              class="form-control"
+              rows="3"
+              maxlength="500"
+              required
+            ></textarea>
+          </div>
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          form="formDevolver{{ detalle.id }}"
+          class="btn btn-danger"
+        >
+          <i class="bx bx-undo"></i> Confirmar devolución
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %} 
+{% endfor %} 
+{% endif %}
+
+<script src="{% static 'js/pedido_tienda_detalle.js' %}"></script>
+{% endblock %}

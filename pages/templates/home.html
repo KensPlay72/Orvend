@@ -108,9 +108,7 @@
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="{% static 'css/style.css' %}"
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20261012-colab-footer"
       media="print"
       onload="this.media = 'all'"
     />
@@ -127,7 +125,7 @@
       onload="this.media = 'all'"
     />
     <noscript>
-      <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+      <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20261012-colab-footer" />
       <link
         rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;700&display=swap"
@@ -754,7 +752,24 @@
         </div>
       </div>
       <div class="footer-copy">
-        &copy; OrvendMart {% now "Y" %}. Todos los derechos reservados.
+        <span>&copy; OrvendMart {% now "Y" %}. Todos los derechos reservados.</span>
+        <div class="footer-credit">
+          <img
+            src="{% static 'img/orvendcompany-sinfondoalt_2.webp' %}"
+            alt="OrvendCompany"
+            class="footer-company-logo"
+            height="18"
+            loading="lazy"
+          />
+          <span class="footer-colaboracion-x">✕</span>
+          <img
+            src="{% static 'img/orvendmart-loader.webp' %}"
+            alt="OrvendMart"
+            class="footer-company-logo"
+            height="18"
+            loading="lazy"
+          />
+        </div>
       </div>
     </footer>
     <!-- AOS Script -->

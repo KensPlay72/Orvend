@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="{% static 'css/manager.css' %}">
 {% endblock extra_css %}
 {% block page_css_overrides %}
-    <link rel="stylesheet" href="{% static 'css/ventas.css' %}?v=20261005-movil-tarjetas-01">
+    <link rel="stylesheet" href="{% static 'css/ventas.css' %}">
 {% endblock page_css_overrides %}
 {% block titulo_content %}
     <div class="tituloscont">
@@ -97,7 +97,8 @@
                     <div class="ventas-mobile-card__meta">
                         <div><i class="bx bx-calendar" aria-hidden="true"></i><span><small>Fecha</small><strong>{{ d.venta.f_creacion|date:"d/m/Y H:i" }}</strong></span></div>
                         <div><i class="bx bx-store" aria-hidden="true"></i><span><small>Sucursal</small><strong>{{ d.venta.sucursal.nombre }}</strong></span></div>
-                        <div><i class="bx bx-user" aria-hidden="true"></i><span><small>Cliente</small><strong>{% if d.venta.id_cliente %}{% if d.venta.con_rtn %}{{ d.venta.id_cliente.empresa|default:d.venta.id_cliente.nombre_completo }}{% else %}{{ d.venta.id_cliente.nombre_completo }}{% endif %}{% else %}Consumidor Final{% endif %}</strong></span></div>
+                        <div><i class="bx {% if d.venta.origen == 'ruta' %}bx-car{% elif d.venta.origen == 'ecommerce' %}bx-globe{% else %}bx-store{% endif %}" aria-hidden="true"></i><span><small>Origen</small><strong>{{ d.origen_nombre }}</strong></span></div>
+                        <div><i class="bx bx-user" aria-hidden="true"></i><span><small>Cliente</small><strong>{% if d.venta.id_cliente %}{% if d.venta.con_rtn %}{{ d.venta.id_cliente.empresa|default:d.venta.id_cliente.nombre_completo }}{% else %}{{ d.venta.id_cliente.nombre_completo }}{% endif %}{% else %}{{ d.cliente_venta_nombre|default:"Consumidor Final" }}{% endif %}</strong></span></div>
                         <div><i class="bx bx-user-check" aria-hidden="true"></i><span><small>Cajero</small><strong>{{ d.cajero_nombre }}</strong></span></div>
                     </div>
                     <footer class="ventas-mobile-card__amounts">
@@ -108,7 +109,11 @@
                     </footer>
                 </article>
             {% empty %}
-                <div class="ventas-mobile-empty"><i class="bx bx-receipt" aria-hidden="true"></i><strong>Sin ventas</strong><span>No se encontraron ventas con los filtros seleccionados.</span></div>
+                <div class="mobile-empty-state">
+                    <i class="bx bx-receipt fs-2 text-muted d-block mb-2"></i>
+                    <strong>No hay ventas registradas para mostrar.</strong>
+                    <p class="text-muted small m-0">Las ventas realizadas aparecerán aquí.</p>
+                </div>
             {% endfor %}
         </section>
         <div class="tabla-container ventas-desktop-table">
@@ -116,6 +121,7 @@
                 <thead>
                     <tr>
                         <th>Factura</th>
+                        <th>Origen</th>
                         <th>Fecha</th>
                         <th>Cliente</th>
                         <th>Cajero</th>
@@ -135,6 +141,7 @@
                     {% for d in page_obj %}
                         <tr>
                             <td>{{ d.venta.id_factura_cai.numero_factura }}</td>
+                            <td>{{ d.origen_nombre }}</td>
                             <td>{{ d.venta.f_creacion|date:"d/m/Y H:i" }}</td>
                             <td>
                                 {% if d.venta.id_cliente %}
@@ -148,7 +155,7 @@
                                         {{ d.venta.id_cliente.nombre_completo }}
                                     {% endif %}
                                 {% else %}
-                                    Consumidor Final
+                                    {{ d.cliente_venta_nombre|default:"Consumidor Final" }}
                                 {% endif %}
                             </td>
                             <td>{{ d.cajero_nombre }}</td>
@@ -165,7 +172,11 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="15" class="text-center">No se encontraron ventas</td>
+                            <td colspan="15" class="text-center table-empty-state py-4">
+                                <i class="bx bx-receipt fs-2 text-muted d-block mb-2"></i>
+                                <strong>No hay ventas registradas para mostrar.</strong>
+                                <p class="text-muted small m-0">Las ventas realizadas aparecerán aquí.</p>
+                            </td>
                         </tr>
                     {% endfor %}
                 </tbody>

@@ -75,6 +75,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "manager.middleware.SuscripcionActivaMiddleware",
+    "accounts.middleware.EcommerceActivoMiddleware",
     "manager.middleware.CierreCajaPendienteMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -182,7 +183,7 @@ CONTENT_SECURITY_POLICY = "; ".join(
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.jsdelivr.net",
         "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net",
         "connect-src 'self' ws: wss:",
-        "frame-src 'none'",
+        "frame-src 'self' https://www.google.com https://maps.google.com",
     ]
 )
 PERMISSIONS_POLICY = "camera=(), geolocation=(), microphone=(), payment=(), usb=()"

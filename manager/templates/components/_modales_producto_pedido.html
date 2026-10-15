@@ -1,0 +1,255 @@
+{% load static %}
+<!-- ========================================================
+     MODAL 1: SELECTOR DE PRODUCTOS (ESTILO CAJA / MÓVIL)
+     ======================================================== -->
+<div
+  class="modal fade modal-sheet-mobile"
+  id="modalSelectorProductosPedido"
+  tabindex="-1"
+  aria-labelledby="tituloSelectorPedido"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered modal600 caja-product-modal">
+    <div class="modal-content caja-product-modal__content">
+      <div class="modal-header">
+        <span class="modal-sheet-handle" aria-hidden="true"></span>
+        <h5 class="modal-title" id="tituloSelectorPedido">
+          Seleccionar producto
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Cerrar"
+        ></button>
+      </div>
+      <div class="modal-body caja-product-modal__body">
+        <form class="caja-product-search" id="formBuscarProductosPedido">
+          <input
+            id="inputBuscarProductosPedido"
+            type="search"
+            placeholder="Buscar por nombre o SKU..."
+            aria-label="Buscar productos"
+            autocomplete="off"
+          />
+          <button
+            type="submit"
+            class="btn classbotones"
+            aria-label="Buscar productos"
+          >
+            <i class="bx bx-search" aria-hidden="true"></i>
+          </button>
+        </form>
+        <div id="listaProductosPedido" class="caja-product-list-wrap">
+          <div class="text-center py-4 text-muted">Cargando productos disponibles...</div>
+        </div>
+        <nav class="caja-product-pagination" aria-label="Páginas de productos">
+          <ul
+            id="paginacionProductosPedido"
+            class="pagination justify-content-center"
+          ></ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================
+     MODAL 2: CONFIGURACIÓN DE PRECIO Y CANTIDAD (CON STEPPER)
+     ======================================================== -->
+<div
+  class="modal fade"
+  id="modalConfigurarProductoPedido"
+  tabindex="-1"
+  aria-labelledby="tituloConfigurarProducto"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title color-sistema-primario" id="tituloConfigurarProducto">
+          Detalle del producto
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Cerrar"
+        ></button>
+      </div>
+      <form id="formConfirmarProductoPedido" method="post" action="">
+        {% csrf_token %}
+        <input type="hidden" name="detalle_id" id="configDetalleId" value="" />
+        <input type="hidden" name="nuevo_producto_id" id="configProductoIdCambio" value="" />
+        <input type="hidden" name="producto_id" id="configProductoIdAnexo" value="" />
+
+        <div class="modal-body">
+          <!-- Bloque del producto original al hacer cambio (se oculta completo al anexar) -->
+          <div id="bloqueProductoOriginalCambio" style="display: none;">
+            <div id="boxProductoOriginalCambio" class="producto-elegido-card p-3 mb-0 border rounded-3" style="background: #f8fafc;">
+              <div class="small text-muted fw-bold mb-2 d-flex align-items-center gap-1">
+                <i class="bx bx-info-circle color-sistema-primario"></i> Producto original solicitado por el cliente:
+              </div>
+              <div class="d-flex align-items-center gap-3">
+                <img
+                  id="imgProductoOriginalCambio"
+                  src="{% static 'img/default.webp' %}"
+                  alt=""
+                  onerror="this.onerror=null; this.src='{% static 'img/default.webp' %}';"
+                  style="width: 52px; height: 52px; flex: 0 0 52px; object-fit: cover; border-radius: 8px; background: #fff; border: 1px solid #e2e8f0;"
+                />
+                <div class="flex-grow-1 min-w-0">
+                  <h6 id="nombreProductoOriginalCambio" class="mb-1 text-dark fw-bold" style="word-break: break-word; overflow-wrap: break-word; white-space: normal; line-height: 1.35;"></h6>
+                  <div class="small text-muted">
+                    <span>Cantidad solicitada: <b id="cantProductoOriginalCambio" class="color-sistema-primario">1 ud</b></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Flecha hacia abajo entre los dos productos con margen simétrico arriba y abajo -->
+            <div id="flechaCambioModal" class="d-flex justify-content-center align-items-center text-center" style="margin: 0.75rem 0;">
+              <div class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 32px; height: 32px; background: color-mix(in srgb, var(--system-primary, #32877f) 12%, #fff); color: var(--system-primary, #32877f);">
+                <i class="bx bx-down-arrow-alt fs-4"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ficha del producto seleccionado (con el título adentro del recuadro) -->
+          <div id="boxProductoSeleccionado" class="producto-elegido-card p-3 mb-3 border rounded-3 bg-light">
+            <div id="boxProductoNuevoSustituto" class="small color-sistema-primario fw-bold mb-2 align-items-center gap-1" style="display: none;">
+              <i class="bx bx-sync"></i> Producto sustituto seleccionado:
+            </div>
+            <div class="d-flex align-items-center gap-3">
+              <img
+                id="configProductoImg"
+                src="{% static 'img/default.webp' %}"
+                alt=""
+                style="width: 52px; height: 52px; flex: 0 0 52px; object-fit: cover; border-radius: 8px; background: #fff; border: 1px solid #e2e8f0;"
+              />
+              <div class="flex-grow-1 min-w-0">
+                <h6 id="configProductoNombre" class="mb-1 text-dark fw-bold" style="word-break: break-word; overflow-wrap: break-word; white-space: normal; line-height: 1.35;"></h6>
+                <div class="small text-muted">
+                  <span id="configProductoSku" class="me-2"></span>
+                  <span>Stock: <b id="configProductoStock" class="text-success">0</b> <span id="configProductoUnidad">ud</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <br>
+          <!-- Precio unitario (sin texto '(Permitido modificar)') -->
+          <div class="mb-3">
+            <label for="modalInputPrecio" class="form-label fw-bold">
+              Precio unitario ({{ moneda_simbolo }})
+            </label>
+            {% if puede_modificar_precio %}
+            <input
+              type="number"
+              name="precio"
+              id="modalInputPrecio"
+              class="form-control text-center fw-bold fs-5"
+              step="0.01"
+              min="0.01"
+              placeholder="0.00"
+              required
+            />
+            <div id="helperPrecioLimites" class="form-text small text-muted text-center" style="display: none;"></div>
+            {% else %}
+            <input
+              type="text"
+              name="precio_display"
+              id="modalInputPrecio"
+              class="form-control text-center fw-bold fs-5 bg-light"
+              placeholder="0.00"
+              readonly
+            />
+            <input type="hidden" name="precio" id="modalHiddenPrecio" value="" />
+            {% endif %}
+          </div>
+          <br />
+
+          <!-- Cantidad Stepper: Flecha izquierda(disminuir) | cantidad | flecha derecha(aumentar) -->
+          <div class="mb-3">
+            <label for="modalInputCantidad" class="form-label fw-bold d-block text-center">
+              Cantidad
+            </label>
+            <div class="stepper-cantidad-control">
+              <button
+                type="button"
+                class="btn-stepper"
+                id="btnQtyDisminuir"
+                title="Disminuir cantidad"
+                aria-label="Disminuir cantidad"
+              >
+                <i class="bx bx-chevron-left"></i>
+              </button>
+              <input
+                type="number"
+                name="cantidad"
+                id="modalInputCantidad"
+                class="form-control input-stepper"
+                step="any"
+                min="1"
+                value="1"
+                placeholder="1"
+                required
+              />
+              <button
+                type="button"
+                class="btn-stepper"
+                id="btnQtyAumentar"
+                title="Aumentar cantidad"
+                aria-label="Aumentar cantidad"
+              >
+                <i class="bx bx-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+          <br />
+
+          <!-- Subtotal estimado -->
+          <div class="text-center py-1 mb-2">
+            <span class="text-muted small">Total estimado:</span>
+            <strong class="color-sistema-primario fs-5 ms-1">
+              {{ moneda_simbolo }} <span id="modalSubtotalEstimado">0.00</span>
+            </strong>
+          </div>
+
+          <!-- Justificación requerida para sustitución -->
+          <div class="mb-2" id="divJustificacionCambio" style="display: none;">
+            <br />
+            <label for="modalInputJustificacion" class="form-label fw-bold">
+              Motivo del cambio <span class="text-danger">*</span>
+            </label>
+            <textarea
+              name="justificacion"
+              id="modalInputJustificacion"
+              class="form-control"
+              rows="2"
+              placeholder="Ej: Se acordó con el cliente cambiar el producto por esta alternativa..."
+            ></textarea>
+          </div>
+        </div>
+      </form>
+
+      <!-- Footer fuera del formulario -->
+      <div class="modal-footer d-flex justify-content-between">
+        <button
+          type="button"
+          class="btn btn-secondary text-white"
+          id="btnVolverAlSelector"
+        >
+          <i class="bx bx-arrow-back"></i> Cambiar producto
+        </button>
+        <button
+          type="submit"
+          form="formConfirmarProductoPedido"
+          class="btn btn-sistema-primario"
+          id="btnConfirmarProducto"
+        >
+          <i class="bx bx-check"></i> Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

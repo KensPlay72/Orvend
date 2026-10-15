@@ -6,8 +6,8 @@
   <link rel="stylesheet" href="{% static 'css/traslados.css' %}" />
 {% endblock extra_css %}
 {% block page_css_overrides %}
-  <link rel="stylesheet" href="{% static 'css/traslados_mobile.css' %}?v=20261009-lista-merma" />
-  <link rel="stylesheet" href="{% static 'css/merma.css' %}?v=20261009-ojo-verde" />
+  <link rel="stylesheet" href="{% static 'css/traslados_mobile.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/merma.css' %}" />
 {% endblock page_css_overrides %}
 {% block titulo_content %}
   <div class="tituloscont">
@@ -57,7 +57,13 @@
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="8" class="text-center">No hay mermas registradas.</td></tr>
+          <tr>
+            <td colspan="8" class="text-center table-empty-state py-4">
+              <i class="bx bx-trash fs-2 text-muted d-block mb-2"></i>
+              <strong>No hay mermas registradas para mostrar.</strong>
+              <p class="text-muted small m-0">Los registros de mermas y desecho de productos aparecerán aquí.</p>
+            </td>
+          </tr>
         {% endfor %}
       </tbody>
     </table>
@@ -82,9 +88,10 @@
         <footer><span>Ver detalle</span><i class="bx bx-right-arrow-alt" aria-hidden="true"></i></footer>
       </a>
     {% empty %}
-      <div class="traslados-mobile-empty">
-        <i class="bx bx-trash"></i><strong>Sin mermas</strong>
-        <span>No hay mermas registradas.</span>
+      <div class="mobile-empty-state">
+        <i class="bx bx-trash fs-2 text-muted d-block mb-2"></i>
+        <strong>No hay mermas registradas para mostrar.</strong>
+        <p class="text-muted small m-0">Los registros de mermas y desecho de productos aparecerán aquí.</p>
       </div>
     {% endfor %}
   </section>

@@ -1,0 +1,365 @@
+{% load static tienda_extras %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="{{ tema_principal|default:'#226d66' }}">
+  <title>{% block title %}{{ configuracion.nombre_comercial|default:"Tienda" }}{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'plugins/css/boxicons.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/tienda.css' %}">
+  <link rel="preload" as="image" href="{% if configuracion.logo_archivo %}{% url 'tiendav:logo' %}{% else %}{% static 'img/LH.webp' %}{% endif %}" fetchpriority="high">
+  <style>
+    :root {
+      --tv-primary: {{ tema_principal|default:'#226d66' }};
+      --tv-secondary: {{ tema_secundario|default:'#114841' }};
+      --tv-button: {{ tema_botones|default:'#29837a' }};
+    }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="tienda-body">
+  <script>
+    window.MONEDA_SISTEMA = "{{ moneda_simbolo|default:'L.'|escapejs }}";
+    window.formatearMoneda = (valor, decimales = 2) => `${window.MONEDA_SISTEMA} ${Number(valor || 0).toFixed(decimales)}`;
+    // Bloquear zoom involuntario por doble click/tap en móviles
+    document.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+    }, { passive: false });
+    document.addEventListener("DOMContentLoaded", () => {
+      if (window.MONEDA_SISTEMA === "L.") return;
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let nodo;
+      while ((nodo = walker.nextNode())) {
+        if (!nodo.parentElement?.closest("script, style")) nodo.nodeValue = nodo.nodeValue.replace(/L\.(?=\s*-?\d)/g, window.MONEDA_SISTEMA);
+      }
+    });
+  </script>
+
+  <!-- Pantalla de carga con animación de cubos adaptada -->
+  <div id="tiendaCargador" class="tienda-loader-overlay" role="status" aria-live="polite" aria-label="Cargando tienda">
+    <div class="manager-loader-boxes" aria-hidden="true">
+      <div class="box"><div></div><div></div><div></div><div></div></div>
+      <div class="box"><div></div><div></div><div></div><div></div></div>
+      <div class="box"><div></div><div></div><div></div><div></div></div>
+      <div class="box"><div></div><div></div><div></div><div></div></div>
+    </div>
+  </div>
+
+  <!-- Contenedor de notificaciones flotantes (Toast) -->
+  <div class="tienda-avisos" id="tiendaAvisos" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Contenedor General de la Tienda -->
+  <div class="tienda-contenido" id="tiendaContenido">
+    <a class="tienda-saltar" href="#contenido-principal">Saltar al contenido</a>
+
+    <!-- Encabezado / Barra de Navegación Principal -->
+    <header class="tienda-header-wrapper">
+      <div class="tienda-header">
+        <a class="tienda-marca" href="{% url 'tiendav:inicio' %}" aria-label="Ir al inicio de {{ configuracion.nombre_comercial|default:'la tienda' }}">
+          <img
+            src="{% if configuracion.logo_archivo %}{% url 'tiendav:logo' %}{% else %}{% static 'img/LH.webp' %}{% endif %}"
+            onerror="this.onerror=null;this.src='{% static 'img/LH.webp' %}';"
+            alt="Logo de {{ configuracion.nombre_comercial|default:'la tienda' }}"
+            fetchpriority="high"
+            loading="eager"
+            decoding="sync"
+          >
+        </a>
+
+        <nav class="tienda-nav" aria-label="Navegación principal">
+          <a class="tienda-nav__enlace {% if request.resolver_match.url_name == 'inicio' and not ver_ofertas %}is-active{% endif %}" href="{% url 'tiendav:inicio' %}">
+            <i class="bx bx-home-alt" aria-hidden="true"></i> <span>Inicio</span>
+          </a>
+          <div class="tienda-nav__grupo">
+            <a class="tienda-nav__enlace {% if request.resolver_match.url_name == 'categorias' %}is-active{% endif %}" href="{% url 'tiendav:categorias' %}">
+              <i class="bx bx-grid-alt" aria-hidden="true"></i> <span>Categorías</span>
+              <i class="bx bx-chevron-down tienda-nav__flecha" aria-hidden="true"></i>
+            </a>
+            <div class="tienda-nav__desplegable" aria-label="Categorías">
+              <a href="{% url 'tiendav:categorias' %}" class="tienda-nav__desplegable-todos">
+                <i class="bx bx-grid-alt" aria-hidden="true"></i> <strong>Todas las categorías</strong>
+              </a>
+              {% for categoria in categorias_nav %}
+                <a href="{% url 'tiendav:inicio' %}?catalogo=1&amp;categoria={{ categoria|categoria_token }}#catalogo">
+                  <i class="bx bx-purchase-tag-alt" aria-hidden="true"></i>{{ categoria.nombre }}
+                </a>
+              {% empty %}
+                <span class="tienda-nav__vacio">No hay categorías disponibles</span>
+              {% endfor %}
+            </div>
+          </div>
+          <a class="tienda-nav__enlace {% if ver_ofertas %}is-active{% endif %}" href="{% url 'tiendav:inicio' %}?catalogo=1&amp;ofertas=1#catalogo">
+            <i class="bx bx-purchase-tag" aria-hidden="true"></i> <span>Ofertas</span>
+          </a>
+          <a class="tienda-nav__enlace {% if request.resolver_match.url_name == 'ubicaciones' %}is-active{% endif %}" href="{% url 'tiendav:ubicaciones' %}">
+            <i class="bx bx-map-pin" aria-hidden="true"></i> <span>Ubicaciones</span>
+          </a>
+        </nav>
+
+        <div class="tienda-header__acciones">
+          {% if configuracion.telefono %}
+            <a class="tienda-contacto-btn" href="tel:{{ configuracion.telefono|urlencode }}" title="Llamar o escribir a la tienda">
+              <i class="bx bx-phone" aria-hidden="true"></i>
+              <span class="tienda-contacto-btn__texto">Contacto</span>
+            </a>
+          {% endif %}
+
+          {% if request.session.tienda_cliente_id %}
+            <details class="tienda-cuenta-menu">
+              <summary class="tienda-cuenta-pill" aria-label="Abrir menú de cuenta">
+                <span class="tienda-cuenta-pill__avatar"><i class="bx bx-user" aria-hidden="true"></i></span>
+                <span class="tienda-cuenta-pill__nombre">{{ request.session.tienda_cliente_nombre }}</span>
+                <i class="bx bx-chevron-down tienda-cuenta-pill__flecha" aria-hidden="true"></i>
+              </summary>
+              <nav class="tienda-cuenta-menu__desplegable" aria-label="Opciones de cuenta">
+                <div class="tienda-cuenta-menu__header">
+                  <small>Sesión iniciada como</small>
+                  <strong>{{ request.session.tienda_cliente_nombre }}</strong>
+                </div>
+                <div class="tienda-cuenta-menu__items">
+                  <a href="{% url 'tiendav:perfil' %}"><i class="bx bx-id-card" aria-hidden="true"></i> Mi perfil</a>
+                  <a href="{% url 'tiendav:historial' %}"><i class="bx bx-receipt" aria-hidden="true"></i> Mis pedidos</a>
+                </div>
+                <div class="tienda-cuenta-menu__footer">
+                  <form method="post" action="{% url 'tiendav:cerrar_sesion' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="tienda-cuenta-menu__logout">
+                      <i class="bx bx-log-out" aria-hidden="true"></i> Cerrar sesión
+                    </button>
+                  </form>
+                </div>
+              </nav>
+            </details>
+          {% else %}
+            <a class="tienda-login-btn" href="{% url 'tiendav:cuenta' %}" aria-label="Iniciar sesión o registrarse">
+              <i class="bx bx-user" aria-hidden="true"></i>
+              <span>Ingresar</span>
+            </a>
+          {% endif %}
+
+          <!-- Botón de apertura del carrito -->
+          <button class="tienda-carrito-btn" type="button" data-cart-open aria-label="Abrir carrito de compras">
+            <span class="tienda-carrito-btn__icono-wrap">
+              <i class="bx bx-shopping-bag" aria-hidden="true"></i>
+              <b class="tienda-carrito-btn__badge" data-cart-count aria-label="0 productos" hidden>0</b>
+            </span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Contenido Dinámico de la Página -->
+    {% block content %}{% endblock %}
+
+    <!-- Pie de Página General -->
+    <footer class="tienda-footer">
+      <div class="tienda-footer__contenedor">
+        <div class="tienda-footer__col tienda-footer__col--marca">
+          <div class="tienda-footer__logo">
+            <img
+              src="{% if configuracion.logo_archivo %}{% url 'tiendav:logo' %}{% else %}{% static 'img/LH.webp' %}{% endif %}"
+              onerror="this.onerror=null;this.src='{% static 'img/LH.webp' %}';"
+              alt="{{ configuracion.nombre_comercial|default:'Tienda' }}"
+            >
+            <h3>{{ configuracion.nombre_comercial|default:"Orvend Mart" }}</h3>
+          </div>
+          <p class="tienda-footer__direccion">{{ configuracion.direccion|default:"Compra de manera sencilla y segura con retiro directo en nuestras tiendas físicas." }}</p>
+          <div class="tienda-footer__contactos">
+            {% if configuracion.telefono %}
+              <a class="tienda-footer__contacto-chip" href="tel:{{ configuracion.telefono|urlencode }}">
+                <i class="bx bx-phone-call"></i>
+                <span>{{ configuracion.telefono }}</span>
+              </a>
+            {% endif %}
+            {% if configuracion.email %}
+              <a class="tienda-footer__contacto-chip" href="mailto:{{ configuracion.email }}">
+                <i class="bx bx-envelope"></i>
+                <span>{{ configuracion.email }}</span>
+              </a>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="tienda-footer__col">
+          <h4 class="tienda-footer__titulo"><i class="bx bx-navigation"></i> Navegación</h4>
+          <ul class="tienda-footer__links">
+            <li><a href="{% url 'tiendav:inicio' %}"><i class="bx bx-chevron-right"></i> Inicio</a></li>
+            <li><a href="{% url 'tiendav:inicio' %}?catalogo=1#catalogo"><i class="bx bx-chevron-right"></i> Catálogo completo</a></li>
+            <li><a href="{% url 'tiendav:ubicaciones' %}"><i class="bx bx-chevron-right"></i> Ubicaciones</a></li>
+            <li><a href="{% url 'tiendav:cuenta' %}"><i class="bx bx-chevron-right"></i> Mi cuenta</a></li>
+            <li><a href="{% url 'tiendav:historial' %}"><i class="bx bx-chevron-right"></i> Mis pedidos</a></li>
+          </ul>
+        </div>
+
+        <div class="tienda-footer__col" id="ubicaciones">
+          <h4 class="tienda-footer__titulo"><i class="bx bx-store-alt"></i> Sucursales de Retiro</h4>
+          <p class="tienda-footer__subtexto">Puntos físicos disponibles para recoger tus compras:</p>
+          <ul class="tienda-footer__sucursales">
+            {% for sucursal in sucursales %}
+              <li><a href="{% url 'tiendav:ubicaciones' %}#sucursal-{{ sucursal.id }}" style="color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;"><i class="bx bx-map-pin"></i> <span>{{ sucursal.nombre }}</span></a></li>
+            {% empty %}
+              <li><i class="bx bx-info-circle"></i> <span>Disponibilidad en tienda física</span></li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      <div class="tienda-footer__bottom">
+        <p>&copy; {% now "Y" %} {{ configuracion.nombre_comercial|default:"Orvend Mart" }}. Todos los derechos reservados.</p>
+        <div class="tienda-footer__creditos">
+          <img src="{% static 'img/orvendcompany-sinfondoalt_2.webp' %}" alt="OrvendCompany" class="tienda-footer__company-logo" loading="lazy">
+          <span class="tienda-footer__colaboracion-x">✕</span>
+          <img src="{% static 'img/orvendmart-loader.webp' %}" alt="OrvendMart" class="tienda-footer__company-logo" loading="lazy">
+        </div>
+      </div>
+
+    </footer>
+  </div>
+
+  <!-- Barra de Navegación Inferior Móvil (fija al viewport) -->
+  <nav class="tienda-nav-movil" aria-label="Navegación inferior">
+    <a href="{% url 'tiendav:inicio' %}" class="tienda-nav-movil__enlace {% if request.resolver_match.url_name == 'inicio' %}is-active{% endif %}">
+      <i class="bx bx-home-alt" aria-hidden="true"></i><span>Inicio</span>
+    </a>
+    <a href="{% url 'tiendav:categorias' %}" class="tienda-nav-movil__enlace {% if request.resolver_match.url_name == 'categorias' %}is-active{% endif %}">
+      <i class="bx bx-grid-alt" aria-hidden="true"></i><span>Categorías</span>
+    </a>
+    <button type="button" class="tienda-nav-movil__enlace" data-cart-open aria-label="Abrir carrito">
+      <span class="tienda-nav-movil__carrito">
+        <i class="bx bx-shopping-bag" aria-hidden="true"></i>
+        <b class="tienda-carrito-btn__badge" data-cart-count aria-label="0 productos" hidden>0</b>
+      </span>
+      <span>Carrito</span>
+    </button>
+    <a href="{% url 'tiendav:ubicaciones' %}" class="tienda-nav-movil__enlace {% if request.resolver_match.url_name == 'ubicaciones' %}is-active{% endif %}">
+      <i class="bx bx-map-pin" aria-hidden="true"></i><span>Ubicaciones</span>
+    </a>
+  </nav>
+
+  <!-- Carrito Lateral Desplegable (Modal Drawer) -->
+  <dialog class="tienda-carrito" id="tiendaCarrito" aria-labelledby="tiendaCarritoTitulo"
+          data-checkout-url="{% url 'tiendav:crear_pedido' %}"
+          data-auth-url="{% url 'tiendav:cuenta' %}"
+          data-authenticated="{% if request.session.tienda_cliente_id %}true{% else %}false{% endif %}">
+    <div class="tienda-carrito__dialog-inner">
+      <!-- PASO 1: VISTA DE CARRITO -->
+      <div class="tienda-carrito__vista-bloque" data-cart-view="cart">
+        <div class="tienda-carrito__encabezado">
+          <div class="tienda-carrito__titulos">
+            <p class="tienda-eyebrow"><i class="bx bx-shopping-bag"></i> Resumen de compra</p>
+            <h2 id="tiendaCarritoTitulo">Mi carrito de compras</h2>
+          </div>
+          <button class="tienda-carrito__cerrar" type="button" data-cart-close aria-label="Cerrar carrito">
+            <i class="bx bx-x" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <div class="tienda-carrito__items" data-cart-items></div>
+
+        <div class="tienda-carrito__vacio" data-cart-empty>
+          <div class="tienda-carrito__vacio-visual">
+            <div class="tienda-carrito__vacio-halo"></div>
+            <div class="tienda-carrito__vacio-icono"><i class="bx bx-shopping-bag" aria-hidden="true"></i></div>
+            <span class="tienda-carrito__vacio-flotante"><i class="bx bx-plus"></i></span>
+          </div>
+          <strong class="tienda-carrito__vacio-titulo">Tu carrito está vacío</strong>
+          <p class="tienda-carrito__vacio-desc">Explora nuestro catálogo y agrega los productos que deseas pedir.</p>
+          <div class="tienda-carrito__vacio-puntos">
+            <span><i class="bx bx-check-circle"></i> Retiro directo en sucursales</span>
+            <span><i class="bx bx-check-circle"></i> Inventario en tiempo real</span>
+          </div>
+          <a href="{% url 'tiendav:inicio' %}?catalogo=1#catalogo" class="tienda-btn-primario tienda-carrito__vacio-cta" data-cart-close>
+            <i class="bx bx-compass"></i> Explorar catálogo
+          </a>
+        </div>
+
+        <div class="tienda-carrito__pie" data-cart-footer hidden>
+          <div class="tienda-carrito__subtotal-fila">
+            <span>Subtotal estimado:</span>
+            <strong data-cart-total>L. 0.00</strong>
+          </div>
+
+          <div class="tienda-carrito__sucursal-bloque">
+            <label class="tienda-carrito__sucursal-label" for="tiendaSucursal">
+              <i class="bx bx-map-pin"></i> Selecciona la tienda de retiro
+            </label>
+            <select class="tienda-carrito__selector" id="tiendaSucursal" data-cart-location>
+              {% for sucursal in sucursales %}
+                <option value="{{ sucursal.id }}">{{ sucursal.nombre }}</option>
+              {% empty %}
+                <option value="">No hay tiendas físicas disponibles</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          {% csrf_token %}
+          <button class="tienda-carrito__pedido" type="button" data-cart-go-confirm {% if not sucursales %}disabled{% endif %}>
+            <i class="bx bx-right-arrow-alt" aria-hidden="true"></i>
+            <span>Continuar a confirmación</span>
+          </button> 
+        </div>
+      </div>
+
+      <!-- PASO 2: APARTADO DE CONFIRMACIÓN DE PEDIDO -->
+      <div class="tienda-carrito__vista-bloque" data-cart-view="confirm" hidden>
+        <div class="tienda-carrito__encabezado">
+          <div class="tienda-carrito__titulos">
+            <button type="button" class="tienda-btn-volver-cart" data-cart-back-cart>
+              <i class="bx bx-arrow-back"></i> Modificar carrito
+            </button>
+            <h2>Confirmación de pedido</h2>
+          </div>
+          <button class="tienda-carrito__cerrar" type="button" data-cart-close aria-label="Cerrar">
+            <i class="bx bx-x" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <div class="tienda-confirmacion-contenido">
+          <div class="tienda-confirmacion__resumen-card">
+            <div class="tienda-confirmacion__meta-item">
+              <i class="bx bx-store-alt"></i>
+              <div>
+                <small>Sucursal para retirar:</small>
+                <strong data-confirm-location>Cargando sucursal...</strong>
+              </div>
+            </div>
+            <div class="tienda-confirmacion__meta-item">
+              <i class="bx bx-package"></i>
+              <div>
+                <small>Total de artículos:</small>
+                <strong data-confirm-items-count>0 productos</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="tienda-confirmacion__productos-seccion">
+            <h4><i class="bx bx-list-check"></i> Productos que incluye tu pedido</h4>
+            <div class="tienda-confirmacion__lista" data-confirm-items-list></div>
+          </div>
+
+          <div class="tienda-confirmacion__aviso">
+            <i class="bx bx-shield-check"></i>
+            <span>Al confirmar, tus productos se reservarán de inmediato para que los retires y pagues en la tienda.</span>
+          </div>
+        </div>
+
+        <div class="tienda-carrito__pie tienda-confirmacion__pie">
+          <div class="tienda-carrito__subtotal-fila">
+            <span>Total a pagar al retirar:</span>
+            <strong data-confirm-total>L. 0.00</strong>
+          </div>
+          <button class="tienda-carrito__pedido tienda-carrito__pedido--confirmar" type="button" data-cart-submit-order>
+            <i class="bx bx-check-double" aria-hidden="true"></i>
+            <span>Confirmar Pedido</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="{% static 'plugins/sweetalert2.min.js' %}"></script>
+  <script src="{% static 'js/tienda-ui.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% load static pagination_tags %}
+{% block title %}Detalle del Pedido #{{ pedido.id }} | {{ configuracion.nombre_comercial|default:"Tienda" }}{% endblock %}
+{% block content %}
+<main class="tienda-historial" id="contenido-principal">
+  <div class="tienda-historial__contenedor">
+    <header class="tienda-historial__encabezado">
+      <div class="tienda-historial__titulos">
+        <div class="d-flex align-items-center gap-3 flex-wrap mt-2">
+          <h1 class="m-0">Pedido #{{ pedido.id }}</h1>
+          <span class="tienda-pedido-estado tienda-pedido-estado--{{ pedido.estado|lower }}">
+            {% if pedido.estado == "PENDIENTE" %}
+              <i class="bx bx-time-five" aria-hidden="true"></i> Pendiente
+            {% elif pedido.estado == "EN_REVISION" %}
+              <i class="bx bx-refresh" aria-hidden="true"></i> En revisión
+            {% elif pedido.estado == "ACEPTADO" %}
+              <i class="bx bx-check-circle" aria-hidden="true"></i> Aceptado
+            {% elif pedido.estado == "ENTREGADO" %}
+              <i class="bx bx-package" aria-hidden="true"></i> Entregado
+            {% else %}
+              <i class="bx bx-x-circle" aria-hidden="true"></i> Rechazado
+            {% endif %}
+          </span>
+        </div>
+        <small class="text-muted"><i class="bx bx-calendar"></i> Realizado el {{ pedido.creado|date:"d/m/Y · h:i a" }}</small>
+      </div>
+      <div class="tienda-historial__acciones-header">
+        <a class="tienda-btn-secundario" href="{% url 'tiendav:inicio' %}">
+          <i class="bx bx-store"></i>
+          <span>Seguir comprando</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- Resumen de retiro -->
+    <div class="tienda-pedido-detalle__resumen-card">
+      <div class="tienda-pedido-detalle__sucursal-info">
+        <div class="tienda-pedido-detalle__icono-store">
+          <i class="bx bx-store-alt"></i>
+        </div>
+        <div>
+          <small>Sucursal para retirar y pagar:</small>
+          <strong>{{ pedido.ubicacion.nombre }}</strong>
+          {% if pedido.ubicacion.direccion %}
+            <p class="m-0 text-muted small"><i class="bx bx-map-pin"></i> {{ pedido.ubicacion.direccion }}</p>
+          {% endif %}
+        </div>
+      </div>
+      <div class="tienda-pedido-detalle__total-box">
+        <small>Total de la reserva:</small>
+        <strong>{{ moneda_simbolo }} {{ pedido.total|floatformat:2 }}</strong>
+      </div>
+    </div>
+
+    <!-- Lista de Productos Solicitados -->
+    <section class="tienda-pedido-card mt-4" id="productos-pedido">
+      <header class="tienda-pedido-card__header">
+        <div class="tienda-pedido-card__id-bloque">
+          <span class="tienda-pedido-card__badge-icono"><i class="bx bx-package"></i></span>
+          <div>
+            <strong>Productos de tu pedido ({{ page_obj.paginator.count }})</strong>
+            <small>Revisa el estado de cada artículo reservado</small>
+          </div>
+        </div>
+      </header>
+
+      <div class="tienda-pedido-card__detalles">
+        <ul class="tienda-pedido-card__items">
+          {% for detalle in detalles %}
+            {% with prod_img=detalle.producto.imagenes_producto.first prod_cambio_img=detalle.producto_cambio.imagenes_producto.first %}
+              <li class="tienda-pedido-item tienda-pedido-item--completo">
+                <!-- Imagen del producto solicitado por el cliente (producto antiguo) -->
+                <div class="tienda-pedido-item__img-wrap">
+                  {% if prod_img and prod_img.id %}
+                    <img src="{% url 'tiendav:producto_imagen' prod_img.id %}" alt="{{ detalle.nombre_producto }}" onerror="this.onerror=null; this.src='{% static 'img/default.webp' %}';" loading="lazy">
+                  {% else %}
+                    <img src="{% static 'img/default.webp' %}" alt="{{ detalle.nombre_producto }}" loading="lazy">
+                  {% endif %}
+                </div>
+
+                <div class="tienda-pedido-item__info">
+                  {% if detalle.rev_estado == "CAMBIADO" and detalle.producto_cambio %}
+                    <div class="pedido-producto-original text-muted">
+                      <span class="tienda-pedido-item__nombre text-decoration-line-through text-muted">{{ detalle.nombre_producto }}</span>
+                      <div class="tienda-pedido-item__meta small text-muted">
+                        <span>{{ detalle.cantidad|floatformat:"-2" }} ud{{ detalle.cantidad|pluralize:"s" }}</span>
+                        <span>× {{ moneda_simbolo }} {{ detalle.precio_unitario|floatformat:2 }}</span>
+                        {% if detalle.codigo_sku %}
+                          <span class="tienda-pedido-item__sku">SKU: {{ detalle.codigo_sku }}</span>
+                        {% endif %}
+                      </div>
+                    </div>
+
+                    <div class="pedido-cambio-divisor my-2 d-flex align-items-center gap-2">
+                      <i class="bx bx-down-arrow-alt fs-4" style="color: var(--tv-primary, #32877f);"></i>
+                      <span class="tienda-item-estado tienda-item-estado--cambiado">
+                        <i class="bx bx-sync"></i> Cambio
+                      </span>
+                    </div>
+
+                    <!-- Recuadro del cambio del producto con la foto del nuevo producto -->
+                    <div class="pedido-producto-nuevo d-flex align-items-center gap-3">
+                      <div class="pedido-cambio-thumb flex-shrink-0">
+                        {% if prod_cambio_img and prod_cambio_img.id %}
+                          <img src="{% url 'tiendav:producto_imagen' prod_cambio_img.id %}" alt="{{ detalle.producto_cambio.nombre }}" onerror="this.onerror=null; this.src='{% static 'img/default.webp' %}';" loading="lazy">
+                        {% else %}
+                          <img src="{% static 'img/default.webp' %}" alt="{{ detalle.producto_cambio.nombre }}" loading="lazy">
+                        {% endif %}
+                      </div>
+
+                      <div class="pedido-producto-nuevo__detalles flex-grow-1 min-w-0">
+                        {% if detalle.producto_cambio.tienda_token %}
+                          <a href="{% url 'tiendav:detalle_producto' detalle.producto_cambio.tienda_token %}" class="tienda-pedido-item__nombre fw-bold text-dark">
+                            {{ detalle.producto_cambio.nombre }}
+                          </a>
+                        {% else %}
+                          <span class="tienda-pedido-item__nombre fw-bold text-dark">{{ detalle.producto_cambio.nombre }}</span>
+                        {% endif %}
+                        <div class="tienda-pedido-item__meta">
+                          <span class="tienda-pedido-item__cant fw-bold">{{ detalle.rev_cantidad_aprobada|floatformat:"-2" }} ud{{ detalle.rev_cantidad_aprobada|pluralize:"s" }}</span>
+                          <span class="tienda-pedido-item__precio-u">× {{ moneda_simbolo }} {{ detalle.rev_precio_unitario|floatformat:2 }}</span>
+                          {% if detalle.producto_cambio.codigo_sku %}
+                            <span class="tienda-pedido-item__sku">SKU: {{ detalle.producto_cambio.codigo_sku }}</span>
+                          {% endif %}
+                        </div>
+                      </div>
+                    </div>
+
+                    {% if detalle.rev_justificacion %}
+                      <div class="tienda-item-justificacion tienda-item-justificacion--cambiado mt-2">
+                        <i class="bx bx-info-circle"></i> <span><strong>Motivo del cambio:</strong> {{ detalle.rev_justificacion }}</span>
+                      </div>
+                    {% endif %}
+                  {% else %}
+                    <a href="{% url 'tiendav:detalle_producto' detalle.producto.tienda_token %}" class="tienda-pedido-item__nombre">
+                      {{ detalle.nombre_producto }}
+                    </a>
+                    <div class="tienda-pedido-item__meta">
+                      <span class="tienda-pedido-item__cant">{{ detalle.cantidad|floatformat:"-2" }} ud{{ detalle.cantidad|pluralize:"s" }}</span>
+                      <span class="tienda-pedido-item__precio-u">× {{ moneda_simbolo }} {{ detalle.precio_unitario|floatformat:2 }}</span>
+                      {% if detalle.codigo_sku %}
+                        <span class="tienda-pedido-item__sku">SKU: {{ detalle.codigo_sku }}</span>
+                      {% endif %}
+                    </div>
+
+                    <!-- Estado del producto individual asignado en Manager -->
+                    <div class="tienda-pedido-item__estado-bloque mt-2">
+                      {% if detalle.rev_estado == "DEVUELTO" %}
+                        <span class="tienda-item-estado tienda-item-estado--rechazado">
+                          <i class="bx bx-undo"></i> Producto devuelto
+                        </span>
+                        {% if detalle.rev_justificacion_devolucion %}
+                          <div class="tienda-item-justificacion tienda-item-justificacion--rechazado">
+                            <i class="bx bx-info-circle"></i>
+                            <span><strong>Motivo de devolución:</strong> {{ detalle.rev_justificacion_devolucion }}</span>
+                          </div>
+                        {% endif %}
+                      {% elif detalle.rev_estado == "ACEPTADO" %}
+                        <span class="tienda-item-estado tienda-item-estado--aceptado">
+                          <i class="bx bx-check-circle"></i>
+                          {% if detalle.rev_entregado %}Entregado{% else %}Aceptado por la tienda{% endif %}
+                        </span>
+                      {% elif detalle.rev_estado == "AJUSTADO" %}
+                        <span class="tienda-item-estado tienda-item-estado--ajustado">
+                          <i class="bx bx-transfer"></i> Cantidad ajustada a <b>{{ detalle.rev_cantidad_aprobada|floatformat:"-2" }}</b> ud{{ detalle.rev_cantidad_aprobada|floatformat:"-2"|pluralize:"s" }} (solicitaste {{ detalle.rev_cantidad_original|floatformat:"-2" }})
+                        </span>
+                        {% if detalle.rev_justificacion %}
+                          <div class="tienda-item-justificacion">
+                            <i class="bx bx-info-circle"></i> <span><strong>Motivo:</strong> {{ detalle.rev_justificacion }}</span>
+                          </div>
+                        {% endif %}
+                      {% elif detalle.rev_estado == "RECHAZADO" %}
+                        <span class="tienda-item-estado tienda-item-estado--rechazado">
+                          <i class="bx bx-x-circle"></i> No disponible
+                        </span>
+                        {% if detalle.rev_justificacion %}
+                          <div class="tienda-item-justificacion tienda-item-justificacion--rechazado">
+                            <i class="bx bx-info-circle"></i> <span><strong>Motivo:</strong> {{ detalle.rev_justificacion }}</span>
+                          </div>
+                        {% endif %}
+                      {% else %}
+                        <span class="tienda-item-estado tienda-item-estado--pendiente">
+                          <i class="bx bx-time"></i> Pendiente de revisión
+                        </span>
+                      {% endif %}
+                    </div>
+                  </div>
+                {% endif %}
+
+                <div class="tienda-pedido-item__subtotal-col">
+                  <small>Subtotal</small>
+                  {% if detalle.rev_estado == "RECHAZADO" %}
+                    <strong class="tienda-pedido-item__subtotal text-muted text-decoration-line-through">{{ moneda_simbolo }} 0.00</strong>
+                  {% else %}
+                    <strong class="tienda-pedido-item__subtotal">{{ moneda_simbolo }} {{ detalle.rev_subtotal|floatformat:2 }}</strong>
+                  {% endif %}
+                </div>
+              </li>
+            {% endwith %}
+          {% endfor %}
+        </ul>
+      </div>
+
+      {% if page_obj.paginator.num_pages > 1 %}
+        <nav class="tienda-paginador" aria-label="Paginación de productos del pedido">
+          <ul class="tienda-paginador__lista">
+            <li class="tienda-paginador__item {% if not page_obj.has_previous %}is-disabled{% endif %}">
+              {% if page_obj.has_previous %}
+                <a class="tienda-paginador__link" href="?page={{ page_obj.previous_page_number }}#productos-pedido" aria-label="Página anterior">
+                  <i class="bx bx-chevron-left"></i>
+                </a>
+              {% else %}
+                <span class="tienda-paginador__link" aria-hidden="true"><i class="bx bx-chevron-left"></i></span>
+              {% endif %}
+            </li>
+            {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
+            {% for pagina in paginas_visibles %}
+              <li class="tienda-paginador__item {% if pagina == page_obj.number %}is-active{% endif %}">
+                <a class="tienda-paginador__link" href="?page={{ pagina }}#productos-pedido" {% if pagina == page_obj.number %}aria-current="page"{% endif %}>{{ pagina }}</a>
+              </li>
+            {% endfor %}
+            <li class="tienda-paginador__item {% if not page_obj.has_next %}is-disabled{% endif %}">
+              {% if page_obj.has_next %}
+                <a class="tienda-paginador__link" href="?page={{ page_obj.next_page_number }}#productos-pedido" aria-label="Página siguiente">
+                  <i class="bx bx-chevron-right"></i>
+                </a>
+              {% else %}
+                <span class="tienda-paginador__link" aria-hidden="true"><i class="bx bx-chevron-right"></i></span>
+              {% endif %}
+            </li>
+          </ul>
+        </nav>
+      {% endif %}
+
+      <footer class="tienda-pedido-card__footer">
+        <div class="tienda-pedido-card__total">
+          <span>Total a pagar al recoger en tienda:</span>
+          <strong>{{ moneda_simbolo }} {{ pedido.total|floatformat:2 }}</strong>
+        </div>
+        <div class="tienda-pedido-card__nota tienda-pedido-card__nota--{{ pedido.estado|lower }}">
+          {% if pedido.estado == "PENDIENTE" %}
+            <i class="bx bx-time" aria-hidden="true"></i>
+            <span>Tu reserva está pendiente de revisión por el personal de la tienda.</span>
+          {% elif pedido.estado == "EN_REVISION" %}
+            <i class="bx bx-refresh" aria-hidden="true"></i>
+            <span>El personal de la tienda está preparando y revisando tu pedido.</span>
+          {% elif pedido.estado == "ACEPTADO" %}
+            <i class="bx bx-check-shield" aria-hidden="true"></i>
+            <span>¡Pedido listo! Puedes pasar a retirarlo y abonarlo en la sucursal seleccionada.</span>
+          {% elif pedido.estado == "ENTREGADO" %}
+            <i class="bx bx-package" aria-hidden="true"></i>
+            <span>Tu pedido fue entregado. Si algún producto fue devuelto, aquí encontrarás el motivo.</span>
+          {% else %}
+            <i class="bx bx-x" aria-hidden="true"></i>
+            <span>Este pedido fue rechazado y las unidades fueron liberadas.</span>
+          {% endif %}
+        </div>
+      </footer>
+    </section>
+  </div>
+</main>
+{% endblock %}

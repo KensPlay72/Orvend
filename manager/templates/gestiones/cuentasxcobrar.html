@@ -6,7 +6,7 @@
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}">
 {% endblock %}
-{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/catalogos_mobile.css' %}?v=20261005-movil-solo" />{% endblock page_css_overrides %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/catalogos_mobile.css' %}" />{% endblock page_css_overrides %}
 
 {% block titulo_content %}
     <div class="tituloscont">
@@ -206,7 +206,13 @@
                         </td>
                     </tr>
                 {% empty %}
-                    <tr><td colspan="10" class="text-center">No hay cuentas por cobrar registradas</td></tr>
+                    <tr>
+                        <td colspan="10" class="text-center table-empty-state py-4">
+                            <i class="bx bx-receipt fs-2 text-muted d-block mb-2"></i>
+                            <strong>No hay cuentas por cobrar registradas para mostrar.</strong>
+                            <p class="text-muted small m-0">Los créditos y saldos pendientes de cobro a clientes aparecerán aquí.</p>
+                        </td>
+                    </tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -228,5 +234,5 @@
             </li>
         </ul>
     </nav>
-    <script type="module" src="{% static 'js/gestiones/cuentasxcobrar.js' %}?v=abonos-20260907"></script>
+    <script type="module" src="{% static 'js/gestiones/cuentasxcobrar.js' %}"></script>
 {% endblock %}

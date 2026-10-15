@@ -1,7 +1,7 @@
 {% extends "menu.html" %} {% load static pagination_tags %} {% block title %}
 Cajas Manager {% endblock %} {% block page_css_overrides %}<link
   rel="stylesheet"
-  href="{% static 'css/cajas_manager_mobile.css' %}?v=20261006-movil"
+  href="{% static 'css/cajas_manager_mobile.css' %}"
 />{% endblock page_css_overrides %} {% block extra_css %}
 
 <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
@@ -220,10 +220,10 @@ Cajas Manager {% endblock %} {% block page_css_overrides %}<link
       {% empty %}
 
       <tr>
-        <td colspan="9" class="text-center py-4">
-          <i class="bx bx-info-circle"></i>
-
-          No hay cajas registradas.
+        <td colspan="9" class="text-center table-empty-state py-4">
+          <i class="bx bx-wallet fs-2 text-muted d-block mb-2"></i>
+          <strong>No hay cajas registradas para mostrar.</strong>
+          <p class="text-muted small m-0">Las aperturas y cierres de caja para esta sucursal aparecerán aquí.</p>
         </td>
       </tr>
 
@@ -290,9 +290,10 @@ Cajas Manager {% endblock %} {% block page_css_overrides %}<link
     </div>
   </article>
   {% empty %}
-  <div class="cajas-manager-mobile-empty">
-    <i class="bx bx-wallet"></i><strong>Sin cajas registradas</strong
-    ><span>No hay resultados para los filtros seleccionados.</span>
+  <div class="mobile-empty-state">
+    <i class="bx bx-wallet fs-2 text-muted d-block mb-2"></i>
+    <strong>No hay cajas registradas para mostrar.</strong>
+    <p class="text-muted small m-0">Las aperturas y cierres de caja para esta sucursal aparecerán aquí.</p>
   </div>
   {% endfor %}
 </section>

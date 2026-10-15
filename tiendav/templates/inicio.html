@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+{% load static pagination_tags tienda_extras %}
+{% block title %}{{ configuracion.nombre_comercial|default:"Tienda" }} | Catálogo{% endblock %}
+{% block content %}
+  <main class="tienda-inicio" id="contenido-principal">
+    <!-- Portada o Banner Principal según configuración -->
+    {% if banner_principal %}
+      <!-- Banner Principal subido (reemplaza por completo la portada y se muestra como imagen limpia) -->
+      <section class="tienda-banner-principal" aria-label="Banner principal">
+        <img class="tienda-banner-principal__img"
+             src="{% url 'tiendav:banner' banner_principal.id %}"
+             alt="{{ configuracion.nombre_comercial|default:'Banner de la tienda' }}">
+      </section>
+    {% else %}
+      <!-- Portada Principal con el encabezado predeterminado -->
+      <section class="tienda-portada">
+        <div class="tienda-portada__texto">
+          <p class="tienda-eyebrow"><i class="bx bx-store-alt" aria-hidden="true"></i> Compra en línea</p>
+          <h1>Lo que necesitas,<br><span>más cerca de ti.</span></h1>
+          <p class="tienda-portada__subtitulo">Explora nuestro catálogo en vivo con inventario en tiempo real y reserva tus productos favoritos en segundos.</p>
+          <div class="tienda-portada__acciones">
+            <a class="tienda-portada__cta" href="?catalogo=1#catalogo">
+              <span>Explorar catálogo</span>
+              <i class="bx bx-down-arrow-alt" aria-hidden="true"></i>
+            </a>
+            {% if configuracion.telefono %}
+              <a class="tienda-portada__cta-secundario" href="tel:{{ configuracion.telefono|urlencode }}">
+                <i class="bx bx-phone-call" aria-hidden="true"></i>
+                <span>Atención directa</span>
+              </a>
+            {% endif %}
+          </div>
+        </div>
+        <div class="tienda-portada__arte" aria-hidden="true">
+          <div class="tienda-portada__panel">
+            <div class="tienda-portada__panel-cabecera">
+              <span class="tienda-portada__panel-icono"><i class="bx bx-store-alt"></i></span>
+              <span class="tienda-portada__panel-titulo">
+                <strong>Marketplace</strong>
+                <small>Compra fácil, recibe cerca</small>
+              </span>
+              <span class="tienda-portada__estado"><i class="bx bx-pulse"></i> En vivo</span>
+            </div>
+            <div class="tienda-portada__panel-grid">
+              <span class="tienda-portada__producto tienda-portada__producto--uno">
+                <i class="bx bx-apple"></i><small>Frescos</small>
+              </span>
+              <span class="tienda-portada__producto tienda-portada__producto--dos">
+                <i class="bx bx-package"></i><small>Esenciales</small>
+              </span>
+              <span class="tienda-portada__producto tienda-portada__producto--tres">
+                <i class="bx bx-coffee"></i><small>Despensa</small>
+              </span>
+              <span class="tienda-portada__producto tienda-portada__producto--cuatro">
+                <i class="bx bx-home-heart"></i><small>Hogar</small>
+              </span>
+            </div>
+            <div class="tienda-portada__panel-pie">
+              <span><i class="bx bx-check-circle"></i> Stock verificado</span>
+              <i class="bx bx-right-arrow-alt"></i>
+            </div>
+          </div>
+          <span class="tienda-portada__sello tienda-portada__sello--arriba"><i class="bx bx-sparkles"></i> Todo cerca</span>
+          <span class="tienda-portada__sello tienda-portada__sello--abajo"><i class="bx bx-map"></i> Retira en tienda</span>
+        </div>
+      </section>
+    {% endif %}
+
+    <!-- Buscador Integrado -->
+    <section class="tienda-seccion-buscador">
+      <form class="tienda-buscador" method="get" role="search" action="#catalogo">
+        {% if categoria_token %}<input type="hidden" name="categoria" value="{{ categoria_token }}">{% endif %}
+        <i class="bx bx-search tienda-buscador__icono" aria-hidden="true"></i>
+        <label class="tienda-visualmente-oculto" for="buscarProducto">Buscar en el catálogo</label>
+        <input id="buscarProducto" type="search" name="buscar" value="{{ busqueda }}" autocomplete="off" placeholder="¿Qué producto, marca o categoría buscas hoy?">
+        {% if busqueda %}
+          <a href="?catalogo=1{% if categoria_token %}&amp;categoria={{ categoria_token }}{% endif %}#catalogo" class="tienda-buscador__limpiar" aria-label="Limpiar búsqueda">
+            <i class="bx bx-x"></i>
+          </a>
+        {% endif %}
+        <button type="submit" class="tienda-buscador__boton" aria-label="Buscar" title="Buscar">
+          <i class="bx bx-search" aria-hidden="true"></i>
+        </button>
+      </form>
+    </section>
+
+    <!-- Barra de Ventajas de Compra -->
+    <section class="tienda-ventajas" aria-label="Ventajas de la tienda">
+      <article class="tienda-ventaja-card">
+        <span class="tienda-ventaja-card__icono"><i class="bx bx-store-alt" aria-hidden="true"></i></span>
+        <div>
+          <strong>Compra en tu localidad</strong>
+          <small>Recoge en tienda sin costo de envío</small>
+        </div>
+      </article>
+      <article class="tienda-ventaja-card">
+        <span class="tienda-ventaja-card__icono"><i class="bx bx-check-shield" aria-hidden="true"></i></span>
+        <div>
+          <strong>Stock en tiempo real</strong>
+          <small>Solo unidades enteras verificadas</small>
+        </div>
+      </article>
+      <article class="tienda-ventaja-card">
+        <span class="tienda-ventaja-card__icono"><i class="bx bx-time" aria-hidden="true"></i></span>
+        <div>
+          <strong>Reserva al instante</strong>
+          <small>Aparta tus productos y paga al recoger</small>
+        </div>
+      </article>
+    </section>
+
+    <!-- El catálogo se abre explícitamente desde la navegación; la portada carga productos progresivamente. -->
+    {% if busqueda or categoria_id or ver_catalogo or ver_ofertas %}
+      <!-- Catálogo de Productos (Filtros, Grilla y Paginación) -->
+      <section class="tienda-catalogo" id="catalogo">
+      <div class="tienda-catalogo__encabezado">
+        <div class="tienda-catalogo__titulos">
+          <p class="tienda-eyebrow">
+            {% if categoria_seleccionada %}
+              <i class="bx bx-category"></i> {{ categoria_seleccionada.nombre }}
+            {% elif ver_ofertas %}
+              <i class="bx bx-purchase-tag"></i> Ofertas
+            {% else %}
+              <i class="bx bx-grid-alt"></i> Lo mejor de nuestra tienda
+            {% endif %}
+          </p>
+          <h2>
+            {% if busqueda %}
+              Resultados para “{{ busqueda }}”
+            {% elif categoria_seleccionada %}
+              {{ categoria_seleccionada.nombre }}
+            {% elif ver_ofertas %}
+              Ofertas disponibles
+            {% else %}
+              Catálogo de productos
+            {% endif %}
+          </h2>
+        </div>
+      </div>
+
+      {% if page_obj.object_list %}
+        <div class="tienda-productos">
+          {% for producto in page_obj %}
+            {% with imagen=producto.imagenes_producto.all|first %}
+              <article class="tienda-producto tienda-producto--compacto {% if not producto.existencia|tiene_stock_entero %}tienda-producto--agotado{% endif %}">
+                <a class="tienda-producto__enlace" href="{% url 'tiendav:detalle_producto' producto.tienda_token %}" aria-label="Ver detalles de {{ producto.nombre }}">
+                  <div class="tienda-producto__imagen">
+                    {% if imagen and imagen.imagen_archivo %}
+                      <img src="{% url 'tiendav:producto_imagen' imagen.id %}" alt="{{ producto.nombre }}" loading="lazy">
+                    {% else %}
+                      <img src="{% static 'img/default.webp' %}" alt="{{ producto.nombre }}" loading="lazy">
+                    {% endif %}
+                    
+                    {% if producto.tiene_oferta %}
+                      <span class="tienda-producto__etiqueta tienda-producto__etiqueta--oferta"><i class="bx bx-purchase-tag" aria-hidden="true"></i> En oferta</span>
+                    {% elif producto.existencia|tiene_stock_entero %}
+                      <span class="tienda-producto__etiqueta"><i class="bx bx-check" aria-hidden="true"></i> Disponible</span>
+                    {% else %}
+                      <span class="tienda-producto__etiqueta tienda-producto__etiqueta--sin-stock"><i class="bx bx-x" aria-hidden="true"></i> Sin stock</span>
+                    {% endif %}
+                  </div>
+
+                  <div class="tienda-producto__contenido">
+                    <span class="tienda-producto__categoria">{{ producto.categoria.nombre }}</span>
+                    <h3 class="tienda-producto__titulo">{{ producto.nombre }}</h3>
+                    {% if producto.marca %}
+                      <p class="tienda-producto__marca">{{ producto.marca.nombre }}</p>
+                    {% endif %}
+                  </div>
+                </a>
+
+                <div class="tienda-producto__pie">
+                  <div class="tienda-producto__precio-wrapper">
+                    <small>Precio unitario</small>
+                    {% if producto.tiene_oferta %}<del class="tienda-producto__precio-anterior">{{ moneda_simbolo }} {{ producto.precio_venta|floatformat:2 }}</del>{% endif %}
+                    <strong class="tienda-producto__precio">{{ moneda_simbolo }} {{ producto.precio_oferta|floatformat:2 }}</strong>
+                    
+                    {% if producto.existencia|tiene_stock_entero %}
+                      <span class="tienda-producto__stock-status"><i class="bx bx-check-circle" aria-hidden="true"></i> En existencia</span>
+                    {% else %}
+                      <span class="tienda-producto__stock-status tienda-producto__stock-status--agotado"><i class="bx bx-x-circle" aria-hidden="true"></i> Sin stock</span>
+                    {% endif %}
+                  </div>
+
+                  <a href="{% url 'tiendav:detalle_producto' producto.tienda_token %}"
+                     class="tienda-producto__agregar {% if not producto.existencia|tiene_stock_entero %}is-disabled{% endif %}"
+                     aria-label="Comprar {{ producto.nombre }}"
+                     data-product-token="{{ producto.tienda_token }}"
+                     data-btn-card
+                     data-stock="{% if producto.existencia|tiene_stock_entero %}1{% else %}0{% endif %}">
+                    <i class="bx {% if producto.existencia|tiene_stock_entero %}bx-shopping-bag{% else %}bx-block{% endif %}" aria-hidden="true"></i>
+                    <span>{% if producto.existencia|tiene_stock_entero %}Comprar{% else %}Agotado{% endif %}</span>
+                  </a>
+                </div>
+              </article>
+            {% endwith %}
+          {% endfor %}
+        </div>
+
+        <!-- Paginación -->
+        {% if page_obj.paginator.num_pages > 1 %}
+          <nav class="tienda-paginador" aria-label="Paginación del catálogo">
+            <ul class="tienda-paginador__lista">
+              <li class="tienda-paginador__item {% if not page_obj.has_previous %}is-disabled{% endif %}">
+                {% if page_obj.has_previous %}
+                  <a class="tienda-paginador__link" href="?catalogo=1&amp;buscar={{ busqueda|urlencode }}{% if categoria_token %}&amp;categoria={{ categoria_token }}{% endif %}{% if ver_ofertas %}&amp;ofertas=1{% endif %}&amp;page={{ page_obj.previous_page_number }}#catalogo" aria-label="Página anterior">
+                    <i class="bx bx-chevron-left"></i>
+                  </a>
+                {% else %}
+                  <span class="tienda-paginador__link" aria-hidden="true"><i class="bx bx-chevron-left"></i></span>
+                {% endif %}
+              </li>
+              {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
+              {% for numero in paginas_visibles %}
+                <li class="tienda-paginador__item {% if numero == page_obj.number %}is-active{% endif %}">
+                  <a class="tienda-paginador__link" href="?catalogo=1&amp;buscar={{ busqueda|urlencode }}{% if categoria_token %}&amp;categoria={{ categoria_token }}{% endif %}{% if ver_ofertas %}&amp;ofertas=1{% endif %}&amp;page={{ numero }}#catalogo" {% if numero == page_obj.number %}aria-current="page"{% endif %}>
+                    {{ numero }}
+                  </a>
+                </li>
+              {% endfor %}
+              <li class="tienda-paginador__item {% if not page_obj.has_next %}is-disabled{% endif %}">
+                {% if page_obj.has_next %}
+                  <a class="tienda-paginador__link" href="?catalogo=1&amp;buscar={{ busqueda|urlencode }}{% if categoria_token %}&amp;categoria={{ categoria_token }}{% endif %}{% if ver_ofertas %}&amp;ofertas=1{% endif %}&amp;page={{ page_obj.next_page_number }}#catalogo" aria-label="Página siguiente">
+                    <i class="bx bx-chevron-right"></i>
+                  </a>
+                {% else %}
+                  <span class="tienda-paginador__link" aria-hidden="true"><i class="bx bx-chevron-right"></i></span>
+                {% endif %}
+              </li>
+            </ul>
+          </nav>
+        {% endif %}
+      {% else %}
+        <div class="tienda-vacio" role="status" aria-live="polite">
+          <div class="tienda-vacio__visual">
+            <span class="tienda-vacio__halo" aria-hidden="true"></span>
+            <div class="tienda-vacio__icono">
+              {% if ver_ofertas %}
+                <i class="bx bx-purchase-tag-alt" aria-hidden="true"></i>
+              {% elif busqueda %}
+                <i class="bx bx-search-alt" aria-hidden="true"></i>
+              {% elif categoria_seleccionada %}
+                <i class="bx bx-category-alt" aria-hidden="true"></i>
+              {% else %}
+                <i class="bx bx-package" aria-hidden="true"></i>
+              {% endif %}
+            </div>
+            <span class="tienda-vacio__flotante" aria-hidden="true">
+              {% if ver_ofertas %}
+                <i class="bx bx-time-five"></i>
+              {% elif busqueda %}
+                <i class="bx bx-filter-alt"></i>
+              {% else %}
+                <i class="bx bx-sparkles"></i>
+              {% endif %}
+            </span>
+          </div>
+
+          <div class="tienda-vacio__contenido">
+            {% if ver_ofertas %}
+              <h3 class="tienda-vacio__titulo">No hay ofertas activas en este momento</h3>
+              <p class="tienda-vacio__mensaje">Actualmente todos los productos cuentan con sus precios estándar. Publicamos descuentos y promociones especiales con frecuencia, ¡vuelve a consultar pronto!</p>
+            {% elif busqueda %}
+              <h3 class="tienda-vacio__titulo">No encontramos productos para “{{ busqueda }}”</h3>
+              <p class="tienda-vacio__mensaje">Prueba con otros términos de búsqueda, revisa la ortografía o explora las categorías disponibles.</p>
+            {% elif categoria_seleccionada %}
+              <h3 class="tienda-vacio__titulo">No hay productos disponibles en {{ categoria_seleccionada.nombre }}</h3>
+              <p class="tienda-vacio__mensaje">Por el momento no contamos con existencias en esta categoría. Puedes consultar otras secciones con stock disponible.</p>
+            {% else %}
+              <h3 class="tienda-vacio__titulo">No encontramos productos disponibles</h3>
+              <p class="tienda-vacio__mensaje">En este momento estamos actualizando el inventario. Explora las demás opciones o vuelve a consultar en breve.</p>
+            {% endif %}
+
+            <div class="tienda-vacio__acciones">
+              <a class="tienda-vacio__btn-accion" href="{% url 'tiendav:inicio' %}?catalogo=1#catalogo">
+                <i class="bx bx-store-alt"></i>
+                <span>Ver todo el catálogo</span>
+              </a>
+              {% if busqueda or categoria_id or ver_ofertas %}
+                <a class="tienda-vacio__btn-secundario" href="{% url 'tiendav:categorias' %}">
+                  <i class="bx bx-grid-alt"></i>
+                  <span>Explorar categorías</span>
+                </a>
+              {% endif %}
+            </div>
+
+            {% if categorias %}
+              <div class="tienda-vacio__sugerencias">
+                <span class="tienda-vacio__sugerencias-label"><i class="bx bx-compass"></i> Categorías disponibles:</span>
+                <div class="tienda-vacio__chips">
+                  {% for cat in categorias|slice:":6" %}
+                    <a class="tienda-vacio__chip" href="{% url 'tiendav:inicio' %}?catalogo=1&amp;categoria={{ cat|categoria_token }}#catalogo">
+                      {{ cat.nombre }}
+                    </a>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+      </section>
+    {% elif categorias_con_carrusel %}
+      <!-- Catálogo completo ordenado por categoría con carrusel promocional intermedio -->
+      <section class="tienda-secciones-carruseles" id="categorias" aria-label="Productos por categoría">
+        {% include "partials/categoria_carrusel.html" with categorias_con_carrusel=categorias_primera_mitad %}
+
+        <!-- Carrusel de Banners Promocionales ubicado enmedio de las categorías -->
+        {% if banners_carrusel %}
+          <section class="tienda-hero tienda-carrusel" aria-label="Promociones">
+            {% for banner in banners_carrusel %}
+              <figure class="tienda-slide {% if forloop.first %}is-active{% endif %}" data-slide="{{ forloop.counter0 }}">
+                <img src="{% url 'tiendav:banner' banner.id %}" alt="{{ banner.titulo|default:'Promoción de la tienda' }}" loading="{% if forloop.first %}eager{% else %}lazy{% endif %}" fetchpriority="{% if forloop.first %}high{% else %}auto{% endif %}">
+                {% if banner.titulo %}
+                  <figcaption>
+                    <div class="tienda-slide__titulo">{{ banner.titulo }}</div>
+                    {% if banner.subtitulo %}<small class="tienda-slide__subtitulo">{{ banner.subtitulo }}</small>{% endif %}
+                  </figcaption>
+                {% endif %}
+              </figure>
+            {% endfor %}
+            {% if banners_carrusel|length > 1 %}
+              <button class="tienda-carrusel__control tienda-carrusel__prev" type="button" aria-label="Promoción anterior"><i class="bx bx-chevron-left"></i></button>
+              <button class="tienda-carrusel__control tienda-carrusel__next" type="button" aria-label="Siguiente promoción"><i class="bx bx-chevron-right"></i></button>
+              <div class="tienda-carrusel__dots" aria-label="Seleccionar promoción">
+                {% for banner in banners_carrusel %}<button type="button" class="{% if forloop.first %}is-active{% endif %}" aria-label="Promoción {{ forloop.counter }}" data-slide-target="{{ forloop.counter0 }}"></button>{% endfor %}
+              </div>
+            {% endif %}
+          </section>
+        {% endif %}
+
+        {% if categorias_segunda_mitad %}
+          {% include "partials/categoria_carrusel.html" with categorias_con_carrusel=categorias_segunda_mitad %}
+        {% endif %}
+
+        {% if categorias_inicio_tiene_mas %}
+          <div class="tienda-cargar-mas-categorias-wrap" id="wrap-cargar-categorias"
+               data-categorias-url="{% url 'tiendav:inicio' %}"
+               data-next-offset="{{ categorias_inicio_siguiente_offset }}">
+            <button type="button" class="tienda-btn-cargar-mas" id="btn-cargar-mas-categorias">
+              <i class="bx bx-plus-circle" aria-hidden="true"></i>
+              <span>Cargar más categorías</span>
+            </button>
+            <span class="tienda-visualmente-oculto" data-categorias-status aria-live="polite"></span>
+          </div>
+        {% endif %}
+      </section>
+    {% elif banners_carrusel %}
+      <section class="tienda-secciones-carruseles" aria-label="Promociones">
+        <section class="tienda-hero tienda-carrusel" aria-label="Promociones">
+          {% for banner in banners_carrusel %}
+            <figure class="tienda-slide {% if forloop.first %}is-active{% endif %}" data-slide="{{ forloop.counter0 }}">
+              <img src="{% url 'tiendav:banner' banner.id %}" alt="{{ banner.titulo|default:'Promoción de la tienda' }}" loading="{% if forloop.first %}eager{% else %}lazy{% endif %}" fetchpriority="{% if forloop.first %}high{% else %}auto{% endif %}">
+              {% if banner.titulo %}
+                <figcaption>
+                  <div class="tienda-slide__titulo">{{ banner.titulo }}</div>
+                  {% if banner.subtitulo %}<small class="tienda-slide__subtitulo">{{ banner.subtitulo }}</small>{% endif %}
+                </figcaption>
+              {% endif %}
+            </figure>
+          {% endfor %}
+          {% if banners_carrusel|length > 1 %}
+            <button class="tienda-carrusel__control tienda-carrusel__prev" type="button" aria-label="Promoción anterior"><i class="bx bx-chevron-left"></i></button>
+            <button class="tienda-carrusel__control tienda-carrusel__next" type="button" aria-label="Siguiente promoción"><i class="bx bx-chevron-right"></i></button>
+            <div class="tienda-carrusel__dots" aria-label="Seleccionar promoción">
+              {% for banner in banners_carrusel %}<button type="button" class="{% if forloop.first %}is-active{% endif %}" aria-label="Promoción {{ forloop.counter }}" data-slide-target="{{ forloop.counter0 }}"></button>{% endfor %}
+            </div>
+          {% endif %}
+        </section>
+      </section>
+    {% endif %}
+  </main>
+{% endblock %}

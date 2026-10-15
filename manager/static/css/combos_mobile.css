@@ -1,6 +1,7 @@
 /* La versión de escritorio permanece en combos.css. */
 .combos-mobile-list,
-.combos-selected-mobile-list {
+.combos-selected-mobile-list,
+.combos-list-mobile-search-card {
   display: none;
 }
 
@@ -20,7 +21,6 @@
 
   .combos-mobile-card,
   .combos-selected-mobile-card,
-  .combos-mobile-empty,
   .combos-selected-mobile-empty {
     border: 1px solid
       color-mix(in srgb, var(--system-primary, #32877f) 18%, #dce8e7);
@@ -205,20 +205,38 @@
   }
 
   .combos-mobile-empty,
-  .combos-selected-mobile-empty {
-    display: grid;
-    place-items: center;
-    gap: 7px;
-    min-height: 130px;
-    padding: 20px;
-    color: #718182;
+  .combos-selected-mobile-empty,
+  .combos-mobile-list .mobile-empty-state {
+    grid-column: 1 / -1;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 2.2rem 1rem;
     text-align: center;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px dashed #d6e0dd;
+    margin: 0.5rem 0;
   }
 
   .combos-mobile-empty i,
-  .combos-selected-mobile-empty i {
-    color: var(--system-primary, #32877f);
-    font-size: 2rem;
+  .combos-selected-mobile-empty i,
+  .combos-mobile-list .mobile-empty-state i {
+    color: #8da29c;
+  }
+
+  .combos-mobile-empty strong,
+  .combos-mobile-list .mobile-empty-state strong {
+    display: block;
+    font-size: 0.95rem;
+    color: var(--system-secondary, #243531);
+    margin-bottom: 0.25rem;
+  }
+
+  .combos-mobile-empty p,
+  .combos-mobile-list .mobile-empty-state p {
+    color: #71827d;
+    font-size: 0.84rem;
+    margin: 0;
   }
 
 .combos-intro {
@@ -508,103 +526,105 @@
   min-height: 44px;
 }
 
-.combos-list-mobile-search-card {
-  position: relative;
-  display: block;
-  margin: 0 0 0.85rem;
-  padding: 0.85rem;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff);
-  border-radius: 1rem;
-  background: #fff;
-  box-shadow: 0 0.3rem 0.9rem
-    color-mix(in srgb, var(--system-secondary, #10463e) 8%, transparent);
-}
-.combos-list-mobile-search-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: 0.22rem;
-  background: linear-gradient(
-    90deg,
-    var(--system-primary, #32877f),
-    var(--system-button, var(--system-primary, #32877f))
-  );
-}
-.combos-list-mobile-search-card__intro {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  margin-bottom: 0.7rem;
-}
-.combos-list-mobile-search-card__intro > span {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  border-radius: 0.7rem;
-  color: var(--system-primary, #32877f);
-  background: color-mix(in srgb, var(--system-primary, #32877f) 10%, #fff);
-  font-size: 1.15rem;
-}
-.combos-list-mobile-search-card__intro strong,
-.combos-list-mobile-search-card__intro small {
-  display: block;
-}
-.combos-list-mobile-search-card__intro strong {
-  color: var(--system-secondary, #10463e);
-  font-size: 0.88rem;
-}
-.combos-list-mobile-search-card__intro small {
-  margin-top: 0.1rem;
-  color: color-mix(in srgb, var(--system-secondary, #10463e) 55%, #fff);
-  font-size: 0.68rem;
-}
-.combos-list-mobile-search {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.45rem;
-  align-items: center;
-}
-.combos-list-mobile-search__field {
-  position: relative;
-  min-width: 0;
-}
-.combos-list-mobile-search__field > i {
-  position: absolute;
-  top: 50%;
-  left: 0.75rem;
-  color: var(--system-primary, #32877f);
-  font-size: 1.05rem;
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-.combos-list-mobile-search input {
-  width: 100%;
-  min-width: 0;
-  height: 44px;
-  padding: 0.6rem 0.7rem 0.6rem 2.2rem;
-  border: 1px solid
-    color-mix(in srgb, var(--system-primary, #32877f) 18%, #dce7e5);
-  border-radius: 0.65rem;
-  outline: 0;
-  background: color-mix(in srgb, var(--system-primary, #32877f) 4%, #fff);
-}
-.combos-list-mobile-search button {
-  display: inline-flex;
-  min-width: 44px;
-  height: 44px;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 0.65rem;
-  color: #fff;
-  background: var(--system-primary, #32877f);
-}
-.combos-list-mobile-search button span {
-  display: none;
+@media (max-width: 1032px) {
+  .combos-list-mobile-search-card {
+    position: relative;
+    display: block;
+    margin: 0 0 0.85rem;
+    padding: 0.85rem;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--system-primary, #32877f) 17%, #fff);
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 0.3rem 0.9rem
+      color-mix(in srgb, var(--system-secondary, #10463e) 8%, transparent);
+  }
+  .combos-list-mobile-search-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 0.22rem;
+    background: linear-gradient(
+      90deg,
+      var(--system-primary, #32877f),
+      var(--system-button, var(--system-primary, #32877f))
+    );
+  }
+  .combos-list-mobile-search-card__intro {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 0.7rem;
+  }
+  .combos-list-mobile-search-card__intro > span {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    border-radius: 0.7rem;
+    color: var(--system-primary, #32877f);
+    background: color-mix(in srgb, var(--system-primary, #32877f) 10%, #fff);
+    font-size: 1.15rem;
+  }
+  .combos-list-mobile-search-card__intro strong,
+  .combos-list-mobile-search-card__intro small {
+    display: block;
+  }
+  .combos-list-mobile-search-card__intro strong {
+    color: var(--system-secondary, #10463e);
+    font-size: 0.88rem;
+  }
+  .combos-list-mobile-search-card__intro small {
+    margin-top: 0.1rem;
+    color: color-mix(in srgb, var(--system-secondary, #10463e) 55%, #fff);
+    font-size: 0.68rem;
+  }
+  .combos-list-mobile-search {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.45rem;
+    align-items: center;
+  }
+  .combos-list-mobile-search__field {
+    position: relative;
+    min-width: 0;
+  }
+  .combos-list-mobile-search__field > i {
+    position: absolute;
+    top: 50%;
+    left: 0.75rem;
+    color: var(--system-primary, #32877f);
+    font-size: 1.05rem;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+  .combos-list-mobile-search input {
+    width: 100%;
+    min-width: 0;
+    height: 44px;
+    padding: 0.6rem 0.7rem 0.6rem 2.2rem;
+    border: 1px solid
+      color-mix(in srgb, var(--system-primary, #32877f) 18%, #dce7e5);
+    border-radius: 0.65rem;
+    outline: 0;
+    background: color-mix(in srgb, var(--system-primary, #32877f) 4%, #fff);
+  }
+  .combos-list-mobile-search button {
+    display: inline-flex;
+    min-width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 0.65rem;
+    color: #fff;
+    background: var(--system-primary, #32877f);
+  }
+  .combos-list-mobile-search button span {
+    display: none;
+  }
 }
 
 @media (max-width: 520px) {

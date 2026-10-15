@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+{% load static tienda_extras %}
+{% block title %}{{ producto.nombre }} | {{ configuracion.nombre_comercial|default:"Tienda" }}{% endblock %}
+{% block content %}
+  <main class="tienda-detalle" id="contenido-principal">
+    <nav class="tienda-migas" aria-label="Ruta de navegación">
+      <a href="{% url 'tiendav:inicio' %}"><i class="bx bx-home-alt" aria-hidden="true"></i> Inicio</a>
+      <i class="bx bx-chevron-right" aria-hidden="true"></i>
+      <a href="{% url 'tiendav:inicio' %}?catalogo=1#catalogo">Catálogo</a>
+      {% if producto.categoria %}
+        <i class="bx bx-chevron-right" aria-hidden="true"></i>
+        <a href="{% url 'tiendav:inicio' %}?catalogo=1&amp;categoria={{ producto.categoria|categoria_token }}#catalogo">{{ producto.categoria.nombre }}</a>
+      {% endif %}
+      <i class="bx bx-chevron-right" aria-hidden="true"></i>
+      <span class="tienda-migas__actual">{{ producto.nombre }}</span>
+    </nav>
+
+    {% with imagenes=producto.imagenes_producto.all %}
+    {% with imagen_principal=imagenes|first %}
+      <section class="tienda-detalle__principal">
+        <!-- Galería Interactiva con Carrusel y Miniaturas -->
+        <div class="tienda-galeria-contenedor">
+          <div class="tienda-galeria {% if imagenes.count < 2 %}tienda-galeria--simple{% endif %}" tabindex="0" aria-label="Galería de imágenes del producto">
+            {% if imagenes %}
+              {% for imagen in imagenes %}
+                <figure class="tienda-galeria__slide {% if forloop.first %}is-active{% endif %}" data-producto-slide="{{ forloop.counter0 }}">
+                  <img src="{% url 'tiendav:producto_imagen' imagen.id %}" alt="{{ producto.nombre }} — imagen {{ forloop.counter }} de {{ imagenes.count }}" {% if not forloop.first %}loading="lazy"{% endif %}>
+                </figure>
+              {% endfor %}
+
+              {% if imagenes.count > 1 %}
+                <button type="button" class="tienda-galeria__control tienda-galeria__prev" aria-label="Imagen anterior">
+                  <i class="bx bx-chevron-left" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="tienda-galeria__control tienda-galeria__next" aria-label="Siguiente imagen">
+                  <i class="bx bx-chevron-right" aria-hidden="true"></i>
+                </button>
+                
+                <span class="tienda-galeria__contador" aria-live="polite">
+                  <i class="bx bx-image" aria-hidden="true"></i>
+                  <span data-current-slide>1</span> / <span>{{ imagenes.count }}</span>
+                </span>
+
+                <div class="tienda-galeria__dots" aria-label="Seleccionar imagen">
+                  {% for imagen in imagenes %}
+                    <button type="button" class="{% if forloop.first %}is-active{% endif %}" data-producto-slide-target="{{ forloop.counter0 }}" aria-label="Ir a imagen {{ forloop.counter }}"></button>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            {% else %}
+              <figure class="tienda-galeria__slide is-active">
+                <img src="{% static 'img/default.webp' %}" alt="{{ producto.nombre }}">
+              </figure>
+            {% endif %}
+
+            <div class="tienda-galeria__etiquetas">
+              {% if producto.tiene_oferta %}
+                <span class="tienda-badge tienda-badge--oferta"><i class="bx bx-purchase-tag" aria-hidden="true"></i> En oferta</span>
+              {% elif tiene_stock %}
+                <span class="tienda-badge tienda-badge--stock"><i class="bx bx-check" aria-hidden="true"></i> En existencia</span>
+              {% else %}
+                <span class="tienda-badge tienda-badge--sin-stock"><i class="bx bx-x" aria-hidden="true"></i> Sin stock</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Tira de Miniaturas interactiva para navegar -->
+          {% if imagenes.count > 1 %}
+            <div class="tienda-galeria__thumbs" role="region" aria-label="Miniaturas de imágenes">
+              {% for imagen in imagenes %}
+                <button type="button"
+                        class="tienda-galeria__thumb {% if forloop.first %}is-active{% endif %}"
+                        data-producto-thumb="{{ forloop.counter0 }}"
+                        aria-label="Ver imagen {{ forloop.counter }}">
+                  <img src="{% url 'tiendav:producto_imagen' imagen.id %}" alt="Miniatura {{ forloop.counter }}" loading="lazy">
+                </button>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Información del producto -->
+        <article class="tienda-detalle__info">
+          <div class="tienda-detalle__badges">
+            <span class="tienda-chip"><i class="bx bx-category" aria-hidden="true"></i> {{ producto.categoria.nombre }}</span>
+            <span class="tienda-chip tienda-chip--subtle"><i class="bx bx-purchase-tag" aria-hidden="true"></i> {{ producto.marca.nombre }}</span>
+          </div>
+
+          <h1 class="tienda-detalle__titulo">{{ producto.nombre }}</h1>
+
+          <div class="tienda-detalle__precio-card">
+            <div class="tienda-detalle__precio-label">Precio</div>
+            <div class="tienda-detalle__precio-fila">
+              {% if producto.tiene_oferta %}<del class="tienda-detalle__precio-anterior">{{ moneda_simbolo }} {{ producto.precio_venta|floatformat:2 }}</del>{% endif %}
+              <strong class="tienda-detalle__precio">{{ moneda_simbolo }} {{ producto.precio_oferta|floatformat:2 }}</strong>
+              <span class="tienda-detalle__unidad-tipo">por {{ producto.unidad_medida.nombre|lower }}</span>
+            </div>
+          </div>
+
+          <!-- Estado de Stock general comprobando unidades enteras -->
+          <div class="tienda-detalle__stock {% if tiene_stock %}is-available{% else %}is-unavailable{% endif %}">
+            <div class="tienda-detalle__stock-icono">
+              <i class="bx {% if tiene_stock %}bx-check-circle{% else %}bx-x-circle{% endif %}" aria-hidden="true"></i>
+            </div>
+            <div class="tienda-detalle__stock-texto">
+              <strong>{% if tiene_stock %}Disponible en tiendas seleccionadas{% else %}Producto sin existencias{% endif %}</strong>
+              <small>
+                {% if tiene_stock %}
+                  Hay {{ total_unidades_enteras }} {{ producto.unidad_medida.abreviatura }} disponibles para retiro
+                {% else %}
+                  Actualmente no contamos con unidades completas en ninguna tienda
+                {% endif %}
+              </small>
+            </div>
+          </div>
+
+          <div class="tienda-ficha-datos" aria-label="Detalles técnicos">
+            <div class="tienda-ficha-item">
+              <span class="tienda-ficha-item__icono"><i class="bx bx-barcode"></i></span>
+              <div><small>SKU / Código</small><strong>{{ producto.codigo_sku }}</strong></div>
+            </div>
+            <div class="tienda-ficha-item">
+              <span class="tienda-ficha-item__icono"><i class="bx bx-cube"></i></span>
+              <div><small>Unidad</small><strong>{{ producto.unidad_medida.nombre }} ({{ producto.unidad_medida.abreviatura }})</strong></div>
+            </div>
+            <div class="tienda-ficha-item">
+              <span class="tienda-ficha-item__icono"><i class="bx bx-purchase-tag"></i></span>
+              <div><small>Marca</small><strong>{{ producto.marca.nombre }}</strong></div>
+            </div>
+            <div class="tienda-ficha-item">
+              <span class="tienda-ficha-item__icono"><i class="bx bx-category"></i></span>
+              <div><small>Categoría</small><strong>{{ producto.categoria.nombre }}</strong></div>
+            </div>
+          </div>
+
+          {% if producto.descripcion %}
+            <div class="tienda-detalle__descripcion-bloque">
+              <h3>Descripción</h3>
+              <p>{{ producto.descripcion|linebreaksbr }}</p>
+            </div>
+          {% endif %}
+
+          <div class="tienda-detalle__cta-bloque">
+            <button type="button" class="tienda-agregar {% if not tiene_stock %}is-disabled{% endif %}" data-cart-add
+                    data-product-token="{{ producto.tienda_token }}"
+                    data-product-name="{{ producto.nombre }}"
+                    data-product-price="{{ producto.precio_oferta }}"
+                    data-product-image="{% if imagen_principal and imagen_principal.imagen_archivo %}{% url 'tiendav:producto_imagen' imagen_principal.id %}{% else %}{% static 'img/default.webp' %}{% endif %}"
+                    data-stock="{% if tiene_stock %}1{% else %}0{% endif %}"
+                    {% if not tiene_stock %}disabled{% endif %}>
+              <i class="bx {% if tiene_stock %}bx-shopping-bag{% else %}bx-block{% endif %}" aria-hidden="true"></i>
+              <span>{% if tiene_stock %}Comprar{% else %}No disponible para compra{% endif %}</span>
+            </button>
+          </div>
+        </article>
+      </section>
+    {% endwith %}
+    {% endwith %}
+
+    <section class="tienda-disponibilidad tienda-disponibilidad--horizontal" aria-label="Disponibilidad para retiro en sucursales">
+      <div class="tienda-disponibilidad__barra">
+        <div class="tienda-disponibilidad__titulo">
+          <i class="bx bx-store-alt" aria-hidden="true"></i>
+          <span>Disponibilidad en sucursales físicas</span>
+        </div>
+        <span class="tienda-disponibilidad__subtitulo">Unidades para retiro inmediato</span>
+      </div>
+
+      <div class="tienda-ubicaciones-grid">
+        {% for item in disponibilidad %}
+          <div class="tienda-ubicacion-tarjeta {% if item.tiene_stock %}is-disponible{% else %}is-agotada{% endif %}">
+            <div class="tienda-ubicacion-tarjeta__encabezado">
+              <div class="tienda-ubicacion-tarjeta__tienda">
+                <span class="tienda-ubicacion-tarjeta__icono">
+                  <i class="bx bx-store" aria-hidden="true"></i>
+                </span>
+                <strong class="tienda-ubicacion-tarjeta__nombre" title="{{ item.ubicacion.nombre }}">{{ item.ubicacion.nombre }}</strong>
+              </div>
+              {% if item.tiene_stock %}
+                <span class="tienda-ubicacion-badge is-disponible">
+                  <i class="bx bx-check-circle" aria-hidden="true"></i> Disponible
+                </span>
+              {% else %}
+                <span class="tienda-ubicacion-badge is-agotada">
+                  <i class="bx bx-x-circle" aria-hidden="true"></i> Sin stock
+                </span>
+              {% endif %}
+            </div>
+
+            <div class="tienda-ubicacion-tarjeta__cuerpo">
+              {% if item.tiene_stock %}
+                <div class="tienda-ubicacion-stock">
+                  <span class="tienda-ubicacion-stock__cant">{{ item.unidades_enteras }}</span>
+                  <span class="tienda-ubicacion-stock__unidad">{{ producto.unidad_medida.abreviatura|default:"UD"|upper }}</span>
+                  <span class="tienda-ubicacion-stock__texto">disponibles para retiro</span>
+                </div>
+              {% else %}
+                <div class="tienda-ubicacion-stock is-agotada">
+                  <span class="tienda-ubicacion-stock__texto">Sin unidades para retiro en esta sucursal</span>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        {% empty %}
+          <div class="tienda-ubicacion-tarjeta is-agotada">
+            <div class="tienda-ubicacion-tarjeta__cuerpo">
+              <span class="tienda-ubicacion-stock__texto">No hay tiendas físicas disponibles actualmente.</span>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- Productos relacionados -->
+    {% if productos_relacionados %}
+      <section class="tienda-catalogo tienda-relacionados">
+        <div class="tienda-catalogo__encabezado">
+          <div class="tienda-catalogo__titulos">
+            <p class="tienda-eyebrow"><i class="bx bx-star"></i> Recomendaciones</p>
+            <h2>Productos relacionados</h2>
+          </div>
+          <a class="tienda-ver-catalogo" href="{% url 'tiendav:inicio' %}?catalogo=1&amp;categoria={{ producto.categoria|categoria_token }}#catalogo">
+            <span>Ver más en {{ producto.categoria.nombre }}</span>
+            <i class="bx bx-right-arrow-alt" aria-hidden="true"></i>
+          </a>
+        </div>
+        <div class="tienda-carrusel-wrapper">
+          <button type="button" class="tienda-carrusel-nav-btn tienda-carrusel-nav-btn--prev"
+                  data-carousel-nav="prev" data-target="#track-relacionados"
+                  aria-label="Desplazar productos relacionados a la izquierda">
+            <i class="bx bx-chevron-left" aria-hidden="true"></i>
+          </button>
+          <div class="tienda-carrusel-track" id="track-relacionados" tabindex="0" role="region" aria-label="Productos relacionados">
+          {% for relacionado in productos_relacionados %}
+            {% with imagen=relacionado.imagenes_producto.all|first %}
+              <article class="tienda-producto tienda-producto--compacto {% if not relacionado.existencia|tiene_stock_entero %}tienda-producto--agotado{% endif %}">
+                <a class="tienda-producto__enlace" href="{% url 'tiendav:detalle_producto' relacionado.tienda_token %}" aria-label="Ver {{ relacionado.nombre }}">
+                  <div class="tienda-producto__imagen">
+                    {% if imagen and imagen.imagen_archivo %}
+                      <img src="{% url 'tiendav:producto_imagen' imagen.id %}" alt="{{ relacionado.nombre }}" loading="lazy">
+                    {% else %}
+                      <img src="{% static 'img/default.webp' %}" alt="{{ relacionado.nombre }}" loading="lazy">
+                    {% endif %}
+                    {% if relacionado.tiene_oferta %}
+                      <span class="tienda-producto__etiqueta tienda-producto__etiqueta--oferta"><i class="bx bx-purchase-tag" aria-hidden="true"></i> En oferta</span>
+                    {% elif relacionado.existencia|tiene_stock_entero %}
+                      <span class="tienda-producto__etiqueta"><i class="bx bx-check" aria-hidden="true"></i> Disponible</span>
+                    {% else %}
+                      <span class="tienda-producto__etiqueta tienda-producto__etiqueta--sin-stock"><i class="bx bx-x" aria-hidden="true"></i> Sin stock</span>
+                    {% endif %}
+                  </div>
+                  <div class="tienda-producto__contenido">
+                    <span class="tienda-producto__categoria">{{ relacionado.categoria.nombre }}</span>
+                    <h3 class="tienda-producto__titulo">{{ relacionado.nombre }}</h3>
+                    {% if relacionado.marca %}
+                      <p class="tienda-producto__marca">{{ relacionado.marca.nombre }}</p>
+                    {% endif %}
+                  </div>
+                </a>
+                <div class="tienda-producto__pie">
+                  <div class="tienda-producto__precio-wrapper">
+                    <small>Precio</small>
+                    {% if relacionado.tiene_oferta %}<del class="tienda-producto__precio-anterior">{{ moneda_simbolo }} {{ relacionado.precio_venta|floatformat:2 }}</del>{% endif %}
+                    <strong class="tienda-producto__precio">{{ moneda_simbolo }} {{ relacionado.precio_oferta|floatformat:2 }}</strong>
+                  </div>
+                  <button type="button"
+                     class="tienda-producto__agregar {% if not relacionado.existencia|tiene_stock_entero %}is-disabled{% endif %}"
+                     data-cart-add
+                     data-product-token="{{ relacionado.tienda_token }}"
+                     data-product-name="{{ relacionado.nombre }}"
+                     data-product-price="{{ relacionado.precio_oferta }}"
+                     data-product-image="{% if imagen and imagen.imagen_archivo %}{% url 'tiendav:producto_imagen' imagen.id %}{% else %}{% static 'img/default.webp' %}{% endif %}"
+                     data-stock="{% if relacionado.existencia|tiene_stock_entero %}1{% else %}0{% endif %}"
+                     aria-label="Comprar {{ relacionado.nombre }}"
+                     {% if not relacionado.existencia|tiene_stock_entero %}disabled{% endif %}>
+                    <i class="bx {% if relacionado.existencia|tiene_stock_entero %}bx-shopping-bag{% else %}bx-block{% endif %}" aria-hidden="true"></i>
+                    <span>{% if relacionado.existencia|tiene_stock_entero %}Comprar{% else %}Agotado{% endif %}</span>
+                  </button>
+                </div>
+              </article>
+            {% endwith %}
+          {% endfor %}
+          </div>
+          <button type="button" class="tienda-carrusel-nav-btn tienda-carrusel-nav-btn--next"
+                  data-carousel-nav="next" data-target="#track-relacionados"
+                  aria-label="Desplazar productos relacionados a la derecha">
+            <i class="bx bx-chevron-right" aria-hidden="true"></i>
+          </button>
+        </div>
+      </section>
+    {% endif %}
+  </main>
+{% endblock %}

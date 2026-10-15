@@ -61,5 +61,11 @@ def tema_empresa(request):
             "moneda_sistema": ConfiguracionEmpresa.MONEDA_LEMPIRA,
             "moneda_simbolo": "L.",
         }
-    tema["tiendav_habilitada"] = getattr(settings, "TIENDAV_HABILITADA", False)
+    try:
+        from accounts.models import permision
+        ecommerce_on = permision.ecommerce_activo()
+    except Exception:
+        ecommerce_on = True
+
+    tema["tiendav_habilitada"] = getattr(settings, "TIENDAV_HABILITADA", False) and ecommerce_on
     return tema

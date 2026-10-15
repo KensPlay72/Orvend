@@ -2,13 +2,13 @@
 {% load static %}
 {% block title %}Registrar Merma{% endblock title %}
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/compras.css' %}?v=20260918-02" />
-  <link rel="stylesheet" href="{% static 'css/traslados.css' %}?v=20261006-input-cantidad" />
-  <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261003-mobile-sheet" />
+  <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/traslados.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 {% endblock extra_css %}
 {% block page_css_overrides %}
-  <link rel="stylesheet" href="{% static 'css/traslados_mobile.css' %}?v=20261005-paginador-stock" />
-  <link rel="stylesheet" href="{% static 'css/merma.css' %}?v=20261009-merma-listado" />
+  <link rel="stylesheet" href="{% static 'css/traslados_mobile.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/merma.css' %}" />
 {% endblock page_css_overrides %}
 {% block titulo_content %}
   <div class="tituloscont">
@@ -114,5 +114,5 @@
     <section class="traslados-editor-mobile-list"
              aria-label="Productos agregados a la merma"></section>
   </div>
-  <script src="{% static 'js/gestiones/merma.js' %}?v=20261009-merma-listado-carga"></script>
+  <script src="{% static 'js/gestiones/merma.js' %}"></script>
 {% endblock main_content %}

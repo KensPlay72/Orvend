@@ -216,6 +216,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   renderDetalle();
 
+  const MAX_COMBO_IMAGE_BYTES = 5 * 1024 * 1024;
+
   inputImagenCombo.addEventListener("change", () => {
     const archivo = inputImagenCombo.files?.[0];
     if (!archivo) return;
@@ -227,6 +229,19 @@ document.addEventListener("DOMContentLoaded", () => {
         icon: "warning",
         title: "Formato inválido",
         text: "Selecciona una imagen JPG, PNG o WEBP.",
+        confirmButtonText: "Aceptar",
+        customClass: { confirmButton: "classbotones" },
+      });
+      return;
+    }
+    if (archivo.size > MAX_COMBO_IMAGE_BYTES) {
+      inputImagenCombo.value = "";
+      imagenCombo = null;
+      imagenComboPreview.src = "/static/img/default.png";
+      Swal.fire({
+        icon: "warning",
+        title: "Imagen demasiado pesada",
+        text: "La imagen del combo puede pesar como máximo 5 MB.",
         confirmButtonText: "Aceptar",
         customClass: { confirmButton: "classbotones" },
       });

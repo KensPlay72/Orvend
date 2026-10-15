@@ -4,11 +4,11 @@
 {% block extra_css %}
 <link
   rel="stylesheet"
-  href="{% static 'css/manager.css' %}?v=20261004-retiros-sheet"
+  href="{% static 'css/manager.css' %}"
 />
 <link
   rel="stylesheet"
-  href="{% static 'css/retiros_caja.css' %}?v=20261004-retiros-sheet"
+  href="{% static 'css/retiros_caja.css' %}"
 />
 {% endblock %} 
 {% block titulo_content %}
@@ -63,10 +63,10 @@
       </button>
     </article>
     {% empty %}
-    <div class="retiros-empty">
-      <span class="retiros-empty__icon"><i class="bx bx-wallet-alt"></i></span>
-      <h3>Sin cajas activas</h3>
-      <p>No hay cajas activas para retirar efectivo en este momento.</p>
+    <div class="mobile-empty-state">
+      <i class="bx bx-wallet-alt fs-2 text-muted d-block mb-2"></i>
+      <strong>No hay cajas activas registradas para mostrar.</strong>
+      <p class="text-muted small m-0">No hay cajas activas para retirar efectivo en este momento.</p>
     </div>
     {% endfor %}
   </section>

@@ -393,7 +393,7 @@ if (notificationsToggle && notificationsPanel && notificacionesHabilitadas) {
 
   const conectarSharedWorker = () => {
     try {
-      const workerUrl = new URL("./notificaciones_worker.js?v=20261009-nav-persistente", menuScriptUrl);
+      const workerUrl = new URL("./notificaciones_worker.js", menuScriptUrl);
       const worker = new SharedWorker(workerUrl, { name: "orvend-notificaciones" });
       const puertoNotificaciones = worker.port;
       puertoNotificaciones.addEventListener("message", (event) => {

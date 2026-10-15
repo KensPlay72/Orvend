@@ -3,10 +3,10 @@
 {% block title %}Combos{% endblock %} 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
-<link rel="stylesheet" href="{% static 'css/combos.css' %}?v=20261006-05" />
+<link rel="stylesheet" href="{% static 'css/combos.css' %}" />
 {% endblock %} 
 {% block page_css_overrides %}
-<link rel="stylesheet" href="{% static 'css/combos_mobile.css' %}?v=20261006-05" />
+<link rel="stylesheet" href="{% static 'css/combos_mobile.css' %}" />
 {% endblock %}
 {% block titulo_content %}
 <div class="tituloscont">
@@ -78,8 +78,11 @@
       <tr>
         <td
           colspan="{% if perms.manager.change_combos %}7{% else %}6{% endif %}"
+          class="text-center table-empty-state py-4"
         >
-          No hay combos registrados.
+          <i class="bx bx-package fs-2 text-muted d-block mb-2"></i>
+          <strong>No hay combos registrados para mostrar.</strong>
+          <p class="text-muted small m-0">Los combos o paquetes de productos creados aparecerán aquí.</p>
         </td>
       </tr>
       {% endfor %}
@@ -115,7 +118,11 @@
     </div>
   </article>
   {% empty %}
-  <div class="combos-mobile-empty"><i class="bx bx-package"></i><span>No hay combos registrados.</span></div>
+  <div class="mobile-empty-state">
+    <i class="bx bx-package fs-2 text-muted d-block mb-2"></i>
+    <strong>No hay combos registrados para mostrar.</strong>
+    <p class="text-muted small m-0">Los combos o paquetes de productos creados aparecerán aquí.</p>
+  </div>
   {% endfor %}
 </section>
 
@@ -173,5 +180,5 @@
     detalle: "/manager/combos/0/detalle/",
   };
 </script>
-<script src="{% static 'js/gestiones/combos-list.js' %}?v=20261006-01"></script>
+<script src="{% static 'js/gestiones/combos-list.js' %}"></script>
 {% endblock %}

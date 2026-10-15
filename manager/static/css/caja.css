@@ -166,6 +166,7 @@ th {
   justify-content: center;
   border-radius: 8px 12px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  min-width: 250px;
 }
 
 .container_abajo button {
@@ -217,6 +218,11 @@ th {
   padding-top: 14px;
 }
 
+.caja-secondary-actions button {
+  width: 100%;
+  white-space: nowrap;
+}
+
 .caja-secondary-title {
   margin: 0 0 2px;
   color: #657571;
@@ -227,20 +233,31 @@ th {
 }
 
 .container_abajo .btn-notas-credito {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   background-color: #2f6f9f;
-  padding: 10px 18px;
-  font-size: 16px;
+  padding: 10px 14px;
+  font-size: 15px;
+  white-space: nowrap;
   box-shadow: none;
 }
 
+.container_abajo .btn-notas-credito i {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
 .container_abajo .btn-cupon-global {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 18px;
+  gap: 7px;
+  padding: 10px 14px;
   background-color: #d99617;
-  font-size: 16px;
+  font-size: 15px;
+  white-space: nowrap;
   box-shadow: none;
 }
 
@@ -249,25 +266,57 @@ th {
 }
 
 .container_abajo .btn-cupon-global i {
-  font-size: 19px;
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
 .container_abajo .btn-cotizacion {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 18px;
+  gap: 7px;
+  padding: 10px 14px;
   background-color: #6a5ca8;
-  font-size: 16px;
+  font-size: 15px;
+  white-space: nowrap;
   box-shadow: none;
 }
 
 .container_abajo .btn-cotizacion:hover {
   background-color: #56498d;
 }
+
 .container_abajo .btn-cotizacion i {
-  font-size: 19px;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.container_abajo .btn-pedido {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 14px;
+  background-color: #0284c7;
+  font-size: 15px;
+  white-space: nowrap;
+  box-shadow: none;
+}
+
+.container_abajo .btn-pedido:hover {
+  background-color: #0369a1;
+}
+
+.container_abajo .btn-pedido i {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.container_abajo .btn-pedido span,
+.container_abajo .btn-cotizacion span,
+.container_abajo .btn-cupon-global span {
+  display: inline;
+  white-space: nowrap;
 }
 
 .nota-credito-row td {
@@ -567,6 +616,14 @@ th {
   border-radius: 9px;
   object-fit: cover;
   background: color-mix(in srgb, var(--system-primary) 6%, #fff);
+}
+
+.caja-product-option__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--system-primary);
+  font-size: 1.75rem;
 }
 
 .caja-product-option__info {

@@ -6,6 +6,7 @@ function validateNumber(input) {
 }
 
 const DEFAULT_PRODUCT_IMAGE = "/static/img/default.webp";
+const MAX_PRODUCT_IMAGE_BYTES = 5 * 1024 * 1024;
 
 function setSubmitButtonState(button, isProcessing) {
   button.disabled = isProcessing;
@@ -338,6 +339,16 @@ inputImagenEdit.addEventListener("change", function (e) {
 
   archivos.forEach((file) => {
     if (imagenesEdit.length >= 5) return;
+    if (file.size > MAX_PRODUCT_IMAGE_BYTES) {
+      Swal.fire({
+        icon: "warning",
+        title: "Imagen demasiado pesada",
+        text: `La imagen "${file.name}" supera el límite de 5 MB por imagen.`,
+        confirmButtonText: "Aceptar",
+        customClass: { confirmButton: "classbotones" },
+      });
+      return;
+    }
 
     imagenesEdit.push({
       file: file,
@@ -1242,6 +1253,16 @@ inputImagen.addEventListener("change", function (e) {
 
   archivos.forEach((file) => {
     if (imagenes.length >= 5) return;
+    if (file.size > MAX_PRODUCT_IMAGE_BYTES) {
+      Swal.fire({
+        icon: "warning",
+        title: "Imagen demasiado pesada",
+        text: `La imagen "${file.name}" supera el límite de 5 MB por imagen.`,
+        confirmButtonText: "Aceptar",
+        customClass: { confirmButton: "classbotones" },
+      });
+      return;
+    }
 
     imagenes.push(file);
 

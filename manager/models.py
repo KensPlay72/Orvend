@@ -572,6 +572,9 @@ class ProveedoresContactos(Abstracto):
 # =========================
 class Ubicaciones(Abstracto):
     nombre = models.CharField(max_length=120)
+    telefono = models.CharField(max_length=30, blank=True, default="")
+    pais = models.CharField(max_length=100, blank=True, default="")
+    departamento = models.CharField(max_length=100, blank=True, default="")
     ubicacion = models.CharField(max_length=255, null=True, blank=True)
     codigo = models.CharField(max_length=10, null=True, blank=True)
     es_bodega = models.BooleanField(default=False)
@@ -579,6 +582,19 @@ class Ubicaciones(Abstracto):
     bodega = models.ForeignKey(
         "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="tiendas"
     )
+    horario = models.TextField(blank=True, default="")
+    mapa_iframe = models.TextField(blank=True, default="")
+    como_llegar_url = models.CharField(max_length=500, blank=True, default="")
+    imagen_nombre = models.CharField(max_length=120, blank=True, default="")
+    imagen_archivo = models.CharField(max_length=180, blank=True, default="")
+    imagen_url = models.CharField(max_length=255, blank=True, default="")
+
+    @property
+    def telefono_whatsapp(self):
+        if not self.telefono:
+            return ""
+        import re
+        return re.sub(r"\D", "", str(self.telefono))
 
     def __str__(self):
         return self.nombre
@@ -1321,6 +1337,14 @@ class Ventas(Abstracto):
         (TIPO_VENTA_CONTADO, "Contado"),
         (TIPO_VENTA_CREDITO, "Crédito"),
     )
+    ORIGEN_LOCAL = "local"
+    ORIGEN_ECOMMERCE = "ecommerce"
+    ORIGEN_RUTA = "ruta"
+    ORIGEN_OPCIONES = (
+        (ORIGEN_LOCAL, "Local"),
+        (ORIGEN_ECOMMERCE, "E-commerce"),
+        (ORIGEN_RUTA, "De ruta"),
+    )
 
     id_factura_cai = models.ForeignKey(
         facturas_cai,
@@ -1363,6 +1387,21 @@ class Ventas(Abstracto):
     tipo_pago = models.CharField(max_length=50)
     tipo_venta = models.CharField(
         max_length=20, choices=TIPO_VENTA_OPCIONES, default=TIPO_VENTA_CONTADO
+    )
+    origen = models.CharField(
+        max_length=12,
+        choices=ORIGEN_OPCIONES,
+        default=ORIGEN_LOCAL,
+    )
+    ecommerce_pedido_id = models.PositiveBigIntegerField(
+        null=True,
+        blank=True,
+        unique=True,
+    )
+    cliente_ecommerce_nombre = models.CharField(
+        max_length=150,
+        blank=True,
+        default="",
     )
 
     class Meta:
@@ -1646,6 +1685,7 @@ class CajaAC(Abstracto):
             ("operar_caja", "Puede operar la caja"),
             ("modificar_precio_caja", "Puede modificar precios en caja"),
             ("ver_dashboard", "Puede ver el dashboard"),
+            ("generar_pedidos_caja", "Puede generar pedidos desde caja"),
         ]
 
     usuario_id = models.IntegerField()

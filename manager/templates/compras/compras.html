@@ -2,9 +2,9 @@
 {% load static pagination_tags %}
 {% block title %}Compras{% endblock %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261006-compras-actions-centered" />
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 {% endblock %}
-{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/compras_mobile.css' %}?v=20261009-detalle-integrado" />{% endblock page_css_overrides %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/compras_mobile.css' %}" />{% endblock page_css_overrides %}
 {% block search_content %}
     <div class="header__search">
         <input type="search"
@@ -271,7 +271,13 @@
 
             </tr>
             {% empty %}
-            <tr><td colspan="9" class="text-center table-empty-state">No hay compras registradas.</td></tr>
+            <tr>
+                <td colspan="9" class="text-center table-empty-state py-4">
+                    <i class="bx bx-cart fs-2 text-muted d-block mb-2"></i>
+                    <strong>No hay compras registradas para mostrar.</strong>
+                    <p class="text-muted small m-0">Las compras de mercadería registradas para esta sucursal aparecerán aquí.</p>
+                </td>
+            </tr>
             {% endfor %}
         </tbody>
     </table>
@@ -314,6 +320,6 @@
     </ul>
 </nav>
         <br>
-        <script type="module" src="{% static 'js/compras/compras.js' %}?v=20260929-exportar"></script>
+        <script type="module" src="{% static 'js/compras/compras.js' %}"></script>
         {% if request.user.is_superuser %}<script src="{% static 'js/importar_excel.js' %}"></script>{% endif %}
 {% endblock %}

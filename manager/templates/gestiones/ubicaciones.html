@@ -4,9 +4,9 @@
     Ubicaciones
 {% endblock title %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=ubicaciones-modal-20260930" />
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 {% endblock extra_css %}
-{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/catalogos_mobile.css' %}?v=20261005-movil-solo" />{% endblock page_css_overrides %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/catalogos_mobile.css' %}" />{% endblock page_css_overrides %}
 {% block titulo_content %}
     <div class="tituloscont">
         <img class="logop"
@@ -55,6 +55,47 @@
                                    class="form-control"
                                    placeholder="Nombre"
                                    required>
+                        </div>
+                        <br>
+                        <!-- ========================= -->
+                        <!-- PAÍS Y DEPARTAMENTO -->
+                        <!-- ========================= -->
+                        <div class="row g-3">
+                            <div class="col-12 col-sm-6">
+                                <div class="form-group">
+                                    <label for="pais_ubicacion">País</label>
+                                    <input type="text"
+                                           name="pais"
+                                           id="pais_ubicacion"
+                                           class="form-control"
+                                           maxlength="100"
+                                           placeholder="Ej: Honduras">
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <div class="form-group">
+                                    <label for="departamento_ubicacion">Departamento</label>
+                                    <input type="text"
+                                           name="departamento"
+                                           id="departamento_ubicacion"
+                                           class="form-control"
+                                           maxlength="100"
+                                           placeholder="Ej: Choluteca">
+                                </div>
+                            </div>
+                        </div>
+                        <br>
+                        <!-- ========================= -->
+                        <!-- TELÉFONO / WHATSAPP -->
+                        <!-- ========================= -->
+                        <div class="form-group">
+                            <label for="telefono_ubicacion">Teléfono / WhatsApp</label>
+                            <input type="text"
+                                   name="telefono"
+                                   id="telefono_ubicacion"
+                                   class="form-control"
+                                   maxlength="30"
+                                   placeholder="Ej: +504 9999-9999">
                         </div>
                         <br>
                         <!-- ========================= -->
@@ -131,6 +172,67 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- ========================= -->
+                        <!-- DATOS DE TIENDA VIRTUAL -->
+                        <!-- ========================= -->
+                         <br>
+                        <div id="tienda_extra_container" hidden>
+                            <div class="form-group mb-3">
+                                <label for="horario_ubicacion">Horarios de atención</label>
+                                <textarea name="horario"
+                                          id="horario_ubicacion"
+                                          class="form-control"
+                                          rows="3"
+                                          placeholder="Lunes a Viernes: 8:00 AM - 7:00 PM&#10;Sábado: 8:00 AM - 6:00 PM&#10;Domingo: 10:00 AM - 6:00 PM"></textarea>
+                            </div>
+                            <br>
+                            <div class="form-group mb-3">
+                                <label for="mapa_iframe">Mapa de Google (Iframe)</label>
+                                <textarea name="mapa_iframe"
+                                          id="mapa_iframe"
+                                          class="form-control"
+                                          rows="2"
+                                          placeholder="Pega aquí el código &lt;iframe src=&quot;https://www.google.com/maps/embed?...&quot;&gt;&lt;/iframe&gt;"></textarea>
+                            </div>
+                            <br>
+                            <div class="form-group mb-3">
+                                <label for="como_llegar_url">Enlace "Cómo llegar" (Google Maps)</label>
+                                <input type="url"
+                                       name="como_llegar_url"
+                                       id="como_llegar_url"
+                                       class="form-control"
+                                       placeholder="https://maps.app.goo.gl/... o https://www.google.com/maps/...">
+                            </div>
+                            <br>
+                            <div class="form-group mb-2">
+                                <label>Imagen de la ubicación <small class="text-muted">(800 × 600 px · Máx. 5 MB)</small></label>
+                                <div class="ubicaciones-imagen-upload">
+                                    <div class="ubicaciones-imagen-preview" id="preview_imagen_ubicacion_wrap" role="button" tabindex="0" aria-label="Seleccionar imagen de la ubicación">
+                                        <div class="ubicaciones-imagen-default" id="default_imagen_ubicacion">
+                                            <i class="bx bx-image-add" aria-hidden="true"></i>
+                                            <span>Haz clic para seleccionar imagen (800 × 600 px · JPG, PNG o WEBP · Máx. 5 MB)</span>
+                                        </div>
+                                        <img id="preview_imagen_ubicacion"
+                                             src=""
+                                             alt="Vista previa de la ubicación"
+                                             hidden>
+                                        <button type="button"
+                                                class="ubicaciones-imagen-remove"
+                                                id="btn_quitar_imagen"
+                                                aria-label="Eliminar imagen"
+                                                hidden>
+                                            <i class="bx bx-x"></i>
+                                        </button>
+                                    </div>
+                                    <input type="file"
+                                           name="imagen"
+                                           id="imagen_ubicacion"
+                                           accept="image/jpeg,image/png,image/webp"
+                                           hidden>
+                                </div>
+                            </div>
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -164,18 +266,59 @@
                         <div class="form-group">
                             <label for="nubicacionedit">Nombre de la ubicación</label>
                             <input type="text"
-                                   name="nubicacionedit"
-                                   id="nubicacionedit"
+                                    name="nubicacionedit"
+                                    id="nubicacionedit"
+                                    class="form-control"
+                                    placeholder="Nombre"
+                                    required>
+                        </div>
+                        <br>
+                        <!-- ========================= -->
+                        <!-- PAÍS Y DEPARTAMENTO -->
+                        <!-- ========================= -->
+                        <div class="row g-3">
+                            <div class="col-12 col-sm-6">
+                                <div class="form-group">
+                                    <label for="pais_ubicacionedit">País</label>
+                                    <input type="text"
+                                           name="pais"
+                                           id="pais_ubicacionedit"
+                                           class="form-control"
+                                           maxlength="100"
+                                           placeholder="Ej: Honduras">
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <div class="form-group">
+                                    <label for="departamento_ubicacionedit">Departamento</label>
+                                    <input type="text"
+                                           name="departamento"
+                                           id="departamento_ubicacionedit"
+                                           class="form-control"
+                                           maxlength="100"
+                                           placeholder="Ej: Choluteca">
+                                </div>
+                            </div>
+                        </div>
+                        <br>
+                        <!-- ========================= -->
+                        <!-- TELÉFONO / WHATSAPP -->
+                        <!-- ========================= -->
+                        <div class="form-group">
+                            <label for="telefono_ubicacionedit">Teléfono / WhatsApp</label>
+                            <input type="text"
+                                   name="telefono"
+                                   id="telefono_ubicacionedit"
                                    class="form-control"
-                                   placeholder="Nombre"
-                                   required>
+                                   maxlength="30"
+                                   placeholder="Ej: +504 9999-9999">
                         </div>
                         <br>
                         <!-- ========================= -->
                         <!-- Ubicación -->
                         <!-- ========================= -->
                         <div class="form-group">
-                            <label for="nubicacion">Detalle ubicación</label>
+                            <label for="nubicaciondetac">Detalle ubicación</label>
                             <textarea
                                    name="nubicaciondetac"
                                    id="nubicaciondetac"
@@ -253,6 +396,67 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- ========================= -->
+                        <!-- DATOS DE TIENDA VIRTUAL (EDITAR) -->
+                        <!-- ========================= -->
+                        <div id="tienda_extra_containeredit" hidden>
+                            <div class="form-group mb-3">
+                                <label for="horario_ubicacionedit">Horarios de atención</label>
+                                <textarea name="horario"
+                                          id="horario_ubicacionedit"
+                                          class="form-control"
+                                          rows="3"
+                                          placeholder="Lunes a Viernes: 8:00 AM - 7:00 PM&#10;Sábado: 8:00 AM - 6:00 PM&#10;Domingo: 10:00 AM - 6:00 PM"></textarea>
+                            </div>
+                            <br>
+                            <div class="form-group mb-3">
+                                <label for="mapa_iframeedit">Mapa de Google (Iframe)</label>
+                                <textarea name="mapa_iframe"
+                                          id="mapa_iframeedit"
+                                          class="form-control"
+                                          rows="2"
+                                          placeholder="Pega aquí el código &lt;iframe src=&quot;https://www.google.com/maps/embed?...&quot;&gt;&lt;/iframe&gt;"></textarea>
+                            </div>
+                            <br>
+                            <div class="form-group mb-3">
+                                <label for="como_llegar_urledit">Enlace "Cómo llegar" (Google Maps)</label>
+                                <input type="url"
+                                       name="como_llegar_url"
+                                       id="como_llegar_urledit"
+                                       class="form-control"
+                                       placeholder="https://maps.app.goo.gl/... o https://www.google.com/maps/...">
+                            </div>
+                            <br>
+                            <div class="form-group mb-2">
+                                <label>Imagen de la ubicación <small class="text-muted">(800 × 600 px · Máx. 5 MB)</small></label>
+                                <input type="hidden" id="quitar_imagenedit" value="false">
+                                <div class="ubicaciones-imagen-upload">
+                                    <div class="ubicaciones-imagen-preview" id="preview_imagen_ubicacionedit_wrap" role="button" tabindex="0" aria-label="Seleccionar imagen de la ubicación">
+                                        <div class="ubicaciones-imagen-default" id="default_imagen_ubicacionedit">
+                                            <i class="bx bx-image-add" aria-hidden="true"></i>
+                                            <span>Haz clic para seleccionar imagen (800 × 600 px · JPG, PNG o WEBP · Máx. 5 MB)</span>
+                                        </div>
+                                        <img id="preview_imagen_ubicacionedit"
+                                             src=""
+                                             alt="Imagen actual de la ubicación"
+                                             hidden>
+                                        <button type="button"
+                                                class="ubicaciones-imagen-remove"
+                                                id="btn_quitar_imagenedit"
+                                                aria-label="Eliminar imagen"
+                                                hidden>
+                                            <i class="bx bx-x"></i>
+                                        </button>
+                                    </div>
+                                    <input type="file"
+                                           name="imagen"
+                                           id="imagen_ubicacionedit"
+                                           accept="image/jpeg,image/png,image/webp"
+                                           hidden>
+                                </div>
+                            </div>
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -281,7 +485,12 @@
                         <!-- ID -->
                         <td>{{ ubicacion.id }}</td>
                         <!-- NOMBRE -->
-                        <td class="fw-bold">{{ ubicacion.nombre }}</td>
+                        <td class="fw-bold">
+                            {{ ubicacion.nombre }}
+                            {% if ubicacion.telefono %}
+                                <br><small class="text-muted fw-normal"><i class="bx bxl-whatsapp text-success" aria-hidden="true"></i> {{ ubicacion.telefono }}</small>
+                            {% endif %}
+                        </td>
                         <!-- TIPO -->
                         <td>
                             {% if ubicacion.es_bodega %}
@@ -328,7 +537,11 @@
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center text-muted">No hay ubicaciones registradas</td>
+                        <td colspan="7" class="text-center table-empty-state py-4">
+                            <i class="bx bx-map-pin fs-2 text-muted d-block mb-2"></i>
+                            <strong>No hay ubicaciones registradas para mostrar.</strong>
+                            <p class="text-muted small m-0">Las sucursales y bodegas del negocio aparecerán aquí.</p>
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>
@@ -364,6 +577,6 @@
         </ul>
     </nav>
     <br>
-    <script type="module" src="{% static 'js/gestiones/ubicaciones.js' %}?v=ubicaciones-bodega-20260930"></script>
+    <script type="module" src="{% static 'js/gestiones/ubicaciones.js' %}"></script>
     <script type="module" src="{% static 'js/chektext.js' %}"></script>
 {% endblock main_content %}

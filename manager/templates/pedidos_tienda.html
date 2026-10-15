@@ -1,112 +1,267 @@
 {% extends "menu.html" %}
 {% load static pagination_tags %}
-{% block title %}Pedidos{% endblock %}
+{% block title %}Pedidos de Clientes{% endblock %}
+
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/manager.css' %}">
-<link rel="stylesheet" href="{% static 'css/pedidos_tienda.css' %}?v=20261010-pedidos-theme-v2">
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/pedidos_tienda.css' %}" />
 {% endblock %}
+
+{% block page_css_overrides %}
+    <link rel="stylesheet" href="{% static 'css/catalogos_mobile.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/ventas.css' %}" />
+    <style>
+      .ventas-filter-form.pedidos-filter-form {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) 110px 48px;
+      }
+      @media (max-width: 991px) {
+        .ventas-filter-form.pedidos-filter-form {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      @media (max-width: 576px) {
+        .ventas-filter-form.pedidos-filter-form {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+{% endblock page_css_overrides %}
+
 {% block titulo_content %}
-<div class="tituloscont">
-  <img class="logop" src="{% static 'img/LH.webp' %}" alt="">
-  <p class="header__logo">| Pedidos</p>
-</div>
+    <div class="tituloscont">
+        <img class="logop" src="{% static 'img/LH.webp' %}" alt="">
+        <p class="header__logo">| Pedidos de Tienda</p>
+    </div>
 {% endblock %}
+
 {% block main_content %}
-<section class="pedidos-tienda">
-  <header class="config-hero pedidos-tienda__hero">
-    <div class="config-hero__icon"><i class="bx bx-shopping-bag" aria-hidden="true"></i></div>
-    <div>
-      <p>Reservas de la tienda en línea</p>
-      <h1>Pedidos de clientes</h1>
-      <span>Acepta los pedidos para descontar las unidades o recházalos para liberar la reserva.</span>
-    </div>
-    <form method="get" class="pedidos-tienda__filtro">
-      <label for="estadoPedido">Estado</label>
-      <select id="estadoPedido" name="estado">
-        <option value="">Todos</option>
-        {% for valor, etiqueta in estados_pedido %}
-          <option value="{{ valor }}" {% if estado_seleccionado == valor %}selected{% endif %}>{{ etiqueta }}</option>
-        {% endfor %}
-      </select>
-      <button type="submit">Filtrar</button>
+<div class="pedidos-tienda-container">
+    <!-- FILTROS REPLICA DE VENTAS -->
+    <form method="get" class="ventas-filter-form pedidos-filter-form mb-3" id="pedidosFilterForm" data-export-url="{% url 'exportar_pedidos_excel' %}">
+        <div class="ventas-filter-heading">
+            <span><i class="bx bx-filter-alt" aria-hidden="true"></i></span>
+            <div><strong>Filtrar pedidos</strong><small>Consulta pedidos por fecha, estado o búsqueda.</small></div>
+        </div>
+        <div class="ventas-filter-group">
+            <label class="ventas-filter-label">Fecha inicial</label>
+            <input type="date"
+                   name="fecha_inicio"
+                   class="form-control"
+                   value="{{ fecha_inicio }}">
+        </div>
+        <div class="ventas-filter-group">
+            <label class="ventas-filter-label">Fecha final</label>
+            <input type="date"
+                   name="fecha_fin"
+                   class="form-control"
+                   value="{{ fecha_fin }}">
+        </div>
+        <div class="ventas-filter-group">
+            <label class="ventas-filter-label">Estado</label>
+            <select name="estado" class="form-control">
+                <option value="">Todos los estados</option>
+                {% for valor, etiqueta in estados_pedido %}
+                    <option value="{{ valor }}" {% if estado_seleccionado == valor %}selected{% endif %}>{{ etiqueta }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="ventas-filter-group flex-grow-1">
+            <label class="ventas-filter-label">Buscar</label>
+            <input type="search"
+                   name="search"
+                   class="form-control"
+                   placeholder="Buscar # pedido, cliente, teléfono..."
+                   value="{{ search }}"
+                   autocomplete="off">
+        </div>
+        <div class="ventas-filter-group ventas-filter-search">
+            <button type="submit" class="ventas-search-btn w-100">Buscar</button>
+        </div>
+        <div class="ventas-filter-group ventas-export-group ventas-filter-export">
+            <button type="button" class="ventas-excel-btn" id="exportarPedidosExcel" aria-label="Exportar pedidos a Excel" title="Exportar a Excel">
+                <i class="bx bx-spreadsheet" aria-hidden="true"></i>
+                <span>Exportar</span>
+            </button>
+        </div>
     </form>
-  </header>
 
-  {% if messages %}
-    <div class="pedidos-tienda__mensajes" aria-live="polite">
-      {% for message in messages %}<p class="pedidos-tienda__mensaje pedidos-tienda__mensaje--{{ message.tags }}">{{ message }}</p>{% endfor %}
+    {% if messages %}
+        <div class="mb-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Tabla principal con diseño unificado como marcas.html -->
+    <div class="tabla-container">
+        <table class="tablas-todo catalog-mobile-table catalog-mobile-table--pedidos" id="tablacont">
+            <thead>
+                <tr>
+                    <th># Pedido</th>
+                    <th>Cliente</th>
+                    <th>Sucursal</th>
+                    <th>Fecha</th>
+                    <th>Total</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pedido in page_obj %}
+                <tr class="pedido-tienda-row" data-id="{{ pedido.id }}" {% if puede_ver_detalle %}data-detail-url="{% url 'detalle_pedido_manager' pedido.token %}" tabindex="0" role="link" aria-label="Abrir pedido {% if pedido.numero_pedido %}{{ pedido.numero_pedido }}{% else %}#{{ pedido.id }}{% endif %}"{% endif %}>
+                    <td>
+                        <span class="pedido-id-chip">{% if pedido.numero_pedido %}{{ pedido.numero_pedido }}{% else %}#{{ pedido.id }}{% endif %}</span>
+                        {% if pedido.origen == "CAJA_RUTA" %}
+                            <span class="badge bg-light text-dark border ms-1" title="Pedido de ruta generado desde caja"><i class="bx bx-car"></i> Ruta</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="pedido-cliente-cell">
+                            <strong>{{ pedido.nombre_cliente }}</strong>
+                            {% if pedido.telefono_cliente %}
+                                <small class="text-muted d-block"><i class="bx bx-phone" style="color: var(--system-primary, #32877f);"></i> {{ pedido.telefono_cliente }}</small>
+                            {% elif pedido.email_cliente %}
+                                <small class="text-muted d-block"><i class="bx bx-envelope" style="color: var(--system-primary, #32877f);"></i> {{ pedido.email_cliente }}</small>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="pedido-sucursal-cell"><i class="bx bx-store" style="color: var(--system-primary, #32877f);"></i> {{ pedido.ubicacion.nombre }}</span>
+                    </td>
+                    <td>{{ pedido.creado|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        <strong style="color: var(--system-primary, #32877f);">{{ moneda_simbolo }} {{ pedido.total|floatformat:2 }}</strong>
+                    </td>
+                    <td class="estado-centrado">
+                        {% if pedido.estado == "PENDIENTE" %}
+                            <span class="badge bg-warning text-dark"><i class="bx bx-time-five"></i> Pendiente</span>
+                        {% elif pedido.estado == "EN_REVISION" %}
+                            <span class="badge bg-info text-dark"><i class="bx bx-refresh"></i> En revisión</span>
+                        {% elif pedido.estado == "ACEPTADO" %}
+                            <span class="badge bg-success"><i class="bx bx-check-circle"></i> Aceptado</span>
+                        {% elif pedido.estado == "PAGADO" %}
+                            <span class="badge bg-info text-white"><i class="bx bx-wallet"></i> Pagado</span>
+                        {% elif pedido.estado == "ENTREGADO" %}
+                            <span class="badge bg-primary"><i class="bx bx-package"></i> Entregado</span>
+                        {% elif pedido.estado == "RECHAZADO" %}
+                            <span class="badge bg-danger"><i class="bx bx-x-circle"></i> Rechazado</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ pedido.get_estado_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if puede_ver_detalle %}
+                            <a href="{% url 'detalle_pedido_manager' pedido.token %}" class="pedido-tienda-ver" title="Entrar al pedido" aria-label="Entrar al pedido">
+                                <i class="bx bx-show" aria-hidden="true"></i>
+                            </a>
+                        {% else %}
+                            <span class="text-muted small" title="Sin permiso para ver detalle"><i class="bx bx-lock-alt"></i></span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center table-empty-state py-4">
+                        <i class="bx bx-receipt fs-2 text-muted d-block mb-2"></i>
+                        <strong>No hay pedidos registrados para mostrar.</strong>
+                        <p class="text-muted small m-0">Los pedidos realizados en la tienda para esta sucursal aparecerán aquí.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-  {% endif %}
 
-  <section class="pedidos-tienda__lista" aria-label="Pedidos recibidos">
-    {% for pedido in pedidos %}
-      <article class="pedido-manager">
-        <header class="pedido-manager__cabecera">
-          <div><span class="pedido-manager__numero">Pedido #{{ pedido.id }}</span><small>{{ pedido.creado|date:"d/m/Y H:i" }}</small></div>
-          <span class="pedido-manager__estado pedido-manager__estado--{{ pedido.estado|lower }}">{{ pedido.get_estado_display }}</span>
-        </header>
-        <div class="pedido-manager__cliente">
-          <strong>{{ pedido.cliente.nombre }}</strong>
-          <span>{{ pedido.cliente.email }}</span>
-          {% if pedido.cliente.telefono %}<span>{{ pedido.cliente.telefono }}</span>{% endif %}
-          <span><i class="bx bx-store" aria-hidden="true"></i> {{ pedido.ubicacion.nombre }}</span>
-        </div>
-        <div class="pedido-manager__productos">
-          {% for detalle in pedido.detalles.all %}
-            <div class="pedido-manager__producto">
-              <span><b>{{ detalle.cantidad|floatformat:"-2" }} × {{ detalle.nombre_producto }}</b><small>SKU: {{ detalle.codigo_sku }} · {{ detalle.precio_unitario|floatformat:2 }} c/u</small></span>
-              <strong>{{ moneda_simbolo }} {{ detalle.subtotal|floatformat:2 }}</strong>
-            </div>
-          {% endfor %}
-        </div>
-        <footer class="pedido-manager__pie">
-          <div><span>Total del pedido</span><strong>{{ moneda_simbolo }} {{ pedido.total|floatformat:2 }}</strong></div>
-          {% if pedido.estado == "PENDIENTE" %}
-            <div class="pedido-manager__acciones">
-              <form method="post" action="{% url 'procesar_pedido_tienda' pedido.id %}">
-                {% csrf_token %}
-                <input type="hidden" name="accion" value="rechazar">
-                <button class="pedido-manager__rechazar" type="submit"><i class="bx bx-x" aria-hidden="true"></i> Rechazar</button>
-              </form>
-              <form method="post" action="{% url 'procesar_pedido_tienda' pedido.id %}">
-                {% csrf_token %}
-                <input type="hidden" name="accion" value="aceptar">
-                <button class="pedido-manager__aceptar" type="submit"><i class="bx bx-check" aria-hidden="true"></i> Aceptar y descontar</button>
-              </form>
-            </div>
-          {% elif pedido.procesado %}
-            <small>Procesado {{ pedido.procesado|date:"d/m/Y H:i" }}{% if pedido.procesado_por %} por {{ pedido.procesado_por.get_full_name|default:pedido.procesado_por.username }}{% endif %}</small>
-          {% endif %}
-        </footer>
-      </article>
-    {% empty %}
-      <div class="pedido-manager__vacio">
-        <i class="bx bx-receipt" aria-hidden="true"></i>
-        <strong>No hay pedidos para mostrar</strong>
-        <span>Los nuevos pedidos reservados por los clientes aparecerán aquí.</span>
-      </div>
-    {% endfor %}
-  </section>
+    <!-- Paginación -->
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="d-flex justify-content-center mt-4">
+        <ul class="pagination">
+            <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+                {% if page_obj.has_previous %}
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&search={{ search|urlencode }}&fecha_inicio={{ fecha_inicio|urlencode }}&fecha_fin={{ fecha_fin|urlencode }}&estado={{ estado_seleccionado|urlencode }}{% if sucursal_seleccionada %}&sucursal={{ sucursal_seleccionada }}{% endif %}">«</a>
+                {% else %}
+                    <span class="page-link">«</span>
+                {% endif %}
+            </li>
 
-  {% if pedidos.paginator.num_pages > 1 %}
-    <nav class="d-flex justify-content-center mt-4" aria-label="Páginas de pedidos">
-      <ul class="pagination">
-        <li class="page-item {% if not pedidos.has_previous %}disabled{% endif %}">
-          {% if pedidos.has_previous %}
-            <a class="page-link" href="?estado={{ estado_seleccionado }}&page={{ pedidos.previous_page_number }}">«</a>
-          {% else %}<span class="page-link">«</span>{% endif %}
-        </li>
-        {% paginas_cercanas pedidos.number pedidos.paginator.num_pages as paginas_visibles %}
-        {% for numero in paginas_visibles %}
-          <li class="page-item {% if numero == pedidos.number %}active{% endif %}"><a class="page-link" href="?estado={{ estado_seleccionado }}&page={{ numero }}">{{ numero }}</a></li>
-        {% endfor %}
-        <li class="page-item {% if not pedidos.has_next %}disabled{% endif %}">
-          {% if pedidos.has_next %}
-            <a class="page-link" href="?estado={{ estado_seleccionado }}&page={{ pedidos.next_page_number }}">»</a>
-          {% else %}<span class="page-link">»</span>{% endif %}
-        </li>
-      </ul>
+            {% paginas_cercanas page_obj.number page_obj.paginator.num_pages as paginas_visibles %}
+            {% for p in paginas_visibles %}
+                <li class="page-item {% if p == page_obj.number %}active{% endif %}">
+                    <a class="page-link" href="?page={{ p }}&search={{ search|urlencode }}&fecha_inicio={{ fecha_inicio|urlencode }}&fecha_fin={{ fecha_fin|urlencode }}&estado={{ estado_seleccionado|urlencode }}{% if sucursal_seleccionada %}&sucursal={{ sucursal_seleccionada }}{% endif %}">{{ p }}</a>
+                </li>
+            {% endfor %}
+
+            <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+                {% if page_obj.has_next %}
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&search={{ search|urlencode }}&fecha_inicio={{ fecha_inicio|urlencode }}&fecha_fin={{ fecha_fin|urlencode }}&estado={{ estado_seleccionado|urlencode }}{% if sucursal_seleccionada %}&sucursal={{ sucursal_seleccionada }}{% endif %}">»</a>
+                {% else %}
+                    <span class="page-link">»</span>
+                {% endif %}
+            </li>
+        </ul>
     </nav>
-  {% endif %}
-</section>
+    {% endif %}
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    // Click en filas para abrir detalle
+    document.querySelectorAll(".pedido-tienda-row[data-detail-url]").forEach((row) => {
+        row.addEventListener("click", (event) => {
+            if (event.target.closest("a, button, input, select, textarea")) return;
+            window.location.assign(row.dataset.detailUrl);
+        });
+        row.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                window.location.assign(row.dataset.detailUrl);
+            }
+        });
+    });
+
+    // Exportación a Excel
+    const formulario = document.getElementById("pedidosFilterForm");
+    const botonExportar = document.getElementById("exportarPedidosExcel");
+    if (formulario && botonExportar) {
+        const iconoOriginal = "bx bx-spreadsheet";
+        botonExportar.addEventListener("click", async () => {
+            const icono = botonExportar.querySelector("i");
+            const parametros = new URLSearchParams(new FormData(formulario));
+
+            botonExportar.disabled = true;
+            if (icono) icono.className = "bx bx-loader-alt bx-spin";
+            botonExportar.setAttribute("aria-label", "Generando archivo de Excel");
+
+            try {
+                const respuesta = await fetch(
+                    `${formulario.dataset.exportUrl}?${parametros.toString()}`
+                );
+                if (!respuesta.ok) throw new Error("No se pudo generar el archivo");
+
+                const archivo = await respuesta.blob();
+                const enlace = document.createElement("a");
+                enlace.href = URL.createObjectURL(archivo);
+                enlace.download = "pedidos_detalle.xlsx";
+                document.body.appendChild(enlace);
+                enlace.click();
+                enlace.remove();
+                URL.revokeObjectURL(enlace.href);
+            } catch (error) {
+                if (typeof Swal !== "undefined") {
+                    Swal.fire("Error", "No se pudo exportar el reporte de pedidos", "error");
+                } else {
+                    alert("No se pudo exportar el reporte de pedidos");
+                }
+            } finally {
+                botonExportar.disabled = false;
+                if (icono) icono.className = iconoOriginal;
+                botonExportar.setAttribute("aria-label", "Exportar pedidos a Excel");
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

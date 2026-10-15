@@ -3,10 +3,10 @@
 {% block title %}Combos{% endblock%} 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
-<link rel="stylesheet" href="{% static 'css/combos.css' %}?v=20261006-05" />
+<link rel="stylesheet" href="{% static 'css/combos.css' %}" />
 {% endblock %} 
 {% block page_css_overrides %}
-<link rel="stylesheet" href="{% static 'css/combos_mobile.css' %}?v=20261006-05" />
+<link rel="stylesheet" href="{% static 'css/combos_mobile.css' %}" />
 {% endblock %}
 {% block titulo_content %}
 <div class="tituloscont">
@@ -70,7 +70,7 @@
               required
           /></label>
           <label class="combos-image-upload" for="comboImagen">
-            <span>Imagen del combo <em>Opcional</em></span>
+            <span>Imagen del combo <em>Opcional (máx. 5 MB)</em></span>
             <input
               id="comboImagen"
               type="file"
@@ -253,5 +253,5 @@
 <script>
   const COMBOS_URLS = { guardar: "{% url 'guardar_combo' %}" };
 </script>
-<script src="{% static 'js/gestiones/combos.js' %}?v=20261006-02"></script>
+<script src="{% static 'js/gestiones/combos.js' %}"></script>
 {% endblock %}

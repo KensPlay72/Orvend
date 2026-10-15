@@ -2,10 +2,10 @@
 {% load static pagination_tags %}
 {% block title %}Clientes{% endblock %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261005-number-inputs" />
+    <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 {% endblock %}
 {% block page_css_overrides %}
-    <link rel="stylesheet" href="{% static 'css/clientes_mobile.css' %}?v=20261005-tarjetas-movil-04" />
+    <link rel="stylesheet" href="{% static 'css/clientes_mobile.css' %}" />
 {% endblock page_css_overrides %}
 {% block titulo_content %}
     <div class="tituloscont">
@@ -881,7 +881,13 @@
                 </td>
             </tr>
             {% empty %}
-            <tr><td colspan="8" class="text-center table-empty-state">No hay clientes registrados.</td></tr>
+            <tr>
+                <td colspan="8" class="text-center table-empty-state py-4">
+                    <i class="bx bx-user fs-2 text-muted d-block mb-2"></i>
+                    <strong>No hay clientes registrados para mostrar.</strong>
+                    <p class="text-muted small m-0">Los clientes registrados en el sistema aparecerán aquí.</p>
+                </td>
+            </tr>
             {% endfor %}
         </tbody>
     </table>
@@ -903,7 +909,11 @@
         {% if not cliente.is_delete %}<footer class="cliente-mobile-card__footer"><button type="button" class="btn btn-primary btn-edit" data-bs-toggle="modal" data-bs-target="#modalput" data-id="{{ cliente.id }}"><i class="bx bx-edit" aria-hidden="true"></i> Editar</button></footer>{% endif %}
     </article>
     {% empty %}
-    <div class="clientes-mobile-empty"><i class="bx bx-user-x" aria-hidden="true"></i><strong>Sin clientes</strong><span>No hay clientes registrados.</span></div>
+    <div class="mobile-empty-state">
+        <i class="bx bx-user fs-2 text-muted d-block mb-2"></i>
+        <strong>No hay clientes registrados para mostrar.</strong>
+        <p class="text-muted small m-0">Los clientes registrados en el sistema aparecerán aquí.</p>
+    </div>
     {% endfor %}
 </section>
         <nav class="d-flex justify-content-center mt-4" aria-label="Páginas de clientes">
@@ -925,6 +935,6 @@
             </ul>
         </nav>
         <br>
-        <script src="{% static 'js/clientes.js' %}?v=credito-permisos-20260907"></script>
+        <script src="{% static 'js/clientes.js' %}"></script>
         <script src="{% static 'js/chektext.js' %}"></script>
     {% endblock %}

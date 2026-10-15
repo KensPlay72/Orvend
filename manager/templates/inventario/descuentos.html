@@ -5,9 +5,9 @@
 {% endblock title %}
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
-  <link rel="stylesheet" href="{% static 'css/descuentos.css' %}?v=20261006-margen-modal-pc" />
+  <link rel="stylesheet" href="{% static 'css/descuentos.css' %}" />
 {% endblock extra_css %}
-{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/descuentos_mobile.css' %}?v=20261006-sin-auto" />{% endblock page_css_overrides %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/descuentos_mobile.css' %}" />{% endblock page_css_overrides %}
 {% block titulo_content %}
   <div class="tituloscont">
     <img class="logop"
@@ -590,7 +590,11 @@
           </tr>
         {% empty %}
           <tr>
-            <td colspan="9" class="text-center table-empty-state">No hay descuentos registrados</td>
+            <td colspan="9" class="text-center table-empty-state py-4">
+              <i class="bx bx-purchase-tag fs-2 text-muted d-block mb-2"></i>
+              <strong>No hay descuentos registrados para mostrar.</strong>
+              <p class="text-muted small m-0">Los descuentos y cupones configurados aparecerán aquí.</p>
+            </td>
           </tr>
         {% endfor %}
       </tbody>

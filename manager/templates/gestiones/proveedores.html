@@ -4,7 +4,7 @@
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 {% endblock %}
-{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/catalogos_mobile.css' %}?v=20261005-movil-solo" />{% endblock page_css_overrides %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/catalogos_mobile.css' %}" />{% endblock page_css_overrides %}
 
 {% block titulo_content %}
     <div class="tituloscont">
@@ -280,7 +280,13 @@
 
             </tr>
             {% empty %}
-            <tr><td colspan="9" class="text-center table-empty-state">No hay proveedores registrados.</td></tr>
+            <tr>
+                <td colspan="9" class="text-center table-empty-state py-4">
+                    <i class="bx bx-truck fs-2 text-muted d-block mb-2"></i>
+                    <strong>No hay proveedores registrados para mostrar.</strong>
+                    <p class="text-muted small m-0">Los proveedores registrados para compras y suministros aparecerán aquí.</p>
+                </td>
+            </tr>
             {% endfor %}
         </tbody>
     </table>
@@ -324,6 +330,6 @@
     </ul>
 </nav>
         <br>
-            <script type="module" src="{% static 'js/gestiones/proveedores.js' %}?v=20260929-01"></script>
+            <script type="module" src="{% static 'js/gestiones/proveedores.js' %}"></script>
             <script type="module" src="{% static 'js/chektext.js' %}"></script>
     {% endblock %}

@@ -5,7 +5,7 @@
 {% endblock title %}
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
-    <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}?v=20261009-detalle-integrado" />
+    <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}" />
 {% endblock extra_css %}
 {% block search_content %}
     <div class="header__search">
@@ -150,7 +150,11 @@
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="8" class="table-empty-state">No hay entradas disponibles</td>
+                        <td colspan="8" class="text-center table-empty-state py-4">
+                            <i class="bx bx-package fs-2 text-muted d-block mb-2"></i>
+                            <strong>No hay entradas registradas para mostrar.</strong>
+                            <p class="text-muted small m-0">Las compras y traslados pendientes de recibir en bodega aparecerán aquí.</p>
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>
@@ -239,10 +243,10 @@
                 {% endif %}
             </article>
         {% empty %}
-            <div class="recepcion-mobile-empty">
-                <i class="bx bx-package"></i>
-                <strong>No hay entradas disponibles</strong>
-                <span>Las entradas pendientes aparecerán aquí.</span>
+            <div class="mobile-empty-state">
+                <i class="bx bx-package fs-2 text-muted d-block mb-2"></i>
+                <strong>No hay entradas registradas para mostrar.</strong>
+                <p class="text-muted small m-0">Las compras y traslados pendientes de recibir en bodega aparecerán aquí.</p>
             </div>
         {% endfor %}
     </section>
@@ -266,5 +270,5 @@
         </ul>
     </nav>
     <br>
-    <script type="module" src="{% static 'js/bodega/bodega.js' %}?v=20261005-detalle-movil"></script>
+    <script type="module" src="{% static 'js/bodega/bodega.js' %}"></script>
 {% endblock main_content %}

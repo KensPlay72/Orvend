@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load static tienda_extras %}
+
+{% block title %}Categorías | {{ configuracion.nombre_comercial|default:"Tienda" }}{% endblock %}
+
+{% block content %}
+<main class="tienda-categorias-pagina" id="contenido-principal">
+  <!-- Migas de pan -->
+  <nav class="tienda-migas" aria-label="Ruta de navegación">
+    <a href="{% url 'tiendav:inicio' %}"><i class="bx bx-home-alt"></i> Inicio</a>
+    <i class="bx bx-chevron-right"></i>
+    <span class="tienda-migas__actual">Categorías</span>
+  </nav>
+
+  <!-- Grid de Tarjetas de Categorías -->
+  {% if categorias %}
+    <section class="tienda-categorias-seccion" aria-label="Listado de categorías">
+      <div class="tienda-categorias-grid">
+        {% for cat in categorias %}
+          <a class="tienda-categoria-card" href="{% url 'tiendav:inicio' %}?catalogo=1&amp;categoria={{ cat.token }}#catalogo">
+            <div class="tienda-categoria-card__cabecera">
+              <span class="tienda-categoria-card__icono" aria-hidden="true">
+                <i class="bx bx-category-alt"></i>
+              </span>
+              <span class="tienda-categoria-card__badge">
+                <i class="bx bx-package"></i> {{ cat.total_productos }} prod{{ cat.total_productos|pluralize:"ucto,uctos" }}
+              </span>
+            </div>
+
+            <div class="tienda-categoria-card__cuerpo">
+              <h2 class="tienda-categoria-card__titulo">{{ cat.nombre }}</h2>
+              <span class="tienda-categoria-card__accion">
+                <span>Ver productos</span>
+                <i class="bx bx-right-arrow-alt" aria-hidden="true"></i>
+              </span>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    </section>
+  {% else %}
+    <div class="tienda-vacio" role="status" aria-live="polite">
+      <div class="tienda-vacio__visual">
+        <span class="tienda-vacio__halo" aria-hidden="true"></span>
+        <div class="tienda-vacio__icono">
+          <i class="bx bx-category" aria-hidden="true"></i>
+        </div>
+        <span class="tienda-vacio__flotante" aria-hidden="true">
+          <i class="bx bx-search"></i>
+        </span>
+      </div>
+
+      <div class="tienda-vacio__contenido">
+        <h3 class="tienda-vacio__titulo">No hay categorías disponibles</h3>
+        <p class="tienda-vacio__mensaje">Estamos actualizando el catálogo de la tienda. Vuelve a consultar en breve.</p>
+        <div class="tienda-vacio__acciones">
+          <a class="tienda-vacio__btn-accion" href="{% url 'tiendav:inicio' %}">
+            <i class="bx bx-home-alt"></i> Ir al inicio
+          </a>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</main>
+{% endblock %}

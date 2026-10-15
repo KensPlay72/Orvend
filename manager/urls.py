@@ -69,9 +69,59 @@ urlpatterns = [
     path("configuracion/banner/<int:banner_id>/", views.configuracion_banner, name="configuracion_banner"),
     path("pedidos-tienda/", views.pedidos_tienda_view, name="pedidos_tienda"),
     path(
-        "pedidos-tienda/<int:pedido_id>/procesar/",
+        "pedidos-tienda/exportar/",
+        views.exportar_pedidos_excel,
+        name="exportar_pedidos_excel",
+    ),
+    path(
+        "pedidos-tienda/buscar-productos/",
+        views.buscar_productos_pedido,
+        name="buscar_productos_pedido",
+    ),
+    path(
+        "pedidos-tienda/orden/<uuid:token>/",
+        views.pedido_tienda_detalle_view,
+        name="detalle_pedido_manager",
+    ),
+    path(
+        "pedidos-tienda/orden/<uuid:token>/revisar-item/",
+        views.revisar_item_pedido_tienda,
+        name="revisar_item_pedido_tienda",
+    ),
+    path(
+        "pedidos-tienda/orden/<uuid:token>/cambiar-item/",
+        views.cambiar_item_pedido_tienda,
+        name="cambiar_item_pedido_tienda",
+    ),
+    path(
+        "pedidos-tienda/orden/<uuid:token>/anexar-item/",
+        views.anexar_item_pedido_tienda,
+        name="anexar_item_pedido_tienda",
+    ),
+    path(
+        "pedidos-tienda/orden/<uuid:token>/procesar/",
         views.procesar_pedido_tienda,
         name="procesar_pedido_tienda",
+    ),
+    path(
+        "pedidos-tienda/<int:pedido_id>/detalle/",
+        views.pedido_tienda_detalle_view,
+    ),
+    path(
+        "pedidos-tienda/<int:pedido_id>/revisar-item/",
+        views.revisar_item_pedido_tienda,
+    ),
+    path(
+        "pedidos-tienda/<int:pedido_id>/cambiar-item/",
+        views.cambiar_item_pedido_tienda,
+    ),
+    path(
+        "pedidos-tienda/<int:pedido_id>/anexar-item/",
+        views.anexar_item_pedido_tienda,
+    ),
+    path(
+        "pedidos-tienda/<int:pedido_id>/procesar/",
+        views.procesar_pedido_tienda,
     ),
     path("combos/", views.combos_view, name="combos"),
     path("combos/guardar/", views.guardar_combo, name="guardar_combo"),
@@ -133,6 +183,11 @@ urlpatterns = [
         "ubicaciones/delete/<int:id>/",
         views.delete_ubicaciones,
         name="delete_ubicaciones",
+    ),
+    path(
+        "ubicaciones/imagen/<int:id>/",
+        views.ubicacion_imagen,
+        name="ubicacion_imagen",
     ),
     path("ubicaciones/search/", views.search_ubicaciones, name="search_ubicaciones"),
     path("ubicaciones/bodega/search/", views.search_bodegas, name="search_bodegas"),
@@ -306,6 +361,7 @@ urlpatterns = [
     path("cotizaciones/", views.cotizaciones_view, name="cotizaciones"),
     path("busquedacodigo/<str:codigo>/", views.busqueda_codigo, name="busqueda_codigo"),
     path("cotizaciones/crear/", views.crear_cotizacion, name="crear_cotizacion"),
+    path("caja/pedidos/crear/", views.crear_pedido_caja, name="crear_pedido_caja"),
     path("cotizaciones/pdf/<uuid:token>/", views.imprimir_cotizacion, name="imprimir_cotizacion"),
     path(
         "busquedanombre/<str:producto>/", views.busqueda_nombre, name="busqueda_nombre"

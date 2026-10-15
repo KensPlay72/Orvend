@@ -106,9 +106,10 @@ from .models import (
     ReservaInventario,
 )
 try:
-    from tiendav.models import PedidoTienda
+    from tiendav.models import PedidoTienda, DetallePedidoTienda
 except (ImportError, ModuleNotFoundError):
     PedidoTienda = None
+    DetallePedidoTienda = None
 
 
 ZONA_HONDURAS = ZoneInfo("America/Tegucigalpa")
@@ -157,12 +158,56 @@ def _puede_gestionar_tienda(usuario):
     return usuario.is_superuser or usuario.has_perm("manager.gestionar_tienda_virtual")
 
 
+def _puede_ver_pedidos_tienda(usuario):
+    return (
+        usuario.is_superuser
+        or usuario.has_perm("tiendav.view_pedidotienda")
+        or usuario.has_perm("manager.gestionar_tienda_virtual")
+    )
+
+
+def _puede_ver_detalle_pedido_tienda(usuario):
+    return (
+        usuario.is_superuser
+        or usuario.has_perm("tiendav.view_detallepedidotienda")
+        or usuario.has_perm("manager.gestionar_tienda_virtual")
+    )
+
+
+def _puede_aprobar_pedido_tienda(usuario):
+    return (
+        usuario.is_superuser
+        or usuario.has_perm("tiendav.add_pedidotienda")
+        or usuario.has_perm("tiendav.change_pedidotienda")
+    )
+
+
+def _puede_cambiar_producto_pedido(usuario):
+    return (
+        usuario.is_superuser
+        or usuario.has_perm("tiendav.cambiar_producto_pedido")
+        or usuario.has_perm("tiendav.change_detallepedidotienda")
+    )
+
+
+def _puede_anexar_producto_pedido(usuario):
+    return (
+        usuario.is_superuser
+        or usuario.has_perm("tiendav.anexar_producto_pedido")
+        or usuario.has_perm("tiendav.add_detallepedidotienda")
+    )
+
+
 def _puede_operar_caja(usuario):
     return usuario.is_superuser or usuario.has_perm("manager.operar_caja")
 
 
 def _puede_generar_cotizaciones(usuario):
     return _puede_operar_caja(usuario) or usuario.has_perm("manager.generar_cotizaciones")
+
+
+def _puede_generar_pedidos(usuario):
+    return _puede_operar_caja(usuario) or usuario.has_perm("manager.generar_pedidos_caja")
 
 
 def _requiere_superusuario(request):
@@ -1880,7 +1925,7 @@ def configuracion_view(request):
                 if configuracion
                 else []
             ),
-            "puede_gestionar_tienda": _puede_gestionar_tienda(request.user),
+            "puede_gestionar_tienda": _puede_gestionar_configuracion(request.user) or _puede_gestionar_tienda(request.user),
             "mostrar_buscador": False,
         },
     )
@@ -1940,7 +1985,7 @@ def guardar_configuracion(request):
         }:
             raise ValueError("La moneda seleccionada no es válida")
         configuracion.moneda = moneda
-        puede_gestionar_tienda = _puede_gestionar_tienda(request.user)
+        puede_gestionar_tienda = _puede_gestionar_configuracion(request.user) or _puede_gestionar_tienda(request.user)
         configuracion.tienda_color_primario = _validar_color_tienda(
             request.POST.get("tienda_color_primario", "#32877F"),
             "El color primario",
@@ -1965,6 +2010,8 @@ def guardar_configuracion(request):
             extension = logo.name.rsplit(".", 1)[-1].lower() if "." in logo.name else ""
             if extension not in {"jpg", "jpeg", "png", "webp"}:
                 raise ValueError("El logo debe ser JPG, PNG o WEBP")
+            if getattr(logo, "size", 0) > 5 * 1024 * 1024:
+                raise ValueError("El logo puede pesar como máximo 5 MB")
             nombre_original, nombre_archivo, logo_url = _guardar_imagen_como_webp(
                 logo,
                 "empresa",
@@ -2004,7 +2051,8 @@ def guardar_configuracion(request):
             configuracion=configuracion,
             tipo=BannerTienda.TIPO_CARRUSEL,
         ).count()
-        if carrusel and not 2 <= existentes_carrusel + len(carrusel) <= 5:
+        total_carrusel = existentes_carrusel + len(carrusel)
+        if total_carrusel > 0 and not (2 <= total_carrusel <= 5):
             raise ValueError("El carrusel debe tener entre 2 y 5 imágenes")
         if banner_principal and BannerTienda.objects.filter(
             configuracion=configuracion,
@@ -2114,159 +2162,1343 @@ def pedidos_tienda_view(request):
     if PedidoTienda is None:
         messages.info(request, "El módulo de tienda virtual no está disponible.")
         return redirect("dashboard")
-    if not _puede_gestionar_tienda(request.user):
+    if not _puede_ver_pedidos_tienda(request.user):
         raise PermissionDenied
+
+    perfil = PerfilUsuario.objects.filter(usuarios=request.user).select_related("ubicacion").first()
+    ubicacion_asignada = perfil.ubicacion if perfil else None
+
+    hoy = timezone.localtime(timezone.now(), ZONA_HONDURAS).date()
+    primer_dia_mes = hoy.replace(day=1)
+    fecha_inicio = request.GET.get("fecha_inicio", "").strip() or primer_dia_mes.strftime("%Y-%m-%d")
+    fecha_fin = request.GET.get("fecha_fin", "").strip() or hoy.strftime("%Y-%m-%d")
+    search = request.GET.get("search", "").strip()
     estado = request.GET.get("estado", "").strip()
     estados_validos = {opcion for opcion, _ in PedidoTienda.Estado.choices}
     pedidos = (
-        PedidoTienda.objects.select_related("cliente", "ubicacion", "procesado_por")
-        .prefetch_related("detalles__reserva")
+        PedidoTienda.objects.select_related("cliente", "cliente_pos", "ubicacion", "procesado_por")
         .order_by("-creado", "-id")
     )
+
+    if not request.user.is_superuser:
+        if not ubicacion_asignada:
+            messages.warning(
+                request,
+                "Tu usuario no tiene una sucursal asignada en su perfil. Contacta a un administrador para que te asigne una sucursal.",
+            )
+            pedidos = pedidos.none()
+        else:
+            pedidos = pedidos.filter(ubicacion=ubicacion_asignada)
+
+    if fecha_inicio and fecha_fin:
+        try:
+            inicio_honduras, fin_honduras = _rango_fechas_honduras(fecha_inicio, fecha_fin)
+            pedidos = pedidos.filter(creado__gte=inicio_honduras, creado__lt=fin_honduras)
+        except Exception:
+            pass
+
     if estado in estados_validos:
         pedidos = pedidos.filter(estado=estado)
     else:
         estado = ""
-    page_obj = Paginator(pedidos, 10).get_page(request.GET.get("page"))
+
+    if search:
+        filtro_search = (
+            Q(numero_pedido__icontains=search)
+            | Q(cliente__nombre__icontains=search)
+            | Q(cliente__telefono__icontains=search)
+            | Q(cliente__email__icontains=search)
+            | Q(cliente_nombre__icontains=search)
+            | Q(cliente_pos__nombre__icontains=search)
+            | Q(cliente_pos__empresa__icontains=search)
+            | Q(cliente_pos__telefono__icontains=search)
+        )
+        if search.isdigit():
+            filtro_search |= Q(id=int(search))
+        pedidos = pedidos.filter(filtro_search)
+
+    paginator = Paginator(pedidos, 10)
+    page_obj = paginator.get_page(request.GET.get("page", 1))
+
     return render(
         request,
         "pedidos_tienda.html",
         {
             "pedidos": page_obj,
             "page_obj": page_obj,
+            "search": search,
+            "fecha_inicio": fecha_inicio,
+            "fecha_fin": fecha_fin,
             "estado_seleccionado": estado,
             "estados_pedido": PedidoTienda.Estado.choices,
-            "mostrar_buscador": False,
+            "ubicacion_asignada": ubicacion_asignada,
+            "es_superuser": request.user.is_superuser,
+            "mostrar_buscador": True,
+            "puede_ver_detalle": _puede_ver_detalle_pedido_tienda(request.user),
+        },
+    )
+
+
+@login_required
+def exportar_pedidos_excel(request):
+    if PedidoTienda is None:
+        raise Http404("Módulo de tienda no disponible")
+    if not _puede_ver_pedidos_tienda(request.user):
+        raise PermissionDenied
+
+    perfil = PerfilUsuario.objects.filter(usuarios=request.user).select_related("ubicacion").first()
+    ubicacion_asignada = perfil.ubicacion if perfil else None
+
+    search = request.GET.get("search", "").strip()
+    estado = request.GET.get("estado", "").strip()
+    hoy = timezone.localtime(timezone.now(), ZONA_HONDURAS).date()
+    primer_dia_mes = hoy.replace(day=1)
+    fecha_inicio = request.GET.get("fecha_inicio", "").strip() or primer_dia_mes.strftime("%Y-%m-%d")
+    fecha_fin = request.GET.get("fecha_fin", "").strip() or hoy.strftime("%Y-%m-%d")
+
+    pedidos = (
+        PedidoTienda.objects.select_related(
+            "cliente", "cliente_pos", "ubicacion", "procesado_por"
+        )
+        .prefetch_related(
+            Prefetch(
+                "detalles",
+                queryset=DetallePedidoTienda.objects.select_related("producto_cambio").order_by("id"),
+            )
+        )
+        .order_by("-creado", "-id")
+    )
+
+    if not request.user.is_superuser:
+        if not ubicacion_asignada:
+            pedidos = pedidos.none()
+        else:
+            pedidos = pedidos.filter(ubicacion=ubicacion_asignada)
+
+    estados_validos = {opcion for opcion, _ in PedidoTienda.Estado.choices}
+    if estado in estados_validos:
+        pedidos = pedidos.filter(estado=estado)
+
+    if fecha_inicio and fecha_fin:
+        try:
+            inicio_honduras, fin_honduras = _rango_fechas_honduras(fecha_inicio, fecha_fin)
+            pedidos = pedidos.filter(creado__gte=inicio_honduras, creado__lt=fin_honduras)
+        except Exception:
+            pass
+
+    if search:
+        filtro_search = (
+            Q(numero_pedido__icontains=search)
+            | Q(cliente__nombre__icontains=search)
+            | Q(cliente__telefono__icontains=search)
+            | Q(cliente__email__icontains=search)
+            | Q(cliente_nombre__icontains=search)
+            | Q(cliente_pos__nombre__icontains=search)
+            | Q(cliente_pos__empresa__icontains=search)
+            | Q(cliente_pos__telefono__icontains=search)
+        )
+        if search.isdigit():
+            filtro_search |= Q(id=int(search))
+        pedidos = pedidos.filter(filtro_search)
+
+    encabezados = [
+        "Número Pedido",
+        "SKU Solicitado",
+        "Producto Solicitado",
+        "Cantidad Solicitada",
+        "Precio Unitario",
+        "Subtotal Solicitado",
+        "Estado Revisión",
+        "Producto Cambio",
+        "SKU Cambio",
+        "Cantidad Aprobada",
+        "Precio Unitario Final",
+        "Subtotal Final",
+        "Motivo / Justificación",
+    ]
+    libro, hoja = _libro_exportacion_grande(
+        "Detalle de Pedidos",
+        encabezados,
+        [18, 16, 32, 18, 18, 18, 18, 32, 16, 18, 18, 18, 35],
+    )
+
+    formatos_fila = {
+        3: "#,##0.00",
+        4: 'L" "#,##0.00',
+        5: 'L" "#,##0.00',
+        9: "#,##0.00",
+        10: 'L" "#,##0.00',
+        11: 'L" "#,##0.00',
+    }
+
+    for pedido in pedidos.iterator(chunk_size=100):
+        detalles_qs = pedido.detalles.all()
+        num_pedido = pedido.numero_pedido or f"PED-{pedido.id:06d}"
+        if not detalles_qs:
+            _agregar_fila_exportacion(
+                hoja,
+                [
+                    num_pedido,
+                    "",
+                    "(Sin productos)",
+                    0,
+                    0,
+                    0,
+                    pedido.get_estado_display(),
+                    "",
+                    "",
+                    0,
+                    0,
+                    0,
+                    "",
+                ],
+                formatos=formatos_fila,
+            )
+        else:
+            for detalle in detalles_qs:
+                motivo = (
+                    detalle.rev_justificacion_devolucion
+                    if detalle.rev_estado == DetallePedidoTienda.EstadoRevision.DEVUELTO
+                    else detalle.rev_justificacion
+                )
+                _agregar_fila_exportacion(
+                    hoja,
+                    [
+                        num_pedido,
+                        detalle.codigo_sku or "",
+                        detalle.nombre_producto or "",
+                        float(detalle.cantidad or 0),
+                        float(detalle.precio_unitario or 0),
+                        float(detalle.subtotal or 0),
+                        detalle.get_estado_revision_display(),
+                        detalle.producto_cambio.nombre if detalle.producto_cambio else "",
+                        detalle.producto_cambio.codigo_sku if detalle.producto_cambio else "",
+                        float(detalle.rev_cantidad_aprobada or 0),
+                        float(detalle.rev_precio_unitario or 0),
+                        float(detalle.rev_subtotal or 0),
+                        motivo or "",
+                    ],
+                    formatos=formatos_fila,
+                )
+
+    buffer = BytesIO()
+    libro.save(buffer)
+    buffer.seek(0)
+    respuesta = HttpResponse(
+        buffer.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    respuesta["Content-Disposition"] = 'attachment; filename="pedidos_detalle.xlsx"'
+    return respuesta
+
+
+@login_required
+def buscar_productos_pedido(request):
+    if not _puede_ver_detalle_pedido_tienda(request.user):
+        raise PermissionDenied
+
+    termino = (request.GET.get("q") or request.GET.get("search") or "").strip()
+    sucursal_id = request.GET.get("sucursal", "").strip()
+    page_num = request.GET.get("page", "1").strip()
+    limit_num = request.GET.get("limit", "10").strip()
+
+    if not sucursal_id.isdigit():
+        return JsonResponse({"success": False, "message": "Sucursal no especificada"}, status=400)
+
+    try:
+        page = max(1, int(page_num))
+    except (ValueError, TypeError):
+        page = 1
+
+    try:
+        limit = max(1, min(50, int(limit_num)))
+    except (ValueError, TypeError):
+        limit = 10
+
+    sucursal = get_object_or_404(Ubicaciones, id=int(sucursal_id), is_active=True, is_delete=False)
+
+    productos_qs = Productos.objects.filter(is_active=True, is_delete=False)
+    if termino:
+        productos_qs = productos_qs.filter(
+            Q(nombre__icontains=termino) | Q(codigo_sku__icontains=termino)
+        )
+
+    inventarios_subquery = Inventarios.objects.filter(
+        producto=OuterRef("pk"),
+        ubicacion=sucursal,
+        is_active=True,
+        is_delete=False,
+    ).values("producto").annotate(total=Sum("cantidad")).values("total")
+
+    reservas_subquery = ReservaInventario.objects.filter(
+        producto=OuterRef("pk"),
+        ubicacion=sucursal,
+        estado=ReservaInventario.Estado.RESERVADA,
+    ).values("producto").annotate(total=Sum("cantidad")).values("total")
+
+    productos_qs = productos_qs.annotate(
+        stock_fisico=Coalesce(Subquery(inventarios_subquery), Decimal("0")),
+        stock_reservado=Coalesce(Subquery(reservas_subquery), Decimal("0")),
+    )
+
+    productos_disponibles = []
+    for prod in productos_qs.select_related("unidad_medida").prefetch_related("imagenes_producto").order_by("nombre"):
+        disponible = prod.stock_fisico - prod.stock_reservado
+        if disponible > 0:
+            img = prod.imagenes_producto.first()
+            img_url = reverse("producto_imagen", args=[img.id]) if img and img.id else "/static/img/default.webp"
+            productos_disponibles.append({
+                "id": prod.id,
+                "nombre": prod.nombre,
+                "codigo_sku": prod.codigo_sku,
+                "precio": float(prod.precio_venta),
+                "precio_min": float(prod.precio_venta_min) if prod.precio_venta_min is not None else None,
+                "precio_max": float(prod.precio_venta_max) if prod.precio_venta_max is not None else None,
+                "stock_disponible": float(disponible),
+                "imagen_url": img_url,
+                "unidad": prod.unidad_medida.nombre if prod.unidad_medida else "",
+            })
+
+    paginator = Paginator(productos_disponibles, limit)
+    pagina_actual = paginator.get_page(page)
+
+    return JsonResponse({
+        "success": True,
+        "productos": list(pagina_actual.object_list),
+        "total_pages": paginator.num_pages,
+        "current_page": pagina_actual.number,
+        "total_count": paginator.count,
+    })
+
+
+def _resolver_pedido_tienda(identificador):
+    """Resuelve un PedidoTienda por UUID token o ID numérico."""
+    qs = PedidoTienda.objects.select_related(
+        "cliente", "cliente_pos", "ubicacion", "procesado_por", "entregado_por"
+    )
+    if isinstance(identificador, int) or (isinstance(identificador, str) and identificador.isdigit()):
+        return get_object_or_404(qs, id=int(identificador))
+    try:
+        return get_object_or_404(qs, token=identificador)
+    except (ValueError):
+        raise Http404("Pedido de tienda no encontrado")
+
+
+def _redirigir_detalle_pedido_tienda(request, pedido):
+    url = reverse("detalle_pedido_manager", kwargs={"token": pedido.token})
+    pagina = request.GET.get("page", "")
+    if pagina.isdigit():
+        url = f"{url}?{urlencode({'page': pagina})}"
+    return redirect(url)
+
+
+def _resumen_revision_pedido_tienda(pedido):
+    total = Decimal("0.00")
+    todos_revisados = True
+    for detalle in pedido.detalles.select_related("reserva", "producto_cambio", "reserva_cambio").all():
+        estado = detalle.rev_estado
+        if estado not in {
+            DetallePedidoTienda.EstadoRevision.RECHAZADO,
+            DetallePedidoTienda.EstadoRevision.DEVUELTO,
+        }:
+            total += detalle.rev_subtotal
+        if estado == DetallePedidoTienda.EstadoRevision.PENDIENTE:
+            todos_revisados = False
+
+    return total, todos_revisados
+
+
+def _devolver_stock_pedido_tienda(detalle, pedido):
+    cantidad = Decimal(
+        str(detalle.cantidad_aprobada if detalle.cantidad_aprobada is not None else detalle.cantidad)
+    )
+    if cantidad <= 0:
+        raise ValueError("No hay una cantidad para devolver al inventario.")
+
+    producto_id = detalle.producto_cambio_id if (detalle.rev_estado == DetallePedidoTienda.EstadoRevision.CAMBIADO and detalle.producto_cambio_id) else detalle.producto_id
+
+    capa = (
+        Inventarios.objects.select_for_update()
+        .filter(
+            producto_id=producto_id,
+            ubicacion_id=pedido.ubicacion_id,
+            is_active=True,
+            is_delete=False,
+        )
+        .order_by("fvencimiento", "id")
+        .first()
+    )
+    if not capa:
+        capa = Inventarios.objects.create(
+            producto_id=producto_id,
+            ubicacion_id=pedido.ubicacion_id,
+            cantidad=Decimal("0"),
+            is_active=True,
+            is_delete=False,
+        )
+
+    anterior = capa.cantidad
+    capa.cantidad += cantidad
+    capa.is_active = True
+    capa.is_delete = False
+    capa.save(update_fields=["cantidad", "is_active", "is_delete"])
+    stock_resultante = Inventarios.objects.filter(
+        producto_id=producto_id,
+        ubicacion_id=pedido.ubicacion_id,
+        is_active=True,
+        is_delete=False,
+    ).aggregate(total=Sum("cantidad"))["total"] or Decimal("0")
+    MovimientoInventario.objects.create(
+        tipo_movimiento=TipoMovimientoInventario.DEVOLUCION_CLIENTE,
+        producto_id=producto_id,
+        ubicacion_destino_id=pedido.ubicacion_id,
+        cantidad=cantidad,
+        stock_anterior=anterior,
+        stock_resultante=stock_resultante,
+    )
+
+
+@login_required
+def pedido_tienda_detalle_view(request, token=None, pedido_id=None):
+    if PedidoTienda is None:
+        messages.info(request, "El módulo de tienda virtual no está disponible.")
+        return redirect("dashboard")
+    if not _puede_ver_detalle_pedido_tienda(request.user):
+        raise PermissionDenied
+
+    pedido = _resolver_pedido_tienda(token or pedido_id)
+
+    if token is None:
+        return redirect("detalle_pedido_manager", token=pedido.token)
+
+    if not request.user.is_superuser:
+        perfil = PerfilUsuario.objects.filter(usuarios=request.user).first()
+        if not perfil or not perfil.ubicacion_id or pedido.ubicacion_id != perfil.ubicacion_id:
+            raise PermissionDenied("No tienes permiso para gestionar pedidos de otra sucursal.")
+
+    page_obj = Paginator(
+        pedido.detalles.select_related("producto", "reserva", "producto_cambio", "reserva_cambio")
+        .prefetch_related(
+            "producto__imagenes_producto",
+            "producto_cambio__imagenes_producto",
+        )
+        .order_by("id"),
+        10,
+    ).get_page(request.GET.get("page", 1))
+    detalles = list(page_obj.object_list)
+    total_calculado, todos_revisados = _resumen_revision_pedido_tienda(pedido)
+    hay_pendientes = not todos_revisados
+
+    venta_relacionada = (
+        Ventas.objects.select_related("id_factura_cai")
+        .filter(ecommerce_pedido_id=pedido.id)
+        .first()
+    )
+
+    return render(
+        request,
+        "pedido_tienda_detalle.html",
+        {
+            "pedido": pedido,
+            "detalles": detalles,
+            "page_obj": page_obj,
+            "total_calculado": total_calculado,
+            "todos_revisados": todos_revisados,
+            "hay_pendientes": hay_pendientes,
+            "es_superuser": request.user.is_superuser,
+            "puede_aprobar": _puede_aprobar_pedido_tienda(request.user),
+            "puede_cambiar": _puede_cambiar_producto_pedido(request.user),
+            "puede_anexar": _puede_anexar_producto_pedido(request.user),
+            "puede_modificar_precio": request.user.has_perm("manager.modificar_precio_caja") or request.user.is_superuser,
+            "venta_relacionada": venta_relacionada,
         },
     )
 
 
 @login_required
 @require_POST
-def procesar_pedido_tienda(request, pedido_id):
+def revisar_item_pedido_tienda(request, token=None, pedido_id=None):
+    if PedidoTienda is None or DetallePedidoTienda is None:
+        messages.info(request, "El módulo de tienda virtual no está disponible.")
+        return redirect("dashboard")
+    if not _puede_aprobar_pedido_tienda(request.user):
+        raise PermissionDenied
+
+    pedido = _resolver_pedido_tienda(token or pedido_id)
+
+    if not request.user.is_superuser:
+        perfil = PerfilUsuario.objects.filter(usuarios=request.user).first()
+        if not perfil or not perfil.ubicacion_id or pedido.ubicacion_id != perfil.ubicacion_id:
+            raise PermissionDenied("No tienes permiso para gestionar pedidos de otra sucursal.")
+
+    accion = request.POST.get("accion", "").strip()
+    if accion != "devolver" and pedido.estado in {
+        PedidoTienda.Estado.ACEPTADO,
+        PedidoTienda.Estado.PAGADO,
+        PedidoTienda.Estado.ENTREGADO,
+        PedidoTienda.Estado.RECHAZADO,
+    }:
+        messages.warning(request, "Este pedido ya fue procesado y no puede ser modificado.")
+        return _redirigir_detalle_pedido_tienda(request, pedido)
+
+    if accion == "aceptar_todos":
+        with transaction.atomic():
+            detalles_pedido = list(
+                pedido.detalles.select_related("reserva", "reserva_cambio").all()
+            )
+            confirmados_count = 0
+            detalles_a_actualizar = []
+            reservas_a_actualizar = []
+            for d in detalles_pedido:
+                estado = d.rev_estado
+                if estado == DetallePedidoTienda.EstadoRevision.PENDIENTE:
+                    d.estado_revision = DetallePedidoTienda.EstadoRevision.ACEPTADO
+                    d.cantidad_aprobada = d.cantidad
+                    d.justificacion = ""
+                    detalles_a_actualizar.append(d)
+                    confirmados_count += 1
+                    if d.reserva_id and d.reserva.estado == ReservaInventario.Estado.RESERVADA:
+                        d.reserva.cantidad = d.cantidad
+                        reservas_a_actualizar.append(d.reserva)
+
+            if confirmados_count > 0:
+                DetallePedidoTienda.objects.bulk_update(
+                    detalles_a_actualizar,
+                    ["estado_revision", "cantidad_aprobada", "justificacion"],
+                )
+                if reservas_a_actualizar:
+                    ReservaInventario.objects.bulk_update(reservas_a_actualizar, ["cantidad"])
+
+                if pedido.estado == PedidoTienda.Estado.PENDIENTE:
+                    pedido.estado = PedidoTienda.Estado.EN_REVISION
+                    pedido.save(update_fields=["estado"])
+
+                nuevo_total, _ = _resumen_revision_pedido_tienda(pedido)
+                pedido.total = nuevo_total
+                pedido.save(update_fields=["total"])
+
+                messages.success(
+                    request,
+                    f"Se confirmaron {confirmados_count} producto{'s' if confirmados_count != 1 else ''} pendiente{'s' if confirmados_count != 1 else ''} correctamente.",
+                )
+            else:
+                messages.info(request, "No hay productos pendientes por confirmar.")
+
+        return _redirigir_detalle_pedido_tienda(request, pedido)
+
+    detalle_id = request.POST.get("detalle_id")
+    justificacion = request.POST.get("justificacion", "").strip()
+    nueva_cantidad_raw = request.POST.get("nueva_cantidad", "").strip()
+
+    detalle = get_object_or_404(
+        DetallePedidoTienda.objects.select_related("reserva", "reserva_cambio"),
+        id=detalle_id,
+        pedido=pedido,
+    )
+
+    if accion == "devolver":
+        if pedido.estado not in {
+            PedidoTienda.Estado.ACEPTADO,
+            PedidoTienda.Estado.PAGADO,
+            PedidoTienda.Estado.ENTREGADO,
+        }:
+            messages.error(request, "Solo puedes devolver productos de pedidos aceptados, pagados o entregados.")
+            return _redirigir_detalle_pedido_tienda(request, pedido)
+        if not justificacion:
+            messages.error(request, "Debes indicar el motivo de la devolución.")
+            return _redirigir_detalle_pedido_tienda(request, pedido)
+
+        try:
+            with transaction.atomic():
+                estado = detalle.estado_revision
+                if estado in {
+                    DetallePedidoTienda.EstadoRevision.PENDIENTE,
+                    DetallePedidoTienda.EstadoRevision.RECHAZADO,
+                    DetallePedidoTienda.EstadoRevision.DEVUELTO,
+                }:
+                    raise ValueError("Este producto no se puede devolver nuevamente.")
+
+                reserva_activa = detalle.reserva_cambio if (detalle.rev_estado == DetallePedidoTienda.EstadoRevision.CAMBIADO and detalle.reserva_cambio_id) else detalle.reserva
+                if reserva_activa:
+                    reserva = ReservaInventario.objects.select_for_update().get(id=reserva_activa.id)
+                    if reserva.estado == ReservaInventario.Estado.CONSUMIDA:
+                        _devolver_stock_pedido_tienda(detalle, pedido)
+                        venta_ecommerce = Ventas.objects.filter(
+                            ecommerce_pedido_id=pedido.id,
+                        ).first()
+                        if venta_ecommerce:
+                            prod_id = detalle.producto_cambio_id if (detalle.rev_estado == DetallePedidoTienda.EstadoRevision.CAMBIADO and detalle.producto_cambio_id) else detalle.producto_id
+                            detalle_venta = (
+                                DetalleVenta.objects.select_for_update()
+                                .filter(
+                                    venta=venta_ecommerce,
+                                    producto_id=prod_id,
+                                )
+                                .first()
+                            )
+                            if detalle_venta:
+                                monto_devuelto = (
+                                    detalle_venta.precio_unitario
+                                    * detalle.rev_cantidad_aprobada
+                                )
+                                detalle_venta.monto_devuelto += monto_devuelto
+                                detalle_venta.save(update_fields=["monto_devuelto"])
+                    elif reserva.estado == ReservaInventario.Estado.RESERVADA:
+                        reserva.estado = ReservaInventario.Estado.CANCELADA
+                        reserva.save(update_fields=["estado"])
+                    else:
+                        raise ValueError("La reserva de este producto ya fue liberada.")
+
+                detalle.estado_revision = DetallePedidoTienda.EstadoRevision.DEVUELTO
+                detalle.justificacion_devolucion = justificacion
+                detalle.save(update_fields=["estado_revision", "justificacion_devolucion"])
+
+                pedido.total, _ = _resumen_revision_pedido_tienda(pedido)
+                pedido.save(update_fields=["total"])
+        except ValueError as error:
+            messages.error(request, str(error))
+        else:
+            messages.success(
+                request,
+                f"El producto {detalle.nombre_producto} fue devuelto correctamente.",
+            )
+        return _redirigir_detalle_pedido_tienda(request, pedido)
+
+    with transaction.atomic():
+        if accion == "aceptar":
+            detalle.estado_revision = DetallePedidoTienda.EstadoRevision.ACEPTADO
+            detalle.cantidad_aprobada = detalle.cantidad
+            detalle.justificacion = ""
+            detalle.save(update_fields=["estado_revision", "cantidad_aprobada", "justificacion"])
+
+            if detalle.reserva_id:
+                reserva = ReservaInventario.objects.select_for_update().get(id=detalle.reserva_id)
+                reserva.cantidad = detalle.cantidad
+                reserva.estado = ReservaInventario.Estado.RESERVADA
+                reserva.save(update_fields=["cantidad", "estado"])
+
+            if pedido.estado == PedidoTienda.Estado.PENDIENTE:
+                pedido.estado = PedidoTienda.Estado.EN_REVISION
+                pedido.save(update_fields=["estado"])
+
+        elif accion == "rechazar":
+            if not justificacion:
+                messages.error(request, "Debes proporcionar una justificación para rechazar el producto.")
+                return _redirigir_detalle_pedido_tienda(request, pedido)
+
+            detalle.estado_revision = DetallePedidoTienda.EstadoRevision.RECHAZADO
+            detalle.cantidad_aprobada = Decimal("0")
+            detalle.justificacion = justificacion
+            detalle.save(update_fields=["estado_revision", "cantidad_aprobada", "justificacion"])
+
+            if detalle.reserva_id:
+                reserva = ReservaInventario.objects.select_for_update().get(id=detalle.reserva_id)
+                reserva.estado = ReservaInventario.Estado.CANCELADA
+                reserva.save(update_fields=["estado"])
+
+            if detalle.reserva_cambio_id:
+                reserva_c = ReservaInventario.objects.select_for_update().get(id=detalle.reserva_cambio_id)
+                reserva_c.estado = ReservaInventario.Estado.CANCELADA
+                reserva_c.save(update_fields=["estado"])
+
+            if pedido.estado == PedidoTienda.Estado.PENDIENTE:
+                pedido.estado = PedidoTienda.Estado.EN_REVISION
+                pedido.save(update_fields=["estado"])
+
+        elif accion == "ajustar":
+            try:
+                nueva_cantidad = Decimal(nueva_cantidad_raw)
+            except (InvalidOperation, ValueError, TypeError):
+                messages.error(request, "La cantidad ingresada no es válida.")
+                return _redirigir_detalle_pedido_tienda(request, pedido)
+
+            if nueva_cantidad <= Decimal("0"):
+                messages.error(request, "La nueva cantidad debe ser mayor a cero.")
+                return _redirigir_detalle_pedido_tienda(request, pedido)
+
+            if nueva_cantidad > detalle.cantidad:
+                cant_orig_str = f"{detalle.cantidad:.2f}".rstrip("0").rstrip(".")
+                messages.error(
+                    request,
+                    f"La cantidad no puede superar las {cant_orig_str} unidades solicitadas por el cliente.",
+                )
+                return _redirigir_detalle_pedido_tienda(request, pedido)
+
+            if nueva_cantidad == detalle.cantidad:
+                detalle.estado_revision = DetallePedidoTienda.EstadoRevision.ACEPTADO
+                detalle.cantidad_aprobada = detalle.cantidad
+                detalle.justificacion = ""
+                detalle.save(update_fields=["estado_revision", "cantidad_aprobada", "justificacion"])
+
+                if detalle.reserva_id:
+                    reserva = ReservaInventario.objects.select_for_update().get(id=detalle.reserva_id)
+                    reserva.cantidad = detalle.cantidad
+                    reserva.estado = ReservaInventario.Estado.RESERVADA
+                    reserva.save(update_fields=["cantidad", "estado"])
+
+                if pedido.estado == PedidoTienda.Estado.PENDIENTE:
+                    pedido.estado = PedidoTienda.Estado.EN_REVISION
+                    pedido.save(update_fields=["estado"])
+
+            else:
+                if not justificacion:
+                    messages.error(request, "Debes ingresar una justificación del por qué cambias la cantidad.")
+                    return _redirigir_detalle_pedido_tienda(request, pedido)
+
+                detalle.estado_revision = DetallePedidoTienda.EstadoRevision.AJUSTADO
+                detalle.cantidad_aprobada = nueva_cantidad
+                detalle.justificacion = justificacion
+                detalle.save(update_fields=["estado_revision", "cantidad_aprobada", "justificacion"])
+
+                if detalle.reserva_id:
+                    reserva = ReservaInventario.objects.select_for_update().get(id=detalle.reserva_id)
+                    reserva.cantidad = nueva_cantidad
+                    reserva.estado = ReservaInventario.Estado.RESERVADA
+                    reserva.save(update_fields=["cantidad", "estado"])
+
+                if pedido.estado == PedidoTienda.Estado.PENDIENTE:
+                    pedido.estado = PedidoTienda.Estado.EN_REVISION
+                    pedido.save(update_fields=["estado"])
+
+        else:
+            messages.error(request, "Acción no reconocida.")
+            return _redirigir_detalle_pedido_tienda(request, pedido)
+
+        nuevo_total, _ = _resumen_revision_pedido_tienda(pedido)
+        pedido.total = nuevo_total
+        pedido.save(update_fields=["total"])
+
+    if accion == "aceptar":
+        mensaje_exito = f"El producto {detalle.nombre_producto} fue aceptado."
+    elif accion == "rechazar":
+        mensaje_exito = f"El producto {detalle.nombre_producto} fue rechazado."
+    else:
+        mensaje_exito = (
+            f"La cantidad de {detalle.nombre_producto} se actualizó a "
+            f"{nueva_cantidad:f} unidades."
+        )
+    messages.success(request, mensaje_exito)
+    return _redirigir_detalle_pedido_tienda(request, pedido)
+
+
+@login_required
+@require_POST
+def cambiar_item_pedido_tienda(request, token=None, pedido_id=None):
+    if PedidoTienda is None or DetallePedidoTienda is None:
+        messages.info(request, "El módulo de tienda virtual no está disponible.")
+        return redirect("dashboard")
+    if not _puede_cambiar_producto_pedido(request.user):
+        raise PermissionDenied
+
+    pedido = _resolver_pedido_tienda(token or pedido_id)
+
+    if not request.user.is_superuser:
+        perfil = PerfilUsuario.objects.filter(usuarios=request.user).first()
+        if not perfil or not perfil.ubicacion_id or pedido.ubicacion_id != perfil.ubicacion_id:
+            raise PermissionDenied("No tienes permiso para gestionar pedidos de otra sucursal.")
+
+    if pedido.estado not in {PedidoTienda.Estado.PENDIENTE, PedidoTienda.Estado.EN_REVISION}:
+        messages.error(request, "Solo se pueden cambiar productos de pedidos pendientes o en revisión.")
+        return _redirigir_detalle_pedido_tienda(request, pedido)
+
+    detalle_id = request.POST.get("detalle_id")
+    nuevo_producto_id = request.POST.get("nuevo_producto_id")
+    cantidad_str = request.POST.get("cantidad_cambio", "").strip()
+    justificacion = request.POST.get("justificacion", "").strip()
+
+    detalle = get_object_or_404(
+        DetallePedidoTienda.objects.select_related("reserva", "reserva_cambio"),
+        id=detalle_id,
+        pedido=pedido,
+    )
+
+    nuevo_producto = get_object_or_404(
+        Productos,
+        id=nuevo_producto_id,
+        is_active=True,
+        is_delete=False,
+    )
+
+    try:
+        cantidad_cambio = Decimal(cantidad_str)
+        if cantidad_cambio <= 0:
+            raise ValueError
+    except (ValueError, TypeError, InvalidOperation):
+        messages.error(request, "La cantidad del producto sustituto debe ser un número mayor a cero.")
+        return _redirigir_detalle_pedido_tienda(request, pedido)
+
+    if not justificacion:
+        messages.error(request, "Debes ingresar una justificación para el cambio de producto.")
+        return _redirigir_detalle_pedido_tienda(request, pedido)
+
+    with transaction.atomic():
+        stock_fisico = (
+            Inventarios.objects.filter(
+                producto=nuevo_producto,
+                ubicacion=pedido.ubicacion,
+                is_active=True,
+                is_delete=False,
+            ).aggregate(total=Sum("cantidad"))["total"] or Decimal("0")
+        )
+        reservas_activas = ReservaInventario.objects.filter(
+            producto=nuevo_producto,
+            ubicacion=pedido.ubicacion,
+            estado=ReservaInventario.Estado.RESERVADA,
+        )
+        if detalle.reserva_cambio_id:
+            reservas_activas = reservas_activas.exclude(id=detalle.reserva_cambio_id)
+        stock_reservado = reservas_activas.aggregate(total=Sum("cantidad"))["total"] or Decimal("0")
+
+        stock_disponible = stock_fisico - stock_reservado
+        if stock_disponible < cantidad_cambio:
+            messages.error(
+                request,
+                f"No hay suficiente stock para cambiar a {nuevo_producto.nombre}. Disponible: {stock_disponible}",
+            )
+            return _redirigir_detalle_pedido_tienda(request, pedido)
+
+        if detalle.reserva_id:
+            reserva_orig = ReservaInventario.objects.select_for_update().get(id=detalle.reserva_id)
+            reserva_orig.estado = ReservaInventario.Estado.CANCELADA
+            reserva_orig.save(update_fields=["estado"])
+
+        if detalle.reserva_cambio_id:
+            reserva_ant = ReservaInventario.objects.select_for_update().get(id=detalle.reserva_cambio_id)
+            reserva_ant.estado = ReservaInventario.Estado.CANCELADA
+            reserva_ant.save(update_fields=["estado"])
+
+        nueva_reserva = ReservaInventario.objects.create(
+            producto=nuevo_producto,
+            ubicacion=pedido.ubicacion,
+            cantidad=cantidad_cambio,
+            estado=ReservaInventario.Estado.RESERVADA,
+        )
+
+        puede_modificar_precio = (
+            request.user.has_perm("manager.modificar_precio_caja")
+            or request.user.is_superuser
+        )
+        precio_cambio = nuevo_producto.precio_venta
+        if puede_modificar_precio:
+            precio_str = request.POST.get("precio", "").strip() or request.POST.get("precio_cambio", "").strip()
+            if precio_str:
+                try:
+                    precio_val = Decimal(precio_str)
+                    if precio_val <= 0:
+                        raise ValueError
+                    if nuevo_producto.precio_venta_min and precio_val < nuevo_producto.precio_venta_min:
+                        messages.error(
+                            request,
+                            f"El precio no puede ser menor a L. {nuevo_producto.precio_venta_min:.2f}",
+                        )
+                        return _redirigir_detalle_pedido_tienda(request, pedido)
+                    if nuevo_producto.precio_venta_max and precio_val > nuevo_producto.precio_venta_max:
+                        messages.error(
+                            request,
+                            f"El precio no puede ser mayor a L. {nuevo_producto.precio_venta_max:.2f}",
+                        )
+                        return _redirigir_detalle_pedido_tienda(request, pedido)
+                    precio_cambio = precio_val
+                except (ValueError, TypeError, InvalidOperation):
+                    messages.error(request, "El precio ingresado no es válido.")
+                    return _redirigir_detalle_pedido_tienda(request, pedido)
+
+        detalle.estado_revision = DetallePedidoTienda.EstadoRevision.CAMBIADO
+        detalle.producto_cambio = nuevo_producto
+        detalle.reserva_cambio = nueva_reserva
+        detalle.cantidad_cambio = cantidad_cambio
+        detalle.precio_unitario_cambio = precio_cambio
+        detalle.cantidad_aprobada = cantidad_cambio
+        detalle.justificacion = justificacion
+        detalle.save(update_fields=[
+            "estado_revision",
+            "producto_cambio",
+            "reserva_cambio",
+            "cantidad_cambio",
+            "precio_unitario_cambio",
+            "cantidad_aprobada",
+            "justificacion",
+        ])
+
+        if pedido.estado == PedidoTienda.Estado.PENDIENTE:
+            pedido.estado = PedidoTienda.Estado.EN_REVISION
+
+        pedido.total, _ = _resumen_revision_pedido_tienda(pedido)
+        pedido.save(update_fields=["estado", "total"])
+
+    messages.success(
+        request,
+        f"Se cambió correctamente el producto {detalle.nombre_producto} por {nuevo_producto.nombre}.",
+    )
+    return _redirigir_detalle_pedido_tienda(request, pedido)
+
+
+@login_required
+@require_POST
+def anexar_item_pedido_tienda(request, token=None, pedido_id=None):
+    if PedidoTienda is None or DetallePedidoTienda is None:
+        messages.info(request, "El módulo de tienda virtual no está disponible.")
+        return redirect("dashboard")
+    if not _puede_anexar_producto_pedido(request.user):
+        raise PermissionDenied
+
+    pedido = _resolver_pedido_tienda(token or pedido_id)
+
+    if not request.user.is_superuser:
+        perfil = PerfilUsuario.objects.filter(usuarios=request.user).first()
+        if not perfil or not perfil.ubicacion_id or pedido.ubicacion_id != perfil.ubicacion_id:
+            raise PermissionDenied("No tienes permiso para gestionar pedidos de otra sucursal.")
+
+    if pedido.estado not in {PedidoTienda.Estado.PENDIENTE, PedidoTienda.Estado.EN_REVISION}:
+        messages.error(request, "Solo se pueden anexar productos a pedidos pendientes o en revisión.")
+        return _redirigir_detalle_pedido_tienda(request, pedido)
+
+    producto_id = request.POST.get("producto_id")
+    cantidad_str = request.POST.get("cantidad", "").strip()
+
+    producto = get_object_or_404(
+        Productos,
+        id=producto_id,
+        is_active=True,
+        is_delete=False,
+    )
+
+    try:
+        cantidad = Decimal(cantidad_str)
+        if cantidad <= 0:
+            raise ValueError
+    except (ValueError, TypeError, InvalidOperation):
+        messages.error(request, "La cantidad a anexar debe ser mayor a cero.")
+        return _redirigir_detalle_pedido_tienda(request, pedido)
+
+    with transaction.atomic():
+        stock_fisico = (
+            Inventarios.objects.filter(
+                producto=producto,
+                ubicacion=pedido.ubicacion,
+                is_active=True,
+                is_delete=False,
+            ).aggregate(total=Sum("cantidad"))["total"] or Decimal("0")
+        )
+        stock_reservado = (
+            ReservaInventario.objects.filter(
+                producto=producto,
+                ubicacion=pedido.ubicacion,
+                estado=ReservaInventario.Estado.RESERVADA,
+            ).aggregate(total=Sum("cantidad"))["total"] or Decimal("0")
+        )
+        disponible = stock_fisico - stock_reservado
+        if disponible < cantidad:
+            messages.error(
+                request,
+                f"No hay suficiente stock para anexar {producto.nombre}. Disponible: {disponible}",
+            )
+            return _redirigir_detalle_pedido_tienda(request, pedido)
+
+        reserva = ReservaInventario.objects.create(
+            producto=producto,
+            ubicacion=pedido.ubicacion,
+            cantidad=cantidad,
+            estado=ReservaInventario.Estado.RESERVADA,
+        )
+
+        puede_modificar_precio = (
+            request.user.has_perm("manager.modificar_precio_caja")
+            or request.user.is_superuser
+        )
+        precio_unitario = producto.precio_venta
+        if puede_modificar_precio:
+            precio_str = request.POST.get("precio", "").strip()
+            if precio_str:
+                try:
+                    precio_val = Decimal(precio_str)
+                    if precio_val <= 0:
+                        raise ValueError
+                    if producto.precio_venta_min and precio_val < producto.precio_venta_min:
+                        messages.error(
+                            request,
+                            f"El precio no puede ser menor a L. {producto.precio_venta_min:.2f}",
+                        )
+                        return _redirigir_detalle_pedido_tienda(request, pedido)
+                    if producto.precio_venta_max and precio_val > producto.precio_venta_max:
+                        messages.error(
+                            request,
+                            f"El precio no puede ser mayor a L. {producto.precio_venta_max:.2f}",
+                        )
+                        return _redirigir_detalle_pedido_tienda(request, pedido)
+                    precio_unitario = precio_val
+                except (ValueError, TypeError, InvalidOperation):
+                    messages.error(request, "El precio ingresado no es válido.")
+                    return _redirigir_detalle_pedido_tienda(request, pedido)
+
+        subtotal = (cantidad * precio_unitario).quantize(Decimal("0.01"))
+        DetallePedidoTienda.objects.create(
+            pedido=pedido,
+            producto=producto,
+            reserva=reserva,
+            nombre_producto=producto.nombre,
+            codigo_sku=producto.codigo_sku,
+            cantidad=cantidad,
+            precio_unitario=precio_unitario,
+            subtotal=subtotal,
+            estado_revision=DetallePedidoTienda.EstadoRevision.ACEPTADO,
+            cantidad_aprobada=cantidad,
+            justificacion="Producto anexado al pedido",
+        )
+
+        if pedido.estado == PedidoTienda.Estado.PENDIENTE:
+            pedido.estado = PedidoTienda.Estado.EN_REVISION
+
+        pedido.total, _ = _resumen_revision_pedido_tienda(pedido)
+        pedido.save(update_fields=["estado", "total"])
+
+    messages.success(
+        request,
+        f"Se anexó {cantidad} ud de {producto.nombre} al pedido.",
+    )
+    return _redirigir_detalle_pedido_tienda(request, pedido)
+
+
+def _registrar_venta_ecommerce_pedido(pedido, detalles, revisiones, usuario):
+    if Ventas.objects.filter(ecommerce_pedido_id=pedido.id).exists():
+        raise ValueError("Este pedido ya tiene una venta registrada.")
+
+    ultima_factura_bloqueada = (
+        facturas_cai.objects.select_for_update()
+        .order_by("-numero_factura")
+        .first()
+    )
+    if ultima_factura_bloqueada is None:
+        ConfiguracionEmpresa.objects.select_for_update().filter(
+            is_delete=False
+        ).order_by("id").first()
+
+    sat = (
+        datos_sat.objects.select_for_update()
+        .filter(
+            id_sucursal_id=pedido.ubicacion_id,
+            is_active=True,
+            is_delete=False,
+        )
+        .first()
+    )
+    if sat:
+        if sat.fecha_de_vencimiento.date() < timezone.localdate():
+            raise ValueError(f"El CAI {sat.numero_cai} está vencido.")
+        ultimo_numero_cai = facturas_cai.objects.filter(id_cai=sat).aggregate(
+            numero=Max("numero_factura")
+        )["numero"]
+        numero_factura = (
+            sat.rango_inicial if ultimo_numero_cai is None else ultimo_numero_cai + 1
+        )
+        if numero_factura > sat.rango_final:
+            raise ValueError(f"El CAI {sat.numero_cai} agotó su rango autorizado.")
+        es_sat = True
+    else:
+        ultimo_numero = (
+            facturas_cai.objects.aggregate(numero=Max("numero_factura"))["numero"]
+            or 100000000
+        )
+        numero_factura = ultimo_numero + 1
+        sat = None
+        es_sat = False
+
+    factura = facturas_cai.objects.create(
+        numero_factura=numero_factura,
+        id_cai=sat,
+        es_sat=es_sat,
+        u_creo_id=usuario.id,
+    )
+
+    lineas_venta = []
+    ids_capas = {
+        asignacion["id"]
+        for detalle in detalles
+        for asignacion in revisiones.get(str(detalle.id), {}).get(
+            "inventarios_entrega", []
+        )
+    }
+    capas_por_id = {
+        capa.id: capa
+        for capa in Inventarios.objects.filter(id__in=ids_capas).only(
+            "id", "producto_id", "compra_id"
+        )
+    }
+    detalles_compra = list(
+        DetalleCompra.objects.filter(
+            producto_id__in=[detalle.producto_id for detalle in detalles],
+            is_delete=False,
+            compra__is_delete=False,
+        )
+        .only("producto_id", "compra_id", "precio_compra", "compra__fecha_compra")
+        .order_by("-compra__fecha_compra", "-id")
+    )
+    costo_por_lote = {
+        (detalle_compra.compra_id, detalle_compra.producto_id): Decimal(
+            detalle_compra.precio_compra
+        )
+        for detalle_compra in detalles_compra
+    }
+    costo_reciente_por_producto = {}
+    for detalle_compra in detalles_compra:
+        costo_reciente_por_producto.setdefault(
+            detalle_compra.producto_id,
+            Decimal(detalle_compra.precio_compra),
+        )
+
+    subtotal_venta = Decimal("0")
+    impuesto_15_venta = Decimal("0")
+    impuesto_18_venta = Decimal("0")
+    costo_total_venta = Decimal("0")
+    utilidad_total_venta = Decimal("0")
+
+    for detalle in detalles:
+        revision = revisiones.get(str(detalle.id), {})
+        if revision.get("estado") in {"RECHAZADO", "DEVUELTO"}:
+            continue
+        cantidad = Decimal(str(revision.get("cantidad_aprobada") or detalle.cantidad))
+        if cantidad <= 0:
+            continue
+
+        asignaciones = revision.get("inventarios_entrega", [])
+        costo_total_linea = Decimal("0")
+        if asignaciones:
+            for asignacion in asignaciones:
+                capa = capas_por_id.get(asignacion["id"])
+                if capa is None:
+                    raise ValueError(
+                        f"No se encontró el lote de inventario de {detalle.nombre_producto}."
+                    )
+                costo_unitario_lote = costo_por_lote.get(
+                    (capa.compra_id, capa.producto_id)
+                ) or costo_reciente_por_producto.get(capa.producto_id)
+                if costo_unitario_lote is None:
+                    raise ValueError(
+                        f"No existe costo de compra registrado para {detalle.nombre_producto}."
+                    )
+                costo_total_linea += (
+                    Decimal(str(asignacion["cantidad"])) * costo_unitario_lote
+                )
+        prod = (
+            detalle.producto_cambio
+            if (detalle.rev_estado == DetallePedidoTienda.EstadoRevision.CAMBIADO and detalle.producto_cambio)
+            else detalle.producto
+        )
+        if asignaciones:
+            pass
+        else:
+            costo_unitario_lote = costo_reciente_por_producto.get(prod.id)
+            if costo_unitario_lote is None:
+                raise ValueError(
+                    f"No existe costo de compra registrado para {prod.nombre}."
+                )
+            costo_total_linea = cantidad * costo_unitario_lote
+
+        precio_unitario = Decimal(
+            str(
+                detalle.precio_unitario_cambio
+                if (detalle.rev_estado == DetallePedidoTienda.EstadoRevision.CAMBIADO and detalle.precio_unitario_cambio is not None)
+                else detalle.precio_unitario
+            )
+        )
+        porcentaje_isv = Decimal(str(prod.impuesto or 0))
+        precio_sin_isv, impuesto_unitario = _desglosar_precio_venta_incluye_isv(
+            precio_unitario,
+            porcentaje_isv,
+        )
+        subtotal_linea = cantidad * precio_sin_isv
+        impuesto_linea = cantidad * impuesto_unitario
+        impuesto_15_linea = (
+            impuesto_linea if porcentaje_isv == Decimal("15") else Decimal("0")
+        )
+        impuesto_18_linea = (
+            impuesto_linea if porcentaje_isv == Decimal("18") else Decimal("0")
+        )
+        costo_unitario = costo_total_linea / cantidad
+        utilidad_unitaria = precio_sin_isv - costo_unitario
+        utilidad_total = utilidad_unitaria * cantidad
+
+        subtotal_venta += subtotal_linea
+        impuesto_15_venta += impuesto_15_linea
+        impuesto_18_venta += impuesto_18_linea
+        costo_total_venta += costo_total_linea
+        utilidad_total_venta += utilidad_total
+        lineas_venta.append(
+            {
+                "producto": prod,
+                "cantidad": cantidad,
+                "precio_unitario": precio_unitario,
+                "costo_unitario": costo_unitario,
+                "utilidad_unitaria": utilidad_unitaria,
+                "utilidad_total": utilidad_total,
+                "subtotal": subtotal_linea,
+                "impuesto_15": impuesto_15_linea,
+                "impuesto_18": impuesto_18_linea,
+            }
+        )
+
+    if not lineas_venta:
+        raise ValueError("El pedido no tiene productos aprobados para registrar como venta.")
+
+    venta = Ventas.objects.create(
+        id_factura_cai=factura,
+        sucursal_id=pedido.ubicacion_id,
+        subtotal=subtotal_venta,
+        impuesto_15=impuesto_15_venta,
+        impuesto_18=impuesto_18_venta,
+        descuento=Decimal("0"),
+        total=subtotal_venta + impuesto_15_venta + impuesto_18_venta,
+        tipo_pago="ecommerce",
+        tipo_venta=Ventas.TIPO_VENTA_CONTADO,
+        costo_total=costo_total_venta,
+        utilidad_total=utilidad_total_venta,
+        origen=Ventas.ORIGEN_RUTA if getattr(pedido, "origen", "") == "CAJA_RUTA" else Ventas.ORIGEN_ECOMMERCE,
+        ecommerce_pedido_id=pedido.id,
+        cliente_ecommerce_nombre=pedido.nombre_cliente,
+        u_creo_id=usuario.id,
+    )
+    DetalleVenta.objects.bulk_create(
+        [
+            DetalleVenta(
+                venta=venta,
+                producto=linea["producto"],
+                cantidad=linea["cantidad"],
+                precio_unitario=linea["precio_unitario"],
+                costo_unitario=linea["costo_unitario"],
+                utilidad_unitaria=linea["utilidad_unitaria"],
+                utilidad_total=linea["utilidad_total"],
+                descuento=Decimal("0"),
+                subtotal=linea["subtotal"],
+                impuesto_15=linea["impuesto_15"],
+                impuesto_18=linea["impuesto_18"],
+                u_creo_id=usuario.id,
+            )
+            for linea in lineas_venta
+        ]
+    )
+    return venta
+
+
+@login_required
+@require_POST
+def procesar_pedido_tienda(request, token=None, pedido_id=None):
     if PedidoTienda is None:
         messages.info(request, "El módulo de tienda virtual no está disponible.")
         return redirect("dashboard")
-    if not _puede_gestionar_tienda(request.user):
+    if not _puede_aprobar_pedido_tienda(request.user):
         raise PermissionDenied
-    accion = request.POST.get("accion", "")
-    if accion not in {"aceptar", "rechazar"}:
+    accion = request.POST.get("accion", "").strip()
+    if accion not in {"aceptar", "rechazar", "entregar"}:
         messages.error(request, "La acción seleccionada no es válida.")
         return redirect("pedidos_tienda")
 
+    pedido = None
     try:
         with transaction.atomic():
-            pedido = get_object_or_404(
-                PedidoTienda.objects.select_for_update(),
-                id=pedido_id,
-            )
-            if pedido.estado != PedidoTienda.Estado.PENDIENTE:
-                messages.warning(request, "Este pedido ya fue procesado.")
-                return redirect("pedidos_tienda")
+            pedido = _resolver_pedido_tienda(token or pedido_id)
+
+            if not request.user.is_superuser:
+                perfil = PerfilUsuario.objects.filter(usuarios=request.user).first()
+                if not perfil or not perfil.ubicacion_id or pedido.ubicacion_id != perfil.ubicacion_id:
+                    raise PermissionDenied("No tienes permiso para gestionar pedidos de otra sucursal.")
 
             detalles = list(
                 pedido.detalles.select_related(
                     "producto",
                     "reserva",
+                    "reserva_cambio",
                 ).order_by("producto_id", "id")
             )
             if not detalles:
                 raise ValueError("Este pedido no tiene productos reservados.")
 
-            if accion == "rechazar":
+            if accion == "entregar":
+                if pedido.estado != PedidoTienda.Estado.PAGADO:
+                    raise ValueError("Solo puedes entregar un pedido que ya haya sido cobrado y pagado en caja.")
+
                 for detalle in detalles:
-                    reserva = detalle.reserva
-                    if reserva.estado != ReservaInventario.Estado.RESERVADA:
-                        raise ValueError(
-                            f"La reserva de {detalle.nombre_producto} ya no está activa."
-                        )
-                    reserva.estado = ReservaInventario.Estado.CANCELADA
-                    reserva.save(update_fields=["estado"])
+                    if detalle.rev_estado in {
+                        DetallePedidoTienda.EstadoRevision.RECHAZADO,
+                        DetallePedidoTienda.EstadoRevision.DEVUELTO,
+                    }:
+                        continue
+                    detalle.entregado = True
+                    detalle.save(update_fields=["entregado"])
+
+                pedido.estado = PedidoTienda.Estado.ENTREGADO
+                pedido.entregado_en = timezone.now()
+                pedido.entregado_por = request.user
+                pedido.save(
+                    update_fields=["estado", "entregado_en", "entregado_por"]
+                )
+
+            elif accion == "rechazar":
+                if pedido.estado not in {
+                    PedidoTienda.Estado.PENDIENTE,
+                    PedidoTienda.Estado.EN_REVISION,
+                }:
+                    raise ValueError("Este pedido ya fue procesado.")
+                for detalle in detalles:
+                    if detalle.reserva_id:
+                        reserva = ReservaInventario.objects.select_for_update().get(id=detalle.reserva_id)
+                        if reserva.estado == ReservaInventario.Estado.RESERVADA:
+                            reserva.estado = ReservaInventario.Estado.CANCELADA
+                            reserva.save(update_fields=["estado"])
+                    if getattr(detalle, "reserva_cambio_id", None):
+                        reserva_c = ReservaInventario.objects.select_for_update().get(id=detalle.reserva_cambio_id)
+                        if reserva_c.estado == ReservaInventario.Estado.RESERVADA:
+                            reserva_c.estado = ReservaInventario.Estado.CANCELADA
+                            reserva_c.save(update_fields=["estado"])
                 pedido.estado = PedidoTienda.Estado.RECHAZADO
+                pedido.procesado = timezone.now()
+                pedido.procesado_por = request.user
+                pedido.save(
+                    update_fields=["estado", "procesado", "procesado_por"]
+                )
             else:
+                if pedido.estado not in {
+                    PedidoTienda.Estado.PENDIENTE,
+                    PedidoTienda.Estado.EN_REVISION,
+                }:
+                    raise ValueError("Este pedido ya fue procesado.")
+                if any(detalle.rev_estado == "PENDIENTE" for detalle in detalles):
+                    raise ValueError(
+                        "No puedes aceptar el pedido mientras haya productos pendientes de revisión. "
+                        "Revisa cada producto aceptándolo, rechazándolo o modificando su cantidad."
+                    )
+
                 for detalle in detalles:
-                    reserva = ReservaInventario.objects.select_for_update().get(
-                        id=detalle.reserva_id
-                    )
-                    if reserva.estado != ReservaInventario.Estado.RESERVADA:
-                        raise ValueError(
-                            f"La reserva de {detalle.nombre_producto} ya no está activa."
-                        )
-                    capas = list(
-                        Inventarios.objects.select_for_update()
-                        .filter(
-                            producto_id=detalle.producto_id,
-                            ubicacion_id=pedido.ubicacion_id,
-                            is_active=True,
-                            is_delete=False,
-                            cantidad__gt=0,
-                        )
-                        .order_by("fvencimiento", "id")
-                    )
-                    stock_fisico = sum(
-                        (capa.cantidad for capa in capas),
-                        Decimal("0"),
-                    )
-                    stock_reservado = (
-                        ReservaInventario.objects.filter(
-                            producto_id=detalle.producto_id,
-                            ubicacion_id=pedido.ubicacion_id,
-                            estado=ReservaInventario.Estado.RESERVADA,
-                            is_active=True,
-                            is_delete=False,
-                        ).aggregate(total=Sum("cantidad"))["total"]
-                        or Decimal("0")
-                    )
-                    if stock_fisico < stock_reservado:
-                        raise ValueError(
-                            f"El inventario de {detalle.nombre_producto} ya no cubre "
-                            "todas las reservas pendientes."
-                        )
-
-                    restante = reserva.cantidad
-                    stock_restante = stock_fisico
-                    for capa in capas:
-                        if restante <= 0:
-                            break
-                        consumir = min(capa.cantidad, restante)
-                        stock_anterior = capa.cantidad
-                        capa.cantidad -= consumir
-                        capa.save(update_fields=["cantidad"])
-                        restante -= consumir
-                        stock_restante -= consumir
-                        MovimientoInventario.objects.create(
-                            tipo_movimiento=TipoMovimientoInventario.SALIDA_VENTA,
-                            producto=detalle.producto,
-                            ubicacion_origen_id=pedido.ubicacion_id,
-                            cantidad=consumir,
-                            stock_anterior=stock_anterior,
-                            stock_resultante=stock_restante,
-                        )
-                    if restante > 0:
-                        raise ValueError(
-                            f"No fue posible completar la salida de "
-                            f"{detalle.nombre_producto}."
-                        )
-                    reserva.estado = ReservaInventario.Estado.CONSUMIDA
-                    reserva.save(update_fields=["estado"])
+                    if detalle.rev_estado == "RECHAZADO":
+                        if detalle.reserva_id:
+                            reserva = ReservaInventario.objects.select_for_update().get(id=detalle.reserva_id)
+                            if reserva.estado == ReservaInventario.Estado.RESERVADA:
+                                reserva.estado = ReservaInventario.Estado.CANCELADA
+                                reserva.save(update_fields=["estado"])
+                        if getattr(detalle, "reserva_cambio_id", None):
+                            reserva_c = ReservaInventario.objects.select_for_update().get(id=detalle.reserva_cambio_id)
+                            if reserva_c.estado == ReservaInventario.Estado.RESERVADA:
+                                reserva_c.estado = ReservaInventario.Estado.CANCELADA
+                                reserva_c.save(update_fields=["estado"])
                 pedido.estado = PedidoTienda.Estado.ACEPTADO
-
-            pedido.procesado = timezone.now()
-            pedido.procesado_por = request.user
-            pedido.save(
-                update_fields=["estado", "procesado", "procesado_por"]
-            )
+                pedido.procesado = timezone.now()
+                pedido.procesado_por = request.user
+                pedido.total, _ = _resumen_revision_pedido_tienda(pedido)
+                pedido.save(
+                    update_fields=["estado", "total", "procesado", "procesado_por"]
+                )
     except ValueError as error:
         messages.error(request, str(error))
-        return redirect("pedidos_tienda")
+        if pedido is None:
+            return redirect("pedidos_tienda")
+        return _redirigir_detalle_pedido_tienda(request, pedido)
 
-    messages.success(
-        request,
-        "Pedido aceptado e inventario actualizado."
-        if accion == "aceptar"
-        else "Pedido rechazado; las unidades se liberaron nuevamente.",
-    )
-    return redirect("pedidos_tienda")
+    mensaje_exito = {
+        "aceptar": "El pedido fue aceptado y está listo para entregar.",
+        "rechazar": "El pedido fue rechazado correctamente.",
+        "entregar": "El pedido fue entregado correctamente.",
+    }
+    messages.success(request, mensaje_exito[accion])
+    return _redirigir_detalle_pedido_tienda(request, pedido)
 
 
 @login_required
@@ -2289,6 +3521,8 @@ def guardar_combo(request):
             extension = imagen_combo.name.rsplit(".", 1)[-1].lower()
             if extension not in {"jpg", "jpeg", "png", "webp"}:
                 raise ValueError("La imagen del combo debe ser JPG, PNG o WEBP")
+            if getattr(imagen_combo, "size", 0) > 5 * 1024 * 1024:
+                raise ValueError("La imagen del combo puede pesar como máximo 5 MB")
 
         if not nombre or not codigo_sku:
             raise ValueError("Ingresa el nombre y SKU del combo")
@@ -2465,6 +3699,14 @@ def exportar_productos_excel(request):
     )
 
     for producto in productos.order_by("id").iterator(chunk_size=500):
+        impuesto = producto.impuesto or Decimal("0")
+        if impuesto == impuesto.to_integral_value():
+            impuesto_val = int(impuesto)
+            impuesto_formato = '0"%"'
+        else:
+            impuesto_val = impuesto
+            impuesto_formato = '0.00"%"'
+
         _agregar_fila_exportacion(
             hoja,
             [
@@ -2478,13 +3720,18 @@ def exportar_productos_excel(request):
                 producto.precio_venta,
                 producto.precio_venta_min,
                 producto.precio_venta_max,
-                producto.impuesto / Decimal("100"),
+                impuesto_val,
                 producto.equival_unid,
                 "Sí" if producto.is_master else "No",
                 "Sí" if producto.vencimiento else "No",
                 "Activo" if producto.is_active else "Inactivo",
             ],
-            formatos={8: "#,##0.00", 9: "#,##0.00", 10: "#,##0.00", 11: "0.00%"},
+            formatos={
+                8: "#,##0.00",
+                9: "#,##0.00",
+                10: "#,##0.00",
+                11: impuesto_formato,
+            },
         )
     return _respuesta_excel(libro, "productos.xlsx")
 
@@ -3251,7 +4498,7 @@ def api_productos(request):
 @login_required
 def api_productos_caja(request):
     """Productos vendibles en la sucursal del cajero, paginados para móvil."""
-    if not _puede_generar_cotizaciones(request.user):
+    if not (_puede_generar_cotizaciones(request.user) or _puede_generar_pedidos(request.user)):
         raise PermissionDenied("No tiene permiso para buscar productos en Caja")
 
     perfil = get_object_or_404(PerfilUsuario, usuarios=request.user)
@@ -3285,8 +4532,76 @@ def api_productos_caja(request):
     if busqueda:
         productos = productos.filter(Q(nombre__icontains=busqueda) | Q(codigo_sku__icontains=busqueda))
 
+    cotizaciones_data = []
+    pedidos_data = []
+    if busqueda and page == 1:
+        cotizaciones = (
+            Cotizacion.objects.select_related("cliente")
+            .filter(
+                sucursal_id=perfil.ubicacion_id,
+                is_active=True,
+                is_delete=False,
+            )
+            .filter(
+                Q(numero_cotizacion__icontains=busqueda)
+                | Q(cliente_nombre__icontains=busqueda)
+                | Q(cliente__nombre__icontains=busqueda)
+                | Q(cliente__apellido__icontains=busqueda)
+                | Q(cliente__empresa__icontains=busqueda)
+                | Q(cliente__dni__icontains=busqueda)
+            )
+            .order_by("-id")[:5]
+        )
+        for cot in cotizaciones:
+            nom_cliente = cot.cliente_nombre
+            if not nom_cliente and cot.cliente:
+                nom_cliente = f"{cot.cliente.nombre or ''} {cot.cliente.apellido or ''}".strip() or cot.cliente.empresa or cot.cliente.dni
+            if not nom_cliente:
+                nom_cliente = "Consumidor Final"
+
+            cotizaciones_data.append({
+                "codigoSKU": cot.numero_cotizacion,
+                "nombre": cot.numero_cotizacion,
+                "clienteNombre": nom_cliente,
+                "esCotizacion": True,
+                "stock": "1",
+                "precioVenta": str(cot.total),
+                "unidad": "",
+                "imagenUrl": "",
+            })
+
+        if PedidoTienda:
+            pedidos = (
+                PedidoTienda.objects.select_related("cliente", "cliente_pos")
+                .filter(
+                    ubicacion_id=perfil.ubicacion_id,
+                    estado=PedidoTienda.Estado.ACEPTADO,
+                )
+                .filter(
+                    Q(numero_pedido__icontains=busqueda)
+                    | Q(cliente_nombre__icontains=busqueda)
+                    | Q(cliente__nombre__icontains=busqueda)
+                    | Q(cliente__telefono__icontains=busqueda)
+                    | Q(cliente_pos__nombre__icontains=busqueda)
+                    | Q(cliente_pos__empresa__icontains=busqueda)
+                    | Q(cliente_pos__dni__icontains=busqueda)
+                )
+                .order_by("-id")[:5]
+            )
+            for ped in pedidos:
+                pedidos_data.append({
+                    "codigoSKU": ped.numero_pedido or f"PED-{ped.id:06d}",
+                    "nombre": ped.numero_pedido or f"PED-{ped.id:06d}",
+                    "clienteNombre": ped.nombre_cliente,
+                    "esPedido": True,
+                    "stock": "1",
+                    "precioVenta": str(ped.total),
+                    "unidad": "",
+                    "imagenUrl": "",
+                })
+
     page_obj = Paginator(productos.order_by("nombre", "id"), limit).get_page(page)
-    results = []
+    results = cotizaciones_data + pedidos_data + []
     for producto in page_obj:
         imagen = producto.imagenes_producto.first()
         stock_disponible = max(
@@ -3300,7 +4615,8 @@ def api_productos_caja(request):
             "unidad": producto.unidad_medida.nombre if producto.unidad_medida else "",
             "imagenUrl": request.build_absolute_uri(reverse("producto_imagen", args=[imagen.id])) if imagen else "",
         })
-    return JsonResponse({"results": results, "page": page_obj.number, "totalPages": page_obj.paginator.num_pages})
+    total_pages = max(page_obj.paginator.num_pages, 1 if (cotizaciones_data or pedidos_data) else 0)
+    return JsonResponse({"results": results, "page": page_obj.number, "totalPages": total_pages})
 
 
 @login_required
@@ -3321,6 +4637,15 @@ def post_producto(request):
         impuesto = request.POST.get("impuesto", "0").strip()
 
         imagenes = request.FILES.getlist("Imagenes")
+        for imagen in imagenes:
+            if getattr(imagen, "size", 0) > 5 * 1024 * 1024:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": f"La imagen '{imagen.name}' supera el límite de 5 MB por imagen",
+                    },
+                    status=400,
+                )
         espadre = str(request.POST.get("Espadre")).lower() == "true"
         vunid = int(request.POST.get("vunid", "0").strip())
 
@@ -3577,6 +4902,16 @@ def put_producto(request, id):
             )
 
         data = request.POST
+        imagenes = request.FILES.getlist("Imagenes")
+        for imagen in imagenes:
+            if getattr(imagen, "size", 0) > 5 * 1024 * 1024:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": f"La imagen '{imagen.name}' supera el límite de 5 MB por imagen",
+                    },
+                    status=400,
+                )
 
         # =========================
         # DATOS BÁSICOS
@@ -4603,22 +5938,97 @@ def ubicaciones_view(request):
     return render(request, "gestiones/ubicaciones.html", context)
 
 
+def _bool_campo_ubicacion(valor):
+    if isinstance(valor, bool):
+        return valor
+    return str(valor or "").strip().lower() in {"true", "1", "on", "yes"}
+
+
+def _extraer_mapa_embed_url(valor):
+    """Extrae la URL src de un código <iframe> de Google Maps o valida una URL directa."""
+    import re
+
+    texto = (valor or "").strip()
+    if not texto:
+        return ""
+    coincidencia = re.search(r'src=["\']([^"\']+)["\']', texto, re.IGNORECASE)
+    url = coincidencia.group(1).strip() if coincidencia else texto
+    if not url.startswith(("https://www.google.com/maps", "https://maps.google.com/")):
+        raise ValueError(
+            "El mapa debe ser un código <iframe> o URL de insertar de Google Maps (Compartir → Incorporar un mapa)"
+        )
+    return url
+
+
+def _validar_como_llegar_url(valor):
+    texto = (valor or "").strip()
+    if not texto:
+        return ""
+    if not texto.startswith(("https://", "http://")):
+        raise ValueError("El enlace de 'Cómo llegar' debe iniciar con https:// o http://")
+    return texto
+
+
+def _validar_imagen_ubicacion(archivo):
+    formatos = {"image/jpeg", "image/png", "image/webp"}
+    extension = archivo.name.rsplit(".", 1)[-1].lower() if "." in archivo.name else ""
+    if archivo.content_type not in formatos and extension not in {"jpg", "jpeg", "png", "webp"}:
+        raise ValueError("La imagen de la ubicación debe ser JPG, PNG o WEBP")
+    if archivo.size > 5 * 1024 * 1024:
+        raise ValueError("La imagen de la ubicación puede pesar como máximo 5 MB")
+    try:
+        archivo.seek(0)
+        img = Image.open(archivo)
+        if img.width != 800 or img.height != 600:
+            raise ValueError(
+                f"La imagen de la sucursal debe medir 800 × 600 píxeles. La imagen enviada mide {img.width} × {img.height} px."
+            )
+        archivo.seek(0)
+    except ValueError:
+        raise
+    except Exception:
+        archivo.seek(0)
+        raise ValueError("El archivo subido no es una imagen válida")
+
+
 @login_required
 @permission_required("manager.add_ubicaciones", raise_exception=True)
 @require_POST
 def post_ubicaciones(request):
 
     try:
-        data = json.loads(request.body)
+        es_json = request.content_type and request.content_type.startswith(
+            "application/json"
+        )
+        data = json.loads(request.body) if es_json else request.POST
 
-        nombre = (data.get("nombre") or "").strip()
+        nombre = (data.get("nombre") or data.get("Nombre") or "").strip()
+        telefono = (
+            data.get("telefono")
+            or data.get("Telefono")
+            or data.get("telefono_ubicacion")
+            or ""
+        ).strip()
+        pais = (data.get("pais") or "").strip()
+        departamento = (data.get("departamento") or "").strip()
         codigo = (data.get("codigo") or "").strip()
         ubicaciones = (data.get("ubicacion") or "").strip()
-        es_bodega = data.get("es_bodega", False)
-        es_tienda = data.get("es_tienda", False)
+        es_bodega = _bool_campo_ubicacion(data.get("es_bodega", False))
+        es_tienda = _bool_campo_ubicacion(data.get("es_tienda", False))
 
-        relacion_bodega = data.get("relacion_bodega", False)
-        bodega_id = data.get("bodega_id")
+        relacion_bodega = _bool_campo_ubicacion(data.get("relacion_bodega", False))
+        bodega_id = data.get("bodega_id") or None
+        if str(bodega_id).lower() in {"null", "none", ""}:
+            bodega_id = None
+
+        horario = (data.get("horario") or "").strip() if es_tienda else ""
+        mapa_iframe = (
+            _extraer_mapa_embed_url(data.get("mapa_iframe")) if es_tienda else ""
+        )
+        como_llegar_url = (
+            _validar_como_llegar_url(data.get("como_llegar_url")) if es_tienda else ""
+        )
+        imagen = request.FILES.get("imagen") if es_tienda else None
 
         # =========================
         # VALIDACIONES BÁSICAS
@@ -4644,15 +6054,24 @@ def post_ubicaciones(request):
                 status=400,
             )
 
+        if imagen:
+            _validar_imagen_ubicacion(imagen)
+
         # =========================
         # CREAR OBJETO
         # =========================
         ubicacion = Ubicaciones(
             nombre=nombre,
+            telefono=telefono,
+            pais=pais,
+            departamento=departamento,
             ubicacion=ubicaciones,
             codigo=codigo,
             es_bodega=es_bodega,
             es_tienda=es_tienda,
+            horario=horario,
+            mapa_iframe=mapa_iframe,
+            como_llegar_url=como_llegar_url,
             u_creo_id=request.user.id,
         )
 
@@ -4662,12 +6081,27 @@ def post_ubicaciones(request):
         if es_tienda and relacion_bodega and bodega_id:
             ubicacion.bodega_id = bodega_id
 
+        if imagen:
+            nombre_original, nombre_archivo, imagen_url = _guardar_imagen_como_webp(
+                imagen,
+                "ubicacion",
+                settings.NEXTCLOUD_FOLDER_CONFI,
+            )
+            ubicacion.imagen_nombre = nombre_original
+            ubicacion.imagen_archivo = nombre_archivo
+            ubicacion.imagen_url = imagen_url
+
         ubicacion.save()
 
         return JsonResponse(
             {"success": True, "message": "Ubicación creada correctamente"}
         )
 
+    except ValueError as error:
+        return JsonResponse(
+            {"success": False, "message": str(error)},
+            status=400,
+        )
     except Exception as e:
         return JsonResponse(
             {"success": False, "message": "Error interno: " + str(e)},
@@ -4693,12 +6127,24 @@ def get_ubicaciones(request, id):
                 "ubicacion": {
                     "id": ubicacion.id,
                     "nombre": ubicacion.nombre,
+                    "telefono": ubicacion.telefono or "",
+                    "pais": ubicacion.pais or "",
+                    "departamento": ubicacion.departamento or "",
                     "detalle": ubicacion.ubicacion,
                     "codigo": ubicacion.codigo,
                     "es_bodega": ubicacion.es_bodega,
                     "es_tienda": ubicacion.es_tienda,
                     "bodegaid": ubicacion.bodega.id if ubicacion.bodega else None,
                     "bodeganombre": ubicacion.bodega.nombre if ubicacion.bodega else "",
+                    "horario": ubicacion.horario or "",
+                    "mapa_iframe": ubicacion.mapa_iframe or "",
+                    "como_llegar_url": ubicacion.como_llegar_url or "",
+                    "imagen_nombre": ubicacion.imagen_nombre or "",
+                    "imagen_url": (
+                        reverse("ubicacion_imagen", args=[ubicacion.id])
+                        if ubicacion.imagen_archivo
+                        else ""
+                    ),
                     "isActive": ubicacion.is_active,
                 },
             }
@@ -4712,22 +6158,45 @@ def get_ubicaciones(request, id):
 
 @login_required
 @permission_required("manager.change_ubicaciones", raise_exception=True)
-@require_http_methods(["PUT"])
+@require_http_methods(["POST", "PUT"])
 def put_ubicaciones(request, id):
 
     try:
-        data = json.loads(request.body)
+        es_json = request.content_type and request.content_type.startswith(
+            "application/json"
+        )
+        data = json.loads(request.body) if es_json else request.POST
 
-        nombre = (data.get("Nombre") or "").strip()
-        codigo = (data.get("Codigo") or "").strip()
+        nombre = (data.get("Nombre") or data.get("nombre") or "").strip()
+        telefono = (
+            data.get("telefono")
+            or data.get("Telefono")
+            or data.get("telefono_ubicacionedit")
+            or data.get("telefono_ubicacion")
+            or ""
+        ).strip()
+        pais = (data.get("pais") or "").strip()
+        departamento = (data.get("departamento") or "").strip()
+        codigo = (data.get("Codigo") or data.get("codigo") or "").strip()
         ubicaciones = (data.get("ubicacion") or "").strip()
-        es_bodega = data.get("es_bodega", False)
-        es_tienda = data.get("es_tienda", False)
+        es_bodega = _bool_campo_ubicacion(data.get("es_bodega", False))
+        es_tienda = _bool_campo_ubicacion(data.get("es_tienda", False))
 
-        relacion_bodega = data.get("relacion_bodega", False)
-        bodegaid = data.get("bodegaid")
+        relacion_bodega = _bool_campo_ubicacion(data.get("relacion_bodega", False))
+        bodegaid = data.get("bodegaid") or data.get("bodega_id") or None
+        if str(bodegaid).lower() in {"null", "none", ""}:
+            bodegaid = None
 
-        is_active = data.get("IsActive", True)
+        is_active = _bool_campo_ubicacion(data.get("IsActive", True))
+        horario = (data.get("horario") or "").strip() if es_tienda else ""
+        mapa_iframe = (
+            _extraer_mapa_embed_url(data.get("mapa_iframe")) if es_tienda else ""
+        )
+        como_llegar_url = (
+            _validar_como_llegar_url(data.get("como_llegar_url")) if es_tienda else ""
+        )
+        quitar_imagen = _bool_campo_ubicacion(data.get("quitar_imagen", False))
+        imagen = request.FILES.get("imagen") if es_tienda else None
 
         # VALIDACIONES BÁSICAS
         if not nombre:
@@ -4755,14 +6224,23 @@ def put_ubicaciones(request, id):
                 status=400,
             )
 
+        if imagen:
+            _validar_imagen_ubicacion(imagen)
+
         # =========================
         # ASIGNACIÓN CAMPOS
         # =========================
         ubicacion.nombre = nombre
+        ubicacion.telefono = telefono
+        ubicacion.pais = pais
+        ubicacion.departamento = departamento
         ubicacion.codigo = codigo
         ubicacion.ubicacion = ubicaciones
         ubicacion.es_bodega = es_bodega
         ubicacion.es_tienda = es_tienda
+        ubicacion.horario = horario
+        ubicacion.mapa_iframe = mapa_iframe
+        ubicacion.como_llegar_url = como_llegar_url
 
         # =========================
         # RELACIÓN BODEGA ↔ TIENDA
@@ -4779,6 +6257,31 @@ def put_ubicaciones(request, id):
         else:
             ubicacion.bodega = None
 
+        imagen_anterior = ubicacion.imagen_archivo
+        if imagen:
+            nombre_original, nombre_archivo, imagen_url = _guardar_imagen_como_webp(
+                imagen,
+                "ubicacion",
+                settings.NEXTCLOUD_FOLDER_CONFI,
+            )
+            ubicacion.imagen_nombre = nombre_original
+            ubicacion.imagen_archivo = nombre_archivo
+            ubicacion.imagen_url = imagen_url
+            if imagen_anterior and imagen_anterior != nombre_archivo:
+                try:
+                    eliminar_archivo(imagen_anterior, settings.NEXTCLOUD_FOLDER_CONFI)
+                except Exception:
+                    pass
+        elif quitar_imagen or not es_tienda:
+            ubicacion.imagen_nombre = ""
+            ubicacion.imagen_archivo = ""
+            ubicacion.imagen_url = ""
+            if imagen_anterior:
+                try:
+                    eliminar_archivo(imagen_anterior, settings.NEXTCLOUD_FOLDER_CONFI)
+                except Exception:
+                    pass
+
         ubicacion.is_active = is_active
         ubicacion.u_modifico_id = request.user.id
         ubicacion.f_modificacion = timezone.now()
@@ -4788,11 +6291,40 @@ def put_ubicaciones(request, id):
             {"success": True, "message": "Ubicación actualizada correctamente"}
         )
 
+    except ValueError as error:
+        return JsonResponse(
+            {"success": False, "message": str(error)},
+            status=400,
+        )
     except Exception as e:
         return JsonResponse(
             {"success": False, "message": "Error interno: " + str(e)},
             status=500,
         )
+
+
+@login_required
+@permission_required("manager.view_ubicaciones", raise_exception=True)
+def ubicacion_imagen(request, id):
+    ubicacion = get_object_or_404(Ubicaciones, id=id, is_delete=False)
+    if not ubicacion.imagen_archivo:
+        return HttpResponse("Imagen no encontrada", status=404)
+    try:
+        archivo = obtener_archivo(
+            ubicacion.imagen_archivo,
+            settings.NEXTCLOUD_FOLDER_CONFI,
+        )
+        content_type = (
+            "image/webp"
+            if ubicacion.imagen_archivo.lower().endswith(".webp")
+            else archivo.headers.get("Content-Type", "image/webp")
+        )
+        return HttpResponse(
+            archivo.content,
+            content_type=content_type,
+        )
+    except Exception:
+        return redirect(static("img/default.webp"))
 
 
 @login_required
@@ -9125,6 +10657,7 @@ def exportar_inventario_excel(request):
         "Presentación",
         "SKU",
         "Proveedor",
+        "ISV",
         "Existencia mayor",
         "Existencia menor",
         "Equivalencia menor",
@@ -9135,7 +10668,7 @@ def exportar_inventario_excel(request):
     libro, hoja = _libro_exportacion_grande(
         "Inventario",
         encabezados,
-        [14, 36, 22, 20, 20, 22, 28, 18, 18, 18, 18, 14, 30],
+        [14, 36, 22, 20, 20, 22, 28, 12, 18, 18, 18, 18, 14, 30],
     )
 
     for producto in productos:
@@ -9156,6 +10689,14 @@ def exportar_inventario_excel(request):
         if unidades_menores == unidades_menores.to_integral_value():
             unidades_menores = int(unidades_menores)
 
+        impuesto = producto.impuesto or Decimal("0")
+        if impuesto == impuesto.to_integral_value():
+            impuesto_val = int(impuesto)
+            impuesto_formato = '0"%"'
+        else:
+            impuesto_val = impuesto
+            impuesto_formato = '0.00"%"'
+
         _agregar_fila_exportacion(
             hoja,
             [
@@ -9166,6 +10707,7 @@ def exportar_inventario_excel(request):
                 producto.unidad_medida.nombre,
                 producto.codigo_sku,
                 _obtener_proveedor_producto(producto),
+                impuesto_val,
                 existencia,
                 unidades_menores,
                 equivalencia_menor,
@@ -9174,10 +10716,11 @@ def exportar_inventario_excel(request):
                 ", ".join(fechas_vencimiento.get(producto.id, [])),
             ],
             formatos={
-                8: "#,##0" if isinstance(existencia, int) else "#,##0.00",
-                9: "#,##0" if isinstance(unidades_menores, int) else "#,##0.00",
-                10: "#,##0",
+                8: impuesto_formato,
+                9: "#,##0" if isinstance(existencia, int) else "#,##0.00",
+                10: "#,##0" if isinstance(unidades_menores, int) else "#,##0.00",
                 11: "#,##0",
+                12: "#,##0",
             },
         )
     return _respuesta_excel(libro, "inventario.xlsx")
@@ -10690,7 +12233,7 @@ def notificaciones_view(request):
 @login_required
 def caja_view(request):
 
-    if not _puede_generar_cotizaciones(request.user):
+    if not (_puede_generar_cotizaciones(request.user) or _puede_generar_pedidos(request.user)):
         raise PermissionDenied("No tiene permiso para acceder a Caja")
 
     puede_operar_caja = _puede_operar_caja(request.user)
@@ -10747,6 +12290,7 @@ def caja_view(request):
         ),
         "puede_operar_caja": puede_operar_caja,
         "puede_generar_cotizaciones": _puede_generar_cotizaciones(request.user),
+        "puede_generar_pedidos": _puede_generar_pedidos(request.user),
     }
 
     return render(request, "caja/caja.html", context)
@@ -11771,12 +13315,6 @@ def devoluciones_venta_list(request):
     estado = request.GET.get("estado", "").strip().upper()
 
     devoluciones_base = _consulta_devoluciones_venta(fecha_inicio, fecha_fin, sucursal)
-    disponibles_count = devoluciones_base.filter(
-        estado=DevolucionVenta.Estado.DISPONIBLE
-    ).count()
-    usadas_count = devoluciones_base.filter(
-        estado=DevolucionVenta.Estado.USADA
-    ).count()
     devoluciones = (
         devoluciones_base.filter(estado=estado)
         if estado in {DevolucionVenta.Estado.DISPONIBLE, DevolucionVenta.Estado.USADA}
@@ -11803,8 +13341,6 @@ def devoluciones_venta_list(request):
             ).order_by("nombre"),
             "sucursal_seleccionada": sucursal,
             "estado_seleccionado": estado,
-            "disponibles_count": disponibles_count,
-            "usadas_count": usadas_count,
         },
     )
 
@@ -12133,6 +13669,136 @@ def crear_cotizacion(request):
 
 
 @login_required
+@require_POST
+def crear_pedido_caja(request):
+    try:
+        if not _puede_generar_pedidos(request.user):
+            raise PermissionDenied("No tiene permiso para generar pedidos desde caja")
+        if PedidoTienda is None or DetallePedidoTienda is None:
+            return JsonResponse({"success": False, "message": "El módulo de pedidos no está disponible"}, status=400)
+
+        data = json.loads(request.body)
+        productos = data.get("productos", [])
+        cliente_id = data.get("cliente_id")
+        cliente_nombre = (data.get("cliente_nombre") or "").strip()
+
+        if not productos:
+            return JsonResponse({"success": False, "message": "Agregue productos al pedido"}, status=400)
+
+        perfil = PerfilUsuario.objects.get(usuarios=request.user)
+        if not perfil.ubicacion_id:
+            return JsonResponse({"success": False, "message": "El usuario no tiene una sucursal asignada"}, status=400)
+
+        sucursal_id = perfil.ubicacion_id
+        ubicacion = Ubicaciones.objects.filter(id=sucursal_id, is_active=True, is_delete=False).first()
+        if not ubicacion:
+            return JsonResponse({"success": False, "message": "La sucursal del usuario no existe o está inactiva"}, status=400)
+
+        ubicaciones_inventario = obtener_ubicaciones_inventario(sucursal_id)
+
+        with transaction.atomic():
+            cliente_pos = None
+            if cliente_id:
+                cliente_pos = Clientes.objects.filter(
+                    id=cliente_id, is_active=True, is_delete=False
+                ).first()
+            if not cliente_nombre and cliente_pos:
+                cliente_nombre = cliente_pos.nombre_completo or cliente_pos.empresa
+            if not cliente_nombre:
+                cliente_nombre = "Consumidor Final"
+
+            detalles_pedido = []
+            total_pedido = Decimal("0")
+
+            for item in productos:
+                combo_id = item.get("combo_id")
+                if combo_id:
+                    return JsonResponse(
+                        {"success": False, "message": "Los pedidos de ruta deben generarse con productos individuales, no combos"},
+                        status=400,
+                    )
+
+                producto_id = item.get("id")
+                cantidad = Decimal(str(item.get("cantidad", 0)))
+                precio = Decimal(str(item.get("precio_venta", 0)))
+                if cantidad <= 0 or precio < 0:
+                    raise ValueError("Las cantidades y precios del pedido no son válidos")
+
+                producto = (
+                    Productos.objects.filter(id=producto_id, is_active=True, is_delete=False)
+                    .first()
+                )
+                if not producto:
+                    raise ValueError(f"El producto con ID {producto_id} no está disponible")
+
+                # Validar permisos de modificación de precio
+                if precio != producto.precio_venta:
+                    if not request.user.has_perm("manager.modificar_precio_caja"):
+                        raise ValueError("No tiene permiso para modificar precios en caja")
+                    if producto.precio_venta_min is not None and precio < producto.precio_venta_min:
+                        raise ValueError(f"El precio de {producto.nombre} no puede ser menor a L. {producto.precio_venta_min:.2f}")
+                    if producto.precio_venta_max is not None and precio > producto.precio_venta_max:
+                        raise ValueError(f"El precio de {producto.nombre} no puede ser mayor a L. {producto.precio_venta_max:.2f}")
+
+                # Validar stock disponible en la sucursal del usuario
+                stock_disponible = _stock_disponible_caja(producto.id, ubicaciones_inventario)
+                if stock_disponible < cantidad:
+                    raise ValueError(f"No hay existencias suficientes para {producto.nombre}. Disponible: {stock_disponible:.2f}")
+
+                # Crear reserva en la sucursal del usuario
+                reserva = ReservaInventario.objects.create(
+                    producto=producto,
+                    ubicacion=ubicacion,
+                    cantidad=cantidad,
+                    estado=ReservaInventario.Estado.RESERVADA,
+                )
+
+                subtotal = (cantidad * precio).quantize(Decimal("0.01"))
+                detalles_pedido.append(
+                    DetallePedidoTienda(
+                        producto=producto,
+                        reserva=reserva,
+                        nombre_producto=producto.nombre,
+                        codigo_sku=producto.codigo_sku,
+                        cantidad=cantidad,
+                        precio_unitario=precio,
+                        subtotal=subtotal,
+                        estado_revision=DetallePedidoTienda.EstadoRevision.ACEPTADO,
+                        cantidad_aprobada=cantidad,
+                        justificacion="",
+                    )
+                )
+                total_pedido += subtotal
+
+            pedido = PedidoTienda.objects.create(
+                cliente_pos=cliente_pos,
+                cliente_nombre=cliente_nombre,
+                origen="CAJA_RUTA",
+                ubicacion=ubicacion,
+                estado=PedidoTienda.Estado.ACEPTADO,
+                total=total_pedido,
+                creado_por=request.user,
+            )
+
+            for det in detalles_pedido:
+                det.pedido = pedido
+            DetallePedidoTienda.objects.bulk_create(detalles_pedido)
+
+        return JsonResponse({
+            "success": True,
+            "message": f"Pedido {pedido.numero_pedido} generado correctamente",
+            "numero_pedido": pedido.numero_pedido,
+            "pedido_id": pedido.id,
+        })
+    except (ValueError, InvalidOperation, json.JSONDecodeError) as error:
+        return JsonResponse({"success": False, "message": str(error)}, status=400)
+    except PerfilUsuario.DoesNotExist:
+        return JsonResponse({"success": False, "message": "El usuario no tiene un perfil configurado"}, status=400)
+    except Exception as error:
+        return JsonResponse({"success": False, "message": str(error)}, status=500)
+
+
+@login_required
 def imprimir_cotizacion(request, token):
     if not (_puede_generar_cotizaciones(request.user) or _puede_ver_cotizaciones(request.user)):
         raise PermissionDenied("No tiene permiso para imprimir cotizaciones")
@@ -12338,7 +14004,7 @@ def cotizaciones_view(request):
 
 @login_required
 def busqueda_codigo(request, codigo):
-    if not _puede_generar_cotizaciones(request.user):
+    if not (_puede_generar_cotizaciones(request.user) or _puede_generar_pedidos(request.user)):
         raise PermissionDenied("No tiene permiso para buscar productos en Caja")
     # ==========================================
     # VERIFICAR PERFIL Y UBICACIÓN
@@ -12369,7 +14035,7 @@ def busqueda_codigo(request, codigo):
     )
 
     cotizacion = (
-        Cotizacion.objects.prefetch_related("detalles")
+        Cotizacion.objects.select_related("cliente").prefetch_related("detalles")
         .filter(
             numero_cotizacion__iexact=codigo,
             sucursal_id=sucursal_id,
@@ -12379,9 +14045,24 @@ def busqueda_codigo(request, codigo):
         .first()
     )
     if cotizacion:
+        cliente_data = None
+        if cotizacion.cliente:
+            c = cotizacion.cliente
+            nombre_completo = f"{c.nombre or ''} {c.nombre2 or ''} {c.apellido or ''} {c.apellido2 or ''}".strip() or c.empresa or c.dni
+            cliente_data = {
+                "id": c.id,
+                "nombre_completo": nombre_completo,
+                "dni": c.dni or "",
+                "empresa": c.empresa or "",
+                "telefono": c.telefono or "",
+                "con_rtn": cotizacion.con_rtn,
+            }
         return JsonResponse({
             "es_cotizacion": True,
             "numero_cotizacion": cotizacion.numero_cotizacion,
+            "cliente": cliente_data,
+            "cliente_nombre": cotizacion.cliente_nombre or (cliente_data["nombre_completo"] if cliente_data else "Consumidor Final"),
+            "con_rtn": cotizacion.con_rtn,
             "productos": [
                 {
                     "id": detalle.producto_id,
@@ -12399,6 +14080,102 @@ def busqueda_codigo(request, codigo):
                 for detalle in cotizacion.detalles.filter(is_active=True, is_delete=False)
             ],
         })
+
+    if PedidoTienda:
+        filtro_pedido = Q(numero_pedido__iexact=codigo)
+        codigo_limpio = codigo.replace("#", "").replace("PED-", "").replace("ped-", "").lstrip("0")
+        if codigo_limpio.isdigit():
+            filtro_pedido |= Q(id=int(codigo_limpio))
+
+        pedido = (
+            PedidoTienda.objects.select_related("cliente", "cliente_pos")
+            .filter(
+                filtro_pedido,
+                ubicacion_id=sucursal_id,
+                estado=PedidoTienda.Estado.ACEPTADO,
+            )
+            .first()
+        )
+        if pedido:
+            cliente_data = None
+            if pedido.cliente_pos:
+                c = pedido.cliente_pos
+                nombre_completo = f"{c.nombre or ''} {c.nombre2 or ''} {c.apellido or ''} {c.apellido2 or ''}".strip() or c.empresa or c.dni
+                cliente_data = {
+                    "id": c.id,
+                    "nombre_completo": nombre_completo,
+                    "dni": c.dni or "",
+                    "empresa": c.empresa or "",
+                    "telefono": c.telefono or "",
+                    "con_rtn": False,
+                }
+            elif pedido.cliente:
+                c = pedido.cliente
+                cliente_data = {
+                    "id": None,
+                    "nombre_completo": c.nombre,
+                    "dni": "",
+                    "empresa": "",
+                    "telefono": c.telefono or "",
+                    "con_rtn": False,
+                }
+
+            detalles = list(
+                pedido.detalles.select_related("producto", "producto_cambio").order_by("producto_id", "id")
+            )
+            productos_pedido = []
+            for det in detalles:
+                if det.rev_estado in {"RECHAZADO", "DEVUELTO"}:
+                    continue
+                cantidad = float(det.rev_cantidad_aprobada)
+                if cantidad <= 0:
+                    continue
+                prod = (
+                    det.producto_cambio
+                    if (det.rev_estado == "CAMBIADO" and det.producto_cambio)
+                    else det.producto
+                )
+                precio = float(
+                    det.precio_unitario_cambio
+                    if (det.rev_estado == "CAMBIADO" and det.precio_unitario_cambio is not None)
+                    else det.precio_unitario
+                )
+                sku = prod.codigo_sku if prod else det.codigo_sku
+                nombre = prod.nombre if prod else det.nombre_producto
+                prod_id = prod.id if prod else det.producto_id
+                porcentaje_isv = float(prod.impuesto or 0) if prod else 0.0
+                precio_sin_isv, imp_unit = _desglosar_precio_venta_incluye_isv(
+                    Decimal(str(precio)), Decimal(str(porcentaje_isv))
+                )
+                impuesto_unitario = float(imp_unit)
+                precio_sin_isv = float(precio_sin_isv)
+                isv_15 = impuesto_unitario * cantidad if porcentaje_isv == 15 else 0.0
+                isv_18 = impuesto_unitario * cantidad if porcentaje_isv == 18 else 0.0
+                subtotal = precio_sin_isv * cantidad
+
+                productos_pedido.append({
+                    "id": prod_id,
+                    "combo_id": None,
+                    "es_combo": False,
+                    "codigo_sku": sku,
+                    "nombre": nombre,
+                    "cantidad": cantidad,
+                    "precio_venta": precio,
+                    "descuento": 0.0,
+                    "subtotal": subtotal,
+                    "isv_15": isv_15,
+                    "isv_18": isv_18,
+                })
+
+            return JsonResponse({
+                "es_pedido": True,
+                "pedido_id": pedido.id,
+                "numero_pedido": pedido.numero_pedido or f"PED-{pedido.id:06d}",
+                "cliente": cliente_data,
+                "cliente_nombre": pedido.nombre_cliente,
+                "con_rtn": False,
+                "productos": productos_pedido,
+            })
 
     # ==========================================
     # BUSCAR PRODUCTO
@@ -12485,7 +14262,7 @@ def busqueda_codigo(request, codigo):
 
 @login_required
 def busqueda_nombre(request, producto):
-    if not _puede_generar_cotizaciones(request.user):
+    if not (_puede_generar_cotizaciones(request.user) or _puede_generar_pedidos(request.user)):
         raise PermissionDenied("No tiene permiso para buscar productos en Caja")
     # ==========================================
     # VERIFICAR PERFIL Y UBICACIÓN
@@ -12616,6 +14393,89 @@ def busqueda_nombre(request, producto):
         if datos_combo:
             data.append(datos_combo)
 
+    cotizaciones = (
+        Cotizacion.objects.select_related("cliente")
+        .filter(
+            sucursal_id=sucursal_id,
+            is_active=True,
+            is_delete=False,
+        )
+        .filter(
+            Q(numero_cotizacion__icontains=producto)
+            | Q(cliente_nombre__icontains=producto)
+            | Q(cliente__nombre__icontains=producto)
+            | Q(cliente__empresa__icontains=producto)
+        )
+        .order_by("-id")[:5]
+    )
+    for cot in cotizaciones:
+        nom_cliente = cot.cliente_nombre
+        if not nom_cliente and cot.cliente:
+            nom_cliente = f"{cot.cliente.nombre or ''} {cot.cliente.apellido or ''}".strip() or cot.cliente.empresa or cot.cliente.dni
+        if not nom_cliente:
+            nom_cliente = "Consumidor Final"
+
+        data.insert(0, {
+            "id": None,
+            "codigo_sku": cot.numero_cotizacion,
+            "nombre": cot.numero_cotizacion,
+            "precio_venta": cot.total,
+            "precio_venta_min": cot.total,
+            "precio_venta_max": cot.total,
+            "lleva": 0,
+            "paga": 0,
+            "descuento": 0,
+            "es_acumulable": False,
+            "isv": Decimal("0"),
+            "tipos_isv": 0,
+            "stock": "1",
+            "es_cotizacion": True,
+            "cliente_nombre": nom_cliente,
+        })
+
+    if PedidoTienda:
+        filtro_pedidos = (
+            Q(numero_pedido__icontains=producto)
+            | Q(cliente_nombre__icontains=producto)
+            | Q(cliente__nombre__icontains=producto)
+            | Q(cliente__telefono__icontains=producto)
+            | Q(cliente_pos__nombre__icontains=producto)
+            | Q(cliente_pos__empresa__icontains=producto)
+            | Q(cliente_pos__dni__icontains=producto)
+        )
+        codigo_limpio = producto.replace("#", "").replace("PED-", "").replace("ped-", "").lstrip("0")
+        if codigo_limpio.isdigit():
+            filtro_pedidos |= Q(id=int(codigo_limpio))
+
+        pedidos = (
+            PedidoTienda.objects.select_related("cliente", "cliente_pos")
+            .filter(
+                ubicacion_id=sucursal_id,
+                estado=PedidoTienda.Estado.ACEPTADO,
+            )
+            .filter(filtro_pedidos)
+            .order_by("-id")[:5]
+        )
+        for ped in pedidos:
+            num_ped = ped.numero_pedido or f"PED-{ped.id:06d}"
+            data.insert(0, {
+                "id": None,
+                "codigo_sku": num_ped,
+                "nombre": num_ped,
+                "precio_venta": ped.total,
+                "precio_venta_min": ped.total,
+                "precio_venta_max": ped.total,
+                "lleva": 0,
+                "paga": 0,
+                "descuento": 0,
+                "es_acumulable": False,
+                "isv": Decimal("0"),
+                "tipos_isv": 0,
+                "stock": "1",
+                "es_pedido": True,
+                "cliente_nombre": ped.nombre_cliente,
+            })
+
     return JsonResponse(
         data,
         safe=False
@@ -12685,6 +14545,20 @@ def guardar_compra(request):
             tarjeta = data.get("tarjeta", [])
             cliente = data.get("cliente", {})
             nota_credito_id = data.get("nota_credito_id")
+            pedido_tienda_id = data.get("pedido_tienda_id")
+            pedido_tienda = None
+            if pedido_tienda_id and PedidoTienda:
+                pedido_tienda = (
+                    PedidoTienda.objects.select_for_update()
+                    .filter(
+                        id=pedido_tienda_id,
+                        ubicacion_id=sucursal_id,
+                        estado=PedidoTienda.Estado.ACEPTADO,
+                    )
+                    .first()
+                )
+                if not pedido_tienda:
+                    raise Exception("El pedido seleccionado no existe o no está en estado Aceptado")
 
             if not pago:
                 raise Exception("No se recibieron los datos de pago")
@@ -12924,9 +14798,18 @@ def guardar_compra(request):
                 else Ventas.TIPO_VENTA_CONTADO
             )
 
+            cliente_pos_id = cliente.get("id")
+            if cliente_pos_id:
+                try:
+                    cliente_pos_id = int(cliente_pos_id)
+                except (ValueError, TypeError):
+                    cliente_pos_id = None
+            else:
+                cliente_pos_id = None
+
             venta = Ventas.objects.create(
                 id_factura_cai=factura_cai,
-                id_cliente_id=cliente.get("id"),
+                id_cliente_id=cliente_pos_id,
                 sucursal_id=sucursal_id,
                 subtotal=pago[0].get("subtotal"),
                 impuesto_15=pago[0].get("isv15"),
@@ -12939,6 +14822,13 @@ def guardar_compra(request):
                 tipo_venta=tipo_venta,
                 costo_total=0,
                 utilidad_total=0,
+                origen=(
+                    Ventas.ORIGEN_RUTA
+                    if pedido_tienda and getattr(pedido_tienda, "origen", "") == "CAJA_RUTA"
+                    else (Ventas.ORIGEN_ECOMMERCE if pedido_tienda else Ventas.ORIGEN_LOCAL)
+                ),
+                ecommerce_pedido_id=pedido_tienda.id if pedido_tienda else None,
+                cliente_ecommerce_nombre=pedido_tienda.nombre_cliente if pedido_tienda else "",
                 u_creo_id=request.user.id,
             )
 
@@ -13132,13 +15022,18 @@ def guardar_compra(request):
                         (Decimal(str(lote.cantidad)) for lote in lotes),
                         Decimal("0"),
                     )
+                    reservas_qs = ReservaInventario.objects.filter(
+                        producto=producto_inventario,
+                        ubicacion_id__in=ubicaciones_inventario,
+                        estado=ReservaInventario.Estado.RESERVADA,
+                        is_delete=False,
+                    )
+                    if pedido_tienda:
+                        reservas_qs = reservas_qs.exclude(
+                            detalle_pedido_tienda__pedido=pedido_tienda
+                        )
                     stock_reservado = (
-                        ReservaInventario.objects.filter(
-                            producto=producto_inventario,
-                            ubicacion_id__in=ubicaciones_inventario,
-                            estado=ReservaInventario.Estado.RESERVADA,
-                            is_delete=False,
-                        ).aggregate(total=Sum("cantidad"))["total"]
+                        reservas_qs.aggregate(total=Sum("cantidad"))["total"]
                         or Decimal("0")
                     )
                     stock_disponible = max(
@@ -13425,6 +15320,29 @@ def guardar_compra(request):
                     "total",
                 ]
             )
+
+            if pedido_tienda:
+                for detalle in pedido_tienda.detalles.all():
+                    if detalle.reserva_id:
+                        reserva = (
+                            ReservaInventario.objects.select_for_update()
+                            .filter(id=detalle.reserva_id)
+                            .first()
+                        )
+                        if reserva and reserva.estado == ReservaInventario.Estado.RESERVADA:
+                            reserva.estado = ReservaInventario.Estado.CONSUMIDA
+                            reserva.save(update_fields=["estado"])
+                    if getattr(detalle, "reserva_cambio_id", None):
+                        reserva_c = (
+                            ReservaInventario.objects.select_for_update()
+                            .filter(id=detalle.reserva_cambio_id)
+                            .first()
+                        )
+                        if reserva_c and reserva_c.estado == ReservaInventario.Estado.RESERVADA:
+                            reserva_c.estado = ReservaInventario.Estado.CONSUMIDA
+                            reserva_c.save(update_fields=["estado"])
+                pedido_tienda.estado = PedidoTienda.Estado.PAGADO
+                pedido_tienda.save(update_fields=["estado"])
 
             # =====================================================
             # ENVÍO DE FACTURA POR WHATSAPP
@@ -15251,7 +17169,15 @@ def ventas_view(request):
 
     total_general = detalles.aggregate(total=Sum("utilidad_total"))["total"] or 0
 
-    total_vendido = detalles.aggregate(total=Sum("venta__total"))["total"] or 0
+    ventas_filtradas = Ventas.objects.filter(id__in=detalles.values("venta_id"))
+    total_vendido = ventas_filtradas.aggregate(total=Sum("total"))["total"] or 0
+    total_devuelto = (
+        DetalleVenta.objects.filter(venta__in=ventas_filtradas).aggregate(
+            total=Sum("monto_devuelto")
+        )["total"]
+        or Decimal("0")
+    )
+    total_vendido -= total_devuelto
 
     paginator = Paginator(detalles, 25)
 
@@ -15264,14 +17190,27 @@ def ventas_view(request):
 
     for detalle in page_obj:
         detalle.cajero_nombre = usuarios.get(detalle.venta.u_creo_id, "No disponible")
+        detalle.origen_nombre = detalle.venta.get_origen_display()
+        detalle.cliente_venta_nombre = (
+            detalle.venta.id_cliente.nombre_completo
+            if detalle.venta.id_cliente
+            else (detalle.venta.cliente_ecommerce_nombre or "Consumidor Final")
+        )
         detalle.subtotal_linea = detalle.subtotal or (
             detalle.cantidad * detalle.precio_unitario
+            - Decimal(detalle.impuesto_15 or 0)
+            - Decimal(detalle.impuesto_18 or 0)
         )
         detalle.devolucion_linea = (
-            devoluciones_por_detalle.get(detalle.id, Decimal("0")) or Decimal("0")
+            max(
+                devoluciones_por_detalle.get(detalle.id, Decimal("0")) or Decimal("0"),
+                Decimal(detalle.monto_devuelto or 0),
+            )
         )
         detalle.total_neto_linea = (
             detalle.subtotal_linea
+            + Decimal(detalle.impuesto_15 or 0)
+            + Decimal(detalle.impuesto_18 or 0)
             - (detalle.descuento or Decimal("0"))
             - detalle.devolucion_linea
         )
@@ -15399,6 +17338,7 @@ def exportar_ventas_excel(request):
 
     encabezados = [
         "Factura",
+        "Origen",
         "Fecha",
         "ID cliente",
         "Nombre cliente",
@@ -15429,12 +17369,14 @@ def exportar_ventas_excel(request):
     libro, hoja = _libro_exportacion_grande(
         "Ventas",
         encabezados,
-        [16, 14, 14, 28, 22, 22, 16, 20, 15, 34, 22, 24, 20, 20, 12, 16, 16, 16, 16, 16, 16, 16, 12, 16, 16, 16, 16],
+        [16, 16, 14, 14, 28, 22, 22, 16, 20, 15, 34, 22, 24, 20, 20, 12, 16, 16, 16, 16, 16, 16, 12, 16, 16, 16, 16, 16],
     )
 
     for detalle in detalles.iterator(chunk_size=200):
         subtotal_linea = detalle.subtotal or (
             detalle.cantidad * detalle.precio_unitario
+            - Decimal(detalle.impuesto_15 or 0)
+            - Decimal(detalle.impuesto_18 or 0)
         )
         isv_linea = (
             Decimal(detalle.impuesto_15 or 0)
@@ -15443,16 +17385,28 @@ def exportar_ventas_excel(request):
         importe_bruto_linea = Decimal(detalle.precio_unitario or 0) * Decimal(
             detalle.cantidad or 0
         )
-        isv_porcentaje = (
-            (isv_linea * Decimal("100") / importe_bruto_linea)
-            if importe_bruto_linea > 0 and isv_linea > 0
-            else Decimal("0")
-        )
+        if importe_bruto_linea > 0 and isv_linea > 0:
+            isv_calculado = (isv_linea * Decimal("100") / importe_bruto_linea).quantize(
+                Decimal("0.01")
+            )
+            if isv_calculado == isv_calculado.to_integral_value():
+                isv_porcentaje = int(isv_calculado)
+                isv_formato = '0"%"'
+            else:
+                isv_porcentaje = isv_calculado
+                isv_formato = '0.00"%"'
+        else:
+            isv_porcentaje = 0
+            isv_formato = '0"%"'
         devolucion_linea = (
-            devoluciones_por_detalle.get(detalle.id, Decimal("0")) or Decimal("0")
+            max(
+                devoluciones_por_detalle.get(detalle.id, Decimal("0")) or Decimal("0"),
+                Decimal(detalle.monto_devuelto or 0),
+            )
         )
         total_neto_linea = (
             subtotal_linea
+            + isv_linea
             - (detalle.descuento or Decimal("0"))
             - devolucion_linea
         )
@@ -15460,7 +17414,7 @@ def exportar_ventas_excel(request):
         cliente_nombre = (
             detalle.venta.id_cliente.nombre_completo
             if detalle.venta.id_cliente
-            else "Consumidor Final"
+            else (detalle.venta.cliente_ecommerce_nombre or "Consumidor Final")
         )
         producto = detalle.producto
         equivalencia_min, equivalencia_max = (
@@ -15474,6 +17428,7 @@ def exportar_ventas_excel(request):
                 detalle.venta.id_factura_cai.numero_factura
                 if detalle.venta.id_factura_cai
                 else "",
+                detalle.venta.get_origen_display(),
                 _fecha_honduras(detalle.venta.f_creacion).date(),
                 cliente_id,
                 cliente_nombre,
@@ -15508,20 +17463,20 @@ def exportar_ventas_excel(request):
                 equivalencia_max,
             ],
             formatos={
-                2: "dd/mm/yyyy",
-                15: "#,##0.00",
+                3: "dd/mm/yyyy",
                 16: "#,##0.00",
                 17: "#,##0.00",
                 18: "#,##0.00",
                 19: "#,##0.00",
                 20: "#,##0.00",
                 21: "#,##0.00",
-                22: '0.##"%"',
-                23: "#,##0.00",
+                22: "#,##0.00",
+                23: isv_formato,
                 24: "#,##0.00",
                 25: "#,##0.00",
-                26: "#,##0",
+                26: "#,##0.00",
                 27: "#,##0",
+                28: "#,##0",
             },
         )
     return _respuesta_excel(libro, f"ventas_{fecha_inicio}_{fecha_fin}.xlsx")

@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Mi perfil | {{ configuracion.nombre_comercial|default:"Tienda" }}{% endblock %}
+{% block content %}
+<main class="tienda-perfil" id="contenido-principal">
+  <div class="tienda-perfil__contenedor">
+    <header class="tienda-perfil__encabezado">
+      <div class="tienda-perfil__avatar" aria-hidden="true">
+        <i class="bx bx-user"></i>
+      </div>
+      <div class="tienda-perfil__titulos">
+        <p class="tienda-eyebrow"><i class="bx bx-id-card" aria-hidden="true"></i> Panel de cliente</p>
+        <h1>{{ cliente_tienda.nombre }}</h1>
+        <p>Administra tu información de contacto y tus direcciones para futuras reservas.</p>
+      </div>
+      <div class="tienda-perfil__acciones-header">
+        <a class="tienda-btn-secundario" href="{% url 'tiendav:historial' %}">
+          <i class="bx bx-receipt" aria-hidden="true"></i>
+          <span>Mis pedidos</span>
+        </a>
+      </div>
+    </header>
+
+    <section class="tienda-perfil__panel">
+      <!-- Ficha de cuenta (Email sólo lectura) -->
+      <div class="tienda-perfil__datos-cuenta">
+        <div class="tienda-perfil__datos-cuenta-icono">
+          <i class="bx bx-envelope" aria-hidden="true"></i>
+        </div>
+        <div class="tienda-perfil__datos-cuenta-info">
+          <small>Correo electrónico de acceso</small>
+          <strong>{{ cliente_tienda.email }}</strong>
+        </div>
+        <span class="tienda-badge tienda-badge--neutral">
+          <i class="bx bx-lock-alt"></i> Cuenta verificada
+        </span>
+      </div>
+
+      {% if perfil_actualizado %}
+        <div class="tienda-alerta tienda-alerta--exito" role="status">
+          <i class="bx bx-check-circle" aria-hidden="true"></i>
+          <div>
+            <strong>¡Cambios guardados!</strong>
+            <p>Tus datos de perfil se actualizaron con éxito.</p>
+          </div>
+        </div>
+      {% endif %}
+
+      {% if error %}
+        <div class="tienda-form-error" role="alert">
+          <i class="bx bx-error-circle" aria-hidden="true"></i>
+          <div>
+            <strong>Error al guardar</strong>
+            <p>{{ error }}</p>
+          </div>
+        </div>
+      {% endif %}
+
+      <form class="tienda-perfil__formulario" method="post">
+        {% csrf_token %}
+        
+        <div class="tienda-perfil__seccion">
+          <h3><i class="bx bx-user-pin"></i> Datos personales</h3>
+          <div class="tienda-perfil__grid">
+            <div class="tienda-campo">
+              <label for="nombrePerfil">Nombre completo <span class="tienda-campo__requerido">*</span></label>
+              <div class="tienda-input-group">
+                <i class="bx bx-user tienda-input-group__icono" aria-hidden="true"></i>
+                <input id="nombrePerfil" type="text" name="nombre" value="{{ cliente_tienda.nombre }}" maxlength="150" autocomplete="name" required placeholder="Tu nombre">
+              </div>
+            </div>
+
+            <div class="tienda-campo">
+              <label for="telefonoPerfil">Teléfono o WhatsApp</label>
+              <div class="tienda-input-group">
+                <i class="bx bx-phone tienda-input-group__icono" aria-hidden="true"></i>
+                <input id="telefonoPerfil" type="tel" name="telefono" value="{{ cliente_tienda.telefono }}" maxlength="30" autocomplete="tel" placeholder="Para coordinar entregas">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tienda-perfil__seccion">
+          <h3><i class="bx bx-map-pin"></i> Dirección de referencia y entrega</h3>
+          <div class="tienda-perfil__grid">
+            <div class="tienda-campo tienda-campo--full">
+              <label for="direccionPerfil">Dirección principal</label>
+              <div class="tienda-input-group">
+                <i class="bx bx-home tienda-input-group__icono" aria-hidden="true"></i>
+                <input id="direccionPerfil" type="text" name="direccion" value="{{ cliente_tienda.direccion }}" maxlength="255" autocomplete="street-address" placeholder="Colonia, barrio, calle o avenida">
+              </div>
+            </div>
+
+            <div class="tienda-campo">
+              <label for="municipioPerfil">Ciudad o Municipio</label>
+              <div class="tienda-input-group">
+                <i class="bx bx-buildings tienda-input-group__icono" aria-hidden="true"></i>
+                <input id="municipioPerfil" type="text" name="municipio" value="{{ cliente_tienda.municipio }}" maxlength="100" autocomplete="address-level2" placeholder="Ej. Tegucigalpa, San Pedro Sula">
+              </div>
+            </div>
+
+            <div class="tienda-campo">
+              <label for="departamentoPerfil">Departamento / Estado</label>
+              <div class="tienda-input-group">
+                <i class="bx bx-map tienda-input-group__icono" aria-hidden="true"></i>
+                <input id="departamentoPerfil" type="text" name="departamento" value="{{ cliente_tienda.departamento }}" maxlength="100" autocomplete="address-level1" placeholder="Ej. Francisco Morazán, Cortés">
+              </div>
+            </div>
+
+            <div class="tienda-campo tienda-campo--full">
+              <label for="indicacionesPerfil">Indicaciones o puntos de referencia <span class="tienda-campo__opcional">(opcional)</span></label>
+              <div class="tienda-input-group">
+                <i class="bx bx-navigation tienda-input-group__icono" aria-hidden="true"></i>
+                <input id="indicacionesPerfil" type="text" name="indicaciones_entrega" value="{{ cliente_tienda.indicaciones_entrega }}" maxlength="255" placeholder="Color de casa, frente a qué lugar, portón, etc.">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tienda-perfil__footer">
+          <a class="tienda-btn-texto" href="{% url 'tiendav:inicio' %}">
+            <i class="bx bx-store"></i> Ir a la tienda
+          </a>
+          <button type="submit" class="tienda-btn-guardar">
+            <i class="bx bx-save" aria-hidden="true"></i>
+            <span>Guardar cambios</span>
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+</main>
+{% endblock %}

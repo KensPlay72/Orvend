@@ -2,9 +2,11 @@ import sys
 
 from django.conf import settings
 from django.http import FileResponse, Http404
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.views.decorators.http import require_GET
+
+from accounts.models import permision
 
 from manager.models import SuscripcionSistema
 
@@ -16,7 +18,15 @@ PUBLIC_ASSETS = {
 }
 
 def home(request):
-    return render(request, 'home.html')
+    destino = permision.resolver_destino_raiz()
+    if destino == "login":
+        return redirect("login")
+    elif destino == "tienda":
+        try:
+            return redirect("tiendav:inicio")
+        except Exception:
+            return redirect("login")
+    return render(request, "home.html")
 
 
 def _documento_legal(titulo, resumen, secciones):

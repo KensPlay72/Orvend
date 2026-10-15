@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{% if form_mode == "registrar" %}Crear cuenta{% else %}Iniciar sesión{% endif %} | {{ configuracion.nombre_comercial|default:"Tienda" }}{% endblock %}
+{% block content %}
+<main class="tienda-cuenta-pagina" id="contenido-principal">
+  <div class="tienda-cuenta-layout">
+    <!-- Panel Lateral Informativo / Beneficios -->
+    <aside class="tienda-cuenta-banner">
+      <div class="tienda-cuenta-banner__contenido">
+        <a class="tienda-cuenta-banner__logo" href="{% url 'tiendav:inicio' %}">
+          <img
+            src="{% if configuracion.logo_archivo %}{% url 'tiendav:logo' %}{% else %}{% static 'img/LH.webp' %}{% endif %}"
+            onerror="this.onerror=null;this.src='{% static 'img/LH.webp' %}';"
+            alt="{{ configuracion.nombre_comercial|default:'Tienda' }}"
+          >
+          <span>{{ configuracion.nombre_comercial|default:"Orvend Mart" }}</span>
+        </a>
+
+        <h2>Tu tienda favorita,<br>a un clic de distancia.</h2>
+        <p>Inicia sesión o regístrate para disfrutar de una experiencia de compra personalizada y segura.</p>
+
+        <ul class="tienda-cuenta-beneficios" aria-label="Beneficios de tu cuenta">
+          <li>
+            <div class="tienda-beneficio__icono"><i class="bx bx-cart-alt"></i></div>
+            <div>
+              <strong>Reserva tus productos</strong>
+              <span>Aparta lo que necesitas y recoge en tu tienda más cercana.</span>
+            </div>
+          </li>
+          <li>
+            <div class="tienda-beneficio__icono"><i class="bx bx-receipt"></i></div>
+            <div>
+              <strong>Seguimiento de pedidos</strong>
+              <span>Verifica el estado de tus compras en tiempo real.</span>
+            </div>
+          </li>
+          <li>
+            <div class="tienda-beneficio__icono"><i class="bx bx-shield-quarter"></i></div>
+            <div>
+              <strong>Seguridad y rapidez</strong>
+              <span>Tus datos de entrega siempre listos para tus compras.</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="tienda-cuenta-banner__footer">
+        <small><i class="bx bx-lock-alt"></i> Conexión cifrada y segura</small>
+      </div>
+    </aside>
+
+    <!-- Formulario Principal -->
+    <section class="tienda-cuenta-panel">
+      <!-- Selector de pestañas Iniciar sesión / Registro -->
+      <div class="tienda-auth-tabs" role="tablist">
+        <a href="{% url 'tiendav:cuenta' %}?modo=ingresar&amp;next={{ next_url|urlencode }}"
+           class="tienda-auth-tab {% if form_mode == 'ingresar' %}is-active{% endif %}"
+           role="tab" aria-selected="{% if form_mode == 'ingresar' %}true{% else %}false{% endif %}">
+          <i class="bx bx-log-in"></i> Iniciar sesión
+        </a>
+        <a href="{% url 'tiendav:cuenta' %}?modo=registrar&amp;next={{ next_url|urlencode }}"
+           class="tienda-auth-tab {% if form_mode == 'registrar' %}is-active{% endif %}"
+           role="tab" aria-selected="{% if form_mode == 'registrar' %}true{% else %}false{% endif %}">
+          <i class="bx bx-user-plus"></i> Crear cuenta
+        </a>
+      </div>
+
+      <div class="tienda-cuenta-card">
+        {% if error %}
+          <div class="tienda-form-error" role="alert">
+            <i class="bx bx-error-circle" aria-hidden="true"></i>
+            <div>
+              <strong>Ocurrió un inconveniente</strong>
+              <p>{{ error }}</p>
+            </div>
+          </div>
+        {% endif %}
+
+        {% if form_mode == "registrar" %}
+          <!-- Formulario de Registro -->
+          <div class="tienda-auth-header">
+            <h2>Crear nueva cuenta</h2>
+            <p>Ingresa tus datos para registrarte y empezar a ordenar.</p>
+          </div>
+
+          <form class="tienda-form-cuenta" method="post" autocomplete="on">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="registrar">
+            <input type="hidden" name="next" value="{{ next_url }}">
+
+            <div class="tienda-campo">
+              <label for="nombreCliente">Nombre completo <span class="tienda-campo__requerido">*</span></label>
+              <div class="tienda-input-group">
+                <i class="bx bx-user tienda-input-group__icono" aria-hidden="true"></i>
+                <input id="nombreCliente" type="text" name="nombre" maxlength="150" autocomplete="name" required placeholder="Tu nombre y apellido">
+              </div>
+            </div>
+
+            <div class="tienda-campo">
+              <label for="emailRegistro">Correo electrónico <span class="tienda-campo__requerido">*</span></label>
+              <div class="tienda-input-group">
+                <i class="bx bx-envelope tienda-input-group__icono" aria-hidden="true"></i>
+                <input id="emailRegistro" type="email" name="email" maxlength="254" autocomplete="email" required placeholder="ejemplo@correo.com">
+              </div>
+            </div>
+
+            <div class="tienda-campo">
+              <label for="telefonoCliente">Teléfono o WhatsApp <span class="tienda-campo__opcional">(opcional)</span></label>
+              <div class="tienda-input-group">
+                <i class="bx bx-phone tienda-input-group__icono" aria-hidden="true"></i>
+                <input id="telefonoCliente" type="tel" name="telefono" maxlength="30" autocomplete="tel" placeholder="Para confirmar tus reservas">
+              </div>
+            </div>
+
+            <div class="tienda-campo">
+              <label for="passwordRegistro">Contraseña segura <span class="tienda-campo__requerido">*</span></label>
+              <div class="tienda-input-group">
+                <i class="bx bx-lock-alt tienda-input-group__icono" aria-hidden="true"></i>
+                <input id="passwordRegistro" type="password" name="password" minlength="8"
+                       pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
+                       title="Debe contener al menos 8 caracteres, incluyendo una letra mayúscula, una minúscula y un número"
+                       autocomplete="new-password" required placeholder="Mínimo 8 caracteres">
+                <button type="button" class="tienda-btn-toggle-pass" data-toggle-password aria-label="Mostrar u ocultar contraseña">
+                  <i class="bx bx-show"></i>
+                </button>
+              </div>
+              <small class="tienda-password-requisitos">
+                <i class="bx bx-shield-quarter"></i> Debe incluir al menos 8 caracteres, una mayúscula, una minúscula y un número.
+              </small>
+            </div>
+
+
+            <div class="tienda-campo">
+              <label for="confirmarPassword">Confirmar contraseña <span class="tienda-campo__requerido">*</span></label>
+              <div class="tienda-input-group">
+                <i class="bx bx-check-shield tienda-input-group__icono" aria-hidden="true"></i>
+                <input id="confirmarPassword" type="password" name="confirmar_password" minlength="8" autocomplete="new-password" required placeholder="Repite tu contraseña">
+                <button type="button" class="tienda-btn-toggle-pass" data-toggle-password aria-label="Mostrar u ocultar contraseña">
+                  <i class="bx bx-show"></i>
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" class="tienda-btn-auth">
+              <i class="bx bx-user-plus" aria-hidden="true"></i>
+              <span>Completar registro</span>
+            </button>
+          </form>
+
+          <p class="tienda-cuenta-cambio">
+            ¿Ya tienes una cuenta registrada? 
+            <a href="{% url 'tiendav:cuenta' %}?modo=ingresar&amp;next={{ next_url|urlencode }}">Inicia sesión aquí</a>
+          </p>
+
+        {% else %}
+          <!-- Formulario de Inicio de Sesión -->
+          <div class="tienda-auth-header">
+            <h2>Bienvenido de vuelta</h2>
+            <p>Ingresa tus credenciales para acceder a tus pedidos y carrito.</p>
+          </div>
+
+          <form class="tienda-form-cuenta" method="post" autocomplete="on">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="ingresar">
+            <input type="hidden" name="next" value="{{ next_url }}">
+
+            <div class="tienda-campo">
+              <label for="emailLogin">Correo electrónico</label>
+              <div class="tienda-input-group">
+                <i class="bx bx-envelope tienda-input-group__icono" aria-hidden="true"></i>
+                <input id="emailLogin" type="email" name="email" maxlength="254" autocomplete="email" required placeholder="tu@correo.com">
+              </div>
+            </div>
+
+            <div class="tienda-campo">
+              <label for="passwordLogin">Contraseña</label>
+              <div class="tienda-input-group">
+                <i class="bx bx-lock-alt tienda-input-group__icono" aria-hidden="true"></i>
+                <input id="passwordLogin" type="password" name="password" autocomplete="current-password" required placeholder="Tu contraseña">
+                <button type="button" class="tienda-btn-toggle-pass" data-toggle-password aria-label="Mostrar u ocultar contraseña">
+                  <i class="bx bx-show"></i>
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" class="tienda-btn-auth">
+              <i class="bx bx-log-in" aria-hidden="true"></i>
+              <span>Acceder a mi cuenta</span>
+            </button>
+          </form>
+
+          <p class="tienda-cuenta-cambio">
+            ¿Aún no tienes cuenta? 
+            <a href="{% url 'tiendav:cuenta' %}?modo=registrar&amp;next={{ next_url|urlencode }}">Regístrate gratis</a>
+          </p>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+</main>
+{% endblock %}

@@ -6,7 +6,7 @@
   rel="stylesheet"
   href="{% static 'css/manager.css' %}"
 />
-<link rel="stylesheet" href="{% static 'css/listados_caja_mobile.css' %}?v=20261004-mobile-cards" />
+<link rel="stylesheet" href="{% static 'css/listados_caja_mobile.css' %}" />
 {% endblock %} 
 {% block titulo_content %}
 <div class="tituloscont">
@@ -46,7 +46,11 @@
     </div>
   </article>
   {% empty %}
-  <div class="caja-mobile-records__empty"><i class="bx bx-money-withdraw"></i><strong>Sin retiros</strong><span>Aún no hay retiros registrados.</span></div>
+  <div class="mobile-empty-state">
+    <i class="bx bx-money-withdraw fs-2 text-muted d-block mb-2"></i>
+    <strong>No hay retiros registrados para mostrar.</strong>
+    <p class="text-muted small m-0">Los retiros de efectivo realizados desde Caja aparecerán aquí.</p>
+  </div>
   {% endfor %}
 </section>
 <div class="tabla">
@@ -80,8 +84,10 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="5" class="text-center table-empty-state">
-            Aún no hay retiros registrados.
+          <td colspan="5" class="text-center table-empty-state py-4">
+            <i class="bx bx-money-withdraw fs-2 text-muted d-block mb-2"></i>
+            <strong>No hay retiros registrados para mostrar.</strong>
+            <p class="text-muted small m-0">Los retiros de efectivo realizados desde Caja aparecerán aquí.</p>
           </td>
         </tr>
         {% endfor %}

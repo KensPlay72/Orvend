@@ -4,11 +4,11 @@
   Realizar Traslados
 {% endblock title %}
 {% block extra_css %}
-  <link rel="stylesheet" href="{% static 'css/compras.css' %}?v=20260918-02" />
-  <link rel="stylesheet" href="{% static 'css/traslados.css' %}?v=20261006-input-cantidad" />
-  <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261003-mobile-sheet" />
+  <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/traslados.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
 {% endblock extra_css %}
-{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/traslados_mobile.css' %}?v=20261005-paginador-stock" />{% endblock page_css_overrides %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/traslados_mobile.css' %}" />{% endblock page_css_overrides %}
 {% block titulo_content %}
   <div class="tituloscont">
     <img class="logop"
@@ -149,6 +149,6 @@
       </tbody>
     </table>
   </div>
-  <script src="{% static 'js/gestiones/traslados.js' %}?v=20261005-paginador-stock"></script>
-  <script src="{% static 'js/compras/editor_mobile_cards.js' %}?v=20261005-paginador-stock"></script>
+  <script src="{% static 'js/gestiones/traslados.js' %}"></script>
+  <script src="{% static 'js/compras/editor_mobile_cards.js' %}"></script>
 {% endblock main_content %}

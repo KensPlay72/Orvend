@@ -5,7 +5,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
-<link rel="stylesheet" href="{% static 'css/detalle_devoluciones.css' %}?v=20260925" />
+<link rel="stylesheet" href="{% static 'css/detalle_devoluciones.css' %}" />
 {% endblock %}
 
 {% block titulo_content %}
@@ -84,7 +84,11 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="3" class="text-center">Sin productos</td>
+                            <td colspan="4" class="text-center table-empty-state py-4">
+                                <i class="bx bx-package fs-2 text-muted d-block mb-2"></i>
+                                <strong>No hay productos registrados en esta devolución.</strong>
+                                <p class="text-muted small m-0">Los productos de la devolución aparecerán aquí.</p>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -146,5 +150,5 @@
         </div>
     </div>
 </div>
-    <script type="module" src="{% static 'js/devoluciones/devoluciones.js' %}?v=20260925-03"></script>
+    <script type="module" src="{% static 'js/devoluciones/devoluciones.js' %}"></script>
 {% endblock %}

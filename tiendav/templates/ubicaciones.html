@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% load static tienda_extras %}
+
+{% block title %}Ubicaciones | {{ configuracion.nombre_comercial|default:"Tienda" }}{% endblock %}
+
+{% block content %}
+<main class="tienda-ubicaciones-pagina" id="contenido-principal">
+  <section class="tienda-sucursales-lista" aria-label="Listado de ubicaciones">
+    {% for sucursal in sucursales %}
+      <div class="tienda-sucursal-bloque" id="sucursal-{{ sucursal.id }}">
+        <!-- Encabezado País - Departamento -->
+        <div class="tienda-sucursal-region">
+          <span class="tienda-sucursal-region__icono" aria-hidden="true">
+            <i class="bx bxs-map-pin"></i>
+          </span>
+          <h2 class="tienda-sucursal-region__titulo">
+            {% if sucursal.pais and sucursal.departamento %}
+              {{ sucursal.pais }} - {{ sucursal.departamento }}
+            {% elif sucursal.pais %}
+              {{ sucursal.pais }}
+            {% elif sucursal.departamento %}
+              {{ sucursal.departamento }}
+            {% else %}
+              {{ sucursal.nombre }}
+            {% endif %}
+          </h2>
+          <span class="tienda-sucursal-region__linea" aria-hidden="true"></span>
+        </div>
+
+        <!-- Recuadro de la ubicación -->
+        <article class="tienda-sucursal-card">
+          <!-- Información: 1. Nombre, 2. Dirección, 3. Horarios, 4. Cómo llegar -->
+          <div class="tienda-sucursal-card__info">
+            <div class="tienda-sucursal-card__cabecera">
+              <h3 class="tienda-sucursal-card__titulo">{{ sucursal.nombre }}</h3>
+            </div>
+
+            <div class="tienda-sucursal-card__direccion">
+              <span class="tienda-sucursal-card__etiqueta">
+                <i class="bx bxs-map" aria-hidden="true"></i> Dirección:
+              </span>
+              <p>{{ sucursal.ubicacion|default:"Sucursal habilitada para atención y retiro en tienda." }}</p>
+            </div>
+
+            <div class="tienda-sucursal-card__horarios-box">
+              <span class="tienda-sucursal-card__etiqueta">
+                <i class="bx bx-time-five" aria-hidden="true"></i> Horarios:
+              </span>
+              {% if sucursal.horario %}
+                <div class="tienda-sucursal-card__horarios-texto">{{ sucursal.horario|linebreaksbr }}</div>
+              {% else %}
+                <div class="tienda-sucursal-card__horarios-texto">Consulta disponibilidad de horario directamente en tienda.</div>
+              {% endif %}
+            </div>
+
+            {% if sucursal.telefono %}
+              <div class="tienda-sucursal-card__whatsapp-fila">
+                <i class="bx bxl-whatsapp tienda-sucursal-card__whatsapp-icono" aria-hidden="true"></i>
+                <span class="tienda-sucursal-card__whatsapp-label">WhatsApp:</span>
+                <a
+                  class="tienda-sucursal-card__whatsapp-enlace"
+                  href="https://wa.me/{{ sucursal.telefono|limpiar_telefono_wa }}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Contactar por WhatsApp al {{ sucursal.telefono }}"
+                >{{ sucursal.telefono }}</a>
+              </div>
+            {% endif %}
+
+            <div class="tienda-sucursal-card__acciones">
+              {% if sucursal.como_llegar_url %}
+                <a
+                  class="tienda-sucursal-card__btn-llegar"
+                  href="{{ sucursal.como_llegar_url }}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <i class="bx bxs-navigation" aria-hidden="true"></i>
+                  <span>Cómo llegar</span>
+                </a>
+              {% else %}
+                <a
+                  class="tienda-sucursal-card__btn-llegar"
+                  href="https://www.google.com/maps/search/?api=1&amp;query={{ sucursal.nombre|urlencode }}+{{ sucursal.ubicacion|default:''|urlencode }}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <i class="bx bxs-navigation" aria-hidden="true"></i>
+                  <span>Cómo llegar</span>
+                </a>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- 5. Imagen de la ubicación desde Nextcloud CONFI -->
+          <div class="tienda-sucursal-card__foto">
+            {% if sucursal.imagen_archivo %}
+              <img
+                src="{% url 'tiendav:ubicacion_imagen' sucursal.id %}"
+                alt="Fotografía de {{ sucursal.nombre }}"
+                loading="lazy"
+              >
+            {% else %}
+              <div class="tienda-sucursal-card__foto-vacia">
+                <i class="bx bx-store-alt" aria-hidden="true"></i>
+                <span>{{ sucursal.nombre }}</span>
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- 6. Ubicación Google Maps (Iframe) -->
+          <div class="tienda-sucursal-card__mapa">
+            {% if sucursal.mapa_iframe %}
+              <iframe
+                src="{{ sucursal.mapa_iframe }}"
+                width="600"
+                height="450"
+                style="border:0;"
+                allowfullscreen=""
+                loading="lazy"
+                referrerpolicy="strict-origin-when-cross-origin"
+                title="Ubicación en Google Maps de {{ sucursal.nombre }}"
+              ></iframe>
+            {% else %}
+              <div class="tienda-sucursal-card__mapa-vacio">
+                <i class="bx bx-map-alt" aria-hidden="true"></i>
+                <strong>{{ sucursal.nombre }}</strong>
+                <span>Mapa en línea próximamente</span>
+              </div>
+            {% endif %}
+          </div>
+        </article>
+      </div>
+    {% empty %}
+      <div class="tienda-vacio">
+        <i class="bx bx-store-alt" aria-hidden="true"></i>
+        <h2>Aún no hay ubicaciones registradas</h2>
+        <p>Pronto publicaremos nuestras sucursales y horarios de atención.</p>
+        <a class="tienda-boton-primario" href="{% url 'tiendav:inicio' %}">Ir al inicio</a>
+      </div>
+    {% endfor %}
+  </section>
+</main>
+{% endblock %}

@@ -2,11 +2,11 @@
 {% load static %}
 {% block title %}Detalle Compra{% endblock %}
 {% block extra_css %}
-        <link rel="stylesheet" href="{% static 'css/compras.css' %}?v=20261006-llegada-btn" />
-        <link rel="stylesheet" href="{% static 'css/manager.css' %}?v=20261004-tracker-space" />
-        <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}?v=20261005-tabla-lateral-tablet" />
+        <link rel="stylesheet" href="{% static 'css/compras.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/manager.css' %}" />
+        <link rel="stylesheet" href="{% static 'css/recepcion_inventario.css' %}" />
 {% endblock %}
-{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/detallecompra_mobile.css' %}?v=20261005-alineacion-paginador" />{% endblock page_css_overrides %}
+{% block page_css_overrides %}<link rel="stylesheet" href="{% static 'css/detallecompra_mobile.css' %}" />{% endblock page_css_overrides %}
 {% block titulo_content %}
     <div class="tituloscont">
         <img class="logop" src="{% static 'img/LH.webp' %}" alt="">
@@ -103,6 +103,14 @@
                             {% if compra.saldoUtilizado %}<td data-label="Saldo usado"></td>{% endif %}
                             {% endif %}
                         </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="12" class="text-center table-empty-state py-4">
+                                <i class="bx bx-package fs-2 text-muted d-block mb-2"></i>
+                                <strong>No hay productos registrados para mostrar.</strong>
+                                <p class="text-muted small m-0">Esta compra no tiene productos en el detalle.</p>
+                            </td>
+                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -131,7 +139,11 @@
                         </div>
                     </article>
                     {% empty %}
-                    <div class="recepcion-mobile-empty"><i class="bx bx-package"></i><strong>Sin productos</strong><span>Esta compra no tiene productos registrados.</span></div>
+                    <div class="mobile-empty-state">
+                        <i class="bx bx-package fs-2 text-muted d-block mb-2"></i>
+                        <strong>No hay productos registrados para mostrar.</strong>
+                        <p class="text-muted small m-0">Esta compra no tiene productos en el detalle.</p>
+                    </div>
                     {% endfor %}
                 </section>
 
@@ -228,6 +240,6 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 
 {% include "bodega/_tracking_compra.html" with tracking=compra.tracking %}
-<script src="{% static 'js/bodega/tracking_compra.js' %}?v=20261004-space"></script>
+<script src="{% static 'js/bodega/tracking_compra.js' %}"></script>
 
 {% endblock %}

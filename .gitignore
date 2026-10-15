@@ -12,6 +12,3 @@ __pycache__/
 
 # Archivos generados por Django
 staticfiles/
-
-# Módulo tienda virtual (excluido de Git temporalmente)
-tiendav/
