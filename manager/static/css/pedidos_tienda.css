@@ -1469,19 +1469,20 @@
   height: 38px;
   align-items: center;
   justify-content: center;
-  border: 1px solid #bfdbfe;
+  border: 1px solid #2563eb;
   border-radius: 9px;
-  background: #eff6ff;
-  color: #2563eb;
+  background: #2563eb;
+  color: #ffffff;
   font-size: 1.3rem;
   text-decoration: none;
+  transition: all 0.2s ease;
 }
 
 .pedido-tienda-ver:hover,
 .pedido-tienda-ver:focus-visible {
-  border-color: #bfdbfe;
-  background: #eff6ff;
-  color: #2563eb;
+  border-color: #1d4ed8;
+  background: #1d4ed8;
+  color: #ffffff;
 }
 
 .catalog-mobile-list .pedido-tienda-ver {

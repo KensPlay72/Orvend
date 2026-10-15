@@ -12,17 +12,89 @@
     <link rel="stylesheet" href="{% static 'css/ventas.css' %}" />
     <style>
       .ventas-filter-form.pedidos-filter-form {
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) 110px 48px;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1.2fr 2.5fr 110px 48px;
+        gap: 0.85rem;
+        align-items: end;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .ventas-filter-form.pedidos-filter-form .ventas-filter-heading {
+        display: none;
+      }
+      @media (max-width: 1200px) {
+        .ventas-filter-form.pedidos-filter-form {
+          grid-template-columns: 1fr 1fr 1.1fr 1.8fr 100px 48px;
+        }
       }
       @media (max-width: 991px) {
         .ventas-filter-form.pedidos-filter-form {
           grid-template-columns: 1fr 1fr;
+        }
+        .ventas-filter-form.pedidos-filter-form .ventas-filter-heading {
+          display: flex;
+          grid-column: 1 / -1;
+          align-items: center;
+          gap: 0.65rem;
+          padding-bottom: 0.65rem;
+          margin-bottom: 0.25rem;
+          border-bottom: 1px solid #e8efeb;
+        }
+        .ventas-filter-form.pedidos-filter-form .ventas-filter-heading span {
+          display: grid;
+          width: 38px;
+          min-width: 38px;
+          height: 38px;
+          place-items: center;
+          border-radius: 11px;
+          color: var(--system-primary, #32877f);
+          background: color-mix(in srgb, var(--system-primary, #32877f) 11%, #fff);
+          font-size: 1.2rem;
+        }
+        .ventas-filter-form.pedidos-filter-form .ventas-filter-heading strong {
+          display: block;
+          font-size: 0.9rem;
+          color: var(--system-secondary, #10463e);
+        }
+        .ventas-filter-form.pedidos-filter-form .ventas-filter-heading small {
+          display: block;
+          margin-top: 0.12rem;
+          font-size: 0.68rem;
+          color: color-mix(in srgb, var(--system-secondary, #10463e) 55%, #fff);
+        }
+        .ventas-filter-form.pedidos-filter-form .ventas-filter-group.flex-grow-1 {
+          grid-column: 1 / -1;
         }
       }
       @media (max-width: 576px) {
         .ventas-filter-form.pedidos-filter-form {
           grid-template-columns: 1fr;
         }
+      }
+      .pedido-tienda-ver {
+        display: inline-flex;
+        width: 38px;
+        height: 38px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #2563eb;
+        border-radius: 9px;
+        background: #2563eb;
+        color: #ffffff !important;
+        font-size: 1.3rem;
+        text-decoration: none;
+        transition: all 0.2s ease;
+      }
+      .pedido-tienda-ver:hover,
+      .pedido-tienda-ver:focus-visible {
+        border-color: #1d4ed8;
+        background: #1d4ed8;
+        color: #ffffff !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
+      }
+      .pedido-tienda-ver i {
+        color: #ffffff !important;
       }
     </style>
 {% endblock page_css_overrides %}
