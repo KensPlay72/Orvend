@@ -23,7 +23,7 @@ from django.db.models import (
     Value,
 )
 from django.db.models.functions import Coalesce
-from django.http import Http404, HttpResponse, HttpResponseBadRequest, JsonResponse
+from django.http import Http404, HttpResponse, HttpResponseBadRequest, HttpResponseNotModified, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
@@ -142,8 +142,11 @@ def _productos_publicos(sucursales):
 
 
 def _descuentos_publicos():
+    descuentos = cache.get("tienda_descuentos_publicos")
+    if descuentos is not None:
+        return descuentos
     ahora = timezone.now()
-    return list(
+    descuentos = list(
         Descuento.objects.filter(
             is_active=True,
             is_delete=False,
@@ -161,6 +164,8 @@ def _descuentos_publicos():
         .select_related("productos", "categorias")
         .order_by("id")
     )
+    cache.set("tienda_descuentos_publicos", descuentos, 120)
+    return descuentos
 
 
 def _anotar_precios_oferta(productos, descuentos):
@@ -251,8 +256,18 @@ def _url_siguiente(request):
     return destino
 
 
-def _archivo_publico(nombre_archivo, carpeta, cache_seconds=604800):
-    """Entrega imágenes públicas con caché en memoria y encabezados HTTP para carga instantánea."""
+def _archivo_publico(request, nombre_archivo, carpeta, cache_seconds=604800):
+    """Entrega imágenes públicas con caché en memoria, validación condicional ETag y encabezados HTTP."""
+    if not nombre_archivo:
+        return HttpResponse(status=404)
+
+    etag = f'"{abs(hash(f"{carpeta}_{nombre_archivo}"))}"'
+    if request and request.headers.get("If-None-Match") == etag:
+        response = HttpResponseNotModified()
+        response["ETag"] = etag
+        response["Cache-Control"] = f"public, max-age={cache_seconds}, immutable"
+        return response
+
     clave_cache = f"tienda_img_{carpeta}_{nombre_archivo}"
     cached_data = cache.get(clave_cache)
     if cached_data is not None:
@@ -267,6 +282,7 @@ def _archivo_publico(nombre_archivo, carpeta, cache_seconds=604800):
             return HttpResponse("No fue posible obtener la imagen", status=500)
 
     response = HttpResponse(contenido, content_type=content_type)
+    response["ETag"] = etag
     response["Cache-Control"] = f"public, max-age={cache_seconds}, immutable"
     return response
 
@@ -276,44 +292,62 @@ def logo_tienda(request):
     configuracion = _configuracion_tienda()
     if not configuracion or not configuracion.logo_archivo:
         return HttpResponse(status=404)
-    return _archivo_publico(configuracion.logo_archivo, settings.NEXTCLOUD_FOLDER_CONFI)
+    return _archivo_publico(request, configuracion.logo_archivo, settings.NEXTCLOUD_FOLDER_CONFI)
 
 
 @require_GET
 def banner_tienda(request, banner_id):
-    banner = get_object_or_404(
-        BannerTienda,
-        id=banner_id,
-        activo=True,
-        configuracion__is_active=True,
-        configuracion__is_delete=False,
-    )
-    return _archivo_publico(banner.imagen_archivo, settings.NEXTCLOUD_FOLDER_CONFI)
+    clave_banner = f"tienda_banner_archivo_{banner_id}"
+    nombre_archivo = cache.get(clave_banner)
+    if not nombre_archivo:
+        banner = get_object_or_404(
+            BannerTienda,
+            id=banner_id,
+            activo=True,
+            configuracion__is_active=True,
+            configuracion__is_delete=False,
+        )
+        nombre_archivo = banner.imagen_archivo
+        if nombre_archivo:
+            cache.set(clave_banner, nombre_archivo, 86400)
+    return _archivo_publico(request, nombre_archivo, settings.NEXTCLOUD_FOLDER_CONFI)
 
 
 @require_GET
 def producto_imagen_tienda(request, imagen_id):
-    imagen = get_object_or_404(
-        ProductosImagenes,
-        id=imagen_id,
-        producto__is_active=True,
-        producto__is_delete=False,
-    )
-    return _archivo_publico(imagen.imagen_archivo, settings.NEXTCLOUD_FOLDER_PRODUCTOS)
+    clave_img = f"tienda_img_nombre_{imagen_id}"
+    nombre_archivo = cache.get(clave_img)
+    if not nombre_archivo:
+        imagen = get_object_or_404(
+            ProductosImagenes.objects.select_related("producto"),
+            id=imagen_id,
+            producto__is_active=True,
+            producto__is_delete=False,
+        )
+        nombre_archivo = imagen.imagen_archivo
+        if nombre_archivo:
+            cache.set(clave_img, nombre_archivo, 86400)
+    return _archivo_publico(request, nombre_archivo, settings.NEXTCLOUD_FOLDER_PRODUCTOS)
 
 
 @require_GET
 def ubicacion_imagen_tienda(request, ubicacion_id):
-    ubicacion = get_object_or_404(
-        Ubicaciones,
-        id=ubicacion_id,
-        es_tienda=True,
-        is_active=True,
-        is_delete=False,
-    )
-    if not ubicacion.imagen_archivo:
+    clave_ubi = f"tienda_ubi_img_{ubicacion_id}"
+    nombre_archivo = cache.get(clave_ubi)
+    if not nombre_archivo:
+        ubicacion = get_object_or_404(
+            Ubicaciones,
+            id=ubicacion_id,
+            es_tienda=True,
+            is_active=True,
+            is_delete=False,
+        )
+        nombre_archivo = ubicacion.imagen_archivo
+        if nombre_archivo:
+            cache.set(clave_ubi, nombre_archivo, 86400)
+    if not nombre_archivo:
         return HttpResponse(status=404)
-    return _archivo_publico(ubicacion.imagen_archivo, settings.NEXTCLOUD_FOLDER_CONFI)
+    return _archivo_publico(request, nombre_archivo, settings.NEXTCLOUD_FOLDER_CONFI)
 
 
 @require_GET
@@ -722,22 +756,28 @@ def historial_cliente(request):
         .order_by("-creado", "-id")
     )
     page_obj = Paginator(pedidos, 10).get_page(request.GET.get("page", 1))
-    for pedido in page_obj:
-        pedido.detalles_historial = list(
-            DetallePedidoTienda.objects.filter(pedido_id=pedido.id)
-            .select_related("producto", "reserva", "producto_cambio")
-            .prefetch_related(
-                Prefetch(
-                    "producto__imagenes_producto",
-                    queryset=ProductosImagenes.objects.exclude(imagen_archivo=""),
-                ),
-                Prefetch(
-                    "producto_cambio__imagenes_producto",
-                    queryset=ProductosImagenes.objects.exclude(imagen_archivo=""),
-                ),
-            )
-            .order_by("id")[:5]
+    pedidos_ids = [p.id for p in page_obj]
+    detalles = list(
+        DetallePedidoTienda.objects.filter(pedido_id__in=pedidos_ids)
+        .select_related("producto", "reserva", "producto_cambio")
+        .prefetch_related(
+            Prefetch(
+                "producto__imagenes_producto",
+                queryset=ProductosImagenes.objects.exclude(imagen_archivo=""),
+            ),
+            Prefetch(
+                "producto_cambio__imagenes_producto",
+                queryset=ProductosImagenes.objects.exclude(imagen_archivo=""),
+            ),
         )
+        .order_by("id")
+    )
+    detalles_por_pedido = {}
+    for detalle in detalles:
+        detalles_por_pedido.setdefault(detalle.pedido_id, []).append(detalle)
+
+    for pedido in page_obj:
+        pedido.detalles_historial = detalles_por_pedido.get(pedido.id, [])[:5]
 
     return render(
         request,
@@ -1048,7 +1088,10 @@ def crear_pedido(request):
         {
             "success": True,
             "message": "Tu pedido quedó reservado y está pendiente de confirmación.",
+            "numero_pedido": pedido.numero_pedido or f"PED-{pedido.id:06d}",
             "redirect": reverse("tiendav:historial"),
+            "pedidos_url": reverse("tiendav:historial"),
+            "inicio_url": reverse("tiendav:inicio"),
         },
         status=201,
     )

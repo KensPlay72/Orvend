@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% load static pagination_tags %}
-{% block title %}Detalle del Pedido #{{ pedido.id }} | {{ configuracion.nombre_comercial|default:"Tienda" }}{% endblock %}
+{% block title %}Detalle del Pedido {{ pedido.numero_pedido|default:pedido.id }} | {{ configuracion.nombre_comercial|default:"Tienda" }}{% endblock %}
 {% block content %}
 <main class="tienda-historial" id="contenido-principal">
   <div class="tienda-historial__contenedor">
     <header class="tienda-historial__encabezado">
       <div class="tienda-historial__titulos">
         <div class="d-flex align-items-center gap-3 flex-wrap mt-2">
-          <h1 class="m-0">Pedido #{{ pedido.id }}</h1>
+          <h1 class="m-0">Pedido {{ pedido.numero_pedido|default:pedido.id }}</h1>
           <span class="tienda-pedido-estado tienda-pedido-estado--{{ pedido.estado|lower }}">
             {% if pedido.estado == "PENDIENTE" %}
               <i class="bx bx-time-five" aria-hidden="true"></i> Pendiente
@@ -58,7 +58,7 @@
         <div class="tienda-pedido-card__id-bloque">
           <span class="tienda-pedido-card__badge-icono"><i class="bx bx-package"></i></span>
           <div>
-            <strong>Productos de tu pedido ({{ page_obj.paginator.count }})</strong>
+            <strong>Productos de tu pedido {{ pedido.numero_pedido|default:pedido.id }} ({{ page_obj.paginator.count }})</strong>
             <small>Revisa el estado de cada artículo reservado</small>
           </div>
         </div>
@@ -72,9 +72,9 @@
                 <!-- Imagen del producto solicitado por el cliente (producto antiguo) -->
                 <div class="tienda-pedido-item__img-wrap">
                   {% if prod_img and prod_img.id %}
-                    <img src="{% url 'tiendav:producto_imagen' prod_img.id %}" alt="{{ detalle.nombre_producto }}" onerror="this.onerror=null; this.src='{% static 'img/default.webp' %}';" loading="lazy">
+                    <img src="{% url 'tiendav:producto_imagen' prod_img.id %}" alt="{{ detalle.nombre_producto }}" onerror="this.onerror=null; this.src='{% static 'img/default.webp' %}';" loading="lazy" decoding="async">
                   {% else %}
-                    <img src="{% static 'img/default.webp' %}" alt="{{ detalle.nombre_producto }}" loading="lazy">
+                    <img src="{% static 'img/default.webp' %}" alt="{{ detalle.nombre_producto }}" loading="lazy" decoding="async">
                   {% endif %}
                 </div>
 
@@ -102,9 +102,9 @@
                     <div class="pedido-producto-nuevo d-flex align-items-center gap-3">
                       <div class="pedido-cambio-thumb flex-shrink-0">
                         {% if prod_cambio_img and prod_cambio_img.id %}
-                          <img src="{% url 'tiendav:producto_imagen' prod_cambio_img.id %}" alt="{{ detalle.producto_cambio.nombre }}" onerror="this.onerror=null; this.src='{% static 'img/default.webp' %}';" loading="lazy">
+                          <img src="{% url 'tiendav:producto_imagen' prod_cambio_img.id %}" alt="{{ detalle.producto_cambio.nombre }}" onerror="this.onerror=null; this.src='{% static 'img/default.webp' %}';" loading="lazy" decoding="async">
                         {% else %}
-                          <img src="{% static 'img/default.webp' %}" alt="{{ detalle.producto_cambio.nombre }}" loading="lazy">
+                          <img src="{% static 'img/default.webp' %}" alt="{{ detalle.producto_cambio.nombre }}" loading="lazy" decoding="async">
                         {% endif %}
                       </div>
 

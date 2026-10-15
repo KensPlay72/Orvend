@@ -134,6 +134,10 @@ class PedidoTienda(models.Model):
             ("cambiar_producto_pedido", "Puede cambiar producto en pedido"),
             ("anexar_producto_pedido", "Puede anexar producto a pedido"),
         ]
+        indexes = [
+            models.Index(fields=["cliente", "-creado"], name="pedidotienda_cli_creado_idx"),
+            models.Index(fields=["estado", "-creado"], name="pedidotienda_est_creado_idx"),
+        ]
 
     @property
     def nombre_cliente(self):
@@ -267,6 +271,10 @@ class DetallePedidoTienda(models.Model):
 
     class Meta:
         ordering = ("id",)
+        indexes = [
+            models.Index(fields=["pedido", "id"], name="detpedtienda_ped_id_idx"),
+            models.Index(fields=["producto", "estado_revision"], name="detpedtienda_prod_rev_idx"),
+        ]
 
     @property
     def rev_estado(self):

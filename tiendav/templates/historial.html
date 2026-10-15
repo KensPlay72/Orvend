@@ -33,7 +33,10 @@
             <div class="tienda-pedido-card__id-bloque">
               <span class="tienda-pedido-card__badge-icono"><i class="bx bx-receipt"></i></span>
               <div>
-                <strong>Pedido #{{ pedido.id }}</strong>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                  <strong>N.° Pedido: {{ pedido.numero_pedido|default:pedido.id }}</strong>
+                  <span class="tienda-pedido-card__cant-badge">{{ pedido.total_detalles }} producto{{ pedido.total_detalles|pluralize }}</span>
+                </div>
                 <small><i class="bx bx-calendar"></i> {{ pedido.creado|date:"d/m/Y · h:i a" }}</small>
               </div>
             </div>
@@ -62,7 +65,7 @@
           </div>
 
           <div class="tienda-pedido-card__detalles">
-            <h4><i class="bx bx-package"></i> Productos reservados</h4>
+            <h4><i class="bx bx-package"></i> Productos reservados ({{ pedido.total_detalles }})</h4>
             {% with total_items=pedido.total_detalles %}
               {% if total_items <= 5 %}
                 <ul class="tienda-pedido-card__items">
@@ -71,11 +74,11 @@
                       <li class="tienda-pedido-item">
                         <div class="tienda-pedido-item__img-wrap">
                           {% if detalle.rev_estado == "CAMBIADO" and prod_cambio_img and prod_cambio_img.imagen_archivo %}
-                            <img src="{% url 'tiendav:producto_imagen' prod_cambio_img.id %}" alt="{{ detalle.producto_cambio.nombre }}" loading="lazy">
+                            <img src="{% url 'tiendav:producto_imagen' prod_cambio_img.id %}" alt="{{ detalle.producto_cambio.nombre }}" loading="lazy" decoding="async">
                           {% elif prod_img and prod_img.imagen_archivo %}
-                            <img src="{% url 'tiendav:producto_imagen' prod_img.id %}" alt="{{ detalle.nombre_producto }}" loading="lazy">
+                            <img src="{% url 'tiendav:producto_imagen' prod_img.id %}" alt="{{ detalle.nombre_producto }}" loading="lazy" decoding="async">
                           {% else %}
-                            <img src="{% static 'img/default.webp' %}" alt="{{ detalle.nombre_producto }}" loading="lazy">
+                            <img src="{% static 'img/default.webp' %}" alt="{{ detalle.nombre_producto }}" loading="lazy" decoding="async">
                           {% endif %}
                         </div>
                         <div class="tienda-pedido-item__info">
@@ -139,11 +142,11 @@
                       {% with prod_img=detalle.producto.imagenes_producto.all|first prod_cambio_img=detalle.producto_cambio.imagenes_producto.all|first %}
                         <div class="tienda-pedido-preview__thumb" title="{% if detalle.rev_estado == 'CAMBIADO' and detalle.producto_cambio %}{{ detalle.producto_cambio.nombre }}{% else %}{{ detalle.nombre_producto }}{% endif %}">
                           {% if detalle.rev_estado == "CAMBIADO" and prod_cambio_img and prod_cambio_img.imagen_archivo %}
-                            <img src="{% url 'tiendav:producto_imagen' prod_cambio_img.id %}" alt="{{ detalle.producto_cambio.nombre }}" loading="lazy">
+                            <img src="{% url 'tiendav:producto_imagen' prod_cambio_img.id %}" alt="{{ detalle.producto_cambio.nombre }}" loading="lazy" decoding="async">
                           {% elif prod_img and prod_img.imagen_archivo %}
-                            <img src="{% url 'tiendav:producto_imagen' prod_img.id %}" alt="{{ detalle.nombre_producto }}" loading="lazy">
+                            <img src="{% url 'tiendav:producto_imagen' prod_img.id %}" alt="{{ detalle.nombre_producto }}" loading="lazy" decoding="async">
                           {% else %}
-                            <img src="{% static 'img/default.webp' %}" alt="{{ detalle.nombre_producto }}" loading="lazy">
+                            <img src="{% static 'img/default.webp' %}" alt="{{ detalle.nombre_producto }}" loading="lazy" decoding="async">
                           {% endif %}
                         </div>
                       {% endwith %}
@@ -153,7 +156,7 @@
                     </div>
                   </div>
                   <p class="tienda-pedido-preview__resumen">
-                    Llevas <strong>{{ total_items }} productos</strong> en este pedido.
+                    Pedido <strong>{{ pedido.numero_pedido|default:pedido.id }}</strong> · Incluye <strong>{{ total_items }} producto{{ total_items|pluralize }}</strong> reservados.
                   </p>
                 </div>
               {% endif %}

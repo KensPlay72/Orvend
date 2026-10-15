@@ -847,7 +847,12 @@
       carrito = [];
       guardarCarrito();
       renderizarCarrito();
-      window.location.href = resultado.redirect;
+
+      if (carritoDialogo && typeof carritoDialogo.close === "function") {
+        carritoDialogo.close();
+      }
+
+      mostrarConfirmacionExitosa(resultado);
     } catch (error) {
       window.TiendaUI.error("No se pudo enviar el pedido", "Comprueba tu conexión a internet e inténtalo nuevamente.");
     } finally {
@@ -861,4 +866,44 @@
   document.querySelectorAll("[data-auto-submit]").forEach((control) => {
     control.addEventListener("change", () => control.form?.requestSubmit());
   });
+
+  function mostrarConfirmacionExitosa(datos) {
+    const overlay = document.getElementById("tiendaConfirmacionExito");
+    if (!overlay) {
+      window.location.href = datos?.pedidos_url || datos?.redirect || "/tienda/mis-pedidos/";
+      return;
+    }
+
+    const numSpan = document.getElementById("tiendaExitoNumeroPedido");
+    const btnPedidos = document.getElementById("tiendaExitoBtnPedidos");
+    const btnInicio = document.getElementById("tiendaExitoBtnInicio");
+
+    if (numSpan) {
+      numSpan.textContent = datos?.numero_pedido || "---";
+    }
+
+    if (btnPedidos && (datos?.pedidos_url || datos?.redirect)) {
+      btnPedidos.href = datos.pedidos_url || datos.redirect;
+    }
+
+    if (btnInicio && datos?.inicio_url) {
+      btnInicio.href = datos.inicio_url;
+    }
+
+    // Reiniciar animación si fuese necesario
+    overlay.classList.remove("is-active");
+    void overlay.offsetWidth;
+    overlay.classList.add("is-active");
+    overlay.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+  }
+
+  document.getElementById("tiendaExitoBtnPedidos")?.addEventListener("click", () => {
+    document.body.style.overflow = "";
+  });
+  document.getElementById("tiendaExitoBtnInicio")?.addEventListener("click", () => {
+    document.body.style.overflow = "";
+  });
+
+  window.mostrarConfirmacionPedido = mostrarConfirmacionExitosa;
 }());
